@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Install system dependencies required for EasyOCR and OpenCV
 RUN apt-get update && apt-get install -y \
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0 \
     git \
     && rm -rf /var/lib/apt/lists/*
@@ -17,11 +17,15 @@ COPY requirements.txt .
 # Install dependencies (no-cache-dir keeps the docker image smaller)
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy all the remaining files into the container
-COPY . .
+# Copy all the remaining files into the container as a 'backend' directory
+# This allows absolute imports like 'from backend.services...' to work perfectly
+COPY . /app/backend
+
+# Tell Python where to look for modules (so it can find the 'backend' folder)
+ENV PYTHONPATH=/app
 
 # Expose port 7860 (Hugging Face Spaces default)
 EXPOSE 7860
 
 # Run the FastAPI server via Uvicorn
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "7860"]

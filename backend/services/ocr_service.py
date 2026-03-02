@@ -33,6 +33,15 @@ class OCRService:
             return ""
 
         try:
+            # Strip data URI prefix if present (e.g., "data:image/png;base64,...")
+            if "," in image_base64:
+                image_base64 = image_base64.split(",", 1)[1]
+            
+            # Add back missing padding
+            missing_padding = len(image_base64) % 4
+            if missing_padding:
+                image_base64 += "=" * (4 - missing_padding)
+
             image_bytes = base64.b64decode(image_base64)
             reader = _get_reader()
             results = reader.readtext(image_bytes, detail=0, paragraph=True)
