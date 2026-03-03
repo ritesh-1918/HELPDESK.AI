@@ -3,6 +3,7 @@ import {
   Routes,
   Route,
   Navigate,
+  useLocation
 } from "react-router-dom";
 import React, { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -63,6 +64,49 @@ import PendingAdminRequests from "./master-admin/pages/PendingAdminRequests";
 import AllCompanies from "./master-admin/pages/AllCompanies";
 import AllAdmins from "./master-admin/pages/AllAdmins";
 
+
+function TitleUpdater() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const path = location.pathname;
+    let title = 'HELPDESK.AI';
+
+    // Admin Routes
+    if (path.startsWith('/admin/ticket/')) title = 'Ticket Detail | Admin';
+    else if (path.startsWith('/admin/dashboard')) title = 'Admin Dashboard';
+    else if (path.startsWith('/admin/tickets')) title = 'Admin Tickets';
+    else if (path.startsWith('/admin/users')) title = 'Manage Users | Admin';
+    else if (path.startsWith('/admin/analytics')) title = 'Analytics | Admin';
+    else if (path.startsWith('/admin/profile')) title = 'Admin Profile';
+    else if (path.startsWith('/admin/settings')) title = 'Settings | Admin';
+    // Master Admin Routes
+    else if (path.startsWith('/master-admin/dashboard')) title = 'Master Dashboard';
+    else if (path.startsWith('/master-admin/admin-requests')) title = 'Pending Requests | Master Admin';
+    else if (path.startsWith('/master-admin/companies')) title = 'Companies | Master Admin';
+    else if (path.startsWith('/master-admin/all-admins')) title = 'All Admins | Master Admin';
+    // User Routes
+    else if (path.startsWith('/ticket/')) title = 'Ticket Detail';
+    else if (path.startsWith('/ai-understanding')) title = 'AI Understanding';
+    else if (path.startsWith('/ai-processing')) title = 'AI Processing';
+    else if (path === '/dashboard') title = 'User Dashboard';
+    else if (path === '/create-ticket') title = 'Create Ticket';
+    else if (path === '/my-tickets') title = 'My Tickets';
+    else if (path === '/profile') title = 'User Profile';
+    else if (path === '/notifications') title = 'Notifications';
+    // Public / Lobby Routes
+    else if (path === '/login') title = 'Login';
+    else if (path === '/signup') title = 'Create Account';
+    else if (path === '/admin-signup') title = 'Admin Signup';
+    else if (path === '/user-lobby') title = 'User Lobby';
+    else if (path === '/admin-lobby') title = 'Admin Lobby';
+    else if (path === '/') title = 'Welcome';
+
+    document.title = title === 'HELPDESK.AI' ? title : `${title} | HELPDESK.AI`;
+  }, [location]);
+
+  return null;
+}
 
 function AppLayout() {
   const { user, profile } = useAuthStore();
@@ -133,6 +177,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <TitleUpdater />
       <Toaster />
       <FeedbackWidget />
       <Routes>
