@@ -14,7 +14,8 @@ from contextlib import asynccontextmanager
 # Suppress harmless PyTorch CPU pin_memory warning
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
-from fastapi import FastAPI, HTTPException, Request
+# HF Rebuild Trigger: 2026-03-08
+from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pathlib import Path
