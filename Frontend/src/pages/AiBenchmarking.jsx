@@ -15,6 +15,7 @@ import {
     BrainCircuit
 } from 'lucide-react';
 import axios from 'axios';
+import { API_CONFIG } from '../config';
 
 const AiBenchmarking = () => {
     const [inputText, setInputText] = useState('');
@@ -51,17 +52,17 @@ const AiBenchmarking = () => {
         try {
             // Run V1
             const startV1 = performance.now();
-            const resV1 = await axios.post('http://localhost:8000/ai/analyze_ticket', payload);
+            const resV1 = await axios.post(`${API_CONFIG.BACKEND_URL}/ai/analyze_ticket`, payload);
             const endV1 = performance.now();
 
             // Run V2
             const startV2 = performance.now();
-            const resV2 = await axios.post('http://localhost:8000/ai/analyze-v2', payload);
+            const resV2 = await axios.post(`${API_CONFIG.BACKEND_URL}/ai/analyze-v2`, payload);
             const endV2 = performance.now();
 
             // Run V3
             const startV3 = performance.now();
-            const resV3 = await axios.post('http://localhost:8000/ai/analyze-v3', payload);
+            const resV3 = await axios.post(`${API_CONFIG.BACKEND_URL}/ai/analyze-v3`, payload);
             const endV3 = performance.now();
 
             setResults({

@@ -5,6 +5,7 @@ import html2canvas from 'html2canvas';
 import { supabase } from '../../lib/supabaseClient';
 import useAuthStore from '../../store/authStore';
 import useToastStore from '../../store/toastStore';
+import { API_CONFIG } from '../../config';
 
 // Reusable Hook for Auto-Diagnostics
 function useDiagnostics() {
@@ -288,7 +289,7 @@ const BugReportWidget = () => {
             let probableCause = "Not analyzed";
             try {
                 // Using standard fetch assuming backend is on port 8000
-                const aiResponse = await fetch("http://localhost:8000/ai/analyze_bug", {
+                const aiResponse = await fetch(`${API_CONFIG.BACKEND_URL}/ai/analyze_bug`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({

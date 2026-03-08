@@ -1,7 +1,7 @@
 # Use an official Python runtime as a parent image
 FROM python:3.10-slim
 
-LABEL version="1.1.1" rebuild_trigger="2026-03-08-1930"
+LABEL version="1.1.1" rebuild_trigger="2026-03-08-2032"
 
 # Set the working directory to /app
 WORKDIR /app

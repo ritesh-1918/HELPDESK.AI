@@ -1,2 +1,22 @@
-backend/models/
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
 .env
+
+# Models (Keep them if they are small, but here they are large. 
+# We should probably only keep the ones we actually use if possible, 
+# but for now we'll just ignore the venv)
+# Models
+backend/models/
+backend/venv/
+
+# Logs and Data
+data/low_confidence_log.json
+user_feedback_rows.csv
+
+# Git
+.git/
+.github/

@@ -3,16 +3,11 @@
  */
 
 const getBackendUrl = () => {
-    // Priority: .env → system default → localhost fallback
     const envUrl = import.meta.env.VITE_BACKEND_URL;
-    if (envUrl) return envUrl.trim().replace(/\/$/, ''); // Remove whitespace and trailing slash
+    if (envUrl) return envUrl.trim().replace(/\/$/, '');
 
-    // In production, we might want to default to something else
-    if (import.meta.env.PROD) {
-        return 'https://ritesh19180-ai-helpdesk-api.hf.space';
-    }
-
-    return 'http://localhost:8000';
+    // Default to the live Hugging Face Space for stability
+    return 'https://ritesh19180-ai-helpdesk-api.hf.space';
 };
 
 export const API_CONFIG = {

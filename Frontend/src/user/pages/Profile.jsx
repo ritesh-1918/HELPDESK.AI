@@ -185,8 +185,8 @@ const Profile = () => {
     }
 
     const ticketsCreated = userTickets.length;
-    const ticketsResolvedByAI = userTickets.filter(t => t.status?.toLowerCase().includes('auto') || t.status?.toLowerCase().includes('resolved')).length;
-    const ticketsEscalated = userTickets.filter(t => t.status?.toLowerCase().includes('escalat') || t.status?.toLowerCase() === 'open' || t.status?.toLowerCase().includes('pending')).length;
+    const ticketsResolvedByAI = userTickets.filter(t => t.status?.toLowerCase()?.includes('auto') || t.status?.toLowerCase()?.includes('resolved')).length;
+    const ticketsEscalated = userTickets.filter(t => t.status?.toLowerCase()?.includes('escalat') || t.status?.toLowerCase() === 'open' || t.status?.toLowerCase()?.includes('pending')).length;
 
     return (
         <div className="min-h-screen bg-[#f6f8f7] pb-20">
