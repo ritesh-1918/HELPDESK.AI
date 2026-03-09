@@ -52,6 +52,7 @@ function AnimatedStat({ target, suffix = '', prefix = '', label, isWord = false 
 }
 
 import useAuthStore from '../store/authStore';
+import TeamSection from '../components/landing/TeamSection';
 
 export default function LandingPage() {
     const navigate = useNavigate();
@@ -633,7 +634,10 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* ----------------- FOOTER CTA + LINKS ----------------- */}
+            {/* ----------------- TEAM SECTION ----------------- */}
+            <TeamSection />
+
+            {/* ----------------- FOOTER ----------------- */}
             <footer className="bg-emerald-900 text-white">
                 {/* CTA Block */}
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16 text-center border-b border-white/20">
