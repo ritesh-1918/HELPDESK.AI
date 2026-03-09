@@ -9,6 +9,7 @@ import useTicketStore from "../../store/ticketStore";
 import useAuthStore from "../../store/authStore";
 import { supabase } from "../../lib/supabaseClient";
 import { Card } from "../../components/ui/card";
+import TicketStatusBadge from "../components/TicketStatusBadge";
 import TicketTimeline from "../components/TicketTimeline";
 import TicketChat from "../../components/shared/TicketChat";
 import { formatTicketId } from "../../utils/format";
