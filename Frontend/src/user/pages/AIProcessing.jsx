@@ -6,6 +6,7 @@ import useToastStore from '../../store/toastStore';
 import { Card } from "../../components/ui/card";
 import AIProcessingSteps from "../components/AIProcessingSteps";
 import useTicketStore from "../../store/ticketStore";
+import useAdminStore from '../../admin/store/adminStore';
 import { API_CONFIG } from '../../config';
 
 const steps = [
@@ -40,10 +41,14 @@ const AIProcessing = () => {
                 // === Single call to backend — handles ML classification + Gemini summary ===
                 // Classification, NER, priority, team assignment, duplicate detection → local ML model
                 // Summary generation → backend Gemini service (no redundant frontend API call)
+                const { settings } = useAdminStore.getState();
+
                 const response = await axios.post(`${API_CONFIG.BACKEND_URL}/ai/analyze_ticket`, {
                     text: text,
                     image_text: image_text || "",
-                    image_base64: image_base64 || ""
+                    image_base64: image_base64 || "",
+                    confidence_threshold: settings.aiConfidenceThreshold,
+                    duplicate_sensitivity: settings.duplicateSensitivity
                 });
 
                 console.log("[AIProcessing] Backend Success:", response.data);

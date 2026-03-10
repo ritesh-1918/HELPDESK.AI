@@ -43,6 +43,8 @@ class TicketRequest(BaseModel):
     text: str
     image_base64: str = ""
     image_text: str = "" # Keep for backward compatibility
+    confidence_threshold: float = 0.80
+    duplicate_sensitivity: float = 0.85
 
 
 class DuplicateInfo(BaseModel):
@@ -507,7 +509,7 @@ async def analyze_ticket(request: TicketRequest):
 
     # --- Duplicate detection ---
     try:
-        dup_result = duplicate_service.check_duplicate(text)
+        dup_result = duplicate_service.check_duplicate(text, threshold=request.duplicate_sensitivity)
     except Exception as e:
         traceback.print_exc()
         dup_result = {"is_duplicate": False, "duplicate_ticket_id": None, "similarity": 0.0}
@@ -515,7 +517,7 @@ async def analyze_ticket(request: TicketRequest):
     # --- Reasoning ---
     # Create template-based reasoning (can be upgraded to OpenAI later)
     decision_factors = []
-    if classification["confidence"] > 0.8:
+    if classification["confidence"] > request.confidence_threshold:
         decision_factors.append(f"High confidence match for '{classification['subcategory']}'")
     if entities:
         entity_names = ", ".join([e["text"] for e in entities[:3]])
@@ -537,7 +539,7 @@ async def analyze_ticket(request: TicketRequest):
     highlights = []
 
     # --- Confidence-Based Routing ---
-    REVIEW_THRESHOLD = 0.80
+    REVIEW_THRESHOLD = request.confidence_threshold
     needs_review = False
     if classification["confidence"] < REVIEW_THRESHOLD:
         needs_review = True
@@ -547,7 +549,7 @@ async def analyze_ticket(request: TicketRequest):
 
     # --- Low-Confidence Logging (threshold: 85%) ---
     LOW_CONF_LOG_PATH = Path(__file__).parent / "data" / "low_confidence_log.json"
-    LOW_CONF_THRESHOLD = 0.85
+    LOW_CONF_THRESHOLD = max(0.85, request.confidence_threshold)
     if classification["confidence"] < LOW_CONF_THRESHOLD:
         try:
             if LOW_CONF_LOG_PATH.exists() and LOW_CONF_LOG_PATH.stat().st_size > 2:

@@ -72,9 +72,13 @@ class DuplicateService:
         self._tickets.append((ticket_id, embedding, text))
         self.save_to_disk(ticket_id, text)
 
-    def check_duplicate(self, text: str) -> dict:
+    def check_duplicate(self, text: str, threshold: float = None) -> dict:
         """
         Check if a ticket is a duplicate of any stored ticket.
+
+        Args:
+            text: The ticket text to check.
+            threshold: Optional override for the similarity threshold.
 
         Returns:
             {
@@ -84,6 +88,9 @@ class DuplicateService:
             }
         """
         self.load()
+        
+        # Use provided threshold or default to global constant
+        active_threshold = threshold if threshold is not None else SIMILARITY_THRESHOLD
 
         if not self._tickets:
             return {
@@ -103,7 +110,7 @@ class DuplicateService:
                 best_score = score
                 best_id = ticket_id
 
-        is_dup = best_score >= SIMILARITY_THRESHOLD
+        is_dup = best_score >= active_threshold
 
         return {
             "is_duplicate": is_dup,
