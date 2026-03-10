@@ -152,7 +152,6 @@ function AppLayout() {
   // but we still need to handle role-based navigation here
   return (
     <>
-      <ScrollToTop />
       <Routes>
         <Route path="/knowledge-check" element={<DuplicateDetection />} />
         <Route path="/auto-resolve" element={<AutoResolveChat />} />
@@ -210,6 +209,7 @@ function App() {
   return (
     <BrowserRouter>
       <TitleUpdater />
+      <ScrollToTop />
       <Toaster />
       <BugReportWidget />
       <Routes>

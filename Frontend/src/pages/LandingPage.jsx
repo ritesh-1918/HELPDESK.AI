@@ -57,74 +57,50 @@ function AnimatedStat({ target, suffix = '', prefix = '', label, isWord = false 
 // ---- Demo Modal ----
 function DemoModal({ onClose }) {
     return (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4" onClick={onClose}>
-            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={onClose} />
             <div
-                className="relative bg-gray-950 rounded-3xl border border-white/10 shadow-2xl w-full max-w-3xl p-8 z-10"
+                className="relative bg-gray-950 rounded-3xl border border-white/10 shadow-2xl w-full max-w-4xl overflow-hidden z-10 animate-in fade-in zoom-in duration-300"
                 onClick={e => e.stopPropagation()}
             >
                 <button
                     onClick={onClose}
-                    className="absolute top-4 right-4 text-gray-400 hover:text-white bg-white/10 rounded-full p-2 transition-colors"
+                    className="absolute top-4 right-4 text-gray-400 hover:text-white bg-white/10 rounded-full p-2 transition-colors z-20"
                 >
-                    <X className="w-4 h-4" />
+                    <X className="w-5 h-5" />
                 </button>
-                <div className="mb-6">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-xs font-bold uppercase tracking-wider border border-emerald-500/20 mb-4">
-                        <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" /> Live Demo
-                    </div>
-                    <h2 className="text-2xl font-extrabold text-white">See HelpDesk.ai in Action</h2>
-                    <p className="text-gray-400 text-sm mt-1">Watch how a user complaint becomes a structured ticket in seconds.</p>
+
+                {/* Video Container */}
+                <div className="aspect-video w-full bg-black flex items-center justify-center relative">
+                    <iframe
+                        className="w-full h-full"
+                        src="https://www.youtube.com/embed/YOUR_VIDEO_ID_HERE?autoplay=1&rel=0"
+                        title="HelpDesk.ai Platform Demo"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                    ></iframe>
                 </div>
 
-                {/* Animated Demo */}
-                <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
-                    <div className="bg-gray-800 px-5 py-3 flex items-center gap-3 border-b border-gray-700">
-                        <div className="flex gap-1.5">
-                            <div className="w-3 h-3 rounded-full bg-red-400" />
-                            <div className="w-3 h-3 rounded-full bg-yellow-400" />
-                            <div className="w-3 h-3 rounded-full bg-green-400" />
-                        </div>
-                        <span className="text-xs text-gray-400 font-mono">HelpDesk.ai Terminal</span>
+                <div className="p-6 bg-gray-900 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div>
+                        <h2 className="text-xl font-extrabold text-white">Full Platform Walkthrough</h2>
+                        <p className="text-gray-400 text-sm">See how AI transforms your IT operations.</p>
                     </div>
-                    <div className="p-6 font-mono text-sm space-y-4">
-                        <div className="text-gray-400">
-                            <span className="text-purple-400">const</span> <span className="text-blue-300">input</span> = <span className="text-yellow-300">"vpn down, can't access office from home, urgent!!"</span>;
-                        </div>
-                        <div className="text-gray-400">
-                            <span className="text-purple-400">const</span> <span className="text-blue-300">result</span> = <span className="text-yellow-300">await</span> AI.analyze(input);
-                        </div>
-                        <div className="pl-4 border-l border-emerald-500/30 space-y-1">
-                            <div className="text-gray-500">{'// 📦 Analysis complete in 143ms'}</div>
-                            <div className="text-gray-300">{`{`}</div>
-                            <div className="pl-4 space-y-1">
-                                <div>category: <span className="text-green-300">"Network"</span>,</div>
-                                <div>subcategory: <span className="text-green-300">"VPN Connectivity"</span>,</div>
-                                <div>priority: <span className="text-red-300">"High"</span>,</div>
-                                <div>assignedTeam: <span className="text-orange-300">"NetOps"</span>,</div>
-                                <div>confidence: <span className="text-blue-300">0.96</span>,</div>
-                                <div>autoResolve: <span className="text-purple-300">false</span></div>
-                            </div>
-                            <div className="text-gray-300">{`}`}</div>
-                        </div>
+                    <div className="flex gap-3 w-full md:w-auto">
+                        <button
+                            onClick={() => { onClose(); window.location.href = '/admin-signup'; }}
+                            className="flex-1 md:px-6 bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+                        >
+                            Start Free <ArrowRight className="w-4 h-4" />
+                        </button>
                     </div>
-                </div>
-
-                <div className="mt-6 flex gap-3">
-                    <button
-                        onClick={() => { onClose(); window.location.href = '/admin-signup'; }}
-                        className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
-                    >
-                        Start Free <ArrowRight className="w-4 h-4" />
-                    </button>
-                    <button onClick={onClose} className="px-5 py-3 bg-white/5 border border-white/10 text-gray-300 rounded-xl font-medium hover:bg-white/10 transition-all">
-                        Close
-                    </button>
                 </div>
             </div>
         </div>
     );
 }
+
 
 export default function LandingPage() {
     const navigate = useNavigate();
