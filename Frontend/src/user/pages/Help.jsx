@@ -5,6 +5,72 @@ import { YOUTUBE_RESOURCES, VIDEO_CATEGORIES } from '../../data/youtubeResources
 
 const Help = () => {
     const [activeTab, setActiveTab] = useState('All');
+    const [videos, setVideos] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    React.useEffect(() => {
+        const fetchVideos = async () => {
+            setIsLoading(true);
+            const cacheKey = `youtube_videos_${activeTab}`;
+            const cacheTimeKey = `youtube_videos_time_${activeTab}`;
+            
+            try {
+                const cachedData = localStorage.getItem(cacheKey);
+                const cacheTimestamp = localStorage.getItem(cacheTimeKey);
+                
+                // Cache valid for 24 hours to prevent API quota exhaustion
+                if (cachedData && cacheTimestamp && (Date.now() - parseInt(cacheTimestamp)) < 86400000) {
+                    setVideos(JSON.parse(cachedData));
+                    setIsLoading(false);
+                    return;
+                }
+
+                const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
+                if (!API_KEY) {
+                    throw new Error("No API Key");
+                }
+
+                const query = activeTab === 'All' 
+                    ? 'IT helpdesk troubleshooting' 
+                    : `IT helpdesk ${activeTab.toLowerCase()} troubleshooting`;
+
+                const response = await fetch(
+                    `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=12&q=${encodeURIComponent(query)}&type=video&key=${API_KEY}`
+                );
+                
+                if (!response.ok) { throw new Error("API Error"); }
+                
+                const data = await response.json();
+                
+                // Decode HTML entities in YouTube titles
+                const decodeText = (str) => {
+                    return str.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&");
+                };
+
+                const fetchedVideos = data.items.map(item => ({
+                    id: item.id.videoId,
+                    title: decodeText(item.snippet.title),
+                    description: item.snippet.description,
+                    category: activeTab === 'All' ? 'General' : activeTab,
+                    url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
+                    thumbnail_url: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url
+                }));
+
+                localStorage.setItem(cacheKey, JSON.stringify(fetchedVideos));
+                localStorage.setItem(cacheTimeKey, Date.now().toString());
+                
+                setVideos(fetchedVideos);
+            } catch (error) {
+                console.warn("YouTube API fallback:", error);
+                const fallback = activeTab === 'All' ? YOUTUBE_RESOURCES : YOUTUBE_RESOURCES.filter(v => v.category === activeTab);
+                setVideos(fallback);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchVideos();
+    }, [activeTab]);
 
     const faqs = [
         {
@@ -109,39 +175,45 @@ const Help = () => {
                         </div>
 
                         {/* Video Grid */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {(activeTab === 'All' ? YOUTUBE_RESOURCES : YOUTUBE_RESOURCES.filter(v => v.category === activeTab)).map((video) => (
-                                <a 
-                                    key={video.id} 
-                                    href={video.url} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="group flex flex-col rounded-xl overflow-hidden border border-gray-100 hover:shadow-lg transition-all hover:-translate-y-1 bg-white cursor-pointer"
-                                >
-                                    <div className="relative aspect-video w-full bg-gray-100 overflow-hidden border-b border-gray-100">
-                                        <img 
-                                            src={video.thumbnail_url} 
-                                            alt={video.title}
-                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                        />
-                                        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-                                            <PlayCircle className="w-12 h-12 text-white opacity-90 group-hover:scale-110 transition-transform shadow-sm rounded-full" />
+                        {isLoading ? (
+                            <div className="flex justify-center items-center py-12">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {videos.map((video) => (
+                                    <a 
+                                        key={video.id} 
+                                        href={video.url} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="group flex flex-col rounded-xl overflow-hidden border border-gray-100 hover:shadow-lg transition-all hover:-translate-y-1 bg-white cursor-pointer"
+                                    >
+                                        <div className="relative aspect-video w-full bg-gray-100 overflow-hidden border-b border-gray-100">
+                                            <img 
+                                                src={video.thumbnail_url} 
+                                                alt={video.title}
+                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                            />
+                                            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                                                <PlayCircle className="w-12 h-12 text-white opacity-90 group-hover:scale-110 transition-transform shadow-sm rounded-full" />
+                                            </div>
+                                            <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm text-white text-xs font-semibold px-2 py-1 rounded">
+                                                {video.category}
+                                            </div>
                                         </div>
-                                        <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm text-white text-xs font-semibold px-2 py-1 rounded">
-                                            {video.category}
+                                        <div className="p-4 flex-1 flex flex-col">
+                                            <h4 className="font-bold text-gray-900 line-clamp-2 leading-snug group-hover:text-emerald-700 transition-colors">
+                                                {video.title}
+                                            </h4>
+                                            <p className="text-xs text-gray-500 mt-2 line-clamp-2 mt-auto">
+                                                {video.description}
+                                            </p>
                                         </div>
-                                    </div>
-                                    <div className="p-4 flex-1 flex flex-col">
-                                        <h4 className="font-bold text-gray-900 line-clamp-2 leading-snug group-hover:text-emerald-700 transition-colors">
-                                            {video.title}
-                                        </h4>
-                                        <p className="text-xs text-gray-500 mt-2 line-clamp-2 mt-auto">
-                                            {video.description}
-                                        </p>
-                                    </div>
-                                </a>
-                            ))}
-                        </div>
+                                    </a>
+                                ))}
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
 
