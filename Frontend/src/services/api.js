@@ -7,14 +7,29 @@ const API_BASE_URL = API_CONFIG.BACKEND_URL;
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Helper to get data from storage or default
+// Safe helper to get data from storage or default
 const getStorage = (key, defaultData) => {
-  const stored = localStorage.getItem(key);
-  if (!stored) {
-    localStorage.setItem(key, JSON.stringify(defaultData));
+  try {
+    const stored = localStorage.getItem(key);
+    if (!stored) {
+      setStorage(key, defaultData);
+      return defaultData;
+    }
+    return JSON.parse(stored);
+  } catch (error) {
+    console.warn(`[Storage Error] Failed to read or parse '${key}':`, error);
     return defaultData;
   }
-  return JSON.parse(stored);
+};
+
+// Safe helper to set data and handle QuotaExceeded
+const setStorage = (key, data) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (error) {
+    console.warn(`[Storage Error] Failed to write '${key}'. Possible quota exceeded:`, error);
+    // If quota exceeded, we could trim the data, but for now we fail gracefully.
+  }
 };
 
 export const api = {
@@ -47,7 +62,7 @@ export const api = {
         ]
       };
       tickets.unshift(newTicket); // Add to beginning
-      localStorage.setItem('tickets', JSON.stringify(tickets));
+      setStorage('tickets', tickets);
       return { data: newTicket };
     }
   },

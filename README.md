@@ -71,9 +71,11 @@ HELPDESK.AI isn't just a simple client/server app; it's designed to support a mu
 
 <br/>
 
-## 🏗️ How It Works (Architecture)
+## 🏗️ As-Built Architecture & Documentation
 
-HELPDESK.AI utilizes a clean, decoupled architecture:
+HELPDESK.AI utilizes a clean, decoupled architecture built for production SaaS environments. 
+
+For a deep dive into the technical implementation, constraints, and state management rules, please refer to the official **[As-Built Architecture Document (docs/architecture.md)](./docs/architecture.md)**.
 
 ```mermaid
 graph LR
@@ -89,13 +91,22 @@ graph LR
     G -->|"Dashboard Data"| H["Admin/Agent Portal"]
 ```
 
+### 🛡️ Production Readiness (BMAD End-Game)
+
+In achieving a **Professional Edge** (Phase 1 & 2 of BMAD), the codebase has been hardened for production:
+- **SEO & Metadata Polish:** Full suite of OpenGraph, Twitter Cards, and canonical meta tags configured for optimal social sharing and search visibility.
+- **Adversarial Code Hardening:** Critical data flow through `localStorage` has been fortified with resilient try/catch barriers to prevent Quota Exceeded and JSON Parse breaks.
+- **As-Built Documentation Documentation:** Centralized architecture reference updated to reflect final state.
+- **Analytics Ready:** The frontend is configured for seamless plug-in of lightweight analytics tracking (Plausible/GA).
+- **Error Tracking Framework:** Pre-configured structural boundaries ready for seamless Sentry integration.
+
 ### The Stack
-*   **Frontend**: React 19, Vite, TailwindCSS
+*   **Frontend**: React 19, Vite, TailwindCSS (Hardened Storage)
 *   **Backend Interface**: FastAPI (Python)
 *   **AI/ML Core**: PyTorch, Hugging Face `transformers`
 *   **Database & Auth**: Supabase (PostgreSQL)
 
-<br/>
+<br>
 
 ## 🚀 Live Links & APIs
 
