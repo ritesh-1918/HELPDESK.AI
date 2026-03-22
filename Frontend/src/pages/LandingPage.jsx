@@ -154,7 +154,7 @@ export default function LandingPage() {
             icon: MessageSquare,
             visual: (
                 <div className="space-y-4">
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 max-w-[80%] float-left animate-in slide-in-from-left duration-500">
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 max-w-[100%] float-left animate-in slide-in-from-left duration-500">
                         <p className="text-sm text-blue-200 italic font-medium">"Hey support, the wifi in downstream lab 3 is acting up again. Can't connect. Need fixed ASAP!"</p>
                     </div>
                 </div>
@@ -162,7 +162,7 @@ export default function LandingPage() {
         },
         {
             num: '02',
-            title: 'Neural Analysis',
+            title: 'AI Analysis',
             label: 'The Brain',
             desc: 'AI parses intent, extracts entities (Lab 3), and detects urgency (ASAP) in milliseconds.',
             color: 'emerald',
@@ -272,11 +272,11 @@ export default function LandingPage() {
     };
 
     return (
-        <div className="min-h-screen bg-white font-sans text-slate-800">
+        <div className="min-h-screen pt-16 bg-white font-sans text-slate-800">
             {showDemo && <DemoModal onClose={() => setShowDemo(false)} />}
 
             {/* ==================== NAV ==================== */}
-            <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm">
+            <nav className="fixed top-0 left-0 right-0 z-50 bg-gray-900/30 backdrop-blur-md border-b-[0.5px] border-gray-100/50 shadow-sm">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-16">
                         {/* Logo */}
@@ -379,10 +379,6 @@ export default function LandingPage() {
                             <Play className="w-4 h-4 fill-gray-500" /> Watch a Demo
                         </button>
                     </div>
-
-                    <p className="text-xs text-gray-400 mb-16">
-                        Free forever · No credit card needed · Used by IT teams across India
-                    </p>
 
                     {/* BENTO VISUAL */}
                     <div className="relative max-w-6xl mx-auto">
@@ -723,7 +719,7 @@ export default function LandingPage() {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-12">
                         <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">Simple, Transparent Pricing</h2>
-                        <p className="text-gray-500 mb-8">All plans in Indian Rupees (₹) · No hidden fees · GST applicable</p>
+                        <p className="text-gray-500 mb-8">All plans in Indian Rupees (₹). GST applicable</p>
 
                         {/* Billing Toggle */}
                         <div className="inline-flex items-center gap-3 bg-white border border-gray-200 rounded-full px-2 py-2 shadow-sm">
@@ -783,13 +779,6 @@ export default function LandingPage() {
                             </div>
                         ))}
                     </div>
-
-                    {/* Trust Badges */}
-                    <div className="flex flex-wrap items-center justify-center gap-4 mt-12">
-                        {['🔒 256-bit Encryption', '🇮🇳 DPDP Act Compliant', '⚡ 99.9% Uptime SLA', '✅ No Credit Card Required'].map(badge => (
-                            <div key={badge} className="text-xs font-semibold text-gray-500 bg-white border border-gray-100 px-4 py-2 rounded-full shadow-sm">{badge}</div>
-                        ))}
-                    </div>
                 </div>
             </section>
 
@@ -804,7 +793,7 @@ export default function LandingPage() {
                         The Smartest IT Helpdesk for Indian Businesses
                     </h2>
                     <p className="text-white/70 text-lg mb-10 max-w-xl mx-auto">
-                        Start automating ticket triage today. No credit card required.
+                        Start automating ticket triage today
                     </p>
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                         <button
@@ -842,10 +831,12 @@ export default function LandingPage() {
                             <p className="text-white/50 text-sm leading-relaxed mb-4">
                                 AI-powered IT helpdesk automation for modern Indian enterprises.
                             </p>
-                            <p className="text-xs text-white/30 mb-5">Made with ❤️ in India 🇮🇳</p>
+                            <p className="text-xs text-white/70 mb-5">Made with ❤️ in India 🇮🇳</p>
                             <div className="flex gap-3">
                                 <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="w-9 h-9 bg-white/10 hover:bg-white/20 rounded-lg flex items-center justify-center transition-colors">
-                                    <Twitter className="w-4 h-4" />
+                                    <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white">
+                                        <path d="M18.244 2H21l-6.5 7.43L22 22h-6.828l-5.35-7.01L3.5 22H1l7.02-8.02L2 2h6.92l4.84 6.38L18.244 2z"/>
+                                    </svg>
                                 </a>
                                 <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="w-9 h-9 bg-white/10 hover:bg-white/20 rounded-lg flex items-center justify-center transition-colors">
                                     <Linkedin className="w-4 h-4" />

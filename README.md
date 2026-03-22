@@ -118,7 +118,7 @@ The Helpdesk.ai platform is composed of 30+ specialized page-modules for a compl
 ### 1. Environment Configuration
 Create a `.env` file in the `/Frontend` directory:
 ```bash
-VITE_SUPABASE_URL=your_project_url
+VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 VITE_SUPABASE_ANON_KEY=your_key
 VITE_STRIPE_GROWTH_LINK=your_stripe_link
 VITE_BACKEND_URL=http://localhost:8000

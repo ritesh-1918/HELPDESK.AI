@@ -6,7 +6,7 @@ const TEAM_MEMBERS = [
     // --- COORDINATION TEAM ---
     {
         name: "Duniya Vasa",
-        role: "Group Lead & Coordination Team Lead",
+        role: "Group Lead",
         team: "Coordination",
         image: "/team/duniya_vasa.jpg",
         linkedin: "https://www.linkedin.com/in/duniyavasa/",
@@ -14,7 +14,7 @@ const TEAM_MEMBERS = [
     },
     {
         name: "Sowjanya N",
-        role: "Coordination Team Member",
+        role: "Member",
         team: "Coordination",
         image: "/team/sowjanya_n.jpg",
         linkedin: "https://www.linkedin.com/in/sowjanya-n-962319354",

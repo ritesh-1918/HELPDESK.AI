@@ -90,3 +90,17 @@
     background: #cbd5e1;
   }
 }
+
+html{
+  overflow-y: scroll;
+  scrollbar-width: none; /* Firefox */
+}
+
+html::-webkit-scrollbar{
+  width: 0;
+  height: 0;
+}
+
+body{
+  overflow-x: hidden;
+}
