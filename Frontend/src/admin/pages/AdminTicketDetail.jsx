@@ -15,6 +15,8 @@ import { Select } from "../../components/ui/select";
 import TicketChat from "../../components/shared/TicketChat";
 import { formatTicketId } from "../../utils/format";
 import SLABadge from "../components/SLABadge";
+import { formatFullTimestamp, formatTimelineDate } from "../../utils/dateUtils";
+import TicketTimeline from "../../user/components/TicketTimeline"; // Reuse the 6-step timeline
 
 const AdminTicketDetail = () => {
     const { ticket_id } = useParams();
@@ -173,13 +175,10 @@ const AdminTicketDetail = () => {
 
     if (!ticket) return null;
 
-    const displayCategory = ticket.category || 'Uncategorized';
-    const displayPriority = ticket.priority || 'Medium';
-    const displaySubcategory = ticket.subcategory || 'General';
-    const displayStatus = ticket.status || 'Open';
-    const displaySummary = ticket.subject || 'No Summary';
-    const displayText = ticket.description || displaySummary;
     const confidence = ticket.metadata?.confidence || 0.85;
+    const entities = ticket.metadata?.entities || ticket.entities || [];
+    const displaySummary = ticket.summary || ticket.subject || 'No Summary';
+    const displayText = ticket.description || ticket.text || displaySummary;
 
     return (
         <div className="space-y-6 relative pb-20 animate-in fade-in duration-700">
@@ -210,9 +209,9 @@ const AdminTicketDetail = () => {
                 </div>
 
                 <div className="flex items-center gap-2 w-full md:w-auto">
-                    {!displayStatus?.toLowerCase()?.includes('resolv') ? (
+                    {!ticket.status?.toLowerCase()?.includes('resolv') ? (
                         <>
-                            {displayStatus?.toLowerCase() !== 'in progress' && (
+                            {ticket.status?.toLowerCase() !== 'in progress' && (
                                 <button
                                     onClick={handleAccept}
                                     disabled={!!isUpdating}
@@ -265,7 +264,7 @@ const AdminTicketDetail = () => {
                             <h3 className="text-sm font-black text-slate-900 uppercase italic tracking-tight flex items-center gap-2">
                                 <MessageSquare size={18} className="text-indigo-600" /> User Input Payload
                             </h3>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Captured {new Date(ticket.created_at).toLocaleTimeString()}</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">{formatFullTimestamp(ticket.created_at)}</span>
                         </div>
                         <div className="p-8 space-y-6">
                             <div className="p-8 bg-slate-900 text-white rounded-3xl border-l-[6px] border-indigo-600 shadow-2xl shadow-slate-900/10">
@@ -301,6 +300,15 @@ const AdminTicketDetail = () => {
                             currentUserRole="admin"
                         />
                     </div>
+
+                    {/* Integrated Journey Timeline */}
+                    <Card className="border-none shadow-xl shadow-slate-200/40 rounded-[2rem] overflow-hidden bg-white p-8">
+                        <div className="flex items-center gap-3 mb-6">
+                            <Clock size={18} className="text-emerald-500" />
+                            <h3 className="text-sm font-black text-slate-900 uppercase italic tracking-tight">Full Lifecycle Journey</h3>
+                        </div>
+                        <TicketTimeline ticket={ticket} />
+                    </Card>
                 </div>
 
                 {/* 2. AI Analytics Column (Right - 4 cols) */}
@@ -328,12 +336,12 @@ const AdminTicketDetail = () => {
                                 <div className="grid grid-cols-1 gap-3">
                                     <div className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl shadow-sm">
                                         <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><Briefcase size={12} className="text-indigo-400" /> Category</span>
-                                        <span className="text-[11px] font-black text-slate-900 uppercase italic">{displayCategory}</span>
+                                        <span className="text-[11px] font-black text-slate-900 uppercase italic">{ticket.category}</span>
                                     </div>
                                     <div className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl shadow-sm">
                                         <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><BarChart3 size={12} className="text-amber-400" /> Priority</span>
-                                        <span className={`text-[11px] font-black uppercase italic ${displayPriority?.toLowerCase() === 'high' ? 'text-red-600' : 'text-slate-900'}`}>
-                                            {displayPriority}
+                                        <span className={`text-[11px] font-black uppercase italic ${ticket.priority?.toLowerCase() === 'high' ? 'text-red-600' : 'text-slate-900'}`}>
+                                            {ticket.priority}
                                         </span>
                                     </div>
                                 </div>
@@ -354,13 +362,13 @@ const AdminTicketDetail = () => {
                             </div>
 
                             {/* Extracted Artifacts (Entities) */}
-                            {ticket.entities && ticket.entities.length > 0 && (
+                            {entities && entities.length > 0 && (
                                 <div className="space-y-3">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Identified Entities</label>
                                     <div className="flex flex-wrap gap-2">
-                                        {ticket.entities.map((e, idx) => (
+                                        {entities.map((e, idx) => (
                                             <span key={idx} className="px-3 py-1 bg-indigo-50 text-indigo-600 text-[9px] font-black uppercase tracking-widest rounded-lg border border-indigo-100">
-                                                {String(e)}
+                                                {typeof e === 'object' ? e.text : String(e)}
                                             </span>
                                         ))}
                                     </div>

@@ -604,9 +604,13 @@ async def analyze_ticket(request: TicketRequest):
     except Exception:
         pass
 
-    # Generate a concise 1-2 line summary for the UI
-    summary = text[:100] + "..." if len(text) > 100 else text
-    if gemini_analysis["image_description"]:
+    # Generate a concise 1-2 line summary for the UI using AI
+    if gemini_service:
+        summary = gemini_service.get_summary(text)
+    else:
+        summary = text[:100] + "..." if len(text) > 100 else text
+
+    if gemini_analysis.get("image_description") and "Image Report" not in summary:
         summary = f"Image Report: {summary}"
     
     return TicketResponse(

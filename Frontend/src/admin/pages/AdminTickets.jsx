@@ -24,6 +24,7 @@ import {
 import { Select } from "../../components/ui/select";
 import { formatTicketId } from "../../utils/format";
 import SLABadge from "../components/SLABadge";
+import { formatFullTimestamp, formatTimelineDate } from "../../utils/dateUtils";
 
 const AdminTickets = () => {
     const navigate = useNavigate();
@@ -175,10 +176,11 @@ const AdminTickets = () => {
     }, [tickets, searchQuery]);
 
     const getPriorityStyle = (priority) => {
-        const p = priority?.toLowerCase();
+        const p = String(priority || '').toLowerCase();
         if (p === 'high' || p === 'critical') return 'text-red-600 bg-red-50 border-red-100';
         if (p === 'medium') return 'text-amber-600 bg-amber-50 border-amber-100';
-        return 'text-emerald-600 bg-emerald-50 border-emerald-100';
+        if (p === 'low') return 'text-emerald-600 bg-emerald-50 border-emerald-100';
+        return 'text-slate-500 bg-slate-50 border-slate-100'; // Default
     };
 
     const getConfidenceColor = (conf) => {
@@ -311,15 +313,20 @@ const AdminTickets = () => {
                                     {/* Subject */}
                                     <td className="px-6 py-6">
                                         <div className="flex flex-col">
-                                            <span className="text-xs font-bold text-slate-700 truncate max-w-[200px]">{ticket.subject}</span>
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{ticket.category}</span>
+                                            <span className="text-xs font-bold text-slate-700 truncate max-w-[200px]" title={ticket.summary || ticket.subject}>
+                                                {ticket.summary || ticket.subject}
+                                            </span>
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                                {ticket.category} 
+                                                <span className="text-[9px] font-medium text-slate-300">• {formatTimelineDate(ticket.created_at)}</span>
+                                            </span>
                                         </div>
                                     </td>
 
                                     {/* Priority (Editable) */}
                                     <td className="px-6 py-6">
                                         <Select
-                                            value={ticket.priority}
+                                            value={String(ticket.priority || 'medium').toLowerCase()}
                                             onChange={(e) => handleUpdateTicket(ticket.id, { priority: e.target.value })}
                                             buttonClassName={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider border outline-none cursor-pointer transition-all flex items-center justify-between ${getPriorityStyle(ticket.priority)}`}
                                             options={priorities.filter(p => p !== 'All').map(p => ({ value: p.toLowerCase(), label: p }))}
@@ -341,7 +348,7 @@ const AdminTickets = () => {
                                         <div className="flex items-center gap-2">
                                             <div className={`w-1.5 h-1.5 rounded-full ${ticket.status?.toLowerCase() === 'resolved' || ticket.status?.toLowerCase() === 'closed' ? 'bg-emerald-400' : 'bg-amber-500 animate-pulse'}`}></div>
                                             <Select
-                                                value={ticket.status}
+                                                value={String(ticket.status || 'open').toLowerCase()}
                                                 onChange={(e) => handleUpdateTicket(ticket.id, { status: e.target.value })}
                                                 buttonClassName="bg-transparent text-[10px] font-black text-slate-600 uppercase tracking-widest outline-none cursor-pointer flex justify-between items-center w-full"
                                                 options={statuses.filter(s => s !== 'All').map(s => ({ value: s.toLowerCase(), label: s }))}
