@@ -156,20 +156,53 @@
 
         @media print {
             body {
-                background-color: #0A0F1C;
+                background-color: #0A0F1C !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
             }
 
             .page-wrapper {
-                padding: 0;
-                gap: 0;
+                padding: 0 !important;
+                gap: 0 !important;
+                display: block !important;
             }
 
             .slide-container {
-                box-shadow: none;
+                width: 1280px !important;
+                height: 720px !important;
+                box-shadow: none !important;
+                page-break-after: always !important;
+                position: relative !important;
+                top: 0 !important;
+                left: 0 !important;
+                transform: none !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+                display: block !important;
+            }
+            
+            /* Ensure animations are off for static PDF */
+            .slide-container > div {
+                opacity: 1 !important;
+                animation: none !important;
+                transform: none !important;
             }
 
             #presentation-hint {
                 display: none !important;
+            }
+            
+            /* Hide the interactive iframe and show a static link in PDF if needed, 
+               but actually keeping the iframe might work if the PDF printer captures it.
+               However, a direct link is safer. */
+            .pdf-link {
+                display: block !important;
+                position: absolute;
+                bottom: 20px;
+                right: 20px;
+                color: #10B981 !important;
+                font-weight: bold;
+                text-decoration: none;
             }
         }
     </style>
@@ -1277,75 +1310,57 @@
                 </p>
             </div>
         </div>
-        <!-- Slide 11: Live Platform Demo -->
+        <!-- Slide 11: AI Technical Diagnostics (Phase 2) -->
         <div class="slide-container slide-11">
             <!-- Background Decor -->
-            <div style="position: absolute; top: 0; right: 0; width: 400px; height: 400px; opacity: 0.05; z-index: 1;">
-                <svg fill="none" height="100%" viewBox="0 0 400 400" width="100%">
-                    <circle cx="200" cy="200" r="180" stroke="#10B981" stroke-dasharray="20 10" stroke-width="2">
-                    </circle>
-                    <path d="M200 20V380 M20 200H380" stroke="#10B981" stroke-width="1"></path>
+            <div style="position: absolute; top: 0; right: 0; width: 500px; height: 500px; opacity: 0.1; z-index: 1;">
+                <svg fill="none" height="100%" viewBox="0 0 500 500" width="100%">
+                    <rect height="300" stroke="#10B981" stroke-dasharray="20 10" stroke-width="1" width="300" x="100" y="100"></rect>
+                    <path d="M100 250H400 M250 100V400" stroke="#10B981" stroke-width="0.5"></path>
                 </svg>
             </div>
+            
             <!-- Slide Title -->
-            <div
-                style="position: absolute; top: 30px; left: 80px; width: 1120px; height: 80px; z-index: 10; text-align: center;">
-                <p style="margin: 0; font-size: 48px; font-weight: 700; color: #FFFFFF; line-height: 1.1;">
-                    Live Platform Demo
-                </p>
+            <div style="position: absolute; top: 50px; left: 80px; width: 1120px; z-index: 10;">
+                <p style="margin: 0; font-size: 56px; font-weight: 700; color: #FFFFFF; line-height: 1.1;">AI Technical Diagnostics <span style="color: #10B981;">(Phase 2)</span></p>
+                <div style="width: 120px; height: 4px; background-color: #10B981; margin-top: 20px;"></div>
             </div>
 
-            <!-- Browser Mockup -->
-            <div
-                style="position: absolute; top: 130px; left: 240px; width: 800px; height: 400px; background-color: #111827; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); border: 1px solid #1F2937; z-index: 2; overflow: hidden;">
-                <!-- Browser Bar -->
-                <div
-                    style="height: 40px; background-color: #1F2937; display: flex; align-items: center; padding-left: 20px; border-bottom: 1px solid #374151;">
-                    <div
-                        style="width: 12px; height: 12px; background-color: #EF4444; border-radius: 50%; margin-right: 10px;">
-                    </div>
-                    <div
-                        style="width: 12px; height: 12px; background-color: #F59E0B; border-radius: 50%; margin-right: 10px;">
-                    </div>
-                    <div style="width: 12px; height: 12px; background-color: #10B981; border-radius: 50%;"></div>
-                </div>
-                <!-- Video Embed Container -->
-                <div style="width: 800px; height: 360px; position: relative; cursor: pointer; background-color: #000;"
-                     onclick="this.innerHTML='<iframe width=\'100%\' height=\'100%\' src=\'https://drive.google.com/file/d/1vNUE8wWm3n-XFw6k_3IM6SuRkHmJKVfF/preview\' frameborder=\'0\' allow=\'autoplay\' allowfullscreen></iframe>'">
-                    <img src="https://img.youtube.com/vi/Bj00LzeMylM/maxresdefault.jpg"
-                        style="width: 100%; height: 100%; object-fit: cover; opacity: 0.7;" alt="Video Thumbnail">
-                    <div
-                        style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 15px 30px; background-color: rgba(16, 185, 129, 0.9); border-radius: 50px; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4); border: 2px solid #FFFFFF;">
-                        <i class="fa-solid fa-play" style="color: #0A0F1C; font-size: 32px; margin-left: 5px;"></i>
-                        <span style="color: #0A0F1C; font-weight: 700; margin-left: 10px; font-size: 18px;">PLAY DEMO</span>
-                    </div>
-                    <!-- Fallback Link (Visible only if clicked with Ctrl or in print) -->
-                    <a href="https://drive.google.com/file/d/1vNUE8wWm3n-XFw6k_3IM6SuRkHmJKVfF/view?usp=sharing"
-                        target="_blank" style="position: absolute; bottom: 10px; right: 10px; color: white; font-size: 10px; opacity: 0.5; text-decoration: none;">Drive Link <i class="fa-solid fa-external-link"></i></a>
-                </div>
-            </div>
+            <style>
+                .slide-11 .diag-grid { position: absolute; top: 180px; left: 80px; width: 1120px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; z-index: 10; }
+                .slide-11 .diag-card { background: rgba(17, 24, 39, 0.8); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 20px; padding: 35px; backdrop-filter: blur(10px); }
+                .slide-11 .code-block { font-family: 'Roboto Mono', monospace; background: #000; padding: 20px; border-radius: 12px; color: #10B981; font-size: 14px; margin-top: 15px; border: 1px solid #1F2937; }
+                .slide-11 .signal-badge { background: rgba(16, 185, 129, 0.1); color: #10B981; padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+            </style>
 
-            <!-- Time Allocation -->
-            <div style="position: absolute; top: 560px; left: 0; width: 1280px; text-align: center; z-index: 10;">
-                <p style="margin: 0; font-size: 32px; font-weight: 700; color: #10B981;">5 Minutes</p>
-            </div>
+            <div class="diag-grid">
+                <!-- Advanced NER -->
+                <div class="diag-card">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                        <p style="margin: 0; font-size: 24px; font-weight: 700; color: #FFFFFF;">Deep Neural NER</p>
+                        <span class="signal-badge">Active Scan</span>
+                    </div>
+                    <p style="margin: 0; font-size: 18px; color: #94A3B8; line-height: 1.6;">AI-driven extraction of server-level technical entities including <strong style="color: #10B981;">SQL Clusters, Hostnames, and Performance Latency</strong>.</p>
+                    <div class="code-block">
+                        { <br />
+                        &nbsp;&nbsp;"label": "DATABASE",<br />
+                        &nbsp;&nbsp;"text": "SQL Cluster",<br />
+                        &nbsp;&nbsp;"confidence": 0.94<br />
+                        }
+                    </div>
+                </div>
 
-            <!-- Focus Items -->
-            <div
-                style="position: absolute; top: 640px; left: 0; width: 1280px; display: flex; justify-content: center; align-items: center; gap: 40px; z-index: 10;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <div style="width: 10px; height: 10px; background-color: #10B981; border-radius: 50%;"></div>
-                    <p style="margin: 0; font-size: 18px; font-weight: 500; color: #CBD5E1;">Chaos to Clarity Flow</p>
-                </div>
-                <div style="width: 1px; height: 30px; background-color: #334155;"></div>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <div style="width: 10px; height: 10px; background-color: #10B981; border-radius: 50%;"></div>
-                    <p style="margin: 0; font-size: 18px; font-weight: 500; color: #CBD5E1;">AI Visual Simulator</p>
-                </div>
-                <div style="width: 1px; height: 30px; background-color: #334155;"></div>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <div style="width: 10px; height: 10px; background-color: #10B981; border-radius: 50%;"></div>
-                    <p style="margin: 0; font-size: 18px; font-weight: 500; color: #CBD5E1;">4-Layer Authorization</p>
+                <!-- Environment Harvesting -->
+                <div class="diag-card">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                        <p style="margin: 0; font-size: 24px; font-weight: 700; color: #FFFFFF;">Environment Harvesting</p>
+                        <span class="signal-badge" style="background: rgba(6, 182, 212, 0.1); color: #06B6D4;">Auto-Capture</span>
+                    </div>
+                    <p style="margin: 0; font-size: 18px; color: #94A3B8; line-height: 1.6;">Zero-input capture of <strong style="color: #10B981;">User IP, Device Fingerprint, and Host-Origin</strong> for instant network troubleshooting.</p>
+                    <ul style="margin: 15px 0 0 0; color: #CBD5E1; font-size: 16px; line-height: 2;">
+                        <li><i class="fa-solid fa-shield-check" style="color: #10B981; margin-right: 10px;"></i> Hardened Technical Routing (>90% confidence)</li>
+                        <li><i class="fa-solid fa-shield-check" style="color: #10B981; margin-right: 10px;"></i> Direct-to-Specialist whitelisting</li>
+                    </ul>
                 </div>
             </div>
         </div>
@@ -1477,8 +1492,7 @@
                 <p class="ch-desc">Expanded dataset with <strong style="color: #10B981;">colloquial reports</strong> to
                     normalize mixed patterns.</p>
             </div>
-        </div>
-        <!-- Slide 13: Conclusion & Future Scope -->
+             <!-- Slide 13: Conclusion & Future Scope -->
         <div class="slide-container slide-13">
             <!-- Background Decor -->
             <div style="position: absolute; top: 0; right: 0; width: 400px; height: 300px; opacity: 0.05; z-index: 1;">
@@ -1584,12 +1598,74 @@
                     <p style="margin: 0 0 10px 0; font-size: 20px; font-weight: 700; color: #FFFFFF;">Mobile Application
                     </p>
                     <p style="margin: 0; font-size: 16px; font-weight: 300; color: #CBD5E1; line-height: 1.5;">A native
-                        companion app with push-notification SLA alerts for immediate response.</p>
+                    companion app with push-notification SLA alerts for immediate response.</p>
                 </div>
             </div>
         </div>
-        <!-- Slide 14: Thank You -->
+
+        <!-- Slide 14: Live Platform Demo -->
         <div class="slide-container slide-14">
+            <!-- Background Decor -->
+            <div style="position: absolute; top: -100px; left: -100px; width: 400px; height: 400px; opacity: 0.1; z-index: 1;">
+                <svg fill="none" height="100%" viewBox="0 0 400 400" width="100%">
+                    <circle cx="200" cy="200" r="180" stroke="#10B981" stroke-dasharray="20 10" stroke-width="1"></circle>
+                </svg>
+            </div>
+            
+            <!-- Slide Title -->
+            <div style="position: absolute; top: 40px; left: 0; width: 1280px; text-align: center; z-index: 10;">
+                <p style="margin: 0; font-size: 56px; font-weight: 700; color: #FFFFFF; letter-spacing: -1px;">Live Platform Demo</p>
+                <div style="width: 80px; height: 4px; background-color: #10B981; margin: 15px auto; border-radius: 2px;"></div>
+            </div>
+
+            <!-- Video Player Window (Big Screen) -->
+            <div style="position: absolute; top: 150px; left: 140px; width: 1000px; height: 420px; background-color: #111827; border-radius: 20px; border: 1px solid rgba(16, 185, 129, 0.2); overflow: hidden; z-index: 10; box-shadow: 0 40px 80px rgba(0,0,0,0.6);">
+                <!-- Mac-style window controls -->
+                <div style="height: 40px; background-color: #1F2937; display: flex; align-items: center; padding: 20px; gap: 8px; padding-left: 20px;">
+                    <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #FF5F56;"></div>
+                    <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #FFBD2E;"></div>
+                    <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #27C93F;"></div>
+                    <p style="margin: 0; font-size: 12px; color: #94A3B8; margin-left: auto; margin-right: 20px; font-weight: 500; letter-spacing: 1px;">DEMO_RECORDING_MASTER.MP4</p>
+                </div>
+                <!-- Video Content -->
+                <div style="width: 100%; height: 380px; position: relative; background-color: #000;">
+                    <iframe src="https://drive.google.com/file/d/1vNUE8wWm3n-XFw6k_3IM6SuRkHmJKVfF/preview" 
+                            style="width: 100%; height: 100%; border: none;" 
+                            allow="autoplay"></iframe>
+                    <!-- Overlay Play Hint (Visible only when not playing) -->
+                    <a href="https://drive.google.com/file/d/1vNUE8wWm3n-XFw6k_3IM6SuRkHmJKVfF/view?usp=drive_link" 
+                       target="_blank"
+                       style="position: absolute; bottom: 20px; right: 20px; background: rgba(16, 185, 129, 0.9); color: white; padding: 10px 15px; border-radius: 8px; font-size: 12px; font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); z-index: 20;">
+                        <i class="fa-solid fa-up-right-from-square"></i> Open in Drive
+                    </a>
+                </div>
+            </div>
+
+            <!-- Features Bar -->
+            <div style="position: absolute; bottom: 60px; left: 140px; width: 1000px; display: flex; justify-content: space-between; align-items: center; z-index: 10;">
+                <div style="display: flex; gap: 40px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span style="width: 8px; height: 8px; background-color: #10B981; border-radius: 50%;"></span>
+                        <p style="margin: 0; font-size: 18px; font-weight: 500; color: #FFFFFF;">Chaos to Clarity Flow</p>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px; padding-left: 20px; border-left: 1px solid rgba(255,255,255,0.1);">
+                        <span style="width: 8px; height: 8px; background-color: #10B981; border-radius: 50%;"></span>
+                        <p style="margin: 0; font-size: 18px; font-weight: 500; color: #FFFFFF;">AI Visual Simulator</p>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px; padding-left: 20px; border-left: 1px solid rgba(255,255,255,0.1);">
+                        <span style="width: 8px; height: 8px; background-color: #10B981; border-radius: 50%;"></span>
+                        <p style="margin: 0; font-size: 18px; font-weight: 500; color: #FFFFFF;">4-Layer Authorization</p>
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <p style="margin: 0; font-size: 32px; font-weight: 700; color: #10B981; line-height: 1;">5 Minutes</p>
+                    <p style="margin: 0; font-size: 14px; font-weight: 500; color: #94A3B8; text-transform: uppercase; letter-spacing: 2px;">Recording Duration</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 15: Thank You -->
+        <div class="slide-container slide-15">
             <!-- Background Decor -->
             <div style="position: absolute; top: 0; left: 0; width: 300px; height: 300px; opacity: 0.05; z-index: 1;">
                 <svg fill="none" height="100%" viewBox="0 0 300 300" width="100%">
