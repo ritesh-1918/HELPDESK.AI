@@ -1,0 +1,3253 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HELPDESK.AI Presentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            overflow-x: hidden;
+        }
+
+        .page-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 40px;
+            padding: 40px 0;
+            width: 100%;
+        }
+
+        .slide-wrapper {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            overflow: hidden;
+            transition: height 0.3s ease;
+        }
+
+        .slide-container {
+            position: relative;
+            width: 1280px;
+            height: 720px;
+            overflow: hidden;
+            background-color: #101827;
+            font-family: 'Inter', sans-serif;
+            color: white;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            page-break-after: always;
+            flex-shrink: 0;
+            transform-origin: top center;
+            transition: transform 0.3s ease;
+        }
+
+        /* Presentation Mode FAB */
+        #mobile-toggle {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: #10B981;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4);
+            cursor: pointer;
+            z-index: 9999;
+            border: none;
+            transition: all 0.3s ease;
+        }
+
+        #mobile-toggle:hover {
+            transform: scale(1.1);
+            background: #059669;
+        }
+
+        #mobile-toggle i {
+            font-size: 24px;
+        }
+
+        body.presentation-mode #mobile-toggle {
+            opacity: 0.2;
+            bottom: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            background: #334155;
+        }
+
+        body.presentation-mode #mobile-toggle:hover {
+            opacity: 1;
+        }
+
+        /* Presentation Mode Styles & Advanced Animations */
+        body.presentation-mode {
+            display: block;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #000;
+        }
+
+        body.presentation-mode .page-wrapper {
+            overflow: hidden;
+            background-color: #000;
+            display: block;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        body.presentation-mode .slide-container {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(var(--rotation, 0deg)) scale(var(--scale-factor, 1));
+            transform-origin: center center;
+            width: 1280px;
+            height: 720px;
+            background: #0A0F1C;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+                opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+                visibility 0.6s;
+            z-index: 1;
+            box-shadow: 0 50px 100px rgba(0, 0, 0, 0.5);
+            will-change: transform, opacity;
+        }
+
+        body.presentation-mode .slide-container.active {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            z-index: 10;
+            transform: translate(-50%, -50%) rotate(var(--rotation, 0deg)) scale(var(--scale-factor, 1));
+        }
+
+        /* Directional States */
+        body.presentation-mode .slide-container.slide-next {
+            transform: translate(0%, -50%) scale(var(--scale-factor, 1));
+            /* Start from Right */
+            opacity: 0;
+        }
+
+        body.presentation-mode .slide-container.slide-prev {
+            transform: translate(-100%, -50%) scale(var(--scale-factor, 1));
+            /* Start from Left */
+            opacity: 0;
+        }
+
+        body.presentation-mode .slide-container.exit-left {
+            transform: translate(-100%, -50%) scale(0.9);
+            opacity: 0;
+            filter: blur(10px);
+        }
+
+        body.presentation-mode .slide-container.exit-right {
+            transform: translate(0%, -50%) scale(0.9);
+            opacity: 0;
+            filter: blur(10px);
+        }
+
+        /* All child DIVs start invisible before staggering */
+        body.presentation-mode .slide-container>div {
+            opacity: 0;
+            animation-fill-mode: forwards;
+        }
+
+        /* Child 1: Background Decor fades gently */
+        body.presentation-mode .slide-container.active>div:nth-of-type(1) {
+            animation: fadeDecor 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        /* Child 2: Header Slides Down slightly delayed */
+        body.presentation-mode .slide-container.active>div:nth-of-type(2) {
+            animation: slideHeader 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: 0.1s;
+        }
+
+        /* Children 3+: Main Content block stagger upward beautifully */
+        body.presentation-mode .slide-container.active>div:nth-of-type(3) {
+            animation: morphUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: 0.2s;
+        }
+
+        body.presentation-mode .slide-container.active>div:nth-of-type(4) {
+            animation: morphUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: 0.3s;
+        }
+
+        body.presentation-mode .slide-container.active>div:nth-of-type(5) {
+            animation: morphUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: 0.4s;
+        }
+
+        body.presentation-mode .slide-container.active>div:nth-of-type(6) {
+            animation: morphUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: 0.5s;
+        }
+
+        body.presentation-mode .slide-container.active>div:nth-of-type(7) {
+            animation: morphUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: 0.6s;
+        }
+
+        body.presentation-mode .slide-container.active>div:nth-of-type(n+8) {
+            animation: morphUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: 0.7s;
+        }
+
+        /* Internal Staggering for Grids and Wrappers */
+        body.presentation-mode .slide-container.active .obj-card:nth-of-type(1) {
+            animation: morphUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: 0.2s;
+            opacity: 0;
+        }
+
+        body.presentation-mode .slide-container.active .obj-card:nth-of-type(2) {
+            animation: morphUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: 0.3s;
+            opacity: 0;
+        }
+
+        body.presentation-mode .slide-container.active .obj-card:nth-of-type(3) {
+            animation: morphUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: 0.4s;
+            opacity: 0;
+        }
+
+        body.presentation-mode .slide-container.active .obj-card:nth-of-type(4) {
+            animation: morphUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: 0.5s;
+            opacity: 0;
+        }
+
+        body.presentation-mode .slide-container.active .obj-card:nth-of-type(5) {
+            animation: morphUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: 0.6s;
+            opacity: 0;
+        }
+
+        body.presentation-mode .slide-container.active .dev-card:nth-of-type(1) {
+            animation: morphUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: 0.2s;
+            opacity: 0;
+        }
+
+        body.presentation-mode .slide-container.active .dev-card:nth-of-type(2) {
+            animation: morphUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: 0.4s;
+            opacity: 0;
+        }
+
+        body.presentation-mode .slide-container.active .dev-card:nth-of-type(3) {
+            animation: morphUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: 0.6s;
+            opacity: 0;
+        }
+
+        body.presentation-mode .slide-container.active .engine-card:nth-of-type(1) {
+            animation: morphUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: 0.2s;
+            opacity: 0;
+        }
+
+        body.presentation-mode .slide-container.active .engine-card:nth-of-type(2) {
+            animation: morphUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: 0.3s;
+            opacity: 0;
+        }
+
+        body.presentation-mode .slide-container.active .engine-card:nth-of-type(3) {
+            animation: morphUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: 0.4s;
+            opacity: 0;
+        }
+
+        body.presentation-mode .slide-container.active .engine-card:nth-of-type(4) {
+            animation: morphUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: 0.5s;
+            opacity: 0;
+        }
+
+        body.presentation-mode .slide-container.active .engine-card:nth-of-type(5) {
+            animation: morphUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: 0.6s;
+            opacity: 0;
+        }
+
+        /* Animation Keyframes */
+        @keyframes containerFade {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeDecor {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideHeader {
+            from {
+                opacity: 0;
+                transform: translateY(-40px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes morphUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Restore baseline for printing */
+        @media print {
+            body.presentation-mode .slide-container>div {
+                opacity: 1 !important;
+                animation: none !important;
+                transform: none !important;
+            }
+        }
+
+        #presentation-hint {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(16, 185, 129, 0.9);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-family: 'Space Grotesk', sans-serif;
+            z-index: 1000;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+
+        body.presentation-mode #presentation-hint {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        /* Slide 1 Specific Styling */
+        .slide-1 .title {
+            margin: 0;
+            font-size: 96px;
+            font-weight: 700;
+            color: #10B981;
+            text-align: center;
+            letter-spacing: -2px;
+            line-height: 1.1;
+        }
+
+        .slide-1 .subtitle {
+            margin: 0;
+            font-size: 32px;
+            font-weight: 400;
+            color: #FFFFFF;
+            text-align: center;
+            letter-spacing: 0.5px;
+            opacity: 0.9;
+        }
+
+        @media print {
+            body {
+                background-color: #0A0F1C;
+            }
+
+            .page-wrapper {
+                padding: 0;
+                gap: 0;
+            }
+
+            .slide-container {
+                box-shadow: none;
+            }
+
+            #presentation-hint {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body class="">
+    <div class="page-wrapper" id="master-container">
+        <div class="slide-wrapper">
+            <div class="slide-container slide-1">
+                <!-- Background Decor - Top Right Circuit -->
+                <div
+                    style="position: absolute; top: 0; right: 0; width: 400px; height: 400px; opacity: 0.1; z-index: 1;">
+                    <svg fill="none" height="100%" viewBox="0 0 400 400" width="100%">
+                        <path d="M400 0H200L200 50L150 50L150 150L250 150L250 100L400 100V0Z" fill="#10B981"></path>
+                        <circle cx="150" cy="150" fill="#10B981" r="10"></circle>
+                        <circle cx="200" cy="50" fill="#10B981" r="5"></circle>
+                    </svg>
+                </div>
+                <!-- Background Decor - Bottom Left Circuit -->
+                <div
+                    style="position: absolute; bottom: 0; left: 0; width: 400px; height: 300px; opacity: 0.05; z-index: 1;">
+                    <svg fill="none" height="100%" viewBox="0 0 400 300" width="100%">
+                        <path d="M0 300H150L150 250L100 250L100 150L50 150L50 300H0Z" fill="#10B981"></path>
+                        <circle cx="100" cy="150" fill="#10B981" r="8"></circle>
+                    </svg>
+                </div>
+                <!-- Center Glow Effect -->
+                <div
+                    style="position: absolute; top: 160px; left: 340px; width: 600px; height: 300px; z-index: 2; opacity: 0.2;">
+                    <svg height="100%" viewBox="0 0 600 300" width="100%">
+                        <defs>
+                            <radialgradient cx="50%" cy="50%" fx="50%" fy="50%" id="glow" r="50%">
+                                <stop offset="0%" stop-color="#10B981" stop-opacity="0.6"></stop>
+                                <stop offset="100%" stop-color="#0A0F1C" stop-opacity="0"></stop>
+                            </radialgradient>
+                        </defs>
+                        <ellipse cx="300" cy="150" fill="url(#glow)" rx="300" ry="150"></ellipse>
+                    </svg>
+                </div>
+                <!-- Main Title -->
+                <div
+                    style="position: absolute; top: 220px; left: 140px; width: 1000px; height: 120px; z-index: 10; display: flex; align-items: center; justify-content: center;">
+                    <p class="title">HELPDESK.AI</p>
+                </div>
+                <!-- Subtitle -->
+                <div
+                    style="position: absolute; top: 350px; left: 140px; width: 1000px; height: 60px; z-index: 10; display: flex; align-items: center; justify-content: center;">
+                    <p class="subtitle" style="font-size: 28px; letter-spacing: 0.5px;">AI-Powered Ticket Creation and
+                        Categorization from User Input</p>
+                </div>
+                <!-- Divider Line -->
+                <div
+                    style="position: absolute; top: 440px; left: 490px; width: 300px; height: 2px; background-color: #10B981; z-index: 5; opacity: 0.5;">
+                </div>
+                <!-- Bottom Metadata -->
+                <div
+                    style="position: absolute; top: 580px; left: 140px; width: 1000px; height: 100px; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                    <p
+                        style="margin: 0; font-size: 20px; font-weight: 500; color: #94A3B8; text-align: center; letter-spacing: 1px; text-transform: uppercase;">
+                        Infosys Springboard Virtual Internship 6.0 | <span style="color: #10B981;">Group 2</span>
+                    </p>
+                    <p
+                        style="margin: 10px 0 0 0; font-size: 18px; font-weight: 400; color: #64748B; text-align: center;">
+                        AI &amp; Machine Learning Track | March 2026
+                    </p>
+                </div>
+            </div>
+        </div>
+        <!-- Slide 2: Problem Statement -->
+        <div class="slide-wrapper">
+            <div class="slide-container slide-2">
+                <!-- Background Decor (subtle orbit lines) -->
+                <div
+                    style="position: absolute; top: -100px; right: -100px; width: 600px; height: 600px; opacity: 0.05; z-index: 1; pointer-events: none;">
+                    <svg fill="none" height="100%" viewBox="0 0 600 600" width="100%">
+                        <circle cx="300" cy="300" r="100" stroke="#10B981" stroke-width="1"></circle>
+                        <circle cx="300" cy="300" r="200" stroke="#10B981" stroke-dasharray="10 5" stroke-width="0.5">
+                        </circle>
+                        <circle cx="300" cy="300" r="280" stroke="#10B981" stroke-width="0.5"></circle>
+                    </svg>
+                </div>
+
+                <!-- Slide Title Section -->
+                <div style="position: absolute; top: 60px; left: 80px; width: 1120px; z-index: 10;">
+                    <p
+                        style="margin: 0; font-size: 56px; font-weight: 700; color: #FFFFFF; line-height: 1.1; letter-spacing: -1.5px;">
+                        Problem Statement</p>
+                    <div
+                        style="width: 120px; height: 6px; background: linear-gradient(to right, #10B981, transparent); border-radius: 3px; margin-top: 15px;">
+                    </div>
+                    <p
+                        style="margin: 15px 0 0 0; font-size: 20px; font-weight: 500; color: #64748B; text-transform: uppercase; letter-spacing: 2px;">
+                        The Human-Process Bottleneck in ITSM</p>
+                </div>
+
+                <style>
+                    .slide-2 .problem-grid {
+                        position: absolute;
+                        top: 210px;
+                        left: 80px;
+                        width: 1120px;
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 40px;
+                        z-index: 10;
+                    }
+
+                    .slide-2 .p-card {
+                        background: rgba(17, 24, 39, 0.4);
+                        border: 1px solid rgba(255, 255, 255, 0.05);
+                        border-radius: 20px;
+                        padding: 40px;
+                        box-sizing: border-box;
+                        backdrop-filter: blur(10px);
+                        position: relative;
+                        overflow: hidden;
+                    }
+
+                    .slide-2 .card-accent-g {
+                        border-top: 4px solid #10B981;
+                    }
+
+                    .slide-2 .card-accent-r {
+                        border-top: 4px solid #EF4444;
+                    }
+
+                    .slide-2 .card-hdr {
+                        display: flex;
+                        align-items: center;
+                        gap: 15px;
+                        margin-bottom: 30px;
+                    }
+
+                    .slide-2 .card-icon {
+                        width: 50px;
+                        height: 50px;
+                        border-radius: 12px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 24px;
+                    }
+
+                    .slide-2 .icon-g {
+                        background: rgba(16, 185, 129, 0.1);
+                        color: #10B981;
+                    }
+
+                    .slide-2 .icon-r {
+                        background: rgba(239, 68, 68, 0.1);
+                        color: #EF4444;
+                    }
+
+                    .slide-2 .card-title {
+                        margin: 0;
+                        font-size: 26px;
+                        font-weight: 700;
+                        color: #FFF;
+                    }
+
+                    .slide-2 .p-list {
+                        list-style: none;
+                        padding: 0;
+                        margin: 0;
+                    }
+
+                    .slide-2 .p-list li {
+                        font-size: 19px;
+                        color: #94A3B8;
+                        margin-bottom: 22px;
+                        line-height: 1.6;
+                        padding-left: 28px;
+                        position: relative;
+                    }
+
+                    .slide-2 .p-list li::before {
+                        content: "";
+                        position: absolute;
+                        left: 0;
+                        top: 12px;
+                        width: 8px;
+                        height: 8px;
+                        border-radius: 50%;
+                    }
+
+                    .slide-2 .bullet-g::before {
+                        background: #10B981;
+                        box-shadow: 0 0 10px #10B981;
+                    }
+
+                    .slide-2 .bullet-r::before {
+                        background: #EF4444;
+                        box-shadow: 0 0 10px #EF4444;
+                    }
+
+                    .slide-2 .ph {
+                        color: #FFF;
+                        font-weight: 700;
+                        background: rgba(16, 185, 129, 0.1);
+                        padding: 2px 6px;
+                        border-radius: 4px;
+                    }
+
+                    .slide-2 .ph-r {
+                        color: #FFF;
+                        font-weight: 700;
+                        background: rgba(239, 68, 68, 0.1);
+                        padding: 2px 6px;
+                        border-radius: 4px;
+                    }
+                </style>
+
+                <div class="problem-grid">
+                    <!-- Left: The Process Friction -->
+                    <div class="p-card card-accent-g">
+                        <div class="card-hdr">
+                            <div class="card-icon icon-g"><i class="fa-solid fa-hand-holding-hand"></i></div>
+                            <p class="card-title">Manual Intervention</p>
+                        </div>
+                        <ul class="p-list">
+                            <li class="bullet-g">Heavy reliance on human agents to <span class="ph">understand and
+                                    interpret</span> complex, unstructured user complaints.</li>
+                            <li class="bullet-g">Extensive manual effort required to <span class="ph">categorize
+                                    issues</span> into correct support domains and teams.</li>
+                            <li class="bullet-g">Subjective assignment of <span class="ph">priority levels</span>,
+                                leading to inconsistent and delayed routing.</li>
+                        </ul>
+                    </div>
+
+                    <!-- Right: The Downstream Crisis -->
+                    <div class="p-card card-accent-r">
+                        <div class="card-hdr">
+                            <div class="card-icon icon-r"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                            <p class="card-title">Operational Impact</p>
+                        </div>
+                        <ul class="p-list">
+                            <li class="bullet-r"><span class="ph-r">Significant Delays</span> in ticket resolution times
+                                and frequent breaches of agreed SLAs.</li>
+                            <li class="bullet-r">Critical <span class="ph-r">Human Errors</span> in classification
+                                resulting in misrouting and "ticket ping-pong."</li>
+                            <li class="bullet-r">Inability to <span class="ph-r">Scale Capacity</span> to meet growing
+                                enterprise support volumes efficiently.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Bottom Note -->
+                <div
+                    style="position: absolute; bottom: 50px; left: 80px; width: 1120px; text-align: center; opacity: 0.4;">
+                    <p
+                        style="margin: 0; font-size: 14px; font-weight: 600; color: #64748B; letter-spacing: 1px; text-transform: uppercase;">
+                        A paradigm shift is required to automate intelligence at the point of entry.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: Project Objectives -->
+        <div class="slide-wrapper">
+            <div class="slide-container slide-3">
+                <!-- Background Decoration -->
+                <div
+                    style="position: absolute; top: 0; right: 0; width: 400px; height: 400px; opacity: 0.05; z-index: 1;">
+                    <svg fill="none" height="100%" viewBox="0 0 400 400" width="100%">
+                        <circle cx="200" cy="200" r="150" stroke="#10B981" stroke-dasharray="10 10" stroke-width="2">
+                        </circle>
+                        <circle cx="200" cy="200" r="100" stroke="#10B981" stroke-width="1"></circle>
+                        <line stroke="#10B981" stroke-width="1" x1="200" x2="200" y1="50" y2="350"></line>
+                        <line stroke="#10B981" stroke-width="1" x1="50" x2="350" y1="200" y2="200"></line>
+                    </svg>
+                </div>
+                <!-- Slide Title -->
+                <div style="position: absolute; top: 55px; left: 80px; width: 1120px; height: 80px; z-index: 10;">
+                    <p style="margin: 0; font-size: 56px; font-weight: 700; color: #FFFFFF; line-height: 1.1;">
+                        Project Objectives
+                    </p>
+                </div>
+
+                <style>
+                    .slide-3 .obj-grid {
+                        position: absolute;
+                        top: 160px;
+                        left: 80px;
+                        width: 1120px;
+                        display: grid;
+                        grid-template-columns: repeat(3, 1fr);
+                        gap: 25px;
+                        z-index: 10;
+                    }
+
+                    .slide-3 .obj-card {
+                        background-color: #111827;
+                        border: 1px solid #1F2937;
+                        border-top: 4px solid #10B981;
+                        border-radius: 12px;
+                        padding: 25px;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 12px;
+                        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                        min-height: 200px;
+                    }
+
+                    .slide-3 .check-icon {
+                        width: 44px;
+                        height: 44px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        background-color: rgba(16, 185, 129, 0.1);
+                        border-radius: 10px;
+                        color: #10B981;
+                        font-size: 20px;
+                    }
+
+                    .slide-3 .obj-title {
+                        margin: 0;
+                        font-size: 19px;
+                        font-weight: 700;
+                        color: #FFFFFF;
+                        transition: color 0.3s;
+                    }
+
+                    .slide-3 .obj-text {
+                        margin: 0;
+                        font-size: 14.5px;
+                        line-height: 1.5;
+                        color: #CBD5E1;
+                        font-weight: 300;
+                    }
+
+                    .slide-3 .obj-card:hover {
+                        border-color: #10B981;
+                        transform: translateY(-5px);
+                        background-color: #1E293B;
+                        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    }
+
+                    .slide-3 .obj-card:hover .obj-title {
+                        color: #10B981;
+                    }
+                </style>
+
+                <!-- Objectives Grid -->
+                <div class="obj-grid">
+                    <!-- Obj 1 -->
+                    <div class="obj-card">
+                        <div class="check-icon"><i class="fa-solid fa-microchip"></i></div>
+                        <p class="obj-title">AI Ticket Automation</p>
+                        <p class="obj-text">Completely automate ticket creation and multi-label triage using advanced
+                            Deep Learning models.</p>
+                    </div>
+                    <!-- Obj 2 -->
+                    <div class="obj-card">
+                        <div class="check-icon"><i class="fa-solid fa-magnifying-glass-chart"></i></div>
+                        <p class="obj-title">Metadata Extraction</p>
+                        <p class="obj-text">Eliminate manual forms by dynamically extracting structured metadata via
+                            Named Entity Recognition.</p>
+                    </div>
+                    <!-- Obj 3 -->
+                    <div class="obj-card">
+                        <div class="check-icon"><i class="fa-solid fa-clone"></i></div>
+                        <p class="obj-title">Flood Prevention</p>
+                        <p class="obj-text">Automatically block identical or redundant IT incidents using semantic
+                            similarity vector checks.</p>
+                    </div>
+                    <!-- Obj 4 -->
+                    <div class="obj-card">
+                        <div class="check-icon"><i class="fa-solid fa-comments"></i></div>
+                        <p class="obj-title">L1 Self-Service</p>
+                        <p class="obj-text">Empower user resolution through a real-time conversational AI Chat interface
+                            resolving basic issues instantly.</p>
+                    </div>
+                    <!-- Obj 5 -->
+                    <div class="obj-card">
+                        <div class="check-icon"><i class="fa-solid fa-eye"></i></div>
+                        <p class="obj-title">Visionary OCR Analysis</p>
+                        <p class="obj-text">Leverage Tesseract and Gemini to pull technical data and error codes
+                            directly from user screenshots.</p>
+                    </div>
+                    <!-- Obj 6 -->
+                    <div class="obj-card">
+                        <div class="check-icon"><i class="fa-solid fa-server"></i></div>
+                        <p class="obj-title">Enterprise Scalability</p>
+                        <p class="obj-text">Deploy a robust, multi-tenant serverless architecture capable of handling
+                            high-volume operational loads.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Slide 4: System Architecture — 3 Layers -->
+        <div class="slide-wrapper">
+            <div class="slide-container slide-4">
+                <!-- Background Decor (subtle circuit lines) -->
+                <div
+                    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.03; z-index: 1; pointer-events: none;">
+                    <svg width="100%" height="100%" viewBox="0 0 1280 720" fill="none">
+                        <line x1="640" y1="0" x2="640" y2="720" stroke="#10B981" stroke-width="1" />
+                        <line x1="0" y1="240" x2="1280" y2="240" stroke="#10B981" stroke-width="1" />
+                        <line x1="0" y1="480" x2="1280" y2="480" stroke="#10B981" stroke-width="1" />
+                    </svg>
+                </div>
+
+                <!-- Slide Title -->
+                <div
+                    style="position: absolute; top: 32px; left: 80px; width: 1120px; z-index: 10; display: flex; align-items: baseline; gap: 18px;">
+                    <p style="margin: 0; font-size: 46px; font-weight: 700; color: #FFFFFF; line-height: 1.1;">System
+                        Architecture</p>
+                    <p
+                        style="margin: 0; font-size: 15px; font-weight: 500; color: #64748B; letter-spacing: 2px; text-transform: uppercase;">
+                        3-Layer Decoupled SaaS</p>
+                </div>
+
+                <style>
+                    .slide-4 .arch-wrap {
+                        position: absolute;
+                        top: 110px;
+                        left: 55px;
+                        width: 1170px;
+                        height: 576px;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 0;
+                        z-index: 10;
+                    }
+
+                    .slide-4 .arch-row {
+                        display: flex;
+                        align-items: stretch;
+                        gap: 0;
+                        flex: 1;
+                    }
+
+                    .slide-4 .arch-lbl {
+                        width: 52px;
+                        flex-shrink: 0;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                    }
+
+                    .slide-4 .arch-lbl .lnum {
+                        font-size: 10px;
+                        font-weight: 800;
+                        letter-spacing: 2px;
+                        text-transform: uppercase;
+                        writing-mode: vertical-lr;
+                        transform: rotate(180deg);
+                    }
+
+                    .slide-4 .arch-lbl .lvl {
+                        width: 2px;
+                        flex: 1;
+                        border-radius: 2px;
+                        opacity: 0.3;
+                    }
+
+                    .slide-4 .arch-panel {
+                        flex: 1;
+                        border-radius: 14px;
+                        border: 1px solid transparent;
+                        padding: 14px 20px;
+                        box-sizing: border-box;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        gap: 10px;
+                        position: relative;
+                        overflow: hidden;
+                        margin: 4px 0;
+                        transition: border-color 0.3s, box-shadow 0.3s;
+                    }
+
+                    .slide-4 .arch-panel:hover {
+                        box-shadow: 0 0 32px rgba(255, 255, 255, 0.04);
+                    }
+
+                    .slide-4 .ap-blue {
+                        background: linear-gradient(140deg, #060F24 0%, #0A1C3A 100%);
+                        border-color: #1A3360;
+                    }
+
+                    .slide-4 .ap-green {
+                        background: linear-gradient(140deg, #04100C 0%, #071A11 100%);
+                        border-color: #0D2E1C;
+                    }
+
+                    .slide-4 .ap-pur {
+                        background: linear-gradient(140deg, #0D0519 0%, #180629 100%);
+                        border-color: #280d48;
+                    }
+
+                    .slide-4 .ap-blue:hover {
+                        border-color: #3B82F6;
+                    }
+
+                    .slide-4 .ap-green:hover {
+                        border-color: #10B981;
+                    }
+
+                    .slide-4 .ap-pur:hover {
+                        border-color: #8B5CF6;
+                    }
+
+                    .slide-4 .ap-hdr {
+                        display: flex;
+                        align-items: center;
+                        gap: 10px;
+                    }
+
+                    .slide-4 .ap-icon {
+                        width: 42px;
+                        height: 42px;
+                        border-radius: 10px;
+                        flex-shrink: 0;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 20px;
+                    }
+
+                    .slide-4 .ic-b {
+                        background: rgba(59, 130, 246, 0.15);
+                        color: #60A5FA;
+                    }
+
+                    .slide-4 .ic-g {
+                        background: rgba(16, 185, 129, 0.15);
+                        color: #10B981;
+                    }
+
+                    .slide-4 .ic-p {
+                        background: rgba(139, 92, 246, 0.15);
+                        color: #A78BFA;
+                    }
+
+                    .slide-4 .ap-name {
+                        margin: 0;
+                        font-size: 19px;
+                        font-weight: 700;
+                        color: #FFF;
+                    }
+
+                    .slide-4 .ap-tech {
+                        margin: 0;
+                        font-size: 12.5px;
+                        font-weight: 500;
+                    }
+
+                    .slide-4 .tc-b {
+                        color: #93C5FD;
+                    }
+
+                    .slide-4 .tc-g {
+                        color: #6EE7B7;
+                    }
+
+                    .slide-4 .tc-p {
+                        color: #C4B5FD;
+                    }
+
+                    .slide-4 .ap-chips {
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 5px;
+                    }
+
+                    .slide-4 .ch {
+                        padding: 3px 10px;
+                        border-radius: 30px;
+                        font-size: 11.5px;
+                        font-weight: 600;
+                    }
+
+                    .slide-4 .cb {
+                        background: rgba(59, 130, 246, 0.1);
+                        color: #93C5FD;
+                        border: 1px solid rgba(59, 130, 246, 0.2);
+                    }
+
+                    .slide-4 .cg {
+                        background: rgba(16, 185, 129, 0.1);
+                        color: #6EE7B7;
+                        border: 1px solid rgba(16, 185, 129, 0.2);
+                    }
+
+                    .slide-4 .cp {
+                        background: rgba(139, 92, 246, 0.1);
+                        color: #C4B5FD;
+                        border: 1px solid rgba(139, 92, 246, 0.2);
+                    }
+
+                    .slide-4 .dbdg {
+                        position: absolute;
+                        top: 10px;
+                        right: 14px;
+                        padding: 2px 10px;
+                        border-radius: 30px;
+                        font-size: 10.5px;
+                        font-weight: 600;
+                    }
+
+                    .slide-4 .dbdg-b {
+                        background: rgba(59, 130, 246, 0.12);
+                        color: #93C5FD;
+                        border: 1px solid rgba(59, 130, 246, 0.25);
+                    }
+
+                    .slide-4 .dbdg-g {
+                        background: rgba(16, 185, 129, 0.12);
+                        color: #6EE7B7;
+                        border: 1px solid rgba(16, 185, 129, 0.25);
+                    }
+
+                    .slide-4 .dbdg-p {
+                        background: rgba(139, 92, 246, 0.12);
+                        color: #C4B5FD;
+                        border: 1px solid rgba(139, 92, 246, 0.25);
+                    }
+
+                    .slide-4 .conn {
+                        height: 26px;
+                        display: flex;
+                        align-items: center;
+                        padding-left: 52px;
+                        gap: 0;
+                    }
+
+                    .slide-4 .conn .cl {
+                        flex: 1;
+                        height: 1.5px;
+                        background: linear-gradient(to right, transparent, #10B981, transparent);
+                        opacity: 0.35;
+                        animation: connAnim 2.2s ease-in-out infinite;
+                    }
+
+                    .slide-4 .conn .ci {
+                        color: #10B981;
+                        font-size: 13px;
+                        opacity: 0.7;
+                        padding: 0 6px;
+                    }
+
+                    .slide-4 .conn .ct {
+                        font-size: 10.5px;
+                        color: #64748B;
+                        white-space: nowrap;
+                        padding: 0 10px;
+                    }
+
+                    @keyframes connAnim {
+
+                        0%,
+                        100% {
+                            opacity: .15
+                        }
+
+                        50% {
+                            opacity: .55
+                        }
+                    }
+                </style>
+
+                <div class="arch-wrap">
+
+                    <!-- LAYER 1 -->
+                    <div class="arch-row">
+                        <div class="arch-lbl">
+                            <div class="lvl" style="background:#3B82F6;"></div>
+                            <span class="lnum" style="color:#60A5FA;">L1</span>
+                            <div class="lvl" style="background:#3B82F6;"></div>
+                        </div>
+                        <div class="arch-panel ap-blue">
+                            <span class="dbdg dbdg-b">☁ Vercel Edge Network</span>
+                            <div class="ap-hdr">
+                                <div class="ap-icon ic-b"><i class="fa-solid fa-desktop"></i></div>
+                                <div>
+                                    <p class="ap-name">Presentation Layer</p>
+                                    <p class="ap-tech tc-b">React 19 &nbsp;·&nbsp; Vite &nbsp;·&nbsp; TailwindCSS
+                                        &nbsp;·&nbsp; Zustand &nbsp;·&nbsp; React Router v6</p>
+                                </div>
+                            </div>
+                            <div class="ap-chips">
+                                <span class="ch cb">AI-Powered Ticket Submit</span>
+                                <span class="ch cb">AI Processing Simulator</span>
+                                <span class="ch cb">Auto-Resolve Chat</span>
+                                <span class="ch cb">Admin Analytics Dashboard</span>
+                                <span class="ch cb">Master Admin Portal</span>
+                                <span class="ch cb">Voice Input</span>
+                                <span class="ch cb">Stripe Subscriptions</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CONNECTOR 1 → 2 -->
+                    <div class="conn">
+                        <div class="cl"></div>
+                        <i class="fa-solid fa-arrow-down ci"></i>
+                        <div class="cl"></div>
+                        <span class="ct">POST /ai/analyze_ticket &nbsp;·&nbsp; async JSON REST</span>
+                        <div class="cl"></div>
+                        <i class="fa-solid fa-arrow-down ci"></i>
+                        <div class="cl"></div>
+                    </div>
+
+                    <!-- LAYER 2 -->
+                    <div class="arch-row">
+                        <div class="arch-lbl">
+                            <div class="lvl" style="background:#10B981;"></div>
+                            <span class="lnum" style="color:#10B981;">L2</span>
+                            <div class="lvl" style="background:#10B981;"></div>
+                        </div>
+                        <div class="arch-panel ap-green">
+                            <span class="dbdg dbdg-g">☁ Hugging Face Spaces</span>
+                            <div class="ap-hdr">
+                                <div class="ap-icon ic-g"><i class="fa-solid fa-microchip"></i></div>
+                                <div>
+                                    <p class="ap-name">Intelligence &amp; API Layer</p>
+                                    <p class="ap-tech tc-g">FastAPI &nbsp;·&nbsp; Python 3.12 &nbsp;·&nbsp; PyTorch
+                                        &nbsp;·&nbsp; HuggingFace Transformers</p>
+                                </div>
+                            </div>
+                            <div class="ap-chips">
+                                <span class="ch cg">DistilBERT v3 Classifier</span>
+                                <span class="ch cg">NER Entity Harvesting</span>
+                                <span class="ch cg">Cosine Similarity Deduplication</span>
+                                <span class="ch cg">Tesseract OCR</span>
+                                <span class="ch cg">Gemini Reasoning</span>
+                                <span class="ch cg">&lt; 400ms Inference</span>
+                                <span class="ch cg">Adversarial Retraining</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CONNECTOR 2 → 3 -->
+                    <div class="conn">
+                        <div class="cl"></div>
+                        <i class="fa-solid fa-arrow-down ci"></i>
+                        <div class="cl"></div>
+                        <span class="ct">Supabase Client &nbsp;·&nbsp; JWT Bearer Token &nbsp;·&nbsp; RLS
+                            Policies</span>
+                        <div class="cl"></div>
+                        <i class="fa-solid fa-arrow-down ci"></i>
+                        <div class="cl"></div>
+                    </div>
+
+                    <!-- LAYER 3 -->
+                    <div class="arch-row">
+                        <div class="arch-lbl">
+                            <div class="lvl" style="background:#8B5CF6;"></div>
+                            <span class="lnum" style="color:#A78BFA;">L3</span>
+                            <div class="lvl" style="background:#8B5CF6;"></div>
+                        </div>
+                        <div class="arch-panel ap-pur">
+                            <span class="dbdg dbdg-p">☁ Supabase Cloud</span>
+                            <div class="ap-hdr">
+                                <div class="ap-icon ic-p"><i class="fa-solid fa-shield-halved"></i></div>
+                                <div>
+                                    <p class="ap-name">Data &amp; Auth Layer</p>
+                                    <p class="ap-tech tc-p">Supabase &nbsp;·&nbsp; PostgreSQL &nbsp;·&nbsp; JWT
+                                        &nbsp;·&nbsp; Row-Level Security (RLS)</p>
+                                </div>
+                            </div>
+                            <div class="ap-chips">
+                                <span class="ch cp">profiles table (RBAC)</span>
+                                <span class="ch cp">tickets table (JSONB metadata)</span>
+                                <span class="ch cp">Email + Magic Link Auth</span>
+                                <span class="ch cp">Multi-Tenant Isolation</span>
+                                <span class="ch cp">Real-Time Sync</span>
+                                <span class="ch cp">4-Layer Permission Matrix</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div><!-- end arch-wrap -->
+            </div>
+        </div><!-- end slide-4 -->
+        <!-- Slide 5: Dataset Overview -->
+        <div class="slide-wrapper">
+            <div class="slide-container slide-5">
+                <!-- Background Decor -->
+                <div
+                    style="position: absolute; top: 0; right: 0; width: 400px; height: 300px; opacity: 0.05; z-index: 1;">
+                    <svg fill="none" height="100%" viewBox="0 0 400 300" width="100%">
+                        <path d="M400 0H200V100H100V200H0" stroke="#10B981" stroke-dasharray="20 10" stroke-width="2">
+                        </path>
+                    </svg>
+                </div>
+
+                <!-- Slide Title & Main Metric -->
+                <div
+                    style="position: absolute; top: 40px; left: 80px; width: 1120px; z-index: 10; display: flex; justify-content: space-between; align-items: baseline;">
+                    <div>
+                        <p style="margin: 0; font-size: 52px; font-weight: 700; color: #FFFFFF; line-height: 1.1;">
+                            Dataset Overview</p>
+                        <div style="width: 100px; height: 4px; background: #10B981; margin-top: 10px;"></div>
+                    </div>
+                    <div style="text-align: right;">
+                        <p
+                            style="margin: 0; font-size: 16px; font-weight: 600; color: #10B981; text-transform: uppercase; letter-spacing: 2px;">
+                            Total Population</p>
+                        <p style="margin: 0; font-size: 42px; font-weight: 700; color: #FFFFFF;">19,008 <span
+                                style="font-size: 18px; color: #64748B;">Tickets</span></p>
+                    </div>
+                </div>
+
+                <style>
+                    .slide-5 .core-definitions {
+                        position: absolute;
+                        top: 160px;
+                        left: 80px;
+                        width: 1120px;
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 15px;
+                        z-index: 10;
+                    }
+
+                    .slide-5 .def-box {
+                        background: rgba(30, 41, 59, 0.4);
+                        border: 1px solid rgba(255, 255, 255, 0.05);
+                        padding: 15px 20px;
+                        border-radius: 12px;
+                        display: flex;
+                        align-items: center;
+                        gap: 15px;
+                    }
+
+                    .slide-5 .def-tag {
+                        font-weight: 700;
+                        color: #10B981;
+                        font-size: 16px;
+                        min-width: 90px;
+                    }
+
+                    .slide-5 .def-text {
+                        color: #94A3B8;
+                        font-size: 14px;
+                        line-height: 1.4;
+                        margin: 0;
+                    }
+
+                    .slide-5 .chart-row {
+                        position: absolute;
+                        top: 350px;
+                        left: 80px;
+                        width: 1120px;
+                        display: grid;
+                        grid-template-columns: 1fr 1.5fr 1fr;
+                        gap: 20px;
+                        z-index: 10;
+                        align-items: stretch;
+                        height: 300px;
+                    }
+
+                    .slide-5 .chart-container {
+                        background: rgba(15, 23, 42, 0.6);
+                        border-radius: 16px;
+                        padding: 15px;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        text-align: center;
+                        overflow: hidden;
+                        position: relative;
+                    }
+
+                    .slide-5 .chart-container p {
+                        margin: 0 0 10px 0;
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: #CBD5E1;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                        flex-shrink: 0;
+                    }
+
+                    .slide-5 .canvas-wrapper {
+                        position: relative;
+                        width: 100%;
+                        flex-grow: 1;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        min-height: 0;
+                    }
+                </style>
+
+                <!-- Definitions -->
+                <div class="core-definitions">
+                    <div class="def-box">
+                        <span class="def-tag">ACCESS</span>
+                        <p class="def-text">Identity & permissions focus (MFA, Password Resets, Role Changes).</p>
+                    </div>
+                    <div class="def-box">
+                        <span class="def-tag">HARDWARE</span>
+                        <p class="def-text">Physical equipment issues (Battery, Monitor, Printers).</p>
+                    </div>
+                    <div class="def-box">
+                        <span class="def-tag">NETWORK</span>
+                        <p class="def-text">Connectivity and remote access (VPN, DNS, WiFi).</p>
+                    </div>
+                    <div class="def-box">
+                        <span class="def-tag">SOFTWARE</span>
+                        <p class="def-text">Application-level errors, installations, and license issues.</p>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="chart-row">
+                    <!-- Donut: Category -->
+                    <div class="chart-container">
+                        <p>Category Distribution</p>
+                        <div class="canvas-wrapper"><canvas id="catChart"></canvas></div>
+                    </div>
+                    <!-- Bar: Priorities -->
+                    <div class="chart-container">
+                        <p>Distribution of Ticket Priorities</p>
+                        <div class="canvas-wrapper"><canvas id="prioChart"></canvas></div>
+                    </div>
+                    <!-- Pie: Auto-Resolve -->
+                    <div class="chart-container">
+                        <p>Auto-Resolved Tickets</p>
+                        <div class="canvas-wrapper"><canvas id="resolveChart"></canvas></div>
+                    </div>
+                </div>
+
+                <script>
+                    (function () {
+                        const setup = {
+                            font: { family: "'Space Grotesk', sans-serif", size: 11 },
+                            color: '#94A3B8'
+                        };
+
+                        // Category Donut
+                        new Chart(document.getElementById('catChart'), {
+                            type: 'doughnut',
+                            data: {
+                                labels: ['Software', 'Access', 'Network', 'Hardware'],
+                                datasets: [{
+                                    data: [29.2, 25.5, 25.3, 20.0],
+                                    backgroundColor: ['#10B981', '#059669', '#34D399', '#6EE7B7'],
+                                    borderWidth: 0,
+                                    hoverOffset: 8
+                                }]
+                            },
+                            options: {
+                                responsive: true, maintainAspectRatio: false,
+                                plugins: { legend: { position: 'bottom', labels: { color: setup.color, font: setup.font, usePointStyle: true, padding: 12 } } },
+                                cutout: '65%'
+                            }
+                        });
+
+                        // Priority Bar
+                        new Chart(document.getElementById('prioChart'), {
+                            type: 'bar',
+                            data: {
+                                labels: ['Critical', 'Medium', 'Low', 'High'],
+                                datasets: [{
+                                    data: [5500, 5300, 4000, 4000],
+                                    backgroundColor: ['#047857', '#059669', '#10B981', '#34D399'],
+                                    borderRadius: 6
+                                }]
+                            },
+                            options: {
+                                responsive: true, maintainAspectRatio: false,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: setup.color, font: setup.font } },
+                                    x: { grid: { display: false }, ticks: { color: setup.color, font: setup.font } }
+                                }
+                            }
+                        });
+
+                        // Resolve Pie
+                        new Chart(document.getElementById('resolveChart'), {
+                            type: 'pie',
+                            data: {
+                                labels: ['False', 'True'],
+                                datasets: [{
+                                    data: [64.5, 35.5],
+                                    backgroundColor: ['#065F46', '#10B981'],
+                                    borderWidth: 0
+                                }]
+                            },
+                            options: {
+                                responsive: true, maintainAspectRatio: false,
+                                plugins: { legend: { position: 'bottom', labels: { color: setup.color, font: setup.font, usePointStyle: true, padding: 12 } } }
+                            }
+                        });
+                    })();
+                </script>
+            </div>
+        </div>
+
+        <!-- Slide 6: Data Preprocessing & Pipeline Refined -->
+        <div class="slide-wrapper">
+            <div class="slide-container slide-6">
+                <!-- Background Decor -->
+                <div
+                    style="position: absolute; top: -50px; right: -50px; width: 400px; height: 400px; opacity: 0.05; z-index: 1;">
+                    <svg fill="none" height="100%" viewBox="0 0 400 400" width="100%">
+                        <path d="M0 400 L400 0 L400 400 Z" fill="url(#hexRefined)"></path>
+                        <defs>
+                            <linearGradient id="hexRefined" x1="0%" y1="100%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#10B981" />
+                                <stop offset="100%" stop-color="#0A0F1C" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+
+                <!-- Slide Title -->
+                <div style="position: absolute; top: 45px; left: 80px; width: 1120px; z-index: 10;">
+                    <p style="margin: 0; font-size: 48px; font-weight: 700; color: #FFFFFF; line-height: 1.1;">Data
+                        Preprocessing & Pipeline</p>
+                    <div style="width: 80px; height: 4px; background: #10B981; margin-top: 15px; border-radius: 2px;">
+                    </div>
+                </div>
+
+                <style>
+                    .slide-6 .main-pipeline {
+                        position: absolute;
+                        top: 140px;
+                        left: 80px;
+                        width: 1120px;
+                        display: grid;
+                        grid-template-columns: 1.1fr 0.9fr;
+                        gap: 40px;
+                        z-index: 10;
+                        align-items: stretch;
+                        height: 560px;
+                    }
+
+                    .slide-6 .step-stack {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 12px;
+                    }
+
+                    .slide-6 .step-card {
+                        display: flex;
+                        align-items: center;
+                        gap: 20px;
+                        background: rgba(30, 41, 59, 0.4);
+                        padding: 15px 20px;
+                        border-radius: 12px;
+                        border-left: 4px solid #10B981;
+                        transition: transform 0.2s;
+                    }
+
+                    .slide-6 .step-card:hover {
+                        transform: translateX(8px);
+                        background: rgba(30, 41, 59, 0.6);
+                    }
+
+                    .slide-6 .sc-num {
+                        width: 32px;
+                        height: 32px;
+                        border-radius: 8px;
+                        background: #10B981;
+                        color: #FFF;
+                        display: grid;
+                        place-items: center;
+                        font-weight: 700;
+                        font-size: 14px;
+                        flex-shrink: 0;
+                    }
+
+                    .slide-6 .sc-info {
+                        flex-grow: 1;
+                    }
+
+                    .slide-6 .sc-title {
+                        margin: 0;
+                        font-size: 18px;
+                        font-weight: 700;
+                        color: #FFF;
+                    }
+
+                    .slide-6 .sc-desc {
+                        margin: 2px 0 0 0;
+                        font-size: 14px;
+                        color: #94A3B8;
+                    }
+
+                    .slide-6 .code-view {
+                        background: #0F172A;
+                        border-radius: 16px;
+                        padding: 30px;
+                        border: 1px solid rgba(255, 255, 255, 0.05);
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        position: relative;
+                        overflow: hidden;
+                    }
+
+                    .slide-6 .cv-hdr {
+                        margin: 0 0 20px 0;
+                        font-size: 12px;
+                        font-weight: 700;
+                        color: #64748B;
+                        text-transform: uppercase;
+                        letter-spacing: 2px;
+                    }
+
+                    .slide-6 .cv-line {
+                        margin: 0;
+                        font-family: 'Courier New', monospace;
+                        font-size: 14px;
+                        color: #A7F3D0;
+                        line-height: 1.8;
+                    }
+
+                    .slide-6 .cv-comment {
+                        color: #576b81;
+                        font-style: italic;
+                    }
+
+                    .slide-6 .cv-pill {
+                        display: inline-block;
+                        padding: 2px 8px;
+                        border-radius: 4px;
+                        font-size: 11px;
+                        font-weight: 700;
+                        margin-left: 8px;
+                    }
+                </style>
+
+                <div class="main-pipeline">
+                    <!-- Left: 6 Simple Steps -->
+                    <div class="step-stack">
+                        <div class="step-card">
+                            <div class="sc-num">01</div>
+                            <div class="sc-info">
+                                <p class="sc-title">Data Deduplication</p>
+                                <p class="sc-desc">Removing 386 duplicate support tickets for evaluation integrity.</p>
+                            </div>
+                        </div>
+                        <div class="step-card">
+                            <div class="sc-num">02</div>
+                            <div class="sc-info">
+                                <p class="sc-title">Noise Reduction</p>
+                                <p class="sc-desc">Cleaning IT slang and standardizing mixed-case inputs.</p>
+                            </div>
+                        </div>
+                        <div class="step-card" style="border-color: #06B6D4;">
+                            <div class="sc-num" style="background: #06B6D4;">03</div>
+                            <div class="sc-info">
+                                <p class="sc-title">BIO Tag Alignment</p>
+                                <p class="sc-desc">Mapping word-level NER tags to DistilBERT subword offsets.</p>
+                            </div>
+                        </div>
+                        <div class="step-card">
+                            <div class="sc-num">04</div>
+                            <div class="sc-info">
+                                <p class="sc-title">Label Multi-Mapping</p>
+                                <p class="sc-desc">Encoding Category, Sub-Category, and Priority labels to unique IDs.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="step-card">
+                            <div class="sc-num">05</div>
+                            <div class="sc-info">
+                                <p class="sc-title">Stratified 80/20 Split</p>
+                                <p class="sc-desc">Balanced training/test sets locked by label distribution.</p>
+                            </div>
+                        </div>
+                        <div class="step-card">
+                            <div class="sc-num">06</div>
+                            <div class="sc-info">
+                                <p class="sc-title">Tensor Conversion</p>
+                                <p class="sc-desc">Input formatting into PyTorch Tensors for GPU fine-tuning.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Transformation View -->
+                    <div class="code-view">
+                        <p class="cv-hdr">Output Representation View</p>
+
+                        <p class="cv-line"><span class="cv-comment">// Original Input</span></p>
+                        <p class="cv-line" style="color: #FFF;">"wifi is entirely dead in conference room B"</p>
+
+                        <div style="height: 1px; background: rgba(255,255,255,0.05); margin: 20px 0;"></div>
+
+                        <p class="cv-line"><span class="cv-comment">// Tokenized State</span></p>
+                        <p class="cv-line">input_ids: [101, 7523, 2003, ... 3154, 102]</p>
+                        <p class="cv-line">attention_mask: [1, 1, 1, ... 1, 1]</p>
+
+                        <div style="height: 1px; background: rgba(255,255,255,0.05); margin: 20px 0;"></div>
+
+                        <p class="cv-line"><span class="cv-comment">// Resulting Labels</span></p>
+                        <p class="cv-line">label_id: 8 <span class="cv-pill"
+                                style="background: rgba(16, 185, 129, 0.1); color: #10B981;">NETWORK | WIFI</span></p>
+                        <p class="cv-line">ner_labels: [-100, 3, 0, ... 7, -100] <span class="cv-pill"
+                                style="background: rgba(6, 182, 212, 0.1); color: #06B6D4;">BIO-TAGGED</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Slide 7: Model Development: Training & Evaluation -->
+        <div class="slide-wrapper">
+            <div class="slide-container slide-7">
+                <!-- Background Decor -->
+                <div
+                    style="position: absolute; top: 0; right: 0; width: 400px; height: 400px; opacity: 0.05; z-index: 1;">
+                    <svg fill="none" height="100%" viewBox="0 0 400 400" width="100%">
+                        <circle cx="200" cy="200" r="150" stroke="#F9AB00" stroke-dasharray="20 10" stroke-width="2">
+                        </circle>
+                        <path d="M200 50V350 M50 200H350" stroke="#F9AB00" stroke-width="1"></path>
+                        <defs>
+                            <radialGradient id="colabGlow" cx="50%" cy="50%" r="50%">
+                                <stop offset="0%" stop-color="#F9AB00" stop-opacity="0.2"></stop>
+                                <stop offset="100%" stop-color="#F9AB00" stop-opacity="0"></stop>
+                            </radialGradient>
+                        </defs>
+                        <circle cx="200" cy="200" r="100" fill="url(#colabGlow)"></circle>
+                    </svg>
+                </div>
+
+                <!-- Slide Title -->
+                <div style="position: absolute; top: 40px; left: 80px; width: 1120px; z-index: 10;">
+                    <p style="margin: 0; font-size: 44px; font-weight: 700; color: #FFFFFF; line-height: 1.1;">Model
+                        Development & Training Pipeline</p>
+                    <div style="width: 80px; height: 4px; background: #F9AB00; margin-top: 15px; border-radius: 2px;">
+                    </div>
+                </div>
+
+                <style>
+                    .slide-7 .dev-grid {
+                        position: absolute;
+                        top: 140px;
+                        left: 80px;
+                        width: 1120px;
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 30px;
+                        z-index: 10;
+                    }
+
+                    .slide-7 .panel {
+                        background: rgba(30, 41, 59, 0.5);
+                        border-radius: 16px;
+                        border: 1px solid rgba(255, 255, 255, 0.05);
+                        padding: 25px;
+                        box-sizing: border-box;
+                    }
+
+                    .slide-7 .panel-title {
+                        margin: 0 0 15px 0;
+                        font-size: 22px;
+                        font-weight: 600;
+                        color: #FFF;
+                        display: flex;
+                        align-items: center;
+                        gap: 10px;
+                    }
+
+                    .slide-7 .colab-banner {
+                        background: rgba(249, 171, 0, 0.1);
+                        border: 1px solid rgba(249, 171, 0, 0.3);
+                        border-radius: 12px;
+                        padding: 15px 20px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        margin-bottom: 25px;
+                    }
+
+                    .slide-7 .colab-btn {
+                        background: #F9AB00;
+                        color: #000;
+                        font-weight: 700;
+                        padding: 10px 20px;
+                        border-radius: 8px;
+                        text-decoration: none;
+                        font-size: 14px;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 8px;
+                    }
+
+                    .slide-7 .step-list {
+                        list-style: none;
+                        padding: 0;
+                        margin: 0;
+                    }
+
+                    .slide-7 .step-item {
+                        display: flex;
+                        align-items: flex-start;
+                        gap: 15px;
+                        margin-bottom: 20px;
+                    }
+
+                    .slide-7 .step-icon {
+                        width: 32px;
+                        height: 32px;
+                        background: rgba(16, 185, 129, 0.1);
+                        color: #10B981;
+                        border-radius: 8px;
+                        display: grid;
+                        place-items: center;
+                        font-size: 14px;
+                        flex-shrink: 0;
+                    }
+
+                    .slide-7 .step-text {
+                        color: #CBD5E1;
+                        font-size: 15px;
+                        line-height: 1.5;
+                        margin: 0;
+                    }
+
+                    .slide-7 .step-title {
+                        font-weight: 600;
+                        color: #FFF;
+                        display: block;
+                        margin-bottom: 2px;
+                    }
+
+                    .slide-7 .metric-box {
+                        background: rgba(15, 23, 42, 0.5);
+                        border: 1px solid rgba(255, 255, 255, 0.02);
+                        border-radius: 12px;
+                        padding: 20px;
+                    }
+
+                    .slide-7 .metric-title {
+                        font-size: 18px;
+                        font-weight: 600;
+                        color: #10B981;
+                        margin: 0 0 15px 0;
+                        border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+                        padding-bottom: 10px;
+                    }
+
+                    .slide-7 .metric-grid {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 15px;
+                    }
+
+                    .slide-7 .m-val {
+                        font-size: 28px;
+                        font-weight: 700;
+                        color: #FFF;
+                        margin: 0;
+                    }
+
+                    .slide-7 .m-lbl {
+                        font-size: 12px;
+                        color: #64748B;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                        margin: 5px 0 0 0;
+                    }
+                </style>
+
+                <!-- Colab Banner spans full width -- Top area -->
+                <div style="position: absolute; top: 130px; left: 80px; width: 1120px; z-index: 10;">
+                    <div class="colab-banner">
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/d/d0/Google_Colaboratory_SVG_Logo.svg"
+                                alt="Colab Logo" style="height: 32px;">
+                            <div>
+                                <p style="margin: 0; font-size: 18px; font-weight: 600; color: #FFF;">Trained on Google
+                                    Colab</p>
+                                <p style="margin: 2px 0 0 0; font-size: 14px; color: #94A3B8;">Full GPU-accelerated
+                                    distilbert-base-uncased fine-tuning</p>
+                            </div>
+                        </div>
+                        <a href="https://colab.research.google.com/drive/1ZOGsP3ZNqgoEelVTKpZo3FHHEEvKJc2i?usp=sharing"
+                            class="colab-btn" target="_blank">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Open Notebook
+                        </a>
+                    </div>
+                </div>
+
+                <div class="dev-grid" style="top: 230px;">
+                    <!-- Left: Training Methodology -->
+                    <div class="panel">
+                        <p class="panel-title"><i class="fa-solid fa-list-check" style="color: #3B82F6;"></i>
+                            Methodology & Execution</p>
+                        <ul class="step-list">
+                            <li class="step-item">
+                                <div class="step-icon"><i class="fa-solid fa-filter"></i></div>
+                                <p class="step-text"><span class="step-title">Strict Deduplication</span> Removed 386
+                                    absolute duplicates to prevent data leakage and ensure an honest, unbiased
+                                    evaluation.</p>
+                            </li>
+                            <li class="step-item">
+                                <div class="step-icon"><i class="fa-solid fa-layer-group"></i></div>
+                                <p class="step-text"><span class="step-title">Stratified Splitting</span> Performed an
+                                    80/20 train-test split locked by label_id for balanced category representation.</p>
+                            </li>
+                            <li class="step-item">
+                                <div class="step-icon"><i class="fa-solid fa-brain"></i></div>
+                                <p class="step-text"><span class="step-title">Baseline Selection</span> Deployed
+                                    <code>distilbert-base-uncased</code> for its exceptional speed-to-performance ratio
+                                    in dual classification networks.</p>
+                            </li>
+                            <li class="step-item">
+                                <div class="step-icon" style="background: rgba(249, 171, 0, 0.1); color: #F9AB00;"><i
+                                        class="fa-solid fa-bolt"></i></div>
+                                <p class="step-text"><span class="step-title">Fine-Tuning Architecture</span> Utilized
+                                    PyTorch and HuggingFace Trainer with AdamW optimizer, fp16 acceleration, and Epoch
+                                    logging.</p>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Right: Evaluation Metrics -->
+                    <div class="panel" style="display: flex; flex-direction: column; gap: 20px;">
+                        <p class="panel-title" style="margin: 0;"><i class="fa-solid fa-chart-line"
+                                style="color: #10B981;"></i> Final Evaluation Results</p>
+
+                        <!-- Classifier Metrics -->
+                        <div class="metric-box">
+                            <p class="metric-title">Text Classification Model</p>
+                            <div class="metric-grid">
+                                <div>
+                                    <p class="m-val">99.25%</p>
+                                    <p class="m-lbl">Accuracy</p>
+                                </div>
+                                <div>
+                                    <p class="m-val">99.26%</p>
+                                    <p class="m-lbl">Weighted F1</p>
+                                </div>
+                            </div>
+                            <p style="margin: 15px 0 0 0; font-size: 13px; color: #94A3B8;">Trained on 6,946
+                                deduplicated samples (Batch: 32, LR: 2e-5).</p>
+                        </div>
+
+                        <!-- NER Metrics -->
+                        <div class="metric-box" style="border-color: rgba(6, 182, 212, 0.3);">
+                            <p class="metric-title" style="color: #06B6D4; border-color: rgba(6, 182, 212, 0.2);">Named
+                                Entity Recognition (NER)</p>
+                            <div class="metric-grid">
+                                <div>
+                                    <p class="m-val">90.00%</p>
+                                    <p class="m-lbl">F1-Score</p>
+                                </div>
+                                <div>
+                                    <p class="m-val">92.31%</p>
+                                    <p class="m-lbl">Precision</p>
+                                </div>
+                            </div>
+                            <p style="margin: 15px 0 0 0; font-size: 13px; color: #94A3B8;">11 tag BIO scheme extraction
+                                (Batch: 16, LR: 5e-5).</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Slide 8: Named Entity Recognition (NER) -->
+        <div class="slide-wrapper">
+            <div class="slide-container slide-8">
+                <!-- Background Decor -->
+                <div
+                    style="position: absolute; top: 0; right: 0; width: 400px; height: 400px; opacity: 0.05; z-index: 1;">
+                    <svg fill="none" height="100%" viewBox="0 0 400 400" width="100%">
+                        <rect height="150" rx="20" stroke="#10B981" stroke-dasharray="10 10" stroke-width="2"
+                            width="150" x="200" y="50"></rect>
+                        <rect height="150" rx="20" stroke="#10B981" stroke-width="1" width="150" x="150" y="100"></rect>
+                        <circle cx="200" cy="200" fill="#10B981" r="5"></circle>
+                    </svg>
+                </div>
+                <!-- Slide Title -->
+                <div style="position: absolute; top: 40px; left: 80px; width: 1120px; height: 80px; z-index: 10;">
+                    <p style="margin: 0; font-size: 48px; font-weight: 700; color: #FFFFFF; line-height: 1.1;">
+                        Named Entity Recognition (NER)
+                    </p>
+                </div>
+
+                <style>
+                    .slide-8 .ner-section {
+                        display: flex;
+                        align-items: center;
+                        margin-bottom: 60px;
+                    }
+
+                    .slide-8 .icon-sq {
+                        width: 50px;
+                        height: 50px;
+                        background-color: rgba(16, 185, 129, 0.1);
+                        border-radius: 12px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        border: 1px solid #10B981;
+                        margin-right: 30px;
+                        flex-shrink: 0;
+                    }
+
+                    .slide-8 .icon-sq i {
+                        font-size: 24px;
+                        color: #10B981;
+                    }
+
+                    .slide-8 .sec-title {
+                        margin: 0;
+                        font-size: 24px;
+                        font-weight: 600;
+                        color: #10B981;
+                        margin-bottom: 8px;
+                    }
+
+                    .slide-8 .sec-desc {
+                        margin: 0;
+                        font-size: 20px;
+                        font-weight: 300;
+                        color: #CBD5E1;
+                        line-height: 1.5;
+                    }
+                </style>
+
+                <!-- Content Area -->
+                <div style="position: absolute; top: 180px; left: 80px; width: 560px; z-index: 10;">
+                    <div class="ner-section">
+                        <div class="icon-sq"><i class="fa-solid fa-brain"></i></div>
+                        <div>
+                            <p class="sec-title">The Approach</p>
+                            <p class="sec-desc">Transformer-based entity harvesting running in parallel with
+                                classification.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="ner-section" style="margin-top: -10px;">
+                        <div class="icon-sq"><i class="fa-solid fa-tags"></i></div>
+                        <div>
+                            <p class="sec-title">What it Extracts</p>
+                            <p class="sec-desc">Device Names, Hostnames, IP Addresses, OS Versions, Lab IDs, and Error
+                                Codes.</p>
+                        </div>
+                    </div>
+                    <div class="ner-section" style="margin-top: -10px;">
+                        <div class="icon-sq"><i class="fa-solid fa-bolt"></i></div>
+                        <div>
+                            <p class="sec-title">Why it Matters</p>
+                            <p class="sec-desc">Eliminates the need for users to manually fill out 10 different dropdown
+                                menus.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Terminal Window -->
+                <div
+                    style="position: absolute; top: 180px; left: 700px; width: 500px; height: 400px; background-color: #1E293B; border-radius: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); z-index: 2; border: 1px solid #334155; overflow: hidden; font-family: 'Roboto Mono', monospace;">
+                    <!-- Header -->
+                    <div
+                        style="height: 40px; background-color: #0F172A; display: flex; align-items: center; padding-left: 20px; border-bottom: 1px solid #334155;">
+                        <div
+                            style="width: 12px; height: 12px; background-color: #EF4444; border-radius: 50%; margin-right: 10px;">
+                        </div>
+                        <div
+                            style="width: 12px; height: 12px; background-color: #F59E0B; border-radius: 50%; margin-right: 10px;">
+                        </div>
+                        <div style="width: 12px; height: 12px; background-color: #10B981; border-radius: 50%;"></div>
+                    </div>
+                    <!-- Body -->
+                    <div style="padding: 30px; line-height: 1.8; font-size: 18px;">
+                        <p style="margin: 0; color: #64748B;">// Extracted Entities</p>
+                        <p style="margin: 0; color: #E2E8F0;">{</p>
+                        <p style="margin: 0; padding-left: 2ch;"><span style="color: #10B981;">"Device"</span>: <span
+                                style="color: #06B6D4;">"MacBook Pro M2"</span>,</p>
+                        <p style="margin: 0; padding-left: 2ch;"><span style="color: #10B981;">"IP"</span>: <span
+                                style="color: #06B6D4;">"192.168.1.14"</span>,</p>
+                        <p style="margin: 0; padding-left: 2ch;"><span style="color: #10B981;">"OS"</span>: <span
+                                style="color: #06B6D4;">"macOS 14.2"</span>,</p>
+                        <p style="margin: 0; padding-left: 2ch;"><span style="color: #10B981;">"Error"</span>: <span
+                                style="color: #06B6D4;">"ERR_CONNECTION..."</span></p>
+                        <p style="margin: 0; color: #E2E8F0;">}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Slide 9: High-Precision Tech Architecture -->
+        <div class="slide-wrapper">
+            <div class="slide-container slide-9">
+                <!-- Professional Blueprint Background -->
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0;">
+                    <svg width="100%" height="100%">
+                        <pattern id="blueprint-grid" x="0" y="0" width="80" height="80" patternUnits="userSpaceOnUse">
+                            <path d="M 80 0 L 0 0 0 80" fill="none" stroke="rgba(16, 185, 129, 0.03)"
+                                stroke-width="1" />
+                        </pattern>
+                        <rect width="100%" height="100%" fill="url(#blueprint-grid)" />
+                    </svg>
+                </div>
+
+                <!-- Slide Title -->
+                <div style="position: absolute; top: 40px; left: 80px; width: 1120px; z-index: 10;">
+                    <p style="margin: 0; font-size: 40px; font-weight: 700; color: #FFFFFF; line-height: 1.1;">USER
+                        Architecture Flow</p>
+                    <div style="width: 60px; height: 3px; background: #10B981; margin-top: 10px; border-radius: 2px;">
+                    </div>
+                    <p
+                        style="margin: 10px 0 0 0; color:#64748B; font-size: 14px; text-transform:uppercase; letter-spacing:2px; font-weight: 800;">
+                        How the system Works</p>
+                </div>
+
+                <style>
+                    .slide-9 .arch-layout {
+                        position: absolute;
+                        top: 140px;
+                        left: 0;
+                        width: 1280px;
+                        height: 520px;
+                        display: grid;
+                        grid-template-columns: repeat(12, 1fr);
+                        grid-template-rows: repeat(10, 1fr);
+                        z-index: 15;
+                        font-family: 'Inter', sans-serif;
+                    }
+
+                    .slide-9 .node {
+                        background: #111827;
+                        border: 1.5px solid #1F2937;
+                        border-radius: 8px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        padding: 8px 16px;
+                        color: white;
+                        font-size: 13px;
+                        font-weight: 700;
+                        z-index: 20;
+                        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+                        transition: border-color 0.3s;
+                        white-space: nowrap;
+                        width: 180px;
+                        margin: 0 auto;
+                    }
+
+                    .slide-9 .node:hover {
+                        border-color: #10B981;
+                    }
+
+                    .slide-9 .node i {
+                        margin-right: 12px;
+                        font-size: 16px;
+                        width: 20px;
+                        text-align: center;
+                    }
+
+                    /* Node Coordinates (Grid Placement) */
+                    .node-user {
+                        grid-column: 6 / 8;
+                        grid-row: 1;
+                        border-top: 3px solid #3B82F6;
+                    }
+
+                    .node-api {
+                        grid-column: 6 / 8;
+                        grid-row: 3;
+                        border-top: 3px solid #10B981;
+                    }
+
+                    .node-engine {
+                        grid-column: 6 / 8;
+                        grid-row: 5;
+                        border: 2px solid #F59E0B;
+                        height: 50px;
+                    }
+
+                    .node-distil {
+                        grid-column: 3 / 5;
+                        grid-row: 7;
+                        background: #0F172A;
+                    }
+
+                    .node-ner {
+                        grid-column: 6 / 8;
+                        grid-row: 7;
+                        background: #0F172A;
+                    }
+
+                    .node-cosine {
+                        grid-column: 9 / 11;
+                        grid-row: 7;
+                        background: #0F172A;
+                    }
+
+                    .node-db {
+                        grid-column: 6 / 8;
+                        grid-row: 9;
+                        border-top: 3px solid #3ECF8E;
+                    }
+
+                    .node-admin {
+                        grid-column: 6 / 8;
+                        grid-row: 10.5;
+                        font-size: 11px;
+                        opacity: 0.6;
+                        height: 30px;
+                    }
+
+                    /* Path Labels */
+                    .slide-9 .p-label {
+                        position: absolute;
+                        font-size: 9px;
+                        font-weight: 900;
+                        color: #475569;
+                        text-transform: uppercase;
+                        background: #0A0F1C;
+                        padding: 2px 6px;
+                        border: 1px solid #1E293B;
+                        border-radius: 4px;
+                        z-index: 25;
+                        transform: translate(-50%, -50%);
+                    }
+
+                    /* SVG Circuit Paths */
+                    .slide-9 .circuit-path {
+                        stroke: #1E293B;
+                        stroke-width: 2;
+                        fill: none;
+                    }
+
+                    .slide-9 .pulse-ball {
+                        fill: #10B981;
+                        filter: drop-shadow(0 0 5px #10B981);
+                    }
+
+                    @keyframes pulse-move {
+                        0% {
+                            offset-distance: 0%;
+                            opacity: 0;
+                        }
+
+                        10% {
+                            opacity: 1;
+                        }
+
+                        90% {
+                            opacity: 1;
+                        }
+
+                        100% {
+                            offset-distance: 100%;
+                            opacity: 0;
+                        }
+                    }
+
+                    .slide-9 .anim-pulse {
+                        animation: pulse-move 4s linear infinite;
+                    }
+                </style>
+
+                <!-- SVG Circuit Connections -->
+                <svg width="1280" height="600" style="position: absolute; top: 0; left: 0; z-index: 10;">
+                    <defs>
+                        <marker id="dot" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4">
+                            <circle cx="5" cy="5" r="3" fill="#334155" />
+                        </marker>
+                    </defs>
+
+                    <!-- 1. User to API (Direct Vertical) -->
+                    <path id="p1" class="circuit-path" d="M 640 185 L 640 240" marker-start="url(#dot)" />
+                    <circle r="4" class="anim-pulse pulse-ball">
+                        <animateMotion dur="3s" repeatCount="indefinite" path="M 640 185 L 640 240" />
+                    </circle>
+
+                    <!-- 2. API to Engine (Direct Vertical) -->
+                    <path id="p2" class="circuit-path" d="M 640 290 L 640 340" marker-start="url(#dot)" />
+                    <circle r="4" class="anim-pulse pulse-ball">
+                        <animateMotion dur="3s" begin="1s" repeatCount="indefinite" path="M 640 290 L 640 340" />
+                    </circle>
+
+                    <!-- 3. Engine to 3-Model Distribution (Orthogonal T-Junction) -->
+                    <path id="p3" class="circuit-path" d="M 640 400 L 640 430 H 375 V 450" marker-start="url(#dot)" />
+                    <path id="p4" class="circuit-path" d="M 640 400 L 640 450" />
+                    <path id="p5" class="circuit-path" d="M 640 400 L 640 430 H 905 V 450" />
+
+                    <!-- Pulses for Models -->
+                    <circle r="3" class="anim-pulse pulse-ball" style="animation-delay: 2s;">
+                        <animateMotion dur="4s" repeatCount="indefinite" path="M 640 400 L 640 430 H 375 V 450" />
+                    </circle>
+                    <circle r="3" class="anim-pulse pulse-ball" style="animation-delay: 2s;">
+                        <animateMotion dur="4s" repeatCount="indefinite" path="M 640 400 L 640 450" />
+                    </circle>
+                    <circle r="3" class="anim-pulse pulse-ball" style="animation-delay: 2s;">
+                        <animateMotion dur="4s" repeatCount="indefinite" path="M 640 400 L 640 430 H 905 V 450" />
+                    </circle>
+
+                    <!-- 4. Models to DB (Converging Orthogonal) -->
+                    <path id="p6" class="circuit-path" d="M 375 500 V 530 H 640 V 550" />
+                    <path id="p7" class="circuit-path" d="M 640 500 V 550" />
+                    <path id="p8" class="circuit-path" d="M 905 500 V 530 H 640 V 550" />
+
+                    <!-- 5. DB back to User (Large Professional Loop) -->
+                    <path id="pSync" class="circuit-path" d="M 550 580 H 120 V 165 H 550" stroke="#3B82F6"
+                        stroke-dasharray="5 5" opacity="0.3" />
+                    <circle r="4" fill="#3B82F6" class="anim-pulse" style="animation-duration: 6s;">
+                        <animateMotion dur="6s" repeatCount="indefinite" path="M 550 580 H 120 V 165 H 550" />
+                    </circle>
+                </svg>
+
+                <!-- Labels Placement -->
+                <div class="p-label" style="top: 215px; left: 640px;">Submits Issue</div>
+                <div class="p-label" style="top: 315px; left: 640px;">Neural Processing</div>
+                <div class="p-label" style="top: 430px; left: 375px;">Classification</div>
+                <div class="p-label" style="top: 430px; left: 905px;">Deduplication</div>
+                <div class="p-label" style="top: 370px; left: 120px; color:#3B82F6; border-color:#3B82F6;">Real-time
+                    State Sync</div>
+
+                <!-- Nodes Placement -->
+                <div class="arch-layout">
+                    <div class="node node-user"><i class="fa-solid fa-laptop" style="color:#3B82F6;"></i>User (Frontend)
+                    </div>
+                    <div class="node node-api"><i class="fa-solid fa-microchip" style="color:#10B981;"></i>FastAPI
+                        Backend</div>
+                    <div class="node node-engine"><i class="fa-solid fa-brain" style="color:#F59E0B;"></i>AI Inference
+                        Engine</div>
+
+                    <div class="node node-distil">DistilBERT v3</div>
+                    <div class="node node-ner">NER Extraction</div>
+                    <div class="node node-cosine">Cosine Similarity</div>
+
+                    <div class="node node-db"><i class="fa-solid fa-database" style="color:#3ECF8E;"></i>Supabase DB
+                    </div>
+                    <div class="node node-admin" style="grid-row: 10;"><i class="fa-solid fa-gauge-high"></i>Admin
+                        Portal</div>
+                </div>
+            </div>
+        </div>
+        <!-- Slide 10: Integration & Deployment Tech Stack -->
+        <div class="slide-wrapper">
+            <div class="slide-container slide-10">
+                <!-- Background Decor -->
+                <div
+                    style="position: absolute; top: 0; right: 0; width: 400px; height: 400px; opacity: 0.05; z-index: 1;">
+                    <svg fill="none" height="100%" viewBox="0 0 400 400" width="100%">
+                        <path d="M400 0L200 200V400H400V0Z" fill="#10B981"></path>
+                        <circle cx="200" cy="200" r="150" stroke="#10B981" stroke-dasharray="20 10" stroke-width="1">
+                        </circle>
+                    </svg>
+                </div>
+
+                <!-- Slide Title -->
+                <div style="position: absolute; top: 40px; left: 80px; width: 1120px; z-index: 10;">
+                    <p style="margin: 0; font-size: 48px; font-weight: 700; color: #FFFFFF; line-height: 1.1;">
+                        Integration &amp; Deployment</p>
+                    <div style="width: 80px; height: 4px; background: #10B981; margin-top: 15px; border-radius: 2px;">
+                    </div>
+                    <p
+                        style="margin: 10px 0 0 0; font-size: 16px; font-weight: 500; color: #94A3B8; text-transform: uppercase; letter-spacing: 2px;">
+                        Complete Technology Stack</p>
+                </div>
+
+                <style>
+                    .slide-10 .stack-grid {
+                        position: absolute;
+                        top: 180px;
+                        left: 80px;
+                        width: 1120px;
+                        height: 480px;
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        grid-template-rows: 1fr 1fr;
+                        gap: 30px;
+                        z-index: 10;
+                    }
+
+                    .slide-10 .stack-card {
+                        background: #111827;
+                        border: 1px solid #1F2937;
+                        border-radius: 16px;
+                        padding: 30px;
+                        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                        display: flex;
+                        flex-direction: column;
+                    }
+
+                    .slide-10 .card-header {
+                        display: flex;
+                        align-items: center;
+                        border-bottom: 1px solid #1E293B;
+                        padding-bottom: 15px;
+                        margin-bottom: 25px;
+                    }
+
+                    .slide-10 .header-icon {
+                        width: 36px;
+                        height: 36px;
+                        background: rgba(16, 185, 129, 0.1);
+                        color: #10B981;
+                        border-radius: 8px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 16px;
+                        margin-right: 15px;
+                    }
+
+                    .slide-10 .card-title {
+                        font-size: 22px;
+                        font-weight: 700;
+                        color: #F8FAFC;
+                        margin: 0;
+                    }
+
+                    .slide-10 .logo-row {
+                        display: flex;
+                        justify-content: space-around;
+                        align-items: center;
+                        flex-grow: 1;
+                    }
+
+                    .slide-10 .tech-item {
+                        position: relative;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        cursor: pointer;
+                        width: 100px;
+                        height: 100px;
+                    }
+
+                    .slide-10 .tech-logo {
+                        font-size: 45px;
+                        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                        color: #64748B;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        height: 60px;
+                    }
+
+                    .slide-10 .tech-logo svg {
+                        width: 50px;
+                        height: 50px;
+                    }
+
+                    .slide-10 .tech-name {
+                        position: absolute;
+                        bottom: -10px;
+                        background: #1E293B;
+                        color: #10B981;
+                        font-size: 13px;
+                        font-weight: 700;
+                        padding: 4px 12px;
+                        border-radius: 20px;
+                        border: 1px solid #334155;
+                        opacity: 0;
+                        transform: translateY(10px);
+                        transition: all 0.3s ease;
+                        white-space: nowrap;
+                        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+                        pointer-events: none;
+                    }
+
+                    /* Hover Interactions */
+                    .slide-10 .tech-item:hover .tech-logo {
+                        transform: scale(1.2) translateY(-10px);
+                    }
+
+                    .slide-10 .tech-item:hover .tech-name {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+
+                    /* Specific Brand Colors on Hover */
+                    .slide-10 .tech-item.t-react:hover .tech-logo {
+                        color: #61DAFB;
+                    }
+
+                    .slide-10 .tech-item.t-vite:hover .tech-logo {
+                        color: #646CFF;
+                    }
+
+                    .slide-10 .tech-item.t-tailwind:hover .tech-logo {
+                        color: #06B6D4;
+                    }
+
+                    .slide-10 .tech-item.t-zustand:hover .tech-logo {
+                        color: #F7DF1E;
+                    }
+
+                    .slide-10 .tech-item.t-python:hover .tech-logo {
+                        color: #3776AB;
+                    }
+
+                    .slide-10 .tech-item.t-fastapi:hover .tech-logo {
+                        color: #009688;
+                    }
+
+                    .slide-10 .tech-item.t-pytorch:hover .tech-logo {
+                        color: #EE4C2C;
+                    }
+
+                    .slide-10 .tech-item.t-gemini:hover .tech-logo {
+                        color: #8E24AA;
+                    }
+
+                    .slide-10 .tech-item.t-supabase:hover .tech-logo {
+                        color: #3ECF8E;
+                    }
+
+                    .slide-10 .tech-item.t-postgres:hover .tech-logo {
+                        color: #336791;
+                    }
+
+                    .slide-10 .tech-item.t-vercel:hover .tech-logo {
+                        color: #FFFFFF;
+                    }
+
+                    .slide-10 .tech-item.t-hf:hover .tech-logo {
+                        color: #FFD21E;
+                    }
+
+                    .slide-10 .tech-item.t-github:hover .tech-logo {
+                        color: #FFFFFF;
+                    }
+                </style>
+
+                <div class="stack-grid">
+                    <!-- Quadrant 1: Frontend -->
+                    <div class="stack-card">
+                        <div class="card-header">
+                            <div class="header-icon"><i class="fa-solid fa-laptop-code"></i></div>
+                            <p class="card-title">Frontend Experience</p>
+                        </div>
+                        <div class="logo-row">
+                            <div class="tech-item t-react">
+                                <div class="tech-logo"><i class="fa-brands fa-react"></i></div>
+                                <div class="tech-name">React 19</div>
+                            </div>
+                            <div class="tech-item t-vite">
+                                <div class="tech-logo">
+                                    <svg viewBox="0 0 32 32" fill="currentColor">
+                                        <path
+                                            d="M29.56 2.373L16.27 30.63a.833.833 0 0 1-1.5 0L1.516 2.373a.833.833 0 0 1 .792-1.189h26.467a.833.833 0 0 1 .786 1.189zM15.53 11v8.583a.5.5 0 0 0 .5.5h.001A.5.5 0 0 0 16.53 19.58V11a.5.5 0 0 0-.5-.5h-.001A.5.5 0 0 0 15.53 11zM15 22.5A1.5 1.5 0 1 0 16.5 21 1.5 1.5 0 0 0 15 22.5z" />
+                                    </svg>
+                                </div>
+                                <div class="tech-name">Vite</div>
+                            </div>
+                            <div class="tech-item t-tailwind">
+                                <div class="tech-logo">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path
+                                            d="M12.001,4.8c-3.2,0-5.2,1.6-6,4.8c1.2-1.6,2.6-2.2,4.2-1.8c0.913,0.228,1.565,0.89,2.288,1.624C13.666,10.618,15.027,12,18.001,12c3.2,0,5.2-1.6,6-4.8c-1.2,1.6-2.6,2.2-4.2,1.8c-0.913-0.228-1.565-0.89-2.288-1.624C16.337,6.182,14.976,4.8,12.001,4.8z M6.001,12c-3.2,0-5.2,1.6-6,4.8c1.2-1.6,2.6-2.2,4.2-1.8c0.913,0.228,1.565,0.89,2.288,1.624c1.177,1.194,2.538,2.576,5.512,2.576c3.2,0,5.2-1.6,6-4.8c-1.2,1.6-2.6,2.2-4.2,1.8c-0.913-0.228-1.565-0.89-2.288-1.624C10.337,13.382,8.976,12,6.001,12z" />
+                                    </svg>
+                                </div>
+                                <div class="tech-name">Tailwind CSS</div>
+                            </div>
+                            <div class="tech-item t-zustand">
+                                <div class="tech-logo">🐻</div>
+                                <div class="tech-name">Zustand</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quadrant 2: Backend & AI -->
+                    <div class="stack-card">
+                        <div class="card-header">
+                            <div class="header-icon"><i class="fa-solid fa-microchip"></i></div>
+                            <p class="card-title">Backend &amp; AI Inference</p>
+                        </div>
+                        <div class="logo-row">
+                            <div class="tech-item t-python">
+                                <div class="tech-logo"><i class="fa-brands fa-python"></i></div>
+                                <div class="tech-name">Python 3.12</div>
+                            </div>
+                            <div class="tech-item t-fastapi">
+                                <div class="tech-logo">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path
+                                            d="M11.996 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 11.996 0zm5.188 8.018l-5.694 5.693 2.08 2.081-4.161 4.162-4.162-4.162 2.08-2.08-5.693-5.694A8.966 8.966 0 0 1 12 3.004a8.966 8.966 0 0 1 5.184 5.014z" />
+                                    </svg>
+                                </div>
+                                <div class="tech-name">FastAPI</div>
+                            </div>
+                            <div class="tech-item t-pytorch">
+                                <div class="tech-logo">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path
+                                            d="M17.485 8.358c-.544-.648-1.127-1.168-1.748-1.561-.62-.394-1.261-.643-1.921-.749-.66-.105-1.32-.053-1.98.156-.66.21-1.306.568-1.936 1.074-1.638 1.34-2.858 3.235-3.66 5.688a2.535 2.535 0 0 1-.3.6c-.161.261-.341.516-.541.764-.816.985-1.714 1.768-2.693 2.35-.98.58-1.997.945-3.052 1.096l2.197 1.84c.544.646 1.127 1.166 1.748 1.559.62.392 1.261.642 1.92.748.66.105 1.321.053 1.981-.156.66-.21 1.306-.568 1.936-1.074 1.637-1.34 2.857-3.235 3.659-5.688.08-.22.18-.42.3-.6.162-.262.342-.516.541-.765.816-.985 1.715-1.768 2.694-2.35.98-.582 1.997-.946 3.051-1.096zm-9.049-5.68A14.28 14.28 0 0 0 5.4 7.64c-.6.9-1.28 1.73-2.04 2.491.76-.76 1.44-1.59 2.04-2.491A14.28 14.28 0 0 1 8.436 2.68L6.24.84zM18.6 16.36c.6-.9 1.28-1.731 2.04-2.49-.76.76-1.44 1.59-2.04 2.49a14.28 14.28 0 0 1-3.036 4.958l2.196 1.84a16.892 16.892 0 0 0 3.633-5.914..." />
+                                    </svg>
+                                </div>
+                                <div class="tech-name">PyTorch & HF</div>
+                            </div>
+                            <div class="tech-item t-gemini">
+                                <div class="tech-logo"><i class="fa-solid fa-sparkles"></i></div>
+                                <div class="tech-name">Google Gemini</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quadrant 3: Database & Auth -->
+                    <div class="stack-card">
+                        <div class="card-header">
+                            <div class="header-icon"><i class="fa-solid fa-cloud"></i></div>
+                            <p class="card-title">Database &amp; BaaS</p>
+                        </div>
+                        <div class="logo-row" style="justify-content: center; gap: 40px;">
+                            <div class="tech-item t-supabase">
+                                <div class="tech-logo">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path
+                                            d="M12.6 1.488a.952.952 0 0 0-1.2 0L1.751 9.4A.947.947 0 0 0 2.35 11h6.702v10.998c0 .76 1.054 1.139 1.562.592l11.66-12.449A.947.947 0 0 0 21.65 8.5h-7.398V1.956c0-.395-.44-.652-.779-.468z" />
+                                    </svg>
+                                </div>
+                                <div class="tech-name">Supabase</div>
+                            </div>
+                            <div class="tech-item t-postgres">
+                                <div class="tech-logo">
+                                    <i class="fa-solid fa-database"></i>
+                                </div>
+                                <div class="tech-name">PostgreSQL</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quadrant 4: Deployment & DevOps -->
+                    <div class="stack-card">
+                        <div class="card-header">
+                            <div class="header-icon"><i class="fa-solid fa-server"></i></div>
+                            <p class="card-title">Hosting &amp; CI/CD</p>
+                        </div>
+                        <div class="logo-row" style="gap: 20px;">
+                            <div class="tech-item t-vercel">
+                                <div class="tech-logo">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M24 22.525H0l12-21.05 12 21.05z" />
+                                    </svg>
+                                </div>
+                                <div class="tech-name">Vercel</div>
+                            </div>
+                            <div class="tech-item t-hf">
+                                <div class="tech-logo">🤗</div>
+                                <div class="tech-name">Hugging Face</div>
+                            </div>
+                            <div class="tech-item t-github">
+                                <div class="tech-logo"><i class="fa-brands fa-github"></i></div>
+                                <div class="tech-name">GitHub Actions</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Slide 11: Live Platform Demo -->
+        <div class="slide-wrapper">
+            <div class="slide-container slide-11">
+                <!-- Background Decor -->
+                <div
+                    style="position: absolute; top: 0; right: 0; width: 400px; height: 400px; opacity: 0.05; z-index: 1;">
+                    <svg fill="none" height="100%" viewBox="0 0 400 400" width="100%">
+                        <circle cx="200" cy="200" r="180" stroke="#10B981" stroke-dasharray="20 10" stroke-width="2">
+                        </circle>
+                        <path d="M200 20V380 M20 200H380" stroke="#10B981" stroke-width="1"></path>
+                    </svg>
+                </div>
+                <!-- Slide Title -->
+                <div
+                    style="position: absolute; top: 30px; left: 80px; width: 1120px; z-index: 10; display: flex; justify-content: space-between; align-items: flex-end;">
+                    <div>
+                        <p style="margin: 0; font-size: 48px; font-weight: 700; color: #FFFFFF; line-height: 1.1;">Live
+                            Platform Demo</p>
+                        <div
+                            style="width: 80px; height: 4px; background: #10B981; margin-top: 15px; border-radius: 2px;">
+                        </div>
+                    </div>
+                    <div
+                        style="display: flex; align-items: center; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 8px 20px; border-radius: 30px;">
+                        <i class="fa-regular fa-clock" style="color: #10B981; margin-right: 10px; font-size: 18px;"></i>
+                        <p style="margin: 0; font-size: 20px; font-weight: 600; color: #10B981;">~3.5 Minutes</p>
+                    </div>
+                </div>
+
+                <!-- Premium Browser Mockup (1000x562 -> perfectly fits 16:9 video) -->
+                <div
+                    style="position: absolute; top: 120px; left: 140px; width: 1000px; height: 562px; background-color: #000000; border-radius: 12px; box-shadow: 0 30px 60px rgba(0,0,0,0.8), 0 0 0 1px #1F2937; z-index: 2; overflow: hidden; display: flex; flex-direction: column;">
+
+                    <!-- Browser Bar -->
+                    <div
+                        style="height: 40px; background-color: #111827; display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid #1F2937; flex-shrink: 0;">
+                        <div style="display: flex; gap: 8px; margin-right: 20px;">
+                            <div style="width: 12px; height: 12px; background-color: #EF4444; border-radius: 50%;">
+                            </div>
+                            <div style="width: 12px; height: 12px; background-color: #F59E0B; border-radius: 50%;">
+                            </div>
+                            <div style="width: 12px; height: 12px; background-color: #10B981; border-radius: 50%;">
+                            </div>
+                        </div>
+                        <!-- Mock URL Bar -->
+                        <div
+                            style="flex-grow: 1; height: 24px; background: #1F2937; border-radius: 4px; display: flex; align-items: center; justify-content: center;">
+                            <span
+                                style="font-size: 12px; color: #94A3B8; font-family: monospace;">https://helpdesk-ai-app.vercel.app</span>
+                        </div>
+                    </div>
+
+                    <!-- Integrated Google Drive Player (High Reliability) -->
+                    <div
+                        style="flex-grow: 1; width: 100%; position: relative; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px;">
+                        <iframe src="https://drive.google.com/file/d/1vNUE8wWm3n-XFw6k_3IM6SuRkHmJKVfF/preview"
+                            style="width: 100%; height: 600px; border: none; border-radius: 8px;" allow="autoplay">
+                        </iframe>
+                        <div style="margin-top: 20px; text-align: center;">
+                            <a href="https://drive.google.com/file/d/1vNUE8wWm3n-XFw6k_3IM6SuRkHmJKVfF/view?usp=sharing"
+                                target="_blank"
+                                style="display: inline-block; padding: 12px 24px; background: #3B82F6; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; transition: background 0.3s;">
+                                <i class="fa-solid fa-arrow-up-right-from-square" style="margin-right: 8px;"></i> Watch
+                                Full Demo on Google Drive
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Focus Items (Repositioned to bottom neatly) -->
+                <div
+                    style="position: absolute; top: 690px; left: 0; width: 1280px; display: flex; justify-content: center; align-items: center; gap: 40px; z-index: 10;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="fa-solid fa-wand-magic-sparkles" style="color: #10B981;"></i>
+                        <p style="margin: 0; font-size: 16px; font-weight: 500; color: #94A3B8;">Chaos to Clarity Flow
+                        </p>
+                    </div>
+                    <div style="width: 1px; height: 20px; background-color: #334155;"></div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="fa-solid fa-eye" style="color: #10B981;"></i>
+                        <p style="margin: 0; font-size: 16px; font-weight: 500; color: #94A3B8;">AI Visual Simulator</p>
+                    </div>
+                    <div style="width: 1px; height: 20px; background-color: #334155;"></div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="fa-solid fa-lock" style="color: #10B981;"></i>
+                        <p style="margin: 0; font-size: 16px; font-weight: 500; color: #94A3B8;">4-Layer Authorization
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Slide 12: Challenges & Resiliency -->
+        <div class="slide-wrapper">
+            <div class="slide-container slide-12">
+                <!-- Background Decor -->
+                <div
+                    style="position: absolute; top: 0; right: 0; width: 600px; height: 100%; opacity: 0.03; z-index: 1; pointer-events: none;">
+                    <svg width="100%" height="100%" viewBox="0 0 600 720">
+                        <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#10B981" stroke-width="1" />
+                        </pattern>
+                        <rect width="100%" height="100%" fill="url(#grid)" />
+                    </svg>
+                </div>
+
+                <!-- Slide Title -->
+                <div style="position: absolute; top: 40px; left: 80px; width: 1120px; z-index: 10;">
+                    <div style="display: flex; align-items: baseline; gap: 20px;">
+                        <p style="margin: 0; font-size: 48px; font-weight: 700; color: #FFFFFF; line-height: 1.1;">
+                            Challenges &amp; Resiliency</p>
+                        <p
+                            style="margin: 0; font-size: 18px; font-weight: 400; color: #64748B; font-family: 'JetBrains Mono', monospace;">
+                            [SYSTEM_LOG: STABLE]</p>
+                    </div>
+                    <div style="width: 80px; height: 4px; background: #10B981; margin-top: 15px; border-radius: 2px;">
+                    </div>
+                </div>
+
+                <style>
+                    .slide-12 .challenge-dashboard {
+                        position: absolute;
+                        top: 180px;
+                        left: 80px;
+                        width: 1120px;
+                        height: 480px;
+                        display: grid;
+                        grid-template-columns: repeat(3, 1fr);
+                        gap: 30px;
+                        z-index: 10;
+                    }
+
+                    .slide-12 .resilience-pillar {
+                        background: #111827;
+                        border: 1px solid #1F2937;
+                        border-radius: 20px;
+                        display: flex;
+                        flex-direction: column;
+                        overflow: hidden;
+                        transition: transform 0.3s ease, border-color 0.3s ease;
+                        position: relative;
+                    }
+
+                    .slide-12 .resilience-pillar:hover {
+                        transform: translateY(-5px);
+                        border-color: #334155;
+                    }
+
+                    .slide-12 .pillar-status {
+                        height: 60px;
+                        background: #0F172A;
+                        padding: 0 20px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        border-bottom: 1px solid #1E293B;
+                    }
+
+                    .slide-12 .status-dot {
+                        width: 10px;
+                        height: 10px;
+                        border-radius: 50%;
+                        background: #EF4444;
+                        box-shadow: 0 0 10px #EF4444;
+                        animation: pulse-red 2s infinite;
+                    }
+
+                    @keyframes pulse-red {
+                        0% {
+                            opacity: 1;
+                            transform: scale(1);
+                        }
+
+                        50% {
+                            opacity: 0.5;
+                            transform: scale(1.2);
+                        }
+
+                        100% {
+                            opacity: 1;
+                            transform: scale(1);
+                        }
+                    }
+
+                    .slide-12 .pillar-label {
+                        font-size: 12px;
+                        font-weight: 700;
+                        color: #94A3B8;
+                        text-transform: uppercase;
+                        letter-spacing: 1.5px;
+                    }
+
+                    .slide-12 .problem-zone {
+                        padding: 25px;
+                        flex-grow: 1;
+                    }
+
+                    .slide-12 .problem-title {
+                        font-size: 20px;
+                        font-weight: 700;
+                        color: #F8FAFC;
+                        margin: 0 0 15px 0;
+                    }
+
+                    .slide-12 .terminal-box {
+                        background: #020617;
+                        border-radius: 8px;
+                        padding: 15px;
+                        font-family: 'JetBrains Mono', monospace;
+                        font-size: 13px;
+                        color: #94A3B8;
+                        line-height: 1.6;
+                        border: 1px solid #1E293B;
+                    }
+
+                    .slide-12 .resolution-zone {
+                        padding: 25px;
+                        background: rgba(16, 185, 129, 0.03);
+                        border-top: 1px solid rgba(16, 185, 129, 0.1);
+                    }
+
+                    .slide-12 .resolution-pill {
+                        display: inline-flex;
+                        align-items: center;
+                        background: rgba(16, 185, 129, 0.1);
+                        color: #10B981;
+                        padding: 4px 12px;
+                        border-radius: 20px;
+                        font-size: 11px;
+                        font-weight: 800;
+                        text-transform: uppercase;
+                        margin-bottom: 12px;
+                        border: 1px solid rgba(16, 185, 129, 0.2);
+                    }
+
+                    .slide-12 .resolution-text {
+                        font-size: 16px;
+                        font-weight: 400;
+                        color: #CBD5E1;
+                        line-height: 1.5;
+                        margin: 0;
+                    }
+                </style>
+
+                <div class="challenge-dashboard">
+                    <!-- Pillar 1 -->
+                    <div class="resilience-pillar">
+                        <div class="pillar-status">
+                            <span class="pillar-label">Challenge 01</span>
+                            <div class="status-dot"></div>
+                        </div>
+                        <div class="problem-zone">
+                            <p class="problem-title">Semantic Distribution Disparity</p>
+                            <div class="terminal-box">
+                                <span style="color: #64748B;">$ analysis --weights</span><br />
+                                > ERR: High-frequency "General" noise distorting minority class vectors.<br />
+                                > Bias detected in specific hardware partitions.
+                            </div>
+                        </div>
+                        <div class="resolution-zone">
+                            <div class="resolution-pill"><i class="fa-solid fa-shield-halved"
+                                    style="margin-right: 6px;"></i> Solution</div>
+                            <p class="resolution-text">Applied <strong style="color: #10B981;">Synthetic
+                                    Augmentation</strong> &amp; stratified sampling to ensure robust detection of rare
+                                failure modes.</p>
+                        </div>
+                    </div>
+
+                    <!-- Pillar 2 -->
+                    <div class="resilience-pillar">
+                        <div class="pillar-status">
+                            <span class="pillar-label">Challenge 02</span>
+                            <div class="status-dot"></div>
+                        </div>
+                        <div class="problem-zone">
+                            <p class="problem-title">Serverless Inference Latency</p>
+                            <div class="terminal-box">
+                                <span style="color: #64748B;">$ ping api.inference.hf</span><br />
+                                > 110M Params loading...<br />
+                                > TIMEOUT: Cold-start delay > 12s on sporadic requests.
+                            </div>
+                        </div>
+                        <div class="resolution-zone">
+                            <div class="resolution-pill"><i class="fa-solid fa-bolt" style="margin-right: 6px;"></i>
+                                Optimized</div>
+                            <p class="resolution-text">Integrated <strong style="color: #10B981;">FastAPI Lifespan
+                                    Hooks</strong> to pre-cache model in RAM, slashing cold-start latency by 95%.</p>
+                        </div>
+                    </div>
+
+                    <!-- Pillar 3 -->
+                    <div class="resilience-pillar">
+                        <div class="pillar-status">
+                            <span class="pillar-label">Challenge 03</span>
+                            <div class="status-dot"></div>
+                        </div>
+                        <div class="problem-zone">
+                            <p class="problem-title">Colloquial Context Ambiguity</p>
+                            <div class="terminal-box">
+                                <span style="color: #64748B;">$ process "jira dead"</span><br />
+                                > UnknownToken: "Hinglish" mix &amp; enterprise jargon.<br />
+                                > Confidence Score: 0.42 [WEAK]
+                            </div>
+                        </div>
+                        <div class="resolution-zone">
+                            <div class="resolution-pill"><i class="fa-solid fa-brain" style="margin-right: 6px;"></i>
+                                Normalized</div>
+                            <p class="resolution-text">Fine-tuned on a <strong style="color: #10B981;">Technical
+                                    Colloquial Corpus</strong> to resolve mixed-lanuage slang and organization jargon.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Slide 13: Conclusion & Future Scope -->
+        <div class="slide-wrapper">
+            <div class="slide-container slide-13">
+                <!-- Background Decor -->
+                <div
+                    style="position: absolute; top: 0; right: 0; width: 400px; height: 300px; opacity: 0.05; z-index: 1;">
+                    <svg fill="none" height="100%" viewBox="0 0 400 300" width="100%">
+                        <circle cx="300" cy="150" r="120" stroke="#06B6D4" stroke-dasharray="10 10" stroke-width="2">
+                        </circle>
+                        <circle cx="300" cy="150" r="80" stroke="#10B981" stroke-width="1"></circle>
+                    </svg>
+                </div>
+                <!-- Slide Title -->
+                <div style="position: absolute; top: 35px; left: 80px; width: 1120px; height: 75px; z-index: 10;">
+                    <p style="margin: 0; font-size: 48px; font-weight: 700; color: #FFFFFF; line-height: 1.1;">
+                        Conclusion &amp; Future Scope
+                    </p>
+                </div>
+
+                <!-- Vertical Divider -->
+                <div
+                    style="position: absolute; top: 160px; left: 639px; width: 2px; height: 480px; background-color: #10B981; opacity: 0.3; z-index: 2;">
+                </div>
+
+                <style>
+                    .slide-13 .sec-label {
+                        font-size: 28px;
+                        font-weight: 700;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                        margin-bottom: 40px;
+                    }
+
+                    .slide-13 .outcome-card {
+                        position: absolute;
+                        top: 230px;
+                        left: 80px;
+                        width: 500px;
+                        height: 300px;
+                        background-color: #111827;
+                        border-radius: 16px;
+                        border: 1px solid #1F2937;
+                        z-index: 2;
+                        padding: 40px;
+                        box-sizing: border-box;
+                    }
+
+                    .slide-13 .future-card {
+                        position: absolute;
+                        width: 500px;
+                        height: 180px;
+                        background-color: #111827;
+                        border-radius: 16px;
+                        border: 1px solid #1F2937;
+                        z-index: 2;
+                        border-left: 4px solid #06B6D4;
+                        padding: 30px;
+                        box-sizing: border-box;
+                        display: flex;
+                        align-items: flex-start;
+                    }
+                </style>
+
+                <!-- LEFT: CONCLUSION -->
+                <div style="position: absolute; top: 160px; left: 80px;">
+                    <p class="sec-label" style="color: #10B981;">Conclusion</p>
+                </div>
+                <div class="outcome-card">
+                    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+                        <div
+                            style="width: 40px; height: 40px; background-color: rgba(16, 185, 129, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <i class="fa-solid fa-check" style="color: #10B981;"></i>
+                        </div>
+                        <p
+                            style="margin: 0; font-size: 16px; font-weight: 600; color: #10B981; text-transform: uppercase;">
+                            Project Success</p>
+                    </div>
+                    <p style="margin: 0; font-size: 56px; font-weight: 700; color: #10B981; line-height: 1;">Sub-500ms
+                    </p>
+                    <p style="margin: 10px 0 20px 0; font-size: 22px; font-weight: 500; color: #FFFFFF;">AI Neural
+                        Pipeline
+                    </p>
+                    <p style="margin: 0; font-size: 18px; font-weight: 300; color: #CBD5E1; line-height: 1.5;">Replacing
+                        the
+                        4-8 minute human manual triage bottleneck with instant routing.</p>
+                </div>
+
+                <!-- RIGHT: FUTURE -->
+                <div style="position: absolute; top: 160px; left: 700px;">
+                    <p class="sec-label" style="color: #06B6D4;">Future Scope</p>
+                </div>
+                <!-- Item 1 -->
+                <div class="future-card" style="top: 230px; left: 700px;">
+                    <div
+                        style="width: 48px; height: 48px; background-color: rgba(6, 182, 212, 0.1); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 20px; flex-shrink: 0;">
+                        <i class="fa-solid fa-arrows-rotate" style="color: #06B6D4; font-size: 24px;"></i>
+                    </div>
+                    <div>
+                        <p style="margin: 0 0 10px 0; font-size: 20px; font-weight: 700; color: #FFFFFF;">Active
+                            Learning
+                            Loops</p>
+                        <p style="margin: 0; font-size: 16px; font-weight: 300; color: #CBD5E1; line-height: 1.5;">Using
+                            <span style="font-family: monospace; color: #06B6D4;">corrections_log.json</span> to
+                            auto-retrain based on Admin feedback.
+                        </p>
+                    </div>
+                </div>
+                <!-- Item 2 -->
+                <div class="future-card" style="top: 430px; left: 700px;">
+                    <div
+                        style="width: 48px; height: 48px; background-color: rgba(6, 182, 212, 0.1); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 20px; flex-shrink: 0;">
+                        <i class="fa-solid fa-mobile-screen-button" style="color: #06B6D4; font-size: 24px;"></i>
+                    </div>
+                    <div>
+                        <p style="margin: 0 0 10px 0; font-size: 20px; font-weight: 700; color: #FFFFFF;">Mobile
+                            Application
+                        </p>
+                        <p style="margin: 0; font-size: 16px; font-weight: 300; color: #CBD5E1; line-height: 1.5;">A
+                            native
+                            companion app with push-notification SLA alerts for immediate response.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Slide 14: Thank You -->
+        <div class="slide-wrapper">
+            <div class="slide-container slide-14">
+                <!-- Background Decor -->
+                <div
+                    style="position: absolute; top: 0; left: 0; width: 300px; height: 300px; opacity: 0.05; z-index: 1;">
+                    <svg fill="none" height="100%" viewBox="0 0 300 300" width="100%">
+                        <circle cx="0" cy="0" r="250" stroke="#10B981" stroke-dasharray="20 10" stroke-width="2">
+                        </circle>
+                    </svg>
+                </div>
+                <div
+                    style="position: absolute; bottom: 0; right: 0; width: 300px; height: 300px; opacity: 0.05; z-index: 1;">
+                    <svg fill="none" height="100%" viewBox="0 0 300 300" width="100%">
+                        <rect height="200" stroke="#10B981" stroke-width="2" width="200" x="100" y="100"></rect>
+                    </svg>
+                </div>
+
+                <!-- Content Area -->
+                <div
+                    style="position: absolute; top: 0; left: 0; width: 1280px; height: 720px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; z-index: 10;">
+                    <p style="margin: 0; font-size: 64px; font-weight: 700; color: #FFFFFF; letter-spacing: -1px;">Thank
+                        You!</p>
+                    <div
+                        style="width: 200px; height: 4px; background-color: #10B981; border-radius: 2px; margin: 25px 0;">
+                    </div>
+                    <p style="margin: 0; font-size: 28px; font-weight: 400; color: #94A3B8;">Questions &amp; Answers</p>
+
+                    <div style="width: 512px; height: 1px; background-color: #10B981; opacity: 0.3; margin: 50px 0;">
+                    </div>
+
+                    <!-- Links -->
+                    <div style="display: flex; flex-direction: column; gap: 40px; text-align: left;">
+                        <div style="display: flex; align-items: center; gap: 20px;">
+                            <div
+                                style="width: 48px; height: 48px; background-color: rgba(16, 185, 129, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fa-solid fa-globe" style="color: #10B981; font-size: 24px;"></i>
+                            </div>
+                            <div>
+                                <p style="margin: 0; font-size: 20px; font-weight: 700; color: #FFFFFF;">Live Tech Demo
+                                </p>
+                                <a href="https://helpdeskaiv1.vercel.app/" target="_blank"
+                                    style="margin: 0; font-size: 18px; color: #10B981; text-decoration: none;">helpdeskaiv1.vercel.app</a>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 20px;">
+                            <div
+                                style="width: 48px; height: 48px; background-color: rgba(16, 185, 129, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fa-brands fa-github" style="color: #10B981; font-size: 24px;"></i>
+                            </div>
+                            <div>
+                                <p style="margin: 0; font-size: 20px; font-weight: 700; color: #FFFFFF;">GitHub
+                                    Repository
+                                </p>
+                                <a href="https://github.com/ritesh-1918/HELPDESK.AI" target="_blank"
+                                    style="margin: 0; font-size: 18px; color: #10B981; text-decoration: none;">github.com/ritesh-1918/HELPDESK.AI
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div style="position: absolute; bottom: 40px; left: 0; width: 1280px; text-align: center;">
+                    <p style="margin: 0; font-size: 14px; font-weight: 500; color: #475569; letter-spacing: 2px;">
+                        HELPDESK.AI • INFOSYS SPRINGBOARD INTERNSHIP 6.0</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Interactive Presentation Logic
+        const slides = document.querySelectorAll('.slide-container');
+        let currentSlide = 0;
+        let isPresentationMode = false;
+        let isRotated = false;
+
+        function updateScale() {
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+
+            if (isPresentationMode) {
+                // Determine if we need to force rotate (Portrait Mobile)
+                if (windowHeight > windowWidth) {
+                    isRotated = true;
+                    // Treat Height as the virtual width for the 16:9 slide
+                    const scaleX = windowHeight / 1280;
+                    const scaleY = windowWidth / 720;
+                    const scale = Math.min(scaleX, scaleY) * 0.98;
+                    document.body.style.setProperty('--scale-factor', scale);
+                    document.body.style.setProperty('--rotation', '90deg');
+                } else {
+                    isRotated = false;
+                    const scaleX = windowWidth / 1280;
+                    const scaleY = windowHeight / 720;
+                    const scale = Math.min(scaleX, scaleY) * 0.98;
+                    document.body.style.setProperty('--scale-factor', scale);
+                    document.body.style.setProperty('--rotation', '0deg');
+                }
+            } else {
+                // Normal scroll mode scaling (Center-aligned PDF style)
+                const scale = Math.min(1, (windowWidth - 40) / 1280);
+                slides.forEach(slide => {
+                    slide.style.transform = `scale(${scale})`;
+                    const wrapper = slide.closest('.slide-wrapper');
+                    if (wrapper) {
+                        wrapper.style.height = (720 * scale) + "px";
+                        wrapper.style.marginBottom = (40 * scale) + "px";
+                    }
+                });
+                document.querySelector('.page-wrapper').style.height = 'auto';
+            }
+        }
+
+        // Trigger scaling immediately
+        updateScale();
+        window.addEventListener('resize', updateScale);
+        window.addEventListener('load', updateScale);
+        document.addEventListener('DOMContentLoaded', updateScale);
+
+        let previousSlide = -1;
+        let isTransitioning = false;
+
+        function updateSlides(direction = 'none') {
+            if (isTransitioning) return;
+            isTransitioning = true;
+
+            const prevIndex = previousSlide;
+            const currIndex = currentSlide;
+
+            slides.forEach((slide, index) => {
+                slide.classList.remove('slide-next', 'slide-prev', 'exit-left', 'exit-right');
+
+                if (index === currIndex) {
+                    if (direction === 'next') slide.classList.add('slide-next');
+                    if (direction === 'prev') slide.classList.add('slide-prev');
+                    void slide.offsetWidth;
+                    slide.classList.add('active');
+                    slide.classList.remove('slide-next', 'slide-prev');
+                } else if (index === prevIndex) {
+                    if (direction === 'next') slide.classList.add('exit-left');
+                    if (direction === 'prev') slide.classList.add('exit-right');
+                    slide.classList.remove('active');
+                } else {
+                    slide.classList.remove('active');
+                }
+            });
+
+            previousSlide = currentSlide;
+            setTimeout(() => {
+                isTransitioning = false;
+                slides.forEach(s => s.classList.remove('exit-left', 'exit-right'));
+            }, 800);
+        }
+
+        function togglePresentation() {
+            isPresentationMode = !isPresentationMode;
+            document.body.classList.toggle('presentation-mode');
+
+            const btnIcon = document.querySelector('#mobile-toggle i');
+
+            // Clear all inline transforms and height adjustments first to avoid conflicts
+            slides.forEach(slide => {
+                slide.style.removeProperty('transform');
+                if (slide.parentElement && !isPresentationMode) {
+                    slide.parentElement.style.removeProperty('height');
+                    slide.parentElement.style.removeProperty('margin-bottom');
+                }
+            });
+
+            if (isPresentationMode) {
+                currentSlide = 0;
+                previousSlide = -1;
+                updateScale();
+                updateSlides('next');
+                if (btnIcon) btnIcon.className = 'fa-solid fa-xmark';
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen().catch(() => { });
+                }
+            } else {
+                if (btnIcon) btnIcon.className = 'fa-solid fa-play';
+                updateScale(); // Reset to normal scale
+                if (document.fullscreenElement) {
+                    document.exitFullscreen().catch(() => { });
+                }
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'p' || e.key === 'P') {
+                togglePresentation();
+            }
+            if (isPresentationMode && !isTransitioning) {
+                if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+                    if (currentSlide < slides.length - 1) { currentSlide++; updateSlides('next'); }
+                } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+                    if (currentSlide > 0) { currentSlide--; updateSlides('prev'); }
+                } else if (e.key === 'Escape') {
+                    if (isPresentationMode) togglePresentation();
+                }
+            }
+        });
+
+        // Touch Navigation Support
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        let touchEndY = 0;
+
+        document.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, false);
+
+        document.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            touchEndY = e.changedTouches[0].screenY;
+
+            if (isPresentationMode && !isTransitioning) {
+                const diffX = touchStartX - touchEndX;
+                const diffY = touchStartY - touchEndY;
+
+                // Orientation-aware navigation
+                if (isRotated) {
+                    // When rotated 90deg clockwise: 
+                    // Physically sliding 'up' on screen feels like sliding 'right' relative to the slide content
+                    if (diffY > 50) { // Swipe Up (Next)
+                        if (currentSlide < slides.length - 1) { currentSlide++; updateSlides('next'); }
+                    } else if (diffY < -50) { // Swipe Down (Prev)
+                        if (currentSlide > 0) { currentSlide--; updateSlides('prev'); }
+                    }
+                } else {
+                    if (diffX > 50) { // Swipe Left (Next)
+                        if (currentSlide < slides.length - 1) { currentSlide++; updateSlides('next'); }
+                    } else if (diffX < -50) { // Swipe Right (Prev)
+                        if (currentSlide > 0) { currentSlide--; updateSlides('prev'); }
+                    }
+                }
+            }
+        }, false);
+
+        // Add FAB
+        const fab = document.createElement('button');
+        fab.id = "mobile-toggle";
+        fab.innerHTML = '<i class="fa-solid fa-play"></i>';
+        fab.title = "Toggle Presentation Mode (P)";
+        fab.onclick = togglePresentation;
+        document.body.appendChild(fab);
+
+        // Add hint helper
+        const hint = document.createElement('div');
+        hint.innerHTML = 'Press <strong>P</strong> or use the Play button to Present';
+        hint.id = "presentation-hint";
+        document.body.appendChild(hint);
+    </script>
+
+</body>
+
+</html>
