@@ -148,4 +148,4 @@ Built with ❤️ by the **HELPDESK.AI Professional** Team.
 *Driving the future of Intelligent Enterprise Support.*
 
 </div>
-Contributed by Keerthi
+I contributed to the frontend development of this project, focusing on improving the user interface and user experience.
