@@ -146,8 +146,3 @@ Navigate to `/backend` and refer to internal documentation for Python environmen
 
 Built with ❤️ by the **HELPDESK.AI Professional** Team. 
 *Driving the future of Intelligent Enterprise Support.*
-
-</div>
-Contributed by Keerthi
-## Contribution
-Added by Manya Sahasra
