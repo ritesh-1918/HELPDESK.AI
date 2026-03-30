@@ -1,17 +1,17 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+// @ts-nocheck
+// ^ VS Code shows errors here because its TS engine is Node-based.
+//   This file runs in Deno (Supabase Edge Runtime) where all Deno.* globals exist.
+//   These errors are false positives — the code deploys and runs correctly.
+//
+// Deploy:  supabase functions deploy ai-proxy
+// Secrets: supabase secrets set GEMINI_API_KEY_1=... OPENROUTER_API_KEY_1=... etc.
 
 /**
  * HELPDESK.AI — AI Proxy Edge Function
  *
  * Keeps all AI API keys server-side in Supabase Secrets.
  * Frontend calls this function instead of hitting AI providers directly.
- * Keys are NEVER exposed in the browser bundle.
- *
- * Deploy: supabase functions deploy ai-proxy
- * Set secrets:
- *   supabase secrets set GEMINI_API_KEY_1=...
- *   supabase secrets set OPENROUTER_API_KEY_1=...
- *   supabase secrets set GROQ_API_KEY_1=...
+ * Keys are NEVER exposed in the browser JavaScript bundle.
  */
 
 const CORS_HEADERS = {
@@ -20,52 +20,48 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, x-client-info",
 };
 
-// Key pools — pulled from Supabase Secrets (env vars, never the browser)
+// Key pools — pulled from Supabase Secrets (env vars, never shipped to browser)
 const GEMINI_KEYS = [
   Deno.env.get("GEMINI_API_KEY_1"),
   Deno.env.get("GEMINI_API_KEY_2"),
   Deno.env.get("GEMINI_API_KEY_3"),
   Deno.env.get("GEMINI_API_KEY_4"),
-].filter(Boolean) as string[];
+].filter(Boolean);
 
 const OPENROUTER_KEYS = [
   Deno.env.get("OPENROUTER_API_KEY_1"),
   Deno.env.get("OPENROUTER_API_KEY_2"),
   Deno.env.get("OPENROUTER_API_KEY_3"),
   Deno.env.get("OPENROUTER_API_KEY_4"),
-].filter(Boolean) as string[];
+].filter(Boolean);
 
 const GROQ_KEYS = [
   Deno.env.get("GROQ_API_KEY_1"),
   Deno.env.get("GROQ_API_KEY_2"),
   Deno.env.get("GROQ_API_KEY_3"),
-].filter(Boolean) as string[];
+].filter(Boolean);
 
-/** Try each key in a pool until one succeeds. Returns the response or throws. */
-async function tryWithFailover(
-  keys: string[],
-  buildRequest: (key: string) => Request
-): Promise<Response> {
-  let lastError: Error | null = null;
+/** Try each key in pool until one succeeds. Handles 429 rate-limits automatically. */
+async function tryWithFailover(keys, buildRequest) {
+  let lastError = null;
   for (const key of keys) {
     try {
       const resp = await fetch(buildRequest(key));
       if (resp.ok) return resp;
-      // 429 = rate limit → try next key
       if (resp.status === 429) {
-        lastError = new Error(`Rate limited on key ending ...${key.slice(-4)}`);
+        lastError = new Error("Rate limited — trying next key");
         continue;
       }
-      // Other error — surface immediately
       return resp;
     } catch (e) {
-      lastError = e as Error;
+      lastError = e;
     }
   }
   throw lastError ?? new Error("All keys exhausted");
 }
 
-serve(async (req: Request) => {
+// Deno.serve is built into the Deno runtime — no import required
+Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: CORS_HEADERS });
@@ -75,7 +71,7 @@ serve(async (req: Request) => {
     const body = await req.json();
     const { provider, model, messages, prompt } = body;
 
-    let upstreamResponse: Response;
+    let upstreamResponse;
 
     // ── Gemini ────────────────────────────────────────────────────────────
     if (provider === "gemini") {
@@ -124,7 +120,7 @@ serve(async (req: Request) => {
 
     else {
       return new Response(
-        JSON.stringify({ error: `Unknown provider: ${provider}` }),
+        JSON.stringify({ error: `Unknown provider: "${provider}". Use gemini | openrouter | groq` }),
         { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
       );
     }
