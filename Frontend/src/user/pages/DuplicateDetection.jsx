@@ -5,7 +5,10 @@ import {
     CheckCircle2, AlertTriangle, ArrowRight,
     Lightbulb, SearchX, TicketCheck, Search
 } from 'lucide-react';
+import axios from 'axios';
 import useTicketStore from "../../store/ticketStore";
+import { useAuthStore } from "../../store/authStore";
+import { API_CONFIG } from "../../config";
 
 // ─── Animated Step Pipeline ───────────────────────────────────────────────────
 const pipelineSteps = [
