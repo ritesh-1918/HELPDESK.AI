@@ -21,7 +21,7 @@
     <img src="https://img.shields.io/badge/✉️_CONTACT_ENTERPRISE-111827?style=for-the-badge&logo=minutemailer&logoColor=white&labelColor=10b981" height="42" alt="Contact Enterprise" />
   </a>
   &nbsp;&nbsp;
-  <a href="https://ritesh-1918.github.io/HELPDESK.AI/docs/presentation.html">
+  <a href="https://ritesh-1918.github.io/HELPDESK.AI/">
     <img src="https://img.shields.io/badge/📊_SYSTEM_PRESENTATION-111827?style=for-the-badge&logo=googleslides&logoColor=white&labelColor=3b82f6" height="42" alt="System Presentation" />
   </a>
   &nbsp;&nbsp;
