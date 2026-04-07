@@ -1,30 +1,46 @@
-# Overview
+<p align="center">
+  <img src="https://img.shields.io/badge/GITHUB_MODELS_INTEGRATION-111827?style=for-the-badge&logo=github&logoColor=white&labelColor=000000" width="100%" alt="Models Banner">
+</p>
 
-Build your AI products—right inside GitHub. Create prompts, test models, and ship AI-powered features with built-in tools for model access, prompt collaboration, and lightweight evaluation. [Read the docs](https://docs.github.com/en/github-models) to learn more.
+> [!NOTE]
+> Build your AI products—right inside GitHub. Helpdesk.AI uses these systems to create prompts, test models, and ship AI-powered features with built-in tools for prompt collaboration and lightweight CI/CD evaluation.
 
-## Get started
+<br>
 
-### Watch the models demo
-Watch this 3-minute demo reel to learn everything you can do with GitHub Models.
+<table width="100%">
+  <tr>
+    <td width="50%" valign="top">
+      <h2>Integration Strategy</h2>
+      <p>Create, evaluate, and iterate on prompts right inside the local repo configuration.</p>
+      <ul>
+        <li><strong>Prompt Centralization</strong>: Built using standard <code>.prompt.yml</code> architectures.</li>
+        <li><strong>Evaluation Pipelines</strong>: CI/CD test triggers ensure new prompt versions do not degrade AI generation quality.</li>
+        <li><strong>Model Playground</strong>: Allows rapid testing of new parameter weights before deployment.</li>
+      </ul>
+      <br>
+      <a href="https://docs.github.com/en/github-models">
+        <img src="https://img.shields.io/badge/READ_GITHUB_DOCS-111827?style=for-the-badge&logo=readthedocs&logoColor=white&labelColor=252526" alt="Docs">
+      </a>
+    </td>
+    <td width="50%" valign="top">
+      <br>
+      <div align="center">
+        <i>Watch the 3-minute demo reel to understand exact capabilities.</i><br><br>
+        <img src="https://img.shields.io/badge/▶_WATCH_VIDEO_DEMO-111827?style=for-the-badge&logoColor=white&labelColor=dc2626" alt="Video Placeholder">
+      </div>
+    </td>
+  </tr>
+</table>
 
-*(Demo video placeholder)*
+<br><br>
 
-### Explore Features
-*   **Create a sample prompt**
-*   **Compare multiple prompts**
-*   **Compare models**
+> [!IMPORTANT]
+> ### Python Inference Setup
+> Drop this snippet into your core logic code to instantiate the AI engine locally. Requires configured GitHub CLI secrets to execute safely.
 
-## Prompts
-
-Create, evaluate, and iterate on prompts right inside your repo.
-
-**0 prompts found**  
-*Create a prompt to start building with natural language or using `prompt.yml` files.*
-
-## Add AI to your project now
-
-Drop this snippet into your code to start using AI instantly:
-
+<table width="100%">
+  <tr>
+    <td valign="top">
 ```python
 import os
 from azure.ai.inference import ChatCompletionsClient
@@ -42,22 +58,16 @@ client = ChatCompletionsClient(
 
 response = client.complete(
     messages=[
-        SystemMessage("You are a helpful assistant."),
-        UserMessage("What is the capital of France?"),
+        SystemMessage("You are the Helpdesk.AI routing agent."),
+        UserMessage("My computer is crashing repeatedly."),
     ],
-    temperature=1.0,
-    top_p=1.0,
+    temperature=0.4,
+    top_p=0.9,
     model=model
 )
 
 print(response.choices[0].message.content)
 ```
-
-### Explore 40+ models in the catalog
-Compare models in the playground—test parameters, token usage, and latency to find the right fit for your use case.
-
-### Power your prompt with the right model
-Test and compare models against your prompt to find the best fit, then commit it directly to your project when you're ready.
-
-### Instrument your Actions workflow with models
-Set up a new GitHub Actions workflow using models to continually run lightweight evaluations of your AI features on every Pull Request.
+    </td>
+  </tr>
+</table>
