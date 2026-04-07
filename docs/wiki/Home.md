@@ -1,45 +1,51 @@
-# Welcome to Helpdesk.AI
+<p align="center">
+  <img src="./assets/hero.png" width="100%" alt="Helpdesk.AI Hero Banner">
+</p>
 
-<div align="center">
-  <img src="./assets/hero.png" alt="Helpdesk.AI High-End Interactive Landing Page" style="border-radius: 12px; box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23); max-width: 100%; border: 1px solid #e2e8f0;"/>
-</div>
+<br>
 
-<br/>
+> [!NOTE]
+> **Helpdesk.AI** doesn't just manage tickets. It transforms infrastructure chaos into operational clarity in milliseconds. Welcome to the official documentation hub.
 
-## The Intelligent Standard for Enterprise IT
+<br>
 
-> *Helpdesk.AI doesn't just manage tickets. It transforms chaos into clarity in milliseconds.*
+<table width="100%">
+  <tr>
+    <td width="60%" valign="top">
+      <h2>The Triaging Bottleneck, Solved.</h2>
+      <p>Normally, enterprise support desks are bogged down by Level 1 manual triage. It takes humans minutes to read, categorize, and route a single issue.</p>
+      <p>We replaced that bottleneck with a fine-tuned <b>DistilBERT</b> Sequence Classifier and an advanced <b>GitHub Models</b> reasoning layer.</p>
+      <ul>
+        <li><strong>Categorization</strong>: Instantaneous (~50ms)</li>
+        <li><strong>Entity Extraction</strong>: Automatic via Custom NER</li>
+        <li><strong>AI Resolution</strong>: Proactive GitHub Models inference</li>
+      </ul>
+    </td>
+    <td width="40%" valign="top">
+      <br><br>
+      <a href="./Architecture">
+        <img src="https://img.shields.io/badge/EXPLORE_ARCHITECTURE-111827?style=for-the-badge&logo=archlinux&logoColor=white&labelColor=6366f1" width="100%" alt="Architecture">
+      </a>
+      <br><br>
+      <a href="https://helpdeskaiv1.vercel.app/">
+        <img src="https://img.shields.io/badge/ACCESS_STUDIO-111827?style=for-the-badge&logo=vercel&logoColor=white&labelColor=10b981" width="100%" alt="Live Studio">
+      </a>
+    </td>
+  </tr>
+</table>
 
-Welcome to the official documentation and internal blog for the **Helpdesk.AI** platform. Here, you'll find everything from architectural deep-dives to guides on how our neural pipeline functions under heavy load.
+<br><br>
 
-<br/>
+> [!IMPORTANT]
+> ### Transparent Scalability
+> We didn't just build a smart backend; we paired it with a sleek UI that uses rich emeralds and deep indigos to ease eye strain. Designed for enterprise orchestration.
 
-### 🚀 What makes us different?
+<p align="center">
+  <img src="./assets/pricing.png" width="85%" alt="Helpdesk.AI Transparent Pricing">
+</p>
 
-Normally, enterprise support desks are bogged down by Level 1 manual triage. It takes humans minutes to read, categorize, and route an issue. 
+<br>
 
-We replaced that bottleneck with a fine-tuned **DistilBERT** Sequence Classifier and **GitHub Models** powered reasoning layer.
-
-1. **<kbd>Categorization</kbd> is Instantaneous**: Wait times drop to `~50ms`.
-2. **<kbd>Entity Extraction</kbd> is Automatic**: We pull Hostnames and IP Addresses out of plain text automatically using NER.
-3. **<kbd>AI Auto-Resolution</kbd> is Proactive**: The moment a user types their issue, our Gemini-backed inference engine attempts to solve it before it even hits the human queue.
-
----
-
-### 🎨 Simple, Transparent Pricing
-
-<div align="center">
-  <img src="./assets/pricing.png" alt="Helpdesk.AI Pricing Layout" style="border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); max-width: 100%; border: 1px solid #e2e8f0;"/>
-</div>
-<br/>
-
-We didn't just build a smart backend; we paired it with a sleek UI that uses rich emeralds and indigos to ease eye strain. We also believe in transparent, scalable pricing ready for any enterprise.
-
-### 🗂️ Explore the Wiki
-* **[Platform Architecture](./Architecture)**: See how the 4-layer Python/React stack operates.
-* **[Interactive Demo](https://helpdeskaiv1.vercel.app/)**: Try the live simulator.
-
----
-<div align="center">
-  Built with 💚 and strict precision.
-</div>
+<p align="center">
+  <img src="https://img.shields.io/badge/BUILT_FOR_PRODUCTION-111827?style=flat-square&logo=github&logoColor=white">
+</p>
