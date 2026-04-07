@@ -9,7 +9,7 @@
 
 <table width="100%">
   <tr>
-    <td width="35%" valign="top">
+    <td width="100%" valign="top">
       <h2>System Architecture</h2>
       <p>The system is split horizontally:</p>
       <ul>
@@ -19,8 +19,11 @@
         <li><strong>Intelligence</strong>: The custom AI Inference Engine handles <i>Text Processing</i> and <i>Reasoning</i> as side-effects before database commits.</li>
       </ul>
     </td>
-    <td width="65%" valign="top">
-      <br>
+  </tr>
+</table>
+
+### Logic Flow Sequence
+
 ```mermaid
 graph TD
     A["User (React UI)"] -->|"Submits API Req"| B("FastAPI Backend")
@@ -33,9 +36,6 @@ graph TD
     G -->|"Real-time WebSocket Sync"| A
     G -->|"Dashboard Aggregation"| H["Admin Portal"]
 ```
-    </td>
-  </tr>
-</table>
 
 <br><br>
 
