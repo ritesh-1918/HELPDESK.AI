@@ -22,6 +22,28 @@
 
 <br/>
 
+## 📖 Table of Contents
+- [Why Helpdesk.AI?](#-why-helpdeskai)
+- [The Enterprise Evolution](#-the-enterprise-evolution)
+- [System Architecture](#-system-architecture)
+- [The AI Neural Pipeline](#-the-ai-neural-pipeline)
+- [Feature Ecosystem](#-feature-ecosystem)
+- [Technology Ecosystem](#-technology-ecosystem)
+- [Deployment & Local Orchestration](#-deployment--local-orchestration)
+- [Roadmap](#-roadmap)
+
+---
+
+## 🎯 Why Helpdesk.AI?
+
+Helpdesk.AI is more than just a ticketing tool; it is a **Neural Service Orchestrator** designed for modern enterprises. It provides value in three primary ways:
+
+1.  **Eliminating the Triage Bottleneck**: By using context-aware AI (DistilBERT), it categorizes 100% of tickets in milliseconds, allowing IT staff to focus on resolution rather than manual assignment.
+2.  **Proactive Resolution**: Integrated LLMs (GitHub Models/Gemini) analyze issues during creation to suggest "Instant Fixes," potentially reducing ticket volume by up to 30%.
+3.  **Tiered Multi-Tenancy**: Built for SaaS, it supports hundreds of companies on a single instance with secure data isolation (Supabase RLS).
+
+---
+
 ## 💎 The Enterprise Evolution
 
 Helpdesk.ai isn't just a ticketing tool; it's a **Neural IT Orchestrator**. Built to handle the complex requirements of modern organizations, it scales support without scaling headcount.
@@ -153,9 +175,21 @@ npm run dev
 ### 3. Backend Setup
 Navigate to `/backend` and refer to internal documentation for Python environment (`venv`) activation and `uvicorn` startup.
 
+
+---
+
+## 🗺️ Roadmap
+
+- [x] **Phase 1**: Core Ticketing & DistilBERT Categorization.
+- [x] **Phase 2**: Multi-tenant SaaS Architecture (Supabase RLS).
+- [ ] **Phase 3**: GitHub Models integration for generative knowledge-base articles.
+- [ ] **Phase 4**: SAP / ServiceNow direct bidirectional sync.
+- [ ] **Phase 5**: AI Voice Support Agent via Twilio.
+
 ---
 
 <div align="center">
 
 Built with ❤️ by the **HELPDESK.AI Professional** Team. 
-*Driving the future of Intelligent Enterprise Support
+*Driving the future of Intelligent Enterprise Support*
+</div>
