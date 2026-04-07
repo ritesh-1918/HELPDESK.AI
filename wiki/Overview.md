@@ -25,7 +25,7 @@
     <td width="50%" valign="top" align="center">
       <br>
       <i>Watch the 3-minute demo reel to understand exact capabilities.</i><br><br>
-        <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ">
+        <a href="https://www.youtube.com/watch?v=Bj00LzeMylM">
           <img src="https://img.shields.io/badge/▶_WATCH_VIDEO_DEMO-111827?style=for-the-badge&logo=youtube&logoColor=white&labelColor=dc2626" alt="Video Placeholder">
         </a>
     </td>
