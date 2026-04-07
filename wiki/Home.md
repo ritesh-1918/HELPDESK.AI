@@ -1,7 +1,7 @@
 # Welcome to Helpdesk.AI
 
 <div align="center">
-  <img src="./assets/hero_dashboard.png" alt="Helpdesk.AI High-End Interactive Landing Page" style="border-radius: 12px; box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23); max-width: 100%; border: 1px solid #e2e8f0;"/>
+  <img src="./assets/hero.png" alt="Helpdesk.AI High-End Interactive Landing Page" style="border-radius: 12px; box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23); max-width: 100%; border: 1px solid #e2e8f0;"/>
 </div>
 
 <br/>
@@ -26,14 +26,14 @@ We replaced that bottleneck with a fine-tuned **DistilBERT** Sequence Classifier
 
 ---
 
-### 🎨 Chaos to Clarity UI
+### 🎨 Simple, Transparent Pricing
 
 <div align="center">
-  <img src="./assets/hero_dashboard_v2.png" alt="Helpdesk.AI Dashboard Layout" style="border-radius: 8px; border: 2px solid #555; padding: 4px; background: #000;"/>
+  <img src="./assets/pricing.png" alt="Helpdesk.AI Pricing Layout" style="border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); max-width: 100%; border: 1px solid #e2e8f0;"/>
 </div>
 <br/>
 
-We didn't just build a smart backend; we paired it with a sleek, dark-mode first UI that uses rich emeralds and indigos to ease eye strain for IT professionals staring at logs all day. 
+We didn't just build a smart backend; we paired it with a sleek UI that uses rich emeralds and indigos to ease eye strain. We also believe in transparent, scalable pricing ready for any enterprise.
 
 ### 🗂️ Explore the Wiki
 * **[Platform Architecture](./Architecture)**: See how the 4-layer Python/React stack operates.
