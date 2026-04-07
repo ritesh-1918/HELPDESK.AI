@@ -22,12 +22,12 @@
         <img src="https://img.shields.io/badge/READ_GITHUB_DOCS-111827?style=for-the-badge&logo=readthedocs&logoColor=white&labelColor=252526" alt="Docs">
       </a>
     </td>
-    <td width="50%" valign="top">
+    <td width="50%" valign="top" align="center">
       <br>
-      <div align="center">
-        <i>Watch the 3-minute demo reel to understand exact capabilities.</i><br><br>
-        <img src="https://img.shields.io/badge/▶_WATCH_VIDEO_DEMO-111827?style=for-the-badge&logoColor=white&labelColor=dc2626" alt="Video Placeholder">
-      </div>
+      <i>Watch the 3-minute demo reel to understand exact capabilities.</i><br><br>
+        <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ">
+          <img src="https://img.shields.io/badge/▶_WATCH_VIDEO_DEMO-111827?style=for-the-badge&logo=youtube&logoColor=white&labelColor=dc2626" alt="Video Placeholder">
+        </a>
     </td>
   </tr>
 </table>
@@ -38,9 +38,7 @@
 > ### Python Inference Setup
 > Drop this snippet into your core logic code to instantiate the AI engine locally. Requires configured GitHub CLI secrets to execute safely.
 
-<table width="100%">
-  <tr>
-    <td valign="top">
+
 ```python
 import os
 from azure.ai.inference import ChatCompletionsClient
@@ -49,7 +47,7 @@ from azure.core.credentials import AzureKeyCredential
 
 endpoint = "https://models.github.ai/inference"
 model = "openai/gpt-4o"
-token = os.environ["GITHUB_TOKEN"]
+token = os.environ["GH_MODELS_TOKEN"]
 
 client = ChatCompletionsClient(
     endpoint=endpoint,
@@ -68,6 +66,3 @@ response = client.complete(
 
 print(response.choices[0].message.content)
 ```
-    </td>
-  </tr>
-</table>
