@@ -16,21 +16,35 @@
 ### ⚡ Eliminating the Manual Triage Bottleneck.
 *Helpdesk.ai uses deep-learning neural networks and 4-layer enterprise architecture to categorize, prioritize, and resolve IT issues in milliseconds.*
 
-[Launch Application](https://helpdeskaiv1.vercel.app/) • [Contact Enterprise](https://helpdeskaiv1.vercel.app/contact-sales) • [API Documentation](https://ritesh19180-ai-helpdesk-api.hf.space/docs)
-
+<div align="center">
+  <br/>
+  <a href="https://helpdeskaiv1.vercel.app/">
+    <img src="https://img.shields.io/badge/🚀_LAUNCH_APPLICATION-111827?style=for-the-badge&logo=vercel&logoColor=white&labelColor=6366f1" height="42" alt="Launch Application" />
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://helpdeskaiv1.vercel.app/contact-sales">
+    <img src="https://img.shields.io/badge/✉️_CONTACT_ENTERPRISE-111827?style=for-the-badge&logo=minutemailer&logoColor=white&labelColor=10b981" height="42" alt="Contact Enterprise" />
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://ritesh19180-ai-helpdesk-api.hf.space/docs">
+    <img src="https://img.shields.io/badge/📚_API_DOCUMENTATION-111827?style=for-the-badge&logo=swagger&logoColor=white&labelColor=f59e0b" height="42" alt="API Documentation" />
+  </a>
+  <br/><br/>
+</div>
 </div>
 
 <br/>
 
-## 📖 Table of Contents
-- [Why Helpdesk.AI?](#-why-helpdeskai)
-- [The Enterprise Evolution](#-the-enterprise-evolution)
-- [System Architecture](#-system-architecture)
-- [The AI Neural Pipeline](#-the-ai-neural-pipeline)
-- [Feature Ecosystem](#-feature-ecosystem)
-- [Technology Ecosystem](#-technology-ecosystem)
-- [Deployment & Local Orchestration](#-deployment--local-orchestration)
-- [Roadmap](#-roadmap)
+## 📖 Navigation Hub
+
+<div align="center">
+
+| 🧩 **Platform Vision** | 🏗️ **Under the Hood** | 🚀 **Next Steps** |
+| :--- | :--- | :--- |
+| ➧ [Why Helpdesk.AI?](#-why-helpdeskai)<br>➧ [The Enterprise Evolution](#-the-enterprise-evolution) | ➧ [System Architecture](#-system-architecture)<br>➧ [The AI Neural Pipeline](#-the-ai-neural-pipeline) | ➧ [Deployment / Setup](#-deployment--local-orchestration)<br>➧ [Future Roadmap](#-roadmap) |
+| ➧ [Feature Ecosystem](#-feature-ecosystem) | ➧ [Technology Ecosystem](#-technology-ecosystem) | |
+
+</div>
 
 ---
 
