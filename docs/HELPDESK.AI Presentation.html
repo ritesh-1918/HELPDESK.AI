@@ -102,12 +102,15 @@
         }
 
         body.presentation-mode .page-wrapper {
+            position: fixed;
+            inset: 0;
             overflow: hidden;
             background-color: #000;
             display: block;
             padding: 0;
             width: 100vw;
             height: 100vh;
+            z-index: 9998;
         }
 
         body.presentation-mode .slide-container {
@@ -140,27 +143,25 @@
             transform: translate(-50%, -50%) rotate(var(--rotation, 0deg)) scale(var(--scale-factor, 1));
         }
 
-        /* Directional States */
+        /* Directional States using rotation-aware offsets */
         body.presentation-mode .slide-container.slide-next {
-            transform: translate(0%, -50%) scale(var(--scale-factor, 1));
-            /* Start from Right */
+            transform: translate(50%, -50%) rotate(var(--rotation, 0deg)) scale(var(--scale-factor, 0.8));
             opacity: 0;
         }
 
         body.presentation-mode .slide-container.slide-prev {
-            transform: translate(-100%, -50%) scale(var(--scale-factor, 1));
-            /* Start from Left */
+            transform: translate(-150%, -50%) rotate(var(--rotation, 0deg)) scale(var(--scale-factor, 0.8));
             opacity: 0;
         }
 
         body.presentation-mode .slide-container.exit-left {
-            transform: translate(-100%, -50%) scale(0.9);
+            transform: translate(-150%, -50%) rotate(var(--rotation, 0deg)) scale(var(--scale-factor, 0.9));
             opacity: 0;
             filter: blur(10px);
         }
 
         body.presentation-mode .slide-container.exit-right {
-            transform: translate(0%, -50%) scale(0.9);
+            transform: translate(50%, -50%) rotate(var(--rotation, 0deg)) scale(var(--scale-factor, 0.9));
             opacity: 0;
             filter: blur(10px);
         }
