@@ -19,7 +19,6 @@ user_feedback_rows.csv
 
 # Git
 .git/
-.github/
 
 # Frontend
 node_modules/
