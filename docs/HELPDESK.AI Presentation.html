@@ -799,389 +799,251 @@
         <!-- Slide 4: System Architecture — 3 Layers -->
         <div class="slide-wrapper">
             <div class="slide-container slide-4">
-                <!-- Background Decor (subtle circuit lines) -->
-                <div
-                    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.03; z-index: 1; pointer-events: none;">
-                    <svg width="100%" height="100%" viewBox="0 0 1280 720" fill="none">
-                        <line x1="640" y1="0" x2="640" y2="720" stroke="#10B981" stroke-width="1" />
-                        <line x1="0" y1="240" x2="1280" y2="240" stroke="#10B981" stroke-width="1" />
-                        <line x1="0" y1="480" x2="1280" y2="480" stroke="#10B981" stroke-width="1" />
+                <!-- Professional Blueprint Background -->
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0;">
+                    <svg width="100%" height="100%">
+                        <pattern id="blueprint-grid" x="0" y="0" width="80" height="80" patternUnits="userSpaceOnUse">
+                            <path d="M 80 0 L 0 0 0 80" fill="none" stroke="rgba(16, 185, 129, 0.03)"
+                                stroke-width="1" />
+                        </pattern>
+                        <rect width="100%" height="100%" fill="url(#blueprint-grid)" />
                     </svg>
                 </div>
 
                 <!-- Slide Title -->
-                <div
-                    style="position: absolute; top: 32px; left: 80px; width: 1120px; z-index: 10; display: flex; align-items: baseline; gap: 18px;">
-                    <p style="margin: 0; font-size: 46px; font-weight: 700; color: #FFFFFF; line-height: 1.1;">System
+                <div style="position: absolute; top: 40px; left: 80px; width: 1120px; z-index: 10;">
+                    <p style="margin: 0; font-size: 40px; font-weight: 700; color: #FFFFFF; line-height: 1.1;">System
                         Architecture</p>
+                    <div style="width: 60px; height: 3px; background: #10B981; margin-top: 10px; border-radius: 2px;">
+                    </div>
                     <p
-                        style="margin: 0; font-size: 15px; font-weight: 500; color: #64748B; letter-spacing: 2px; text-transform: uppercase;">
-                        3-Layer Decoupled SaaS</p>
+                        style="margin: 10px 0 0 0; color:#64748B; font-size: 14px; text-transform:uppercase; letter-spacing:2px; font-weight: 800;">
+                        How the system Works</p>
                 </div>
 
                 <style>
-                    .slide-4 .arch-wrap {
+                    .slide-4 .arch-layout {
                         position: absolute;
-                        top: 110px;
-                        left: 55px;
-                        width: 1170px;
-                        height: 576px;
-                        display: flex;
-                        flex-direction: column;
-                        gap: 0;
-                        z-index: 10;
+                        top: 140px;
+                        left: 0;
+                        width: 1280px;
+                        height: 520px;
+                        display: grid;
+                        grid-template-columns: repeat(12, 1fr);
+                        grid-template-rows: repeat(10, 1fr);
+                        z-index: 15;
+                        font-family: 'Inter', sans-serif;
                     }
 
-                    .slide-4 .arch-row {
+                    .slide-4 .node {
+                        background: #111827;
+                        border: 1.5px solid #1F2937;
+                        border-radius: 8px;
                         display: flex;
-                        align-items: stretch;
-                        gap: 0;
-                        flex: 1;
-                    }
-
-                    .slide-4 .arch-lbl {
-                        width: 52px;
-                        flex-shrink: 0;
-                        display: flex;
-                        flex-direction: column;
                         align-items: center;
                         justify-content: center;
+                        padding: 8px 16px;
+                        color: white;
+                        font-size: 13px;
+                        font-weight: 700;
+                        z-index: 20;
+                        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+                        transition: border-color 0.3s;
+                        white-space: nowrap;
+                        width: 180px;
+                        margin: 0 auto;
                     }
 
-                    .slide-4 .arch-lbl .lnum {
-                        font-size: 10px;
-                        font-weight: 800;
-                        letter-spacing: 2px;
-                        text-transform: uppercase;
-                        writing-mode: vertical-lr;
-                        transform: rotate(180deg);
-                    }
-
-                    .slide-4 .arch-lbl .lvl {
-                        width: 2px;
-                        flex: 1;
-                        border-radius: 2px;
-                        opacity: 0.3;
-                    }
-
-                    .slide-4 .arch-panel {
-                        flex: 1;
-                        border-radius: 14px;
-                        border: 1px solid transparent;
-                        padding: 14px 20px;
-                        box-sizing: border-box;
-                        display: flex;
-                        flex-direction: column;
-                        justify-content: center;
-                        gap: 10px;
-                        position: relative;
-                        overflow: hidden;
-                        margin: 4px 0;
-                        transition: border-color 0.3s, box-shadow 0.3s;
-                    }
-
-                    .slide-4 .arch-panel:hover {
-                        box-shadow: 0 0 32px rgba(255, 255, 255, 0.04);
-                    }
-
-                    .slide-4 .ap-blue {
-                        background: linear-gradient(140deg, #060F24 0%, #0A1C3A 100%);
-                        border-color: #1A3360;
-                    }
-
-                    .slide-4 .ap-green {
-                        background: linear-gradient(140deg, #04100C 0%, #071A11 100%);
-                        border-color: #0D2E1C;
-                    }
-
-                    .slide-4 .ap-pur {
-                        background: linear-gradient(140deg, #0D0519 0%, #180629 100%);
-                        border-color: #280d48;
-                    }
-
-                    .slide-4 .ap-blue:hover {
-                        border-color: #3B82F6;
-                    }
-
-                    .slide-4 .ap-green:hover {
+                    .slide-4 .node:hover {
                         border-color: #10B981;
                     }
 
-                    .slide-4 .ap-pur:hover {
-                        border-color: #8B5CF6;
+                    .slide-4 .node i {
+                        margin-right: 12px;
+                        font-size: 16px;
+                        width: 20px;
+                        text-align: center;
                     }
 
-                    .slide-4 .ap-hdr {
-                        display: flex;
-                        align-items: center;
-                        gap: 10px;
+                    /* Node Coordinates (Grid Placement) */
+                    .node-user {
+                        grid-column: 6 / 8;
+                        grid-row: 1;
+                        border-top: 3px solid #3B82F6;
                     }
 
-                    .slide-4 .ap-icon {
-                        width: 42px;
-                        height: 42px;
-                        border-radius: 10px;
-                        flex-shrink: 0;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        font-size: 20px;
+                    .node-api {
+                        grid-column: 6 / 8;
+                        grid-row: 3;
+                        border-top: 3px solid #10B981;
                     }
 
-                    .slide-4 .ic-b {
-                        background: rgba(59, 130, 246, 0.15);
-                        color: #60A5FA;
+                    .node-engine {
+                        grid-column: 6 / 8;
+                        grid-row: 5;
+                        border: 2px solid #F59E0B;
+                        height: 50px;
                     }
 
-                    .slide-4 .ic-g {
-                        background: rgba(16, 185, 129, 0.15);
-                        color: #10B981;
+                    .node-distil {
+                        grid-column: 3 / 5;
+                        grid-row: 7;
+                        background: #0F172A;
                     }
 
-                    .slide-4 .ic-p {
-                        background: rgba(139, 92, 246, 0.15);
-                        color: #A78BFA;
+                    .node-ner {
+                        grid-column: 6 / 8;
+                        grid-row: 7;
+                        background: #0F172A;
                     }
 
-                    .slide-4 .ap-name {
-                        margin: 0;
-                        font-size: 19px;
-                        font-weight: 700;
-                        color: #FFF;
+                    .node-cosine {
+                        grid-column: 9 / 11;
+                        grid-row: 7;
+                        background: #0F172A;
                     }
 
-                    .slide-4 .ap-tech {
-                        margin: 0;
-                        font-size: 12.5px;
-                        font-weight: 500;
+                    .node-db {
+                        grid-column: 6 / 8;
+                        grid-row: 9;
+                        border-top: 3px solid #3ECF8E;
                     }
 
-                    .slide-4 .tc-b {
-                        color: #93C5FD;
+                    .node-admin {
+                        grid-column: 6 / 8;
+                        grid-row: 10.5;
+                        font-size: 11px;
+                        opacity: 0.6;
+                        height: 30px;
                     }
 
-                    .slide-4 .tc-g {
-                        color: #6EE7B7;
-                    }
-
-                    .slide-4 .tc-p {
-                        color: #C4B5FD;
-                    }
-
-                    .slide-4 .ap-chips {
-                        display: flex;
-                        flex-wrap: wrap;
-                        gap: 5px;
-                    }
-
-                    .slide-4 .ch {
-                        padding: 3px 10px;
-                        border-radius: 30px;
-                        font-size: 11.5px;
-                        font-weight: 600;
-                    }
-
-                    .slide-4 .cb {
-                        background: rgba(59, 130, 246, 0.1);
-                        color: #93C5FD;
-                        border: 1px solid rgba(59, 130, 246, 0.2);
-                    }
-
-                    .slide-4 .cg {
-                        background: rgba(16, 185, 129, 0.1);
-                        color: #6EE7B7;
-                        border: 1px solid rgba(16, 185, 129, 0.2);
-                    }
-
-                    .slide-4 .cp {
-                        background: rgba(139, 92, 246, 0.1);
-                        color: #C4B5FD;
-                        border: 1px solid rgba(139, 92, 246, 0.2);
-                    }
-
-                    .slide-4 .dbdg {
+                    /* Path Labels */
+                    .slide-4 .p-label {
                         position: absolute;
-                        top: 10px;
-                        right: 14px;
-                        padding: 2px 10px;
-                        border-radius: 30px;
-                        font-size: 10.5px;
-                        font-weight: 600;
+                        font-size: 9px;
+                        font-weight: 900;
+                        color: #475569;
+                        text-transform: uppercase;
+                        background: #0A0F1C;
+                        padding: 2px 6px;
+                        border: 1px solid #1E293B;
+                        border-radius: 4px;
+                        z-index: 25;
+                        transform: translate(-50%, -50%);
                     }
 
-                    .slide-4 .dbdg-b {
-                        background: rgba(59, 130, 246, 0.12);
-                        color: #93C5FD;
-                        border: 1px solid rgba(59, 130, 246, 0.25);
+                    /* SVG Circuit Paths */
+                    .slide-4 .circuit-path {
+                        stroke: #1E293B;
+                        stroke-width: 2;
+                        fill: none;
                     }
 
-                    .slide-4 .dbdg-g {
-                        background: rgba(16, 185, 129, 0.12);
-                        color: #6EE7B7;
-                        border: 1px solid rgba(16, 185, 129, 0.25);
+                    .slide-4 .pulse-ball {
+                        fill: #10B981;
+                        filter: drop-shadow(0 0 5px #10B981);
                     }
 
-                    .slide-4 .dbdg-p {
-                        background: rgba(139, 92, 246, 0.12);
-                        color: #C4B5FD;
-                        border: 1px solid rgba(139, 92, 246, 0.25);
-                    }
+                    @keyframes pulse-move {
+                        0% {
+                            offset-distance: 0%;
+                            opacity: 0;
+                        }
 
-                    .slide-4 .conn {
-                        height: 26px;
-                        display: flex;
-                        align-items: center;
-                        padding-left: 52px;
-                        gap: 0;
-                    }
+                        10% {
+                            opacity: 1;
+                        }
 
-                    .slide-4 .conn .cl {
-                        flex: 1;
-                        height: 1.5px;
-                        background: linear-gradient(to right, transparent, #10B981, transparent);
-                        opacity: 0.35;
-                        animation: connAnim 2.2s ease-in-out infinite;
-                    }
+                        90% {
+                            opacity: 1;
+                        }
 
-                    .slide-4 .conn .ci {
-                        color: #10B981;
-                        font-size: 13px;
-                        opacity: 0.7;
-                        padding: 0 6px;
-                    }
-
-                    .slide-4 .conn .ct {
-                        font-size: 10.5px;
-                        color: #64748B;
-                        white-space: nowrap;
-                        padding: 0 10px;
-                    }
-
-                    @keyframes connAnim {
-
-                        0%,
                         100% {
-                            opacity: .15
+                            offset-distance: 100%;
+                            opacity: 0;
                         }
+                    }
 
-                        50% {
-                            opacity: .55
-                        }
+                    .slide-4 .anim-pulse {
+                        animation: pulse-move 4s linear infinite;
                     }
                 </style>
 
-                <div class="arch-wrap">
+                <!-- SVG Circuit Connections -->
+                <svg width="1280" height="600" style="position: absolute; top: 0; left: 0; z-index: 10;">
+                    <defs>
+                        <marker id="dot" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4">
+                            <circle cx="5" cy="5" r="3" fill="#334155" />
+                        </marker>
+                    </defs>
 
-                    <!-- LAYER 1 -->
-                    <div class="arch-row">
-                        <div class="arch-lbl">
-                            <div class="lvl" style="background:#3B82F6;"></div>
-                            <span class="lnum" style="color:#60A5FA;">L1</span>
-                            <div class="lvl" style="background:#3B82F6;"></div>
-                        </div>
-                        <div class="arch-panel ap-blue">
-                            <span class="dbdg dbdg-b">☁ Vercel Edge Network</span>
-                            <div class="ap-hdr">
-                                <div class="ap-icon ic-b"><i class="fa-solid fa-desktop"></i></div>
-                                <div>
-                                    <p class="ap-name">Presentation Layer</p>
-                                    <p class="ap-tech tc-b">React 19 &nbsp;·&nbsp; Vite &nbsp;·&nbsp; TailwindCSS
-                                        &nbsp;·&nbsp; Zustand &nbsp;·&nbsp; React Router v6</p>
-                                </div>
-                            </div>
-                            <div class="ap-chips">
-                                <span class="ch cb">AI-Powered Ticket Submit</span>
-                                <span class="ch cb">AI Processing Simulator</span>
-                                <span class="ch cb">Auto-Resolve Chat</span>
-                                <span class="ch cb">Admin Analytics Dashboard</span>
-                                <span class="ch cb">Master Admin Portal</span>
-                                <span class="ch cb">Voice Input</span>
-                                <span class="ch cb">Stripe Subscriptions</span>
-                            </div>
-                        </div>
+                    <!-- 1. User to API (Direct Vertical) -->
+                    <path id="p1" class="circuit-path" d="M 640 185 L 640 240" marker-start="url(#dot)" />
+                    <circle r="4" class="anim-pulse pulse-ball">
+                        <animateMotion dur="3s" repeatCount="indefinite" path="M 640 185 L 640 240" />
+                    </circle>
+
+                    <!-- 2. API to Engine (Direct Vertical) -->
+                    <path id="p2" class="circuit-path" d="M 640 290 L 640 340" marker-start="url(#dot)" />
+                    <circle r="4" class="anim-pulse pulse-ball">
+                        <animateMotion dur="3s" begin="1s" repeatCount="indefinite" path="M 640 290 L 640 340" />
+                    </circle>
+
+                    <!-- 3. Engine to 3-Model Distribution (Orthogonal T-Junction) -->
+                    <path id="p3" class="circuit-path" d="M 640 400 L 640 430 H 375 V 450" marker-start="url(#dot)" />
+                    <path id="p4" class="circuit-path" d="M 640 400 L 640 450" />
+                    <path id="p5" class="circuit-path" d="M 640 400 L 640 430 H 905 V 450" />
+
+                    <!-- Pulses for Models -->
+                    <circle r="3" class="anim-pulse pulse-ball" style="animation-delay: 2s;">
+                        <animateMotion dur="4s" repeatCount="indefinite" path="M 640 400 L 640 430 H 375 V 450" />
+                    </circle>
+                    <circle r="3" class="anim-pulse pulse-ball" style="animation-delay: 2s;">
+                        <animateMotion dur="4s" repeatCount="indefinite" path="M 640 400 L 640 450" />
+                    </circle>
+                    <circle r="3" class="anim-pulse pulse-ball" style="animation-delay: 2s;">
+                        <animateMotion dur="4s" repeatCount="indefinite" path="M 640 400 L 640 430 H 905 V 450" />
+                    </circle>
+
+                    <!-- 4. Models to DB (Converging Orthogonal) -->
+                    <path id="p6" class="circuit-path" d="M 375 500 V 530 H 640 V 550" />
+                    <path id="p7" class="circuit-path" d="M 640 500 V 550" />
+                    <path id="p8" class="circuit-path" d="M 905 500 V 530 H 640 V 550" />
+
+                    <!-- 5. DB back to User (Large Professional Loop) -->
+                    <path id="pSync" class="circuit-path" d="M 550 580 H 120 V 165 H 550" stroke="#3B82F6"
+                        stroke-dasharray="5 5" opacity="0.3" />
+                    <circle r="4" fill="#3B82F6" class="anim-pulse" style="animation-duration: 6s;">
+                        <animateMotion dur="6s" repeatCount="indefinite" path="M 550 580 H 120 V 165 H 550" />
+                    </circle>
+                </svg>
+
+                <!-- Labels Placement -->
+                <div class="p-label" style="top: 215px; left: 640px;">Submits Issue</div>
+                <div class="p-label" style="top: 315px; left: 640px;">Neural Processing</div>
+                <div class="p-label" style="top: 430px; left: 375px;">Classification</div>
+                <div class="p-label" style="top: 430px; left: 905px;">Deduplication</div>
+                <div class="p-label" style="top: 370px; left: 120px; color:#3B82F6; border-color:#3B82F6;">Real-time
+                    State Sync</div>
+
+                <!-- Nodes Placement -->
+                <div class="arch-layout">
+                    <div class="node node-user"><i class="fa-solid fa-laptop" style="color:#3B82F6;"></i>User (Frontend)
                     </div>
+                    <div class="node node-api"><i class="fa-solid fa-microchip" style="color:#10B981;"></i>FastAPI
+                        Backend</div>
+                    <div class="node node-engine"><i class="fa-solid fa-brain" style="color:#F59E0B;"></i>AI Inference
+                        Engine</div>
 
-                    <!-- CONNECTOR 1 → 2 -->
-                    <div class="conn">
-                        <div class="cl"></div>
-                        <i class="fa-solid fa-arrow-down ci"></i>
-                        <div class="cl"></div>
-                        <span class="ct">POST /ai/analyze_ticket &nbsp;·&nbsp; async JSON REST</span>
-                        <div class="cl"></div>
-                        <i class="fa-solid fa-arrow-down ci"></i>
-                        <div class="cl"></div>
+                    <div class="node node-distil">DistilBERT v3</div>
+                    <div class="node node-ner">NER Extraction</div>
+                    <div class="node node-cosine">Cosine Similarity</div>
+
+                    <div class="node node-db"><i class="fa-solid fa-database" style="color:#3ECF8E;"></i>Supabase DB
                     </div>
-
-                    <!-- LAYER 2 -->
-                    <div class="arch-row">
-                        <div class="arch-lbl">
-                            <div class="lvl" style="background:#10B981;"></div>
-                            <span class="lnum" style="color:#10B981;">L2</span>
-                            <div class="lvl" style="background:#10B981;"></div>
-                        </div>
-                        <div class="arch-panel ap-green">
-                            <span class="dbdg dbdg-g">☁ Hugging Face Spaces</span>
-                            <div class="ap-hdr">
-                                <div class="ap-icon ic-g"><i class="fa-solid fa-microchip"></i></div>
-                                <div>
-                                    <p class="ap-name">Intelligence &amp; API Layer</p>
-                                    <p class="ap-tech tc-g">FastAPI &nbsp;·&nbsp; Python 3.12 &nbsp;·&nbsp; PyTorch
-                                        &nbsp;·&nbsp; HuggingFace Transformers</p>
-                                </div>
-                            </div>
-                            <div class="ap-chips">
-                                <span class="ch cg">DistilBERT v3 Classifier</span>
-                                <span class="ch cg">NER Entity Harvesting</span>
-                                <span class="ch cg">Cosine Similarity Deduplication</span>
-                                <span class="ch cg">Tesseract OCR</span>
-                                <span class="ch cg">Gemini Reasoning</span>
-                                <span class="ch cg">&lt; 400ms Inference</span>
-                                <span class="ch cg">Adversarial Retraining</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- CONNECTOR 2 → 3 -->
-                    <div class="conn">
-                        <div class="cl"></div>
-                        <i class="fa-solid fa-arrow-down ci"></i>
-                        <div class="cl"></div>
-                        <span class="ct">Supabase Client &nbsp;·&nbsp; JWT Bearer Token &nbsp;·&nbsp; RLS
-                            Policies</span>
-                        <div class="cl"></div>
-                        <i class="fa-solid fa-arrow-down ci"></i>
-                        <div class="cl"></div>
-                    </div>
-
-                    <!-- LAYER 3 -->
-                    <div class="arch-row">
-                        <div class="arch-lbl">
-                            <div class="lvl" style="background:#8B5CF6;"></div>
-                            <span class="lnum" style="color:#A78BFA;">L3</span>
-                            <div class="lvl" style="background:#8B5CF6;"></div>
-                        </div>
-                        <div class="arch-panel ap-pur">
-                            <span class="dbdg dbdg-p">☁ Supabase Cloud</span>
-                            <div class="ap-hdr">
-                                <div class="ap-icon ic-p"><i class="fa-solid fa-shield-halved"></i></div>
-                                <div>
-                                    <p class="ap-name">Data &amp; Auth Layer</p>
-                                    <p class="ap-tech tc-p">Supabase &nbsp;·&nbsp; PostgreSQL &nbsp;·&nbsp; JWT
-                                        &nbsp;·&nbsp; Row-Level Security (RLS)</p>
-                                </div>
-                            </div>
-                            <div class="ap-chips">
-                                <span class="ch cp">profiles table (RBAC)</span>
-                                <span class="ch cp">tickets table (JSONB metadata)</span>
-                                <span class="ch cp">Email + Magic Link Auth</span>
-                                <span class="ch cp">Multi-Tenant Isolation</span>
-                                <span class="ch cp">Real-Time Sync</span>
-                                <span class="ch cp">4-Layer Permission Matrix</span>
-                            </div>
-                        </div>
-                    </div>
-
-                </div><!-- end arch-wrap -->
+                    <div class="node node-admin" style="grid-row: 10;"><i class="fa-solid fa-gauge-high"></i>Admin
+                        Portal</div>
+                </div>
             </div>
         </div><!-- end slide-4 -->
         <!-- Slide 5: Dataset Overview -->
@@ -1986,256 +1848,6 @@
                 </div>
             </div>
         </div>
-        <!-- Slide 9: High-Precision Tech Architecture -->
-        <div class="slide-wrapper">
-            <div class="slide-container slide-9">
-                <!-- Professional Blueprint Background -->
-                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0;">
-                    <svg width="100%" height="100%">
-                        <pattern id="blueprint-grid" x="0" y="0" width="80" height="80" patternUnits="userSpaceOnUse">
-                            <path d="M 80 0 L 0 0 0 80" fill="none" stroke="rgba(16, 185, 129, 0.03)"
-                                stroke-width="1" />
-                        </pattern>
-                        <rect width="100%" height="100%" fill="url(#blueprint-grid)" />
-                    </svg>
-                </div>
-
-                <!-- Slide Title -->
-                <div style="position: absolute; top: 40px; left: 80px; width: 1120px; z-index: 10;">
-                    <p style="margin: 0; font-size: 40px; font-weight: 700; color: #FFFFFF; line-height: 1.1;">USER
-                        Architecture Flow</p>
-                    <div style="width: 60px; height: 3px; background: #10B981; margin-top: 10px; border-radius: 2px;">
-                    </div>
-                    <p
-                        style="margin: 10px 0 0 0; color:#64748B; font-size: 14px; text-transform:uppercase; letter-spacing:2px; font-weight: 800;">
-                        How the system Works</p>
-                </div>
-
-                <style>
-                    .slide-9 .arch-layout {
-                        position: absolute;
-                        top: 140px;
-                        left: 0;
-                        width: 1280px;
-                        height: 520px;
-                        display: grid;
-                        grid-template-columns: repeat(12, 1fr);
-                        grid-template-rows: repeat(10, 1fr);
-                        z-index: 15;
-                        font-family: 'Inter', sans-serif;
-                    }
-
-                    .slide-9 .node {
-                        background: #111827;
-                        border: 1.5px solid #1F2937;
-                        border-radius: 8px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        padding: 8px 16px;
-                        color: white;
-                        font-size: 13px;
-                        font-weight: 700;
-                        z-index: 20;
-                        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-                        transition: border-color 0.3s;
-                        white-space: nowrap;
-                        width: 180px;
-                        margin: 0 auto;
-                    }
-
-                    .slide-9 .node:hover {
-                        border-color: #10B981;
-                    }
-
-                    .slide-9 .node i {
-                        margin-right: 12px;
-                        font-size: 16px;
-                        width: 20px;
-                        text-align: center;
-                    }
-
-                    /* Node Coordinates (Grid Placement) */
-                    .node-user {
-                        grid-column: 6 / 8;
-                        grid-row: 1;
-                        border-top: 3px solid #3B82F6;
-                    }
-
-                    .node-api {
-                        grid-column: 6 / 8;
-                        grid-row: 3;
-                        border-top: 3px solid #10B981;
-                    }
-
-                    .node-engine {
-                        grid-column: 6 / 8;
-                        grid-row: 5;
-                        border: 2px solid #F59E0B;
-                        height: 50px;
-                    }
-
-                    .node-distil {
-                        grid-column: 3 / 5;
-                        grid-row: 7;
-                        background: #0F172A;
-                    }
-
-                    .node-ner {
-                        grid-column: 6 / 8;
-                        grid-row: 7;
-                        background: #0F172A;
-                    }
-
-                    .node-cosine {
-                        grid-column: 9 / 11;
-                        grid-row: 7;
-                        background: #0F172A;
-                    }
-
-                    .node-db {
-                        grid-column: 6 / 8;
-                        grid-row: 9;
-                        border-top: 3px solid #3ECF8E;
-                    }
-
-                    .node-admin {
-                        grid-column: 6 / 8;
-                        grid-row: 10.5;
-                        font-size: 11px;
-                        opacity: 0.6;
-                        height: 30px;
-                    }
-
-                    /* Path Labels */
-                    .slide-9 .p-label {
-                        position: absolute;
-                        font-size: 9px;
-                        font-weight: 900;
-                        color: #475569;
-                        text-transform: uppercase;
-                        background: #0A0F1C;
-                        padding: 2px 6px;
-                        border: 1px solid #1E293B;
-                        border-radius: 4px;
-                        z-index: 25;
-                        transform: translate(-50%, -50%);
-                    }
-
-                    /* SVG Circuit Paths */
-                    .slide-9 .circuit-path {
-                        stroke: #1E293B;
-                        stroke-width: 2;
-                        fill: none;
-                    }
-
-                    .slide-9 .pulse-ball {
-                        fill: #10B981;
-                        filter: drop-shadow(0 0 5px #10B981);
-                    }
-
-                    @keyframes pulse-move {
-                        0% {
-                            offset-distance: 0%;
-                            opacity: 0;
-                        }
-
-                        10% {
-                            opacity: 1;
-                        }
-
-                        90% {
-                            opacity: 1;
-                        }
-
-                        100% {
-                            offset-distance: 100%;
-                            opacity: 0;
-                        }
-                    }
-
-                    .slide-9 .anim-pulse {
-                        animation: pulse-move 4s linear infinite;
-                    }
-                </style>
-
-                <!-- SVG Circuit Connections -->
-                <svg width="1280" height="600" style="position: absolute; top: 0; left: 0; z-index: 10;">
-                    <defs>
-                        <marker id="dot" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4">
-                            <circle cx="5" cy="5" r="3" fill="#334155" />
-                        </marker>
-                    </defs>
-
-                    <!-- 1. User to API (Direct Vertical) -->
-                    <path id="p1" class="circuit-path" d="M 640 185 L 640 240" marker-start="url(#dot)" />
-                    <circle r="4" class="anim-pulse pulse-ball">
-                        <animateMotion dur="3s" repeatCount="indefinite" path="M 640 185 L 640 240" />
-                    </circle>
-
-                    <!-- 2. API to Engine (Direct Vertical) -->
-                    <path id="p2" class="circuit-path" d="M 640 290 L 640 340" marker-start="url(#dot)" />
-                    <circle r="4" class="anim-pulse pulse-ball">
-                        <animateMotion dur="3s" begin="1s" repeatCount="indefinite" path="M 640 290 L 640 340" />
-                    </circle>
-
-                    <!-- 3. Engine to 3-Model Distribution (Orthogonal T-Junction) -->
-                    <path id="p3" class="circuit-path" d="M 640 400 L 640 430 H 375 V 450" marker-start="url(#dot)" />
-                    <path id="p4" class="circuit-path" d="M 640 400 L 640 450" />
-                    <path id="p5" class="circuit-path" d="M 640 400 L 640 430 H 905 V 450" />
-
-                    <!-- Pulses for Models -->
-                    <circle r="3" class="anim-pulse pulse-ball" style="animation-delay: 2s;">
-                        <animateMotion dur="4s" repeatCount="indefinite" path="M 640 400 L 640 430 H 375 V 450" />
-                    </circle>
-                    <circle r="3" class="anim-pulse pulse-ball" style="animation-delay: 2s;">
-                        <animateMotion dur="4s" repeatCount="indefinite" path="M 640 400 L 640 450" />
-                    </circle>
-                    <circle r="3" class="anim-pulse pulse-ball" style="animation-delay: 2s;">
-                        <animateMotion dur="4s" repeatCount="indefinite" path="M 640 400 L 640 430 H 905 V 450" />
-                    </circle>
-
-                    <!-- 4. Models to DB (Converging Orthogonal) -->
-                    <path id="p6" class="circuit-path" d="M 375 500 V 530 H 640 V 550" />
-                    <path id="p7" class="circuit-path" d="M 640 500 V 550" />
-                    <path id="p8" class="circuit-path" d="M 905 500 V 530 H 640 V 550" />
-
-                    <!-- 5. DB back to User (Large Professional Loop) -->
-                    <path id="pSync" class="circuit-path" d="M 550 580 H 120 V 165 H 550" stroke="#3B82F6"
-                        stroke-dasharray="5 5" opacity="0.3" />
-                    <circle r="4" fill="#3B82F6" class="anim-pulse" style="animation-duration: 6s;">
-                        <animateMotion dur="6s" repeatCount="indefinite" path="M 550 580 H 120 V 165 H 550" />
-                    </circle>
-                </svg>
-
-                <!-- Labels Placement -->
-                <div class="p-label" style="top: 215px; left: 640px;">Submits Issue</div>
-                <div class="p-label" style="top: 315px; left: 640px;">Neural Processing</div>
-                <div class="p-label" style="top: 430px; left: 375px;">Classification</div>
-                <div class="p-label" style="top: 430px; left: 905px;">Deduplication</div>
-                <div class="p-label" style="top: 370px; left: 120px; color:#3B82F6; border-color:#3B82F6;">Real-time
-                    State Sync</div>
-
-                <!-- Nodes Placement -->
-                <div class="arch-layout">
-                    <div class="node node-user"><i class="fa-solid fa-laptop" style="color:#3B82F6;"></i>User (Frontend)
-                    </div>
-                    <div class="node node-api"><i class="fa-solid fa-microchip" style="color:#10B981;"></i>FastAPI
-                        Backend</div>
-                    <div class="node node-engine"><i class="fa-solid fa-brain" style="color:#F59E0B;"></i>AI Inference
-                        Engine</div>
-
-                    <div class="node node-distil">DistilBERT v3</div>
-                    <div class="node node-ner">NER Extraction</div>
-                    <div class="node node-cosine">Cosine Similarity</div>
-
-                    <div class="node node-db"><i class="fa-solid fa-database" style="color:#3ECF8E;"></i>Supabase DB
-                    </div>
-                    <div class="node node-admin" style="grid-row: 10;"><i class="fa-solid fa-gauge-high"></i>Admin
-                        Portal</div>
-                </div>
-            </div>
-        </div>
         <!-- Slide 10: Integration & Deployment Tech Stack -->
         <div class="slide-wrapper">
             <div class="slide-container slide-10">
@@ -2871,122 +2483,84 @@
         <div class="slide-wrapper">
             <div class="slide-container slide-13">
                 <!-- Background Decor -->
-                <div
-                    style="position: absolute; top: 0; right: 0; width: 400px; height: 300px; opacity: 0.05; z-index: 1;">
+                <div style="position: absolute; top: 0; right: 0; width: 400px; height: 300px; opacity: 0.05; z-index: 1;">
                     <svg fill="none" height="100%" viewBox="0 0 400 300" width="100%">
-                        <circle cx="300" cy="150" r="120" stroke="#06B6D4" stroke-dasharray="10 10" stroke-width="2">
-                        </circle>
+                        <circle cx="300" cy="150" r="120" stroke="#06B6D4" stroke-dasharray="10 10" stroke-width="2"></circle>
                         <circle cx="300" cy="150" r="80" stroke="#10B981" stroke-width="1"></circle>
                     </svg>
                 </div>
                 <!-- Slide Title -->
                 <div style="position: absolute; top: 35px; left: 80px; width: 1120px; height: 75px; z-index: 10;">
-                    <p style="margin: 0; font-size: 48px; font-weight: 700; color: #FFFFFF; line-height: 1.1;">
-                        Conclusion &amp; Future Scope
-                    </p>
+                    <p style="margin: 0; font-size: 48px; font-weight: 700; color: #FFFFFF; line-height: 1.1;">Conclusion and Future Scope</p>
                 </div>
 
                 <!-- Vertical Divider -->
-                <div
-                    style="position: absolute; top: 160px; left: 639px; width: 2px; height: 480px; background-color: #10B981; opacity: 0.3; z-index: 2;">
-                </div>
+                <div style="position: absolute; top: 160px; left: 639px; width: 2px; height: 480px; background-color: #10B981; opacity: 0.3; z-index: 2;"></div>
 
                 <style>
-                    .slide-13 .sec-label {
-                        font-size: 28px;
-                        font-weight: 700;
-                        text-transform: uppercase;
-                        letter-spacing: 1px;
-                        margin-bottom: 40px;
-                    }
-
-                    .slide-13 .outcome-card {
-                        position: absolute;
-                        top: 230px;
-                        left: 80px;
-                        width: 500px;
-                        height: 300px;
-                        background-color: #111827;
-                        border-radius: 16px;
-                        border: 1px solid #1F2937;
-                        z-index: 2;
-                        padding: 40px;
-                        box-sizing: border-box;
-                    }
-
-                    .slide-13 .future-card {
-                        position: absolute;
-                        width: 500px;
-                        height: 180px;
-                        background-color: #111827;
-                        border-radius: 16px;
-                        border: 1px solid #1F2937;
-                        z-index: 2;
-                        border-left: 4px solid #06B6D4;
-                        padding: 30px;
-                        box-sizing: border-box;
-                        display: flex;
-                        align-items: flex-start;
-                    }
+                    .slide-13 .sec-label { font-size: 28px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 40px; }
+                    .slide-13 .list-card { position: absolute; left: 80px; width: 500px; background-color: #111827; border-radius: 16px; border: 1px solid #1F2937; z-index: 2; padding: 30px; box-sizing: border-box; display: flex; flex-direction: column; gap: 30px;}
+                    .slide-13 .list-card-right { left: 700px; border-left: 4px solid #06B6D4; background: linear-gradient(135deg, #111827 0%, #0F172A 100%);}
+                    .slide-13 .list-item { display: flex; align-items: flex-start; gap: 15px; }
+                    .slide-13 .list-icon { width: 40px; height: 40px; background-color: rgba(16, 185, 129, 0.1); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; border: 1px solid rgba(16,185,129,0.2);}
+                    .slide-13 .list-icon-right { background-color: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6,182,212,0.2); }
+                    .slide-13 .item-title { margin: 0; font-size: 19px; font-weight: 700; color: #FFFFFF; }
+                    .slide-13 .item-desc { margin: 8px 0 0 0; font-size: 14.5px; font-weight: 400; color: #94A3B8; line-height: 1.5; }
                 </style>
 
                 <!-- LEFT: CONCLUSION -->
                 <div style="position: absolute; top: 160px; left: 80px;">
                     <p class="sec-label" style="color: #10B981;">Conclusion</p>
                 </div>
-                <div class="outcome-card">
-                    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
-                        <div
-                            style="width: 40px; height: 40px; background-color: rgba(16, 185, 129, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                            <i class="fa-solid fa-check" style="color: #10B981;"></i>
+                <div class="list-card" style="top: 230px; height: 400px; border-left: 4px solid #10B981;">
+                    <div class="list-item">
+                        <div class="list-icon"><i class="fa-solid fa-check-double" style="color: #10B981; font-size: 18px;"></i></div>
+                        <div>
+                            <p class="item-title">End-to-End Triage Automation</p>
+                            <p class="item-desc">Successfully transformed unstructured natural language input into structured, actionable service tickets.</p>
                         </div>
-                        <p
-                            style="margin: 0; font-size: 16px; font-weight: 600; color: #10B981; text-transform: uppercase;">
-                            Project Success</p>
                     </div>
-                    <p style="margin: 0; font-size: 56px; font-weight: 700; color: #10B981; line-height: 1;">Sub-500ms
-                    </p>
-                    <p style="margin: 10px 0 20px 0; font-size: 22px; font-weight: 500; color: #FFFFFF;">AI Neural
-                        Pipeline
-                    </p>
-                    <p style="margin: 0; font-size: 18px; font-weight: 300; color: #CBD5E1; line-height: 1.5;">Replacing
-                        the
-                        4-8 minute human manual triage bottleneck with instant routing.</p>
+                    <div class="list-item">
+                        <div class="list-icon"><i class="fa-solid fa-brain" style="color: #10B981; font-size: 18px;"></i></div>
+                        <div>
+                            <p class="item-title">High-Precision Intelligence</p>
+                            <p class="item-desc">Achieved accurate categorization and priority assignment using fine-tuned transformer models.</p>
+                        </div>
+                    </div>
+                    <div class="list-item">
+                        <div class="list-icon"><i class="fa-solid fa-bolt" style="color: #10B981; font-size: 18px;"></i></div>
+                        <div>
+                            <p class="item-title">Operational Efficiency</p>
+                            <p class="item-desc">Streamlined workflows with multimodal OCR and semantic duplicate detection, operating at sub-400ms inference speeds.</p>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- RIGHT: FUTURE -->
+                <!-- RIGHT: FUTURE SCOPE -->
                 <div style="position: absolute; top: 160px; left: 700px;">
                     <p class="sec-label" style="color: #06B6D4;">Future Scope</p>
                 </div>
-                <!-- Item 1 -->
-                <div class="future-card" style="top: 230px; left: 700px;">
-                    <div
-                        style="width: 48px; height: 48px; background-color: rgba(6, 182, 212, 0.1); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 20px; flex-shrink: 0;">
-                        <i class="fa-solid fa-arrows-rotate" style="color: #06B6D4; font-size: 24px;"></i>
+                <div class="list-card list-card-right" style="top: 230px; height: 400px;">
+                    <div class="list-item">
+                        <div class="list-icon list-icon-right"><i class="fa-solid fa-arrows-rotate" style="color: #06B6D4; font-size: 18px;"></i></div>
+                        <div>
+                            <p class="item-title">Adaptive Retraining</p>
+                            <p class="item-desc">Establish continuous learning loops powered by the integrated admin feedback and correction system.</p>
+                        </div>
                     </div>
-                    <div>
-                        <p style="margin: 0 0 10px 0; font-size: 20px; font-weight: 700; color: #FFFFFF;">Active
-                            Learning
-                            Loops</p>
-                        <p style="margin: 0; font-size: 16px; font-weight: 300; color: #CBD5E1; line-height: 1.5;">Using
-                            <span style="font-family: monospace; color: #06B6D4;">corrections_log.json</span> to
-                            auto-retrain based on Admin feedback.
-                        </p>
+                    <div class="list-item">
+                        <div class="list-icon list-icon-right"><i class="fa-solid fa-eye" style="color: #06B6D4; font-size: 18px;"></i></div>
+                        <div>
+                            <p class="item-title">Complex Multimodal Support</p>
+                            <p class="item-desc">Expand vision capabilities to interpret technical diagrams and video-based issue reports.</p>
+                        </div>
                     </div>
-                </div>
-                <!-- Item 2 -->
-                <div class="future-card" style="top: 430px; left: 700px;">
-                    <div
-                        style="width: 48px; height: 48px; background-color: rgba(6, 182, 212, 0.1); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 20px; flex-shrink: 0;">
-                        <i class="fa-solid fa-mobile-screen-button" style="color: #06B6D4; font-size: 24px;"></i>
-                    </div>
-                    <div>
-                        <p style="margin: 0 0 10px 0; font-size: 20px; font-weight: 700; color: #FFFFFF;">Mobile
-                            Application
-                        </p>
-                        <p style="margin: 0; font-size: 16px; font-weight: 300; color: #CBD5E1; line-height: 1.5;">A
-                            native
-                            companion app with push-notification SLA alerts for immediate response.</p>
+                    <div class="list-item">
+                        <div class="list-icon list-icon-right"><i class="fa-solid fa-wrench" style="color: #06B6D4; font-size: 18px;"></i></div>
+                        <div>
+                            <p class="item-title">Autonomous Remediation</p>
+                            <p class="item-desc">Integrate with enterprise APIs to enable the AI to perform direct technical fixes like account resets.</p>
+                        </div>
                     </div>
                 </div>
             </div>
