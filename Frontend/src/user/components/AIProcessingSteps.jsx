@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from "framer-motion";
 import { CheckCircle2, Loader2, Circle } from 'lucide-react';
 
 const AIProcessingSteps = ({ steps = [], onComplete, delay = 1200, activeStep = null }) => {
