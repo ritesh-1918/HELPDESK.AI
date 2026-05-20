@@ -42,6 +42,7 @@ const TicketTracking = () => {
                     user_id: user?.id,
                     subject: aiTicket.summary,
                     description: aiTicket.originalIssue || aiTicket.summary,
+                    original_language: aiTicket.originalLanguage || 'en',
                     category: aiTicket.category,
                     subcategory: aiTicket.subcategory,
                     priority: aiTicket.priority,
