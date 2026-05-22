@@ -1,7 +1,8 @@
 import React from 'react';
 import {
     CheckCircle2, Clock,
-    Hash, Flag, FolderOpen, Users, BrainCircuit, ScanSearch, Layers, Network, Zap
+    Hash, Flag, FolderOpen, Users, BrainCircuit, ScanSearch, Layers, Network, Zap,
+    History, RotateCcw, UserCheck, Sliders, ShieldAlert, ArrowRightLeft, Sparkles
 } from 'lucide-react';
 import { formatFullTimestamp } from '../../utils/dateUtils';
  
@@ -139,7 +140,7 @@ const StepNode = ({ state, Icon }) => {
 // Optional `ticketId` prop: looks up the specific ticket in `tickets[]`.
 // Falls back to `activeTicket` if no ID is provided.
 
-const TicketTimeline = ({ ticketId, ticket: passedTicket, className = '', forceStep }) => {
+const TicketTimeline = ({ ticketId, ticket: passedTicket, className = '', forceStep, auditLogs = [] }) => {
     // Reactive store subscription
     const activeTicket = useTicketStore(s => s.activeTicket);
     const tickets = useTicketStore(s => s.tickets);
@@ -311,8 +312,156 @@ const TicketTimeline = ({ ticketId, ticket: passedTicket, className = '', forceS
                     );
                 })}
             </div>
+
+            {/* ════════════════════════════════════
+                AUDIT TRAIL
+            ════════════════════════════════════ */}
+            {auditLogs && auditLogs.length > 0 && (
+                <div className="px-6 py-6 border-t border-gray-100 bg-slate-50/30">
+                    <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-5 flex items-center gap-2">
+                        <History className="w-3.5 h-3.5 text-emerald-600 animate-pulse" /> Unified Audit Trail & Actions
+                    </h3>
+                    <div className="relative pl-5 border-l-2 border-slate-100 space-y-6">
+                        {auditLogs.map((log, idx) => {
+                            const eventInfo = getAuditEventInfo(log);
+                            const EventIcon = eventInfo.Icon;
+                            
+                            return (
+                                <motion.div
+                                    key={log.id || idx}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.25, delay: idx * 0.04 }}
+                                    className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                                >
+                                    {/* Left: bullet dot + text */}
+                                    <div className="flex items-start gap-3">
+                                        {/* Connector bullet */}
+                                        <div className={`absolute left-[-27px] w-[14px] h-[14px] rounded-full border-2 bg-white flex items-center justify-center ${eventInfo.bulletClass}`}>
+                                            <EventIcon className="w-2 h-2 shrink-0" />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-bold text-slate-800 leading-tight">
+                                                {eventInfo.title}
+                                            </p>
+                                            <p className="text-[11px] font-medium text-slate-500 mt-1 max-w-[480px]">
+                                                {eventInfo.description}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Right: metadata/time */}
+                                    <div className="flex sm:flex-col items-center sm:items-end gap-1.5 sm:gap-1 self-start sm:self-center shrink-0">
+                                        <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${eventInfo.badgeClass}`}>
+                                            {eventInfo.badgeText}
+                                        </span>
+                                        <span className="text-[10px] font-bold text-gray-400 leading-none sm:mt-1">
+                                            {formatFullTimestamp(log.created_at)}
+                                        </span>
+                                    </div>
+                                </motion.div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
         </div>
     );
+};
+
+// ─── Audit Event Helper ──────────────────────────────────────────────────────
+
+const getAuditEventInfo = (log) => {
+    const actor = log.actor_name || 'System Assistant';
+    const action = log.action_type;
+    const field = log.changed_field;
+    const oldVal = log.old_value || 'None';
+    const newVal = log.new_value || 'None';
+
+    switch (action) {
+        case 'create':
+            return {
+                Icon: FolderOpen,
+                title: 'Incident Record Created',
+                description: 'Incident was logged into HelpDesk.AI and initialized.',
+                badgeText: 'CREATED',
+                badgeClass: 'bg-emerald-50 text-emerald-700 border border-emerald-100',
+                bulletClass: 'border-emerald-500 text-emerald-500',
+            };
+        case 'reopen':
+            return {
+                Icon: RotateCcw,
+                title: 'Incident Reopened',
+                description: `Incident status was reopened by ${actor}.`,
+                badgeText: 'REOPENED',
+                badgeClass: 'bg-amber-50 text-amber-700 border border-amber-100',
+                bulletClass: 'border-amber-500 text-amber-500',
+            };
+        case 'status_change': {
+            const isAuto = actor === 'System Assistant' || log.actor_id === null;
+            return {
+                Icon: Clock,
+                title: `Status Set: ${newVal.toUpperCase()}`,
+                description: isAuto 
+                    ? `Ticket automatically closed by automated auto-close cron service.` 
+                    : `Incident state transitioned from ${oldVal} to ${newVal} by ${actor}.`,
+                badgeText: isAuto ? 'AUTO_CLOSE' : 'STATUS',
+                badgeClass: isAuto 
+                    ? 'bg-purple-50 text-purple-700 border border-purple-100' 
+                    : 'bg-blue-50 text-blue-700 border border-blue-100',
+                bulletClass: isAuto ? 'border-purple-500 text-purple-500' : 'border-blue-500 text-blue-500',
+            };
+        }
+        case 'priority_change':
+            return {
+                Icon: Flag,
+                title: `Priority Adjusted`,
+                description: `Urgency shifted from ${oldVal} to ${newVal} by ${actor}.`,
+                badgeText: 'PRIORITY',
+                badgeClass: 'bg-amber-50 text-amber-700 border border-amber-100',
+                bulletClass: 'border-amber-500 text-amber-500',
+            };
+        case 'team_change':
+            return {
+                Icon: ArrowRightLeft,
+                title: `Team Diverted`,
+                description: `Assigned team changed from ${oldVal} to ${newVal} by ${actor}.`,
+                badgeText: 'TEAM',
+                badgeClass: 'bg-indigo-50 text-indigo-700 border border-indigo-150',
+                bulletClass: 'border-indigo-500 text-indigo-500',
+            };
+        case 'assignee_change':
+            return {
+                Icon: UserCheck,
+                title: newVal === 'Unassigned' ? 'Agent Unassigned' : 'Agent Assigned',
+                description: newVal === 'Unassigned' 
+                    ? `Ticket unassigned by ${actor}.`
+                    : `Ticket assigned to agent ${newVal} by ${actor}.`,
+                badgeText: 'ASSIGNEE',
+                badgeClass: 'bg-slate-100 text-slate-700 border border-slate-200',
+                bulletClass: 'border-slate-500 text-slate-500',
+            };
+        case 'ai_override':
+            return {
+                Icon: ShieldAlert,
+                title: `AI Triage Correction`,
+                description: field === 'category'
+                    ? `AI category classifications corrected from [${oldVal}] to [${newVal}] by ${actor}.`
+                    : `AI priority prediction corrected from [${oldVal}] to [${newVal}] by ${actor}.`,
+                badgeText: 'AI_OVERRIDE',
+                badgeClass: 'bg-red-50 text-red-700 border border-red-100',
+                bulletClass: 'border-red-500 text-red-500',
+            };
+        default:
+            return {
+                Icon: Sparkles,
+                title: `Ticket Updated`,
+                description: `Modified by ${actor}.`,
+                badgeText: 'UPDATE',
+                badgeClass: 'bg-gray-50 text-gray-700 border border-gray-150',
+                bulletClass: 'border-gray-500 text-gray-500',
+            };
+    }
 };
 
 // ─── Small helper: one summary field ─────────────────────────────────────────

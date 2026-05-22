@@ -16,6 +16,7 @@ import { formatTicketId } from "../../utils/format";
 import SLABadge from "../components/SLABadge";
 import { formatFullTimestamp } from "../../utils/dateUtils";
 import TicketTimeline from "../../user/components/TicketTimeline";
+import { API_CONFIG } from '../../config';
 
 const AdminTicketDetail = () => {
     const { ticket_id } = useParams();
@@ -34,6 +35,23 @@ const AdminTicketDetail = () => {
     const [imageUrl, setImageUrl] = useState(null);
     const [isUpdating, setIsUpdating] = useState(null);
     const [isLive, setIsLive] = useState(false);
+    const [auditLogs, setAuditLogs] = useState([]);
+
+    const fetchInitialAuditLogs = async (compVal) => {
+        const resolvedCompanyId = compVal || useAuthStore.getState().profile?.company_id;
+        if (!resolvedCompanyId) return;
+        try {
+            const response = await fetch(`${API_CONFIG.BACKEND_URL}/tickets/${ticket_id}/audit_logs?company_id=${resolvedCompanyId}`);
+            if (response.ok) {
+                const data = await response.json();
+                setAuditLogs(data);
+            } else {
+                console.warn(`Failed to fetch audit logs: HTTP ${response.status}`);
+            }
+        } catch (err) {
+            console.error("Error fetching audit logs:", err);
+        }
+    };
 
     const [correctionForm, setCorrectionForm] = useState({
         category: '',
@@ -69,6 +87,10 @@ const AdminTicketDetail = () => {
                 setImageUrl(data.image_url);
             } else if (data.metadata?.capturedFileBase64) {
                 setImageUrl(data.metadata.capturedFileBase64);
+            }
+
+            if (data.company_id) {
+                fetchInitialAuditLogs(data.company_id);
             }
         } catch (err) {
             console.error("Fetch detail error:", err);
@@ -106,6 +128,9 @@ const AdminTicketDetail = () => {
                 },
                 (payload) => {
                     setTicket(prev => ({ ...prev, ...payload.new }));
+                    if (payload.new.company_id) {
+                        fetchInitialAuditLogs(payload.new.company_id);
+                    }
                 }
             )
             .subscribe((status) => {
@@ -130,6 +155,11 @@ const AdminTicketDetail = () => {
             if (upError) throw upError;
             setTicket(prev => ({ ...prev, ...updates }));
             showToast("System synchronization complete. Incident record updated.", "success");
+
+            const compId = updates.company_id || ticket?.company_id || useAuthStore.getState().profile?.company_id;
+            if (compId) {
+                fetchInitialAuditLogs(compId);
+            }
         } catch (err) {
             showToast("Update failed: " + err.message, "error");
         } finally {
@@ -333,7 +363,7 @@ const AdminTicketDetail = () => {
                             <Clock size={16} color="#16a34a" />
                             <h3 style={{ fontSize: '11px', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', margin: 0 }}>FULL LIFECYCLE JOURNEY</h3>
                         </div>
-                        <TicketTimeline ticket={ticket} />
+                        <TicketTimeline ticket={ticket} auditLogs={auditLogs} />
                     </div>
                 </div>
 

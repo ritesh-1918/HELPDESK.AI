@@ -13,6 +13,8 @@ import TicketTimeline from "../components/TicketTimeline";
 import TicketChat from "../../components/shared/TicketChat";
 import { formatTicketId } from "../../utils/format";
 import CSATModal from "../components/CSATModal";
+import { API_CONFIG } from '../../config';
+import useAuthStore from '../../store/authStore';
 
 const TicketDetail = () => {
     const { ticket_id } = useParams();
@@ -22,6 +24,23 @@ const TicketDetail = () => {
     const [isReopening, setIsReopening] = useState(false);
     const [showCsat, setShowCsat] = useState(false);
     const [csatHasBeenDismissed, setCsatHasBeenDismissed] = useState(false);
+    const [auditLogs, setAuditLogs] = useState([]);
+
+    const fetchInitialAuditLogs = async (compVal) => {
+        const resolvedCompanyId = compVal || useAuthStore.getState().profile?.company_id;
+        if (!resolvedCompanyId) return;
+        try {
+            const response = await fetch(`${API_CONFIG.BACKEND_URL}/tickets/${ticket_id}/audit_logs?company_id=${resolvedCompanyId}`);
+            if (response.ok) {
+                const data = await response.json();
+                setAuditLogs(data);
+            } else {
+                console.warn(`Failed to fetch audit logs: HTTP ${response.status}`);
+            }
+        } catch (err) {
+            console.error("Error fetching audit logs:", err);
+        }
+    };
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -43,6 +62,9 @@ const TicketDetail = () => {
                         text: data.description,
                         summary: data.subject,
                     });
+                    if (data.company_id) {
+                        fetchInitialAuditLogs(data.company_id);
+                    }
                 }
             } catch (err) {
                 console.error("Error fetching ticket:", err);
@@ -73,6 +95,9 @@ const TicketDetail = () => {
                         text: payload.new.description,
                         summary: payload.new.subject,
                     }));
+                    if (payload.new.company_id) {
+                        fetchInitialAuditLogs(payload.new.company_id);
+                    }
                 }
             )
             .subscribe();
@@ -144,6 +169,10 @@ const TicketDetail = () => {
 
             setTicket(prev => ({ ...prev, ...updates }));
 
+            if (ticket.company_id) {
+                fetchInitialAuditLogs(ticket.company_id);
+            }
+
         } catch (err) {
             console.error("Failed to reopen ticket:", err);
         } finally {
@@ -190,7 +219,7 @@ const TicketDetail = () => {
                         <h2 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
                             <Clock className="w-5 h-5 text-emerald-600" /> Ticket Timeline
                         </h2>
-                        <TicketTimeline ticket={ticket} />
+                        <TicketTimeline ticket={ticket} auditLogs={auditLogs} />
                     </Card>
 
                     {/* Card 2: Ticket Details */}

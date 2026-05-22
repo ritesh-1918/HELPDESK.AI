@@ -662,6 +662,63 @@ async def get_ticket_by_id(ticket_id: str):
     return res.data
 
 
+@app.get("/tickets/{ticket_id}/audit_logs")
+async def get_ticket_audit_logs(ticket_id: str, company_id: str | None = None):
+    """
+    Fetch persistent audit logs for a single ticket from Supabase.
+    Strict company_id isolation is enforced: the ticket's company_id must match the query's company_id.
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+    
+    # 1. Fetch the ticket to verify company isolation
+    ticket_res = supabase.table("tickets").select("company_id").eq("id", ticket_id).single().execute()
+    if not ticket_res.data:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    
+    ticket_company_id = ticket_res.data.get("company_id")
+    
+    # 2. Strict company isolation validation
+    if not company_id:
+        raise HTTPException(status_code=400, detail="company_id query parameter is required for tenant isolation")
+        
+    if str(ticket_company_id) != str(company_id):
+        raise HTTPException(status_code=403, detail="Unauthorized access to ticket audit logs")
+        
+    # 3. Fetch audit logs chronologically, resolved with profile name
+    logs_res = (
+        supabase.table("audit_logs")
+        .select("*, profiles(full_name, email)")
+        .eq("ticket_id", ticket_id)
+        .order("created_at", desc=False)
+        .execute()
+    )
+    
+    # 4. Map profiles to actor_name for easy timeline frontend display
+    mapped_logs = []
+    for log in (logs_res.data or []):
+        profile = log.get("profiles") or {}
+        actor_name = profile.get("full_name") or profile.get("email") or "System Assistant"
+        if log.get("performed_by") is None:
+            actor_name = "System Assistant"
+            
+        mapped_logs.append({
+            "id": log.get("id"),
+            "ticket_id": log.get("ticket_id"),
+            "company_id": log.get("company_id"),
+            "performed_by": log.get("performed_by"),
+            "actor_name": actor_name,
+            "action": log.get("action"),
+            "action_type": log.get("action"), # compatibility alias
+            "old_value": log.get("old_value"),
+            "new_value": log.get("new_value"),
+            "created_at": log.get("created_at")
+        })
+        
+    return mapped_logs
+
+
+
 @app.post("/tickets", response_model=TicketRecord)
 async def create_ticket(ticket: TicketRecord):
     """Save a new ticket into the system."""
