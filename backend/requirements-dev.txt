@@ -1,0 +1,3 @@
+pytest>=8.0.0
+httpx>=0.27.0
+eval-type-backport>=0.2.0

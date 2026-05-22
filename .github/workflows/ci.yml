@@ -2,9 +2,9 @@ name: HELPDESK.AI Continuous Integration (CI)
 
 on:
     push:
-        branches: [main]
+        branches: [main, gssoc]
     pull_request:
-        branches: [main]
+        branches: [main, gssoc]
 
 jobs:
     # --- JOB 1: Frontend Build Verification ---
@@ -49,6 +49,11 @@ jobs:
               run: |
                   cd backend
                   pip install -r requirements.txt
+                  pip install -r requirements-dev.txt
+
+            - name: Run Backend Route Tests
+              run: |
+                  pytest backend/tests
 
             - name: Verify Model Loading (Classifier Service)
               # This checks if the distilbert models are correctly structured and loadable

@@ -4,6 +4,8 @@ POST /ai/analyze_ticket  →  full analysis of a support ticket
 GET  /health             →  service health check
 """
 
+from __future__ import annotations
+
 import os
 import sys
 import uuid
@@ -786,6 +788,8 @@ async def save_ticket(request_body: TicketSaveRequest):
             response["duplicate_index_warning"] = duplicate_index_warning
         return response
 
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
