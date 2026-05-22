@@ -59,6 +59,8 @@ from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
+from backend.services.sla_engine import SLAEngine, compute_sla_breach_at, get_sla_policy
+from backend.services.semantic_duplicate_service import SemanticDuplicateService
 
 
 # ---------------------------------------------------------------------------
@@ -179,6 +181,8 @@ classifier_service = ClassifierService()
 ner_service = NERService()
 duplicate_service = DuplicateService()
 rag_service = RagService()
+sla_engine = SLAEngine(supabase_client=None)  # Will be reassigned after supabase init
+semantic_dupe_service = SemanticDuplicateService(supabase_client=None)  # wired in lifespan
 
 try:
     from backend.services.gemini_service import GeminiService
@@ -221,6 +225,24 @@ async def lifespan(app: FastAPI):
         print(f"[Startup] Gemini Service: {'Initialized' if gemini_service._initialized else 'FAILED (Key missing or SDK error)'}")
     else:
         print("[Startup] Gemini Service: NOT LOADED (Import failed)")
+
+    # Wire services with supabase client
+    sla_engine.supabase = supabase
+    semantic_dupe_service.supabase = supabase
+
+    # Pre-load embedding model so first ticket save is fast
+    try:
+        semantic_dupe_service.load()
+        print(f"[Startup] Semantic Duplicate Detection: {'Loaded' if semantic_dupe_service._loaded else 'Failed (model missing)'}")
+    except Exception as e:
+        print(f"[Startup] Semantic Duplicate Detection load error: {e}")
+    print(f"[Startup] SLA Engine: {'Initialized' if supabase else 'Offline (no DB)'}")
+
+    # Start background SLA checker as an async task (every 5 minutes)
+    if supabase:
+        from backend.sla_checker import sla_checker_loop_async
+        asyncio.create_task(sla_checker_loop_async(supabase, interval_seconds=300))
+        print("[Startup] SLA background checker started (interval=300s)")
 
     print("[Startup] Classifier V2 Shadow: Ready.")
     print("[Startup] Ready.")
@@ -563,6 +585,25 @@ async def save_ticket(request_body: TicketSaveRequest):
         logger.info(f"Tenant linkage: user_hash={user_hash}, company_id={final_data.get('company_id')}")
 
 
+        # Semantic duplicate check BEFORE inserting the ticket
+        # This allows us to warn the user before confirming
+        duplicate_check_result = None
+        try:
+            dupe_text = (request_body.description or request_body.subject or "").strip()
+            if dupe_text:
+                duplicate_check_result = await semantic_dupe_service.check_duplicate(
+                    text=dupe_text,
+                    company_id=final_data.get("company_id"),
+                )
+                if duplicate_check_result["is_duplicate"]:
+                    logger.info(
+                        f"[DUPLICATE] Ticket flagged as potential duplicate of "
+                        f"{duplicate_check_result['duplicate_ticket_id']} "
+                        f"(similarity: {duplicate_check_result['similarity']})"
+                    )
+        except Exception as e:
+            logger.warning(f"[DUPLICATE] Semantic check error (non-fatal): {e}")
+
         res = supabase.table("tickets").insert(final_data).execute()
         
         if not res.data:
@@ -570,22 +611,29 @@ async def save_ticket(request_body: TicketSaveRequest):
             
         ticket_id = res.data[0]["id"]
 
-        duplicate_indexed = True
-        duplicate_index_warning = None
+        # If duplicate detected, link parent ticket
+        if duplicate_check_result and duplicate_check_result["is_duplicate"]:
+            try:
+                supabase.table("tickets").update({
+                    "is_potential_duplicate": True,
+                    "parent_ticket_id": duplicate_check_result["duplicate_ticket_id"],
+                }).eq("id", ticket_id).execute()
+            except Exception as e:
+                logger.warning(f"[DUPLICATE] Failed to link parent ticket: {e}")
+
+        # Index the new ticket's embedding for future duplicate checks
+        embedding_indexed = False
         description_text = (request_body.description or "").strip()
         subject_text = (request_body.subject or "").strip()
         duplicate_text = description_text or subject_text
         if duplicate_text:
             try:
+                # Both: old in-memory index (for backward compat) and new pgvector index
                 duplicate_service.add_ticket(str(ticket_id), duplicate_text)
+                asyncio.create_task(semantic_dupe_service.index_ticket(ticket_id, duplicate_text))
+                embedding_indexed = True
             except Exception as index_error:
-                duplicate_indexed = False
-                duplicate_index_warning = "Duplicate index update failed."
-                print(f"[WARNING] {duplicate_index_warning} ticket_id={ticket_id} error={index_error}")
-        else:
-            duplicate_indexed = False
-            duplicate_index_warning = "Duplicate index update skipped: no description or subject text was provided."
-            print(f"[WARNING] {duplicate_index_warning}")
+                logger.warning(f"[INDEX] Failed to index ticket {ticket_id}: {index_error}")
         
         # Add initial system diagnostic message
         msg = "Our Neural Engine has successfully triaged your issue and routed it to the designated team."
@@ -600,9 +648,17 @@ async def save_ticket(request_body: TicketSaveRequest):
             "message": msg
         }).execute()
         
-        response = {"status": "success", "ticket_id": ticket_id, "duplicate_indexed": duplicate_indexed}
-        if duplicate_index_warning:
-            response["duplicate_index_warning"] = duplicate_index_warning
+        response = {
+            "status": "success",
+            "ticket_id": ticket_id,
+            "duplicate_indexed": embedding_indexed,
+        }
+        if duplicate_check_result and duplicate_check_result["is_duplicate"]:
+            response["duplicate_warning"] = True
+            response["parent_ticket_id"] = duplicate_check_result["duplicate_ticket_id"]
+            response["parent_subject"] = duplicate_check_result.get("parent_subject")
+            response["similarity"] = duplicate_check_result["similarity"]
+            response["candidates"] = duplicate_check_result.get("candidates", [])
         return response
 
     except Exception as e:
@@ -1000,3 +1056,258 @@ async def analyze_ticket_v2(request: TicketRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# SLA Engine Endpoints
+# ---------------------------------------------------------------------------
+
+class SLAStatsResponse(BaseModel):
+    total: int = 0
+    active: int = 0
+    breached: int = 0
+    warning: int = 0
+    met: int = 0
+    breach_rate: float = 0.0
+    by_priority: dict = {}
+
+
+@app.get("/sla/stats", response_model=SLAStatsResponse)
+async def sla_stats():
+    """Get aggregated SLA dashboard statistics across all tickets."""
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not connected")
+    stats = await sla_engine.get_dashboard_stats()
+    if "error" in stats:
+        raise HTTPException(status_code=500, detail=stats["error"])
+    return stats
+
+
+class SLATicketInfo(BaseModel):
+    id: str
+    ticket_id: str | None = None
+    subject: str | None = None
+    summary: str | None = None
+    priority: str = "medium"
+    status: str | None = None
+    assigned_team: str | None = None
+    sla_status: str = "active"
+    escalation_level: int = 0
+    remaining_seconds: int = 0
+    created_at: str | None = None
+    sla_breach_at: str | None = None
+    sla_warning_at: str | None = None
+    last_escalated_at: str | None = None
+
+
+@app.get("/sla/tickets")
+async def sla_tickets(
+    status: str | None = None,
+    priority: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
+):
+    """
+    List tickets with SLA status. Filter by sla_status and/or priority.
+    """
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not connected")
+
+    query = (
+        supabase.table("tickets")
+        .select("id, ticket_id, subject, summary, priority, status, assigned_team, sla_status, escalation_level, remaining_seconds, created_at, sla_breach_at, sla_warning_at, last_escalated_at")
+        .order("created_at", desc=True)
+    )
+
+    if status and status != "all":
+        query = query.eq("sla_status", status)
+    if priority and priority != "all":
+        query = query.eq("priority", priority.capitalize())
+
+    query = query.range(offset, offset + limit - 1)
+    res = query.execute()
+    return {"tickets": res.data or [], "total": len(res.data or [])}
+
+
+class EscalationLogEntry(BaseModel):
+    id: str
+    ticket_id: str | None = None
+    ticket_subject: str = ""
+    priority: str = "medium"
+    sla_status: str = ""
+    escalation_level: int = 0
+    remaining_seconds: int = 0
+    assigned_team: str = ""
+    notification_channels: list = []
+    triggered_at: str | None = None
+    resolved_at: str | None = None
+    notes: str = ""
+
+
+@app.get("/sla/escalations")
+async def sla_escalations(limit: int = 50, offset: int = 0):
+    """Fetch escalation log history."""
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not connected")
+
+    try:
+        res = (
+            supabase.table("escalation_logs")
+            .select("*")
+            .order("triggered_at", desc=True)
+            .range(offset, offset + limit - 1)
+            .execute()
+        )
+        return {"escalations": res.data or [], "total": len(res.data or [])}
+    except Exception as e:
+        # Table might not exist yet
+        print(f"[SLA] Escalation logs query failed: {e}")
+        return {"escalations": [], "total": 0}
+
+
+class SLAPolicyInfo(BaseModel):
+    id: str
+    priority: str
+    max_hours: int
+    warning_pct: float
+    auto_escalate: bool
+    l2_after_minutes: int
+    l3_after_minutes: int
+
+
+@app.get("/sla/policies")
+async def sla_policies():
+    """Get configured SLA policies."""
+    if not supabase:
+        # Return defaults from code
+        policies = []
+        for pri, cfg in sla_engine.SLA_POLICIES.items() if hasattr(sla_engine, 'SLA_POLICIES') else SLA_POLICIES.items():
+            policies.append({
+                "priority": pri,
+                "max_hours": cfg["max_hours"],
+                "warning_pct": cfg["warning_pct"],
+                "auto_escalate": cfg["auto_escalate_on_breach"],
+                "l2_after_minutes": cfg["l2_escalation_mins"],
+                "l3_after_minutes": cfg["l3_escalation_mins"],
+            })
+        return {"policies": policies}
+
+    try:
+        res = supabase.table("sla_policies").select("*").execute()
+        return {"policies": res.data or []}
+    except Exception as e:
+        print(f"[SLA] Policies query failed: {e}")
+        return {"policies": []}
+
+
+@app.post("/sla/check")
+async def trigger_sla_check():
+    """Manually trigger an SLA evaluation cycle (admin)."""
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not connected")
+    
+    asyncio.create_task(sla_engine.check_all_active_tickets())
+    return {"status": "triggered", "message": "SLA check cycle started in background"}
+
+
+# ---------------------------------------------------------------------------
+# Semantic Duplicate Detection Endpoints
+# ---------------------------------------------------------------------------
+
+@app.post("/ai/check_duplicate")
+async def check_duplicate_endpoint(
+    body: TicketRequest,
+    company_id: str | None = None,
+):
+    """
+    Check a ticket text for potential duplicates using semantic vector search.
+    Returns top candidates with similarity scores.
+    """
+    text = (body.text or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="No text provided")
+
+    threshold = body.duplicate_sensitivity if hasattr(body, 'duplicate_sensitivity') else None
+    result = await semantic_dupe_service.check_duplicate(
+        text=text,
+        company_id=company_id or body.company,
+        threshold=threshold,
+    )
+    return result
+
+
+@app.post("/ai/reindex_embeddings")
+async def reindex_embeddings():
+    """Re-generate vector embeddings for all tickets."""
+    result = await semantic_dupe_service.reindex_all()
+    return result
+
+
+@app.get("/system/settings")
+async def get_system_settings():
+    """Fetch all system settings."""
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not connected")
+    try:
+        res = supabase.table("system_settings").select("*").execute()
+        settings = {}
+        for row in res.data or []:
+            settings[row["key"]] = row["value"]
+        return settings
+    except Exception as e:
+        logger.warning(f"[SETTINGS] Query failed: {e}")
+        return {}
+
+
+@app.patch("/system/settings")
+async def update_system_settings(body: dict):
+    """Update a specific system setting."""
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not connected")
+    key = body.get("key")
+    value = body.get("value")
+    if not key or value is None:
+        raise HTTPException(status_code=400, detail="key and value required")
+    try:
+        supabase.table("system_settings").upsert({
+            "key": key,
+            "value": value,
+            "updated_at": datetime.datetime.utcnow().isoformat() + "Z",
+        }).execute()
+        return {"status": "updated", "key": key}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/sla/tickets/{ticket_id}")
+async def sla_ticket_detail(ticket_id: str):
+    """Get detailed SLA info for a specific ticket."""
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not connected")
+
+    # Fetch ticket
+    res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    ticket = res.data
+    result = sla_engine.evaluate_ticket(ticket)
+
+    # Fetch escalation history for this ticket
+    try:
+        esc_res = (
+            supabase.table("escalation_logs")
+            .select("*")
+            .eq("ticket_id", ticket_id)
+            .order("triggered_at", desc=True)
+            .execute()
+        )
+        escalations = esc_res.data or []
+    except Exception:
+        escalations = []
+
+    return {
+        "ticket": ticket,
+        "sla_evaluation": result,
+        "escalations": escalations,
+    }
