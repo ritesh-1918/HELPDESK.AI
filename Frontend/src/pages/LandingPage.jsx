@@ -655,10 +655,10 @@ export default function LandingPage() {
                     <div className="flex flex-col md:flex-row gap-8 md:gap-16 md:items-center">
                         {/* Left: Content */}
                         <div className="w-full md:w-1/2">
-                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-widest border border-emerald-500/20 mb-4 md:mb-6">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-xs font-semibold tracking-tight  border-emerald-500/20 mb-4 md:mb-6">
                                 The Journey
                             </div>
-                            <h2 className="text-3xl sm:text-4xl md:text-6xl font-black text-white tracking-tight leading-[0.9] mb-8 md:mb-12 italic uppercase">
+                            <h2 className="text-3xl sm:text-4xl md:text-6xl font-extrabold text-white tracking-tight leading-[0.9] mb-8 md:mb-12  uppercase">
                                 From Chaos <br />
                                 to <span className="text-emerald-500">Clarity.</span>
                             </h2>
@@ -669,17 +669,17 @@ export default function LandingPage() {
                                         key={idx}
                                         onMouseEnter={() => setActiveStep(idx)}
                                         onClick={() => setActiveStep(idx)}
-                                        className={`group cursor-pointer p-6 rounded-3xl transition-all duration-500 border ${activeStep === idx
+                                        className={`group cursor-pointer p-6 rounded-3xl transition-all duration-300 ease-out border ${activeStep === idx
                                             ? 'bg-white/10 border-white/20 shadow-2xl shadow-black/20'
-                                            : 'bg-transparent border-transparent hover:bg-white/5 opacity-40 hover:opacity-100'
+                                            : 'bg-transparent border-transparent hover:bg-white/5 opacity-70 hover:opacity-100'
                                             }`}
                                     >
                                         <div className="flex items-start gap-4 md:gap-6">
-                                            <div className={`shrink-0 w-10 md:w-12 h-10 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center font-black text-lg md:text-xl italic transition-all duration-500 ${activeStep === idx ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 rotate-12 scale-110' : 'bg-white/10 text-white/40'}`}>
+                                            <div className={`shrink-0 w-10 md:w-12 h-10 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center font-extrabold text-lg md:text-xl italic transition-all duration-500 ${activeStep === idx ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 rotate-12 scale-110' : 'bg-white/10 text-white/40'}`}>
                                                 {step.num}
                                             </div>
                                             <div>
-                                                <h3 className={`text-xl font-black italic uppercase transition-colors duration-500 ${activeStep === idx ? 'text-white' : 'text-white/60'}`}>
+                                                <h3 className={`text-xl font-extrabold  uppercase transition-colors duration-500 ${activeStep === idx ? 'text-white' : 'text-white/60'}`}>
                                                     {step.title}
                                                 </h3>
                                                 {activeStep === idx && (
@@ -710,7 +710,7 @@ export default function LandingPage() {
                                         transition={{ type: 'spring', damping: 20, stiffness: 100 }}
                                         className="w-full h-full flex flex-col items-center justify-center"
                                     >
-                                        <div className="mb-6 inline-flex items-center gap-2 px-4 py-1.5 bg-white/5 text-white/50 rounded-full text-[10px] font-black uppercase tracking-[0.2em]">
+                                        <div className="mb-6 inline-flex items-center gap-2 px-4 py-1.5 bg-white/5 text-white/50 rounded-full text-[10px] font-extrabold uppercase tracking-[0.2em]">
                                             <div className={`w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse`} />
                                             {steps[activeStep].label}
                                         </div>
