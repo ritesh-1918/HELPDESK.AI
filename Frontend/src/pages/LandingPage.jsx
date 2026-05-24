@@ -427,7 +427,7 @@ export default function LandingPage() {
                                         <div className="mb-4">
                                             <h3 className="text-sm font-bold text-gray-800 mb-1">Subject: Wifi down again in Lab 3??</h3>
                                             <p className="text-sm text-gray-600 leading-relaxed">
-                                                Hey support, the wifi in <span className="bg-yellow-100 px-1 rounded">downstairs lab 3</span> is acting up again.
+                                                Hey support, the wifi in <span className="bg-yellow-200 dark:bg-yellow-500/30 dark:text-yellow-200 text-yellow-900 px-1 rounded font-medium">downstairs lab 3</span> is acting up again.
                                                 Can't connect at all. Class starts in 20 mins, need this fixed ASAP!<br /><br />
                                                 Thanks,<br />Sarah
                                             </p>
