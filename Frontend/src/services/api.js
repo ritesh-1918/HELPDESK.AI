@@ -1,8 +1,7 @@
 import axios from 'axios';
 import { MOCK_TICKETS } from './mockData';
-import { API_CONFIG } from '../config';
+import { API_CONFIG, USE_MOCK } from './config';
 
-const USE_MOCK = true;
 const API_BASE_URL = API_CONFIG.BACKEND_URL;
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -48,10 +47,59 @@ export const api = {
       await delay(500);
       return getStorage('tickets', MOCK_TICKETS);
     }
+
+    // When not using mock, call real backend with fallback to mock on failure
+    try {
+      const response = await axios.get(`${API_BASE_URL}/tickets`);
+      const data = response?.data;
+
+      // Normalize to the mock shape: an array of tickets
+      if (Array.isArray(data)) return data;
+      if (data && Array.isArray(data.data)) return data.data;
+      if (data && Array.isArray(data.tickets)) return data.tickets;
+
+      // Best-effort: if the backend returned an object that's not an array,
+      // return that object so callers can inspect fields. This preserves
+      // the fallback behavior but attempts to match the mock when possible.
+      return data;
+    } catch (error) {
+      console.warn('Failed to fetch tickets from backend, falling back to mock:', error);
+      await delay(500);
+      return getStorage('tickets', MOCK_TICKETS);
+    }
   },
 
   createTicket: async (ticketData) => {
     if (USE_MOCK) {
+      await delay(800);
+      const tickets = getStorage('tickets', MOCK_TICKETS);
+      const newTicket = {
+        ticket_id: "TCKT-" + Math.floor(Math.random() * 10000),
+        status: 'Open',
+        createdAt: new Date().toISOString(),
+        ...ticketData,
+        messages: [
+          {
+            sender: 'user',
+            message: ticketData.description || ticketData.summary || '',
+            timestamp: new Date().toISOString()
+          }
+        ]
+      };
+      tickets.unshift(newTicket); // Add to beginning
+      setStorage('tickets', tickets);
+      return { data: newTicket };
+    }
+
+    // When not using mock, call backend to create ticket and fallback to mock on failure
+    try {
+      const response = await axios.post(`${API_BASE_URL}/tickets`, ticketData);
+      const created = response?.data;
+
+      // Normalize to mock shape: { data: <createdTicket> }
+      return { data: created };
+    } catch (error) {
+      console.warn('Failed to create ticket in backend, falling back to mock:', error);
       await delay(800);
       const tickets = getStorage('tickets', MOCK_TICKETS);
       const newTicket = {
