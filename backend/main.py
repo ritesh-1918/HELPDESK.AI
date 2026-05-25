@@ -651,6 +651,22 @@ async def save_ticket(request_body: TicketSaveRequest):
     logger = logging.getLogger(__name__)
     final_data = request_body.model_dump()
 
+    # Backfill SLA deadlines/status when the client omits or sends empty values.
+    priority_key = str(final_data.get("priority") or "medium").lower().strip()
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
+
+    if not str(final_data.get("sla_breach_at") or "").strip():
+        final_data["sla_breach_at"] = compute_sla_breach_at(priority_key, now_utc)
+
+    if not str(final_data.get("sla_response_due_at") or "").strip():
+        policy = get_sla_policy(priority_key)
+        response_hours = max(1, int(round(float(policy["max_hours"]) * 0.25)))
+        response_due_at = now_utc + datetime.timedelta(hours=response_hours)
+        final_data["sla_response_due_at"] = response_due_at.isoformat()
+
+    if not str(final_data.get("sla_status") or "").strip():
+        final_data["sla_status"] = "ACTIVE"
+
     # Resolve tenant linkage from user profile with authorization validation.
     profile = {}
     if request_body.user_id:
@@ -719,13 +735,14 @@ async def save_ticket(request_body: TicketSaveRequest):
         VALID_TICKET_COLUMNS = {
             "user_id", "subject", "description", "category", "subcategory",
             "priority", "assigned_team", "status", "auto_resolve", "is_duplicate",
-            "confidence", "image_url", "company", "company_id", "sla_breach_at", "metadata",
+            "confidence", "image_url", "company", "company_id",
+            "sla_breach_at", "sla_response_due_at", "sla_status", "escalation_level", "metadata",
         }
         # Merge any extra telemetry and SLA/duplicate fields into metadata before filtering
         existing_metadata = final_data.get("metadata") or {}
         extra_keys = (
             "entities", "solution_steps", "ocr_text", "needs_review", "routing_confidence",
-            "is_potential_duplicate", "parent_ticket_id", "sla_response_due_at", "sla_status", "escalation_level"
+            "is_potential_duplicate", "parent_ticket_id"
         )
         for extra_key in extra_keys:
             if extra_key in final_data and final_data[extra_key] not in (None, "", [], {}):
