@@ -1,72 +1,67 @@
-# Mobile App Setup Guide
+# Mobile App Setup & Troubleshooting
+
+HELPDESK.AI mobile is an **Expo SDK 54** React Native app under `MobileApp/`. This guide covers local setup, emulator/device testing, and common fixes for GSSoC contributors.
 
 ## Prerequisites
 
-- Node.js 18+ and npm/yarn
-- React Native CLI or Expo CLI
-- Android Studio (for Android development)
-- Xcode (for iOS development, macOS only)
-- Supabase account and project
+- **Node.js 18+** and npm
+- **Expo CLI** (via `npx expo`; no global install required)
+- **Android Studio** (Android emulator + USB debugging) — Windows, macOS, Linux
+- **Xcode** (iOS Simulator) — macOS only
+- Supabase project credentials (see `.env` below)
 
-## Installation
-
-### 1. Clone the Repository
+## 1. Local setup
 
 ```bash
 git clone https://github.com/ritesh-1918/HELPDESK.AI.git
 cd HELPDESK.AI/MobileApp
-```
-
-### 2. Install Dependencies
-
-```bash
 npm install
-# or
-yarn install
 ```
 
-### 3. Environment Configuration
-
-Create a `.env` file in the MobileApp directory:
+Create `MobileApp/.env`:
 
 ```env
-SUPABASE_URL=your_supabase_url
-SUPABASE_ANON_KEY=your_supabase_anon_key
+EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-### 4. Start Development Server
+Start the Metro bundler and Expo dev server:
 
 ```bash
-# For Android
-npx react-native run-android
-
-# For iOS
-npx react-native run-ios
-
-# For Expo
 npx expo start
 ```
 
-## Supabase Integration
+From the Expo terminal UI:
 
-### Authentication Setup
+- Press **`a`** — open on Android emulator or connected device
+- Press **`i`** — open on iOS Simulator (macOS)
+- Scan the QR code with **Expo Go** on a physical device (same Wi‑Fi)
 
-1. Enable Email/Password auth in Supabase Dashboard
-2. Configure session clearing for smooth logout (ProfileScreen.js)
-3. Handle token refresh automatically
+For a clean cache after dependency or config changes:
 
-### Database Setup
+```bash
+npx expo start -c
+```
 
-1. Run the SQL migrations in `supabase/migrations/`
-2. Set up Row Level Security (RLS) policies
-3. Configure real-time subscriptions for live updates
+## 2. Android emulator & USB debugging
 
-## Troubleshooting
+### Android Virtual Device (AVD)
 
-### Android Issues
+1. Install [Android Studio](https://developer.android.com/studio).
+2. Open **Device Manager** → **Create Device** → pick a phone profile (e.g. Pixel 7).
+3. Download a system image (API 34+ recommended) and finish the wizard.
+4. Start the AVD, then run `npx expo start` and press **`a`**.
 
-#### KeyboardAvoidingView Offset
-If the keyboard overlaps input fields on Android:
+### Physical Android device
+
+1. Enable **Developer options** → **USB debugging** on the device.
+2. Connect via USB; accept the debugging prompt.
+3. Verify: `adb devices` should list your device.
+4. Run `npx expo start` and press **`a`**, or use **Expo Go** and scan the QR code.
+
+### KeyboardAvoidingView (Android)
+
+If inputs sit under the keyboard, use platform-specific offset (see `ProfileScreen.js`):
 
 ```javascript
 import { KeyboardAvoidingView, Platform } from 'react-native';
@@ -75,73 +70,69 @@ import { KeyboardAvoidingView, Platform } from 'react-native';
   behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
   keyboardVerticalOffset={Platform.OS === 'android' ? -100 : 0}
 >
-  {/* Your form content */}
+  {/* form content */}
 </KeyboardAvoidingView>
 ```
 
-#### Gradle Build Failures
+## 3. iOS Simulator (macOS)
+
+1. Install Xcode from the App Store.
+2. Open Xcode once to accept licenses and install components.
+3. Start Simulator: **Xcode → Open Developer Tool → Simulator**, or `open -a Simulator`.
+4. Run `npx expo start` and press **`i`**.
+
+For native iOS builds (not Expo Go):
+
 ```bash
-cd android
-./gradlew clean
-cd ..
-npx react-native run-android
+npx expo run:ios
 ```
 
-### iOS Issues
+If CocoaPods fail:
 
-#### Pod Installation
 ```bash
-cd ios
-pod install --repo-update
-cd ..
-npx react-native run-ios
+cd ios && pod install --repo-update && cd ..
 ```
 
-#### Signing Issues
-1. Open `ios/HELPDESK.xcworkspace` in Xcode
-2. Select your development team
-3. Update bundle identifier if needed
+## 4. Common Expo troubleshooting
 
-### Supabase Connection Issues
+| Problem | Fix |
+|--------|-----|
+| Stale Metro cache / weird bundler errors | `npx expo start -c` |
+| `Unable to resolve module` after npm install | Delete `node_modules`, run `npm install`, then `npx expo start -c` |
+| React Native / Expo version mismatch | Match versions in `package.json`; run `npx expo install --fix` |
+| Port 8081 in use | Kill the old Metro process or run `npx expo start --port 8082` |
+| Android Gradle failures | `cd android && ./gradlew clean && cd ..` then `npx expo run:android` |
+| Supabase auth / session issues | Confirm `.env` keys; test logout clears session in `ProfileScreen.js` |
 
-1. Verify `.env` credentials are correct
-2. Check Supabase project status
-3. Ensure RLS policies allow your queries
-4. Check network connectivity
+### Metro dependency errors
 
-## Soundwave Voice Player
-
-The mobile app includes voice calling with soundwave visualization:
-
-```javascript
-import { SoundWavePlayer } from './components/SoundWavePlayer';
-
-<SoundWavePlayer
-  audioUrl={callAudioUrl}
-  onPlaybackComplete={handleComplete}
-/>
-```
-
-## Build for Production
-
-### Android
 ```bash
-cd android
-./gradlew assembleRelease
+rm -rf node_modules package-lock.json
+npm install
+npx expo start -c
 ```
 
-The APK will be in `android/app/build/outputs/apk/release/`
+## 5. App-specific features
 
-### iOS
-1. Open Xcode
-2. Product → Archive
-3. Follow the distribution wizard
+### Supabase
 
-## Contributing
+- Enable Email/Password auth in the Supabase dashboard.
+- Apply migrations under `supabase/migrations/` and verify RLS policies.
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md) for guidelines.
+### Voice / soundwave UI
+
+Calling screens use the in-app soundwave player; ensure microphone permissions are granted on device builds.
+
+## 6. Production builds
+
+Use EAS (see `MobileApp/eas.json`):
+
+```bash
+npx eas build --platform android
+npx eas build --platform ios
+```
 
 ## Support
 
-- GitHub Issues: https://github.com/ritesh-1918/HELPDESK.AI/issues
-- Discussions: https://github.com/ritesh-1918/HELPDESK.AI/discussions
+- [GitHub Issues](https://github.com/ritesh-1918/HELPDESK.AI/issues)
+- [CONTRIBUTING.md](../CONTRIBUTING.md)
