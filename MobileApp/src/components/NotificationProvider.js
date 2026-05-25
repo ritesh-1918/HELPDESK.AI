@@ -93,7 +93,7 @@ const Toast = ({ id, type = 'info', title, message, onDismiss }) => {
       style={[
         styles.toast,
         {
-          backgroundColor: config.bg,
+          backgroundColor: 'rgba(11, 17, 32, 0.98)',
           borderColor: config.border,
           transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
           opacity: opacityAnim,

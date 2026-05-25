@@ -15,9 +15,11 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Updates from 'expo-updates';
+import { useNotification } from '../../components/NotificationProvider';
 
 const DashboardScreen = () => {
   const navigation = useNavigation();
+  const { success, warning, info } = useNotification();
   const [profile, setProfile] = useState(null);
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -131,7 +133,23 @@ const DashboardScreen = () => {
         event: '*', 
         schema: 'public', 
         table: 'notifications' 
-      }, () => fetchData())
+      }, (payload) => {
+        fetchData();
+        if (payload.eventType === 'INSERT' && payload.new) {
+          const notif = payload.new;
+          supabase.auth.getUser().then(({ data: { user } }) => {
+            if (user && notif.user_id === user.id) {
+              if (notif.type === 'ai_update') {
+                success(notif.title, notif.message);
+              } else if (notif.type === 'alert') {
+                warning(notif.title, notif.message);
+              } else {
+                info(notif.title, notif.message);
+              }
+            }
+          });
+        }
+      })
       .subscribe();
 
     return () => {

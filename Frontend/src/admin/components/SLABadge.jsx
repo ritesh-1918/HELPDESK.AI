@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, AlertTriangle, ShieldCheck } from 'lucide-react';
 
-// SLA resolution limits in milliseconds based on priority.
+// SLA time limits in milliseconds based on priority
 const SLA_LIMITS = {
-    critical: 4 * 60 * 60 * 1000,
-    high: 12 * 60 * 60 * 1000,
-    medium: 24 * 60 * 60 * 1000,
-    low: 72 * 60 * 60 * 1000,
+    critical: 2 * 60 * 60 * 1000,   // 2 hours
+    high: 4 * 60 * 60 * 1000,   // 4 hours
+    medium: 8 * 60 * 60 * 1000,   // 8 hours
+    low: 24 * 60 * 60 * 1000,  // 24 hours
 };
 
 function formatDuration(ms) {
@@ -19,47 +19,36 @@ function formatDuration(ms) {
 }
 
 /**
- * SLABadge — shows SLA status for a ticket.
+ * SLABadge — shows SLA status for a ticket based on its priority and creation time.
  * 
  * Props:
  *  - priority: string ('critical' | 'high' | 'medium' | 'low')
  *  - createdAt: string (ISO date string)
- *  - slaBreachAt: string (ISO date string) — preferred persisted deadline
- *  - slaStatus: string ('ACTIVE' | 'WARNING' | 'BREACHED')
  *  - status: string — if ticket is resolved/closed, show "Met" without countdown
  *  - compact: bool — if true, shows just the badge with no label text
  */
-export default function SLABadge({ priority, createdAt, slaBreachAt, slaStatus, status, compact = false }) {
+export default function SLABadge({ priority, createdAt, status, compact = false }) {
     const [remaining, setRemaining] = useState(null);
 
-    const normalizedStatus = status?.toLowerCase();
-    const normalizedSlaStatus = slaStatus?.toUpperCase();
-    const isResolved = ['resolved', 'closed', 'auto-resolved', 'auto resolved'].includes(normalizedStatus);
+    const isResolved = ['resolved', 'closed', 'auto-resolved'].includes(status?.toLowerCase());
 
     useEffect(() => {
-        if (isResolved) return;
-        if (normalizedSlaStatus === 'BREACHED') {
-            setRemaining(-1);
-            return;
-        }
+        if (isResolved || !priority || !createdAt) return;
 
-        const priorityKey = priority?.toLowerCase?.() || 'medium';
+        const priorityKey = priority.toLowerCase();
         const limit = SLA_LIMITS[priorityKey] || SLA_LIMITS.medium;
-        const deadlineMs = slaBreachAt
-            ? new Date(slaBreachAt).getTime()
-            : new Date(createdAt).getTime() + limit;
-
-        if (!Number.isFinite(deadlineMs)) return;
+        const createdMs = new Date(createdAt).getTime();
 
         const calculate = () => {
-            const rem = deadlineMs - Date.now();
+            const elapsed = Date.now() - createdMs;
+            const rem = limit - elapsed;
             setRemaining(rem);
         };
 
         calculate();
         const timer = setInterval(calculate, 60 * 1000); // update every minute
         return () => clearInterval(timer);
-    }, [priority, createdAt, slaBreachAt, normalizedSlaStatus, isResolved]);
+    }, [priority, createdAt, isResolved]);
 
     if (isResolved) {
         return (

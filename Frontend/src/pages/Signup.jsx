@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import useAuthStore from "../store/authStore";
 import { supabase } from "../lib/supabaseClient";
 import { Eye, EyeOff, BrainCircuit, ArrowRight, Loader2, CheckCircle2, ChevronDown, Search, Building2, ArrowLeft } from "lucide-react";
+import { getPasswordValidation, getPasswordValidationMessage } from "../utils/passwordValidation";
 
 function Signup() {
   const [email, setEmail] = useState("");
@@ -27,6 +28,10 @@ function Signup() {
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
   const { signup, user, profile } = useAuthStore();
+  const passwordRules = { minLength: 6 };
+  const passwordChecks = getPasswordValidation(password, passwordRules);
+  const passwordWarning = getPasswordValidationMessage(passwordChecks, passwordRules);
+  const confirmPasswordWarning = confirmPassword && password !== confirmPassword ? "Passwords do not match." : "";
 
   // Fetch and subscribe to companies
   useEffect(() => {
@@ -113,13 +118,13 @@ function Signup() {
       return;
     }
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters long.");
+    if (passwordWarning) {
+      setError(passwordWarning);
       return;
     }
 
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+    if (confirmPasswordWarning) {
+      setError(confirmPasswordWarning);
       return;
     }
 
@@ -321,6 +326,11 @@ function Signup() {
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+                {password && (
+                  <p aria-live="polite" className={`mt-2 text-[11px] font-semibold ${passwordWarning ? "text-red-600" : "text-emerald-700"}`}>
+                    {passwordWarning || "Password looks good."}
+                  </p>
+                )}
               </div>
               <div className="relative">
                 <label className="block mb-2" style={labelStyle}>Confirm</label>
@@ -331,6 +341,11 @@ function Signup() {
                     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+                {confirmPasswordWarning && (
+                  <p aria-live="polite" className="mt-2 text-[11px] font-semibold text-red-600">
+                    {confirmPasswordWarning}
+                  </p>
+                )}
               </div>
             </div>
 

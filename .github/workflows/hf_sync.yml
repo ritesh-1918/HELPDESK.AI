@@ -2,7 +2,7 @@ name: Sync to Hugging Face Hub
 
 on:
   push:
-    branches: [main]
+    branches: [main, gssoc]
     paths:
       - 'backend/**'
       - '.github/workflows/hf_sync.yml'

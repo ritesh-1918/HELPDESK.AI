@@ -282,6 +282,7 @@ const AIProcessingScreen = () => {
         is_potential_duplicate: result.is_potential_duplicate || false,
         parent_ticket_id: result.parent_ticket_id || null,
         sla_breach_at: slaBreachAt,
+        routing_confidence: result.confidence || 0.0,
         metadata: {
           confidence: result.confidence || 0.0,
           entities: result.entities || [],
@@ -310,7 +311,19 @@ const AIProcessingScreen = () => {
       }
     } catch (err) {
       console.error('Final Submission Error:', err);
-      setError('Failed to create ticket: ' + (err.response?.data?.detail || err.message || 'Unknown error'));
+      let errorMsg = 'Unknown error';
+      if (err.response?.data?.detail) {
+        if (typeof err.response.data.detail === 'string') {
+          errorMsg = err.response.data.detail;
+        } else if (Array.isArray(err.response.data.detail)) {
+          errorMsg = err.response.data.detail.map(d => `${d.loc?.join('.') || 'field'}: ${d.msg}`).join(', ');
+        } else {
+          errorMsg = JSON.stringify(err.response.data.detail);
+        }
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      setError('Failed to create ticket: ' + errorMsg);
       setLoading(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }

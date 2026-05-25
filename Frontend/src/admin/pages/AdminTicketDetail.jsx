@@ -16,6 +16,7 @@ import { formatTicketId } from "../../utils/format";
 import SLABadge from "../components/SLABadge";
 import { formatFullTimestamp } from "../../utils/dateUtils";
 import TicketTimeline from "../../user/components/TicketTimeline";
+import TicketAuditTimeline from "../components/TicketAuditTimeline";
 
 const AdminTicketDetail = () => {
     const { ticket_id } = useParams();
@@ -362,6 +363,8 @@ const AdminTicketDetail = () => {
                         </div>
                         <TicketTimeline ticket={ticket} />
                     </div>
+
+                    <TicketAuditTimeline ticketId={ticket.id} companyId={ticket.company_id} />
                 </div>
 
                 {/* AI Column */}
