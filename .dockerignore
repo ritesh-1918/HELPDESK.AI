@@ -1,0 +1,52 @@
+# Version control
+.git
+.gitignore
+
+# Dependencies (will be installed in container)
+node_modules
+Frontend/node_modules
+backend/node_modules
+MobileApp/node_modules
+
+# Mobile app (not needed for web backend)
+MobileApp
+
+# Documentation
+docs
+*.md
+!README.md
+
+# Development files
+.vscode
+.idea
+*.log
+npm-debug.log*
+scratch
+
+# Build artifacts
+Frontend/build
+Frontend/dist
+backend/dist
+
+# Data and models (should be mounted, not baked in)
+backend/data
+backend/models
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker files (no need to include in context)
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# CI/CD
+.github
+
+# Test files
+**/*.test.js
+**/*.test.jsx
+**/*.spec.js
+**/*.spec.jsx
+__tests__
