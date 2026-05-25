@@ -6,7 +6,7 @@ import os
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 
 ACCESS_COOKIE = "access_token"
 REFRESH_COOKIE = "refresh_token"
@@ -98,12 +98,12 @@ async def get_current_user(request: Request) -> dict:
 
 
 class LoginBody(BaseModel):
-    email: EmailStr
+    email: str = Field(min_length=3)
     password: str = Field(min_length=1)
 
 
 class SignupBody(BaseModel):
-    email: EmailStr
+    email: str = Field(min_length=3)
     password: str = Field(min_length=6)
     full_name: str | None = None
     role: str | None = "user"
