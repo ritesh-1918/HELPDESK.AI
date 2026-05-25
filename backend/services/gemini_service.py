@@ -2,6 +2,7 @@ import os
 import base64
 import io
 import re
+import json
 from PIL import Image
 from google import genai
 from dotenv import load_dotenv
@@ -222,3 +223,65 @@ class GeminiService:
         except Exception as e:
             print(f"[GeminiService] Bug Analysis Error: {e}")
             return f"Diagnostic analysis failed: {str(e)}"
+
+    def detect_language(self, text: str) -> dict:
+        """
+        Detect language for the given text. Returns ISO-ish language code and English language name.
+        """
+        if not text or not text.strip():
+            return {"code": "en", "name": "English"}
+        if not self._initialized:
+            return {"code": "en", "name": "English"}
+
+        try:
+            prompt = (
+                "Detect the natural language of the following user message. "
+                "Return strict JSON only with keys: code, name. "
+                "Example: {\"code\":\"es\",\"name\":\"Spanish\"}.\n\n"
+                f"Text:\n{text}"
+            )
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt
+            )
+            raw = (response.text or "").strip()
+            match = re.search(r"\{.*\}", raw, re.DOTALL)
+            parsed = json.loads(match.group(0) if match else raw)
+            code = str(parsed.get("code", "en")).lower()
+            name = str(parsed.get("name", "English"))
+            if not code:
+                code = "en"
+            if not name:
+                name = "English"
+            return {"code": code, "name": name}
+        except Exception as e:
+            print(f"[GeminiService] Language detection error: {e}")
+            return {"code": "en", "name": "English"}
+
+    def translate_to_english(self, text: str, source_language: str | None = None) -> str:
+        """
+        Translate user text to English while preserving technical terms.
+        """
+        if not text or not text.strip():
+            return text
+        if not self._initialized:
+            return text
+
+        try:
+            lang_hint = f"Source language: {source_language}. " if source_language else ""
+            prompt = (
+                "Translate the following support ticket text to natural, concise English. "
+                "Preserve technical terms, error codes, product names, and formatting. "
+                "Return only translated text with no prefix or explanation. "
+                f"{lang_hint}\n\n"
+                f"Text:\n{text}"
+            )
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt
+            )
+            translated = (response.text or "").strip()
+            return translated or text
+        except Exception as e:
+            print(f"[GeminiService] Translation error: {e}")
+            return text

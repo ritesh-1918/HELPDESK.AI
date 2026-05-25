@@ -1,8 +1,9 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useCallback, useState, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from "../../store/authStore";
 import useToastStore from "../../store/toastStore";
 import { supabase } from "../../lib/supabaseClient";
+import useTicketsRealtime from "../../hooks/useTicketsRealtime";
 import {
     Search,
     Filter,
@@ -29,7 +30,7 @@ import { formatTimelineDate } from "../../utils/dateUtils";
 const AdminTickets = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { user } = useAuthStore();
+    const { user, profile } = useAuthStore();
     const { showToast } = useToastStore();
 
     // Data State
@@ -45,6 +46,27 @@ const AdminTickets = () => {
     const [priorityFilter, setPriorityFilter] = useState('All');
     const [teamFilter, setTeamFilter] = useState('All');
     const [agents, setAgents] = useState([]); // All staff/admins in the company
+
+    const ticketMatchesFilters = useCallback((ticket) => {
+        if (statusFilter !== 'All' && String(ticket.status || '').toLowerCase() !== statusFilter.toLowerCase()) return false;
+        if (categoryFilter !== 'All' && ticket.category !== categoryFilter) return false;
+        if (priorityFilter !== 'All' && String(ticket.priority || '').toLowerCase() !== priorityFilter.toLowerCase()) return false;
+        if (teamFilter !== 'All' && ticket.assigned_team !== teamFilter) return false;
+        return true;
+    }, [categoryFilter, priorityFilter, statusFilter, teamFilter]);
+
+    const handleRealtimeInsert = useCallback((ticket) => {
+        showToast(`New Incident Reported: #${formatTicketId(ticket.id)}`, "success");
+    }, [showToast]);
+
+    const { lastChangedTicketId } = useTicketsRealtime({
+        company: profile?.company,
+        enabled: Boolean(profile),
+        onTicketsChange: setTickets,
+        onInsert: handleRealtimeInsert,
+        shouldInclude: ticketMatchesFilters,
+        channelName: 'admin_tickets_realtime',
+    });
 
     const fetchInitialData = async () => {
         setLoading(true);
@@ -113,38 +135,6 @@ const AdminTickets = () => {
 
     useEffect(() => {
         fetchInitialData();
-
-        // 4. Real-time subscription to ticket changes
-        const { profile } = useAuthStore.getState();
-        const channel = supabase
-            .channel('admin_tickets_realtime')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'tickets',
-                    filter: profile?.company ? `company=eq.${profile.company}` : undefined
-                },
-                (payload) => {
-                    console.log("Admin tickets sync event:", payload.eventType, payload.new);
-                    if (payload.eventType === 'INSERT') {
-                        setTickets(prev => [payload.new, ...prev]);
-                        showToast(`New Incident Reported: #${payload.new.id}`, "success");
-                        // Play a subtle sound or visual cue if needed
-                    } else if (payload.eventType === 'UPDATE') {
-                        setTickets(prev => prev.map(t => t.id === payload.new.id ? { ...t, ...payload.new } : t));
-                    } else if (payload.eventType === 'DELETE') {
-                        setTickets(prev => prev.filter(t => t.id === payload.old.id));
-                    }
-                }
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-     
     }, [statusFilter, categoryFilter, priorityFilter, teamFilter]);
 
     // Seed search from URL
@@ -305,8 +295,11 @@ const AdminTickets = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                            {filteredTickets.map((ticket) => (
-                                <tr key={ticket.id} className={`hover:bg-slate-50/50 transition-colors group ${isUpdating === ticket.id ? 'opacity-50 pointer-events-none' : ''}`}>
+                            {filteredTickets.map((ticket) => {
+                                const wasLiveChanged = String(lastChangedTicketId) === String(ticket.id);
+
+                                return (
+                                <tr key={ticket.id} className={`hover:bg-slate-50/50 transition-colors group ${wasLiveChanged ? 'bg-emerald-50/70 ring-1 ring-emerald-100' : ''} ${isUpdating === ticket.id ? 'opacity-50 pointer-events-none' : ''}`}>
                                     {/* Ticket ID */}
                                     <td className="px-6 py-6">
                                         <span className="font-mono text-xs font-black text-emerald-600">#{formatTicketId(ticket.id)}</span>
@@ -347,6 +340,11 @@ const AdminTickets = () => {
                                                 {ticket.category} 
                                                 <span className="text-[9px] font-medium text-slate-300">• {formatTimelineDate(ticket.created_at)}</span>
                                             </span>
+                                            {ticket?.metadata?.translation?.translated && (
+                                                <span className="text-[10px] text-sky-700 mt-1">
+                                                    Translated from {ticket.metadata.translation.source_language_name || ticket.metadata.translation.source_language || 'Unknown'}
+                                                </span>
+                                            )}
                                         </div>
                                     </td>
 
@@ -456,7 +454,8 @@ const AdminTickets = () => {
                                         </div>
                                     </td>
                                 </tr>
-                            ))}
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>

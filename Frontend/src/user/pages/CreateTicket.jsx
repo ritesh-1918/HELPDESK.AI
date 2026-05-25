@@ -21,7 +21,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from "../../components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../../components/ui/card";
 import { Textarea } from "../../components/ui/textarea";
-import Tesseract from 'tesseract.js';
 import { translateText, SUPPORTED_LANGUAGES } from '../../services/translationService';
 import TemplateSelector from '../components/TemplateSelector';
 import TemplateForm from '../components/TemplateForm';
@@ -111,6 +110,7 @@ const CreateTicket = () => {
     const processOCR = async (imageFile) => {
         setIsOcrLoading(true);
         try {
+            const { default: Tesseract } = await import('tesseract.js');
             const { data: { text } } = await Tesseract.recognize(imageFile, 'eng');
             setExtractedOCR(text.trim());
         } catch (err) {

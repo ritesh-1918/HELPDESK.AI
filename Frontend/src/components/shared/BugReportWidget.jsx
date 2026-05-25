@@ -23,23 +23,12 @@ function useDiagnostics() {
         const browserInfo = navigator.userAgent;
         const screenInfo = `${window.innerWidth}x${window.innerHeight}`;
 
-         
         setDiagnostics(prev => ({
             ...prev,
             url: window.location.href,
             browser: browserInfo,
             screen: screenInfo
         }));
-
-        // Intercept console.error
-        const originalConsoleError = console.error;
-        console.error = function (...args) {
-            setDiagnostics(prev => ({
-                ...prev,
-                consoleErrors: [...prev.consoleErrors, args.join(' ')].slice(-10) // keep last 10
-            }));
-            originalConsoleError.apply(console, args);
-        };
 
         // Global Error Listener
         const handleError = (e) => {
@@ -51,7 +40,6 @@ function useDiagnostics() {
         window.addEventListener('error', handleError);
 
         return () => {
-            console.error = originalConsoleError;
             window.removeEventListener('error', handleError);
         };
     }, []);
