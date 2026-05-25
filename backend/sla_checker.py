@@ -70,6 +70,8 @@ async def run_sla_check(supabase=None, dry_run: bool = False) -> dict:
         if escalated:
             logger.info(f"Dispatching notifications for {len(escalated)} escalated tickets...")
             await engine.dispatch_notifications(escalated)
+            # Send Slack alerts for escalated tickets
+            _dispatch_slack_alerts(escalated)
         stats = await engine.get_dashboard_stats()
         logger.info(f"SLA stats: {json.dumps(stats)}")
         return {"checked": len(escalated) if escalated else 0, "stats": stats}
@@ -115,6 +117,22 @@ def background_checker_loop(interval_minutes: int = 5, dry_run: bool = False):
 #
 # (Not a standalone asyncio loop to avoid blocking the server.)
 
+
+def _dispatch_slack_alerts(escalated: list) -> None:
+    """Send Slack alerts for escalated tickets (best-effort)."""
+    try:
+        from backend.services.slack_notifier import notify_sla_breach
+
+        for ticket in escalated:
+            try:
+                notify_sla_breach(ticket)
+            except Exception as e:
+                logger.warning("Slack notification failed for ticket %s: %s", ticket.get("id"), e)
+    except ImportError:
+        logger.debug("slack_notifier module not available — skipping Slack alerts")
+    except Exception as e:
+        logger.warning("Slack alert dispatch error: %s", e)
+
 async def sla_checker_loop_async(
     supabase,
     interval_seconds: int = 300,
@@ -129,6 +147,7 @@ async def sla_checker_loop_async(
             escalated = await engine.check_all_active_tickets()
             if escalated:
                 await engine.dispatch_notifications(escalated)
+                _dispatch_slack_alerts(escalated)
             logger.info(f"Async SLA check: {len(escalated)} escalations triggered")
         except Exception as e:
             logger.error(f"Async SLA check error: {e}")
