@@ -43,7 +43,7 @@ CREATE POLICY "Service role full audit access" ON audit_logs
 CREATE POLICY "Admins can view own company audit logs" ON audit_logs
     FOR SELECT USING (
         company_id IN (
-            SELECT company_id FROM user_companies WHERE user_id = auth.uid()
+            SELECT company_id FROM profiles WHERE id = auth.uid()
         )
     );
 
