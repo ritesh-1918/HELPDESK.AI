@@ -1,7 +1,39 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '../lib/supabaseClient';
+import { API_CONFIG } from '../config';
 import useTicketStore from './ticketStore';
+
+const BACKEND_URL = API_CONFIG.BACKEND_URL;
+
+const verifyServerCookieSession = async () => {
+    try {
+        const res = await fetch(`${BACKEND_URL}/auth/me`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: { Accept: 'application/json' },
+        });
+        if (!res.ok) return null;
+        const body = await res.json();
+        return body?.user || null;
+    } catch (e) {
+        console.warn('Server cookie session check failed:', e?.message || e);
+        return null;
+    }
+};
+
+const mirrorBackendAuth = async (path, payload) => {
+    try {
+        await fetch(`${BACKEND_URL}${path}`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+    } catch (e) {
+        console.warn(`Backend auth ${path} failed:`, e?.message || e);
+    }
+};
 
 let currentUserPromise = null;
 
@@ -89,6 +121,13 @@ const useAuthStore = create(
                 currentUserPromise = (async () => {
                     try {
                         set({ isCheckingSession: true });
+                        const cookieUser = await verifyServerCookieSession();
+                        if (cookieUser) {
+                            set({ user: cookieUser });
+                            get().getProfile(cookieUser);
+                            return cookieUser;
+                        }
+
                         const { data: { user }, error } = await supabase.auth.getUser();
                         if (error) throw error;
 
@@ -117,6 +156,8 @@ const useAuthStore = create(
                 set({ loading: true });
                 console.log("Attempting login for:", email);
                 try {
+                    await mirrorBackendAuth('/auth/login', { email, password });
+
                     const { data, error } = await supabase.auth.signInWithPassword({
                         email,
                         password,
@@ -205,6 +246,14 @@ const useAuthStore = create(
                 console.log("Starting signup for:", email);
 
                 try {
+                    await mirrorBackendAuth('/auth/signup', {
+                        email,
+                        password,
+                        full_name: fullName,
+                        role,
+                        company,
+                    });
+
                     // 1. Auth Signup with Metadata
                     console.log("Step 1: Auth.signUp...");
                     const { data, error } = await supabase.auth.signUp({
@@ -245,6 +294,15 @@ const useAuthStore = create(
             logout: async () => {
                 set({ loading: true });
                 try {
+                    try {
+                        await fetch(`${BACKEND_URL}/auth/logout`, {
+                            method: 'POST',
+                            credentials: 'include',
+                        });
+                    } catch (e) {
+                        console.warn('Backend cookie logout failed:', e?.message || e);
+                    }
+
                     const { error } = await supabase.auth.signOut();
                     if (error) throw error;
                     set({ user: null, profile: null });
@@ -305,8 +363,7 @@ const useAuthStore = create(
         {
             name: 'auth-storage',
             partialize: (state) => ({
-                // We keep profile persisted for quick UI transitions, 
-                // but session is handled by Supabase cookie/localStorage
+                // Profile only — JWT session lives in HttpOnly cookies (issue #130)
                 profile: state.profile
             }),
         }

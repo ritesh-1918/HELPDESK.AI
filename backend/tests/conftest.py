@@ -267,7 +267,7 @@ def fake_supabase(fake_db):
 
 @pytest.fixture(autouse=True)
 def mock_ai_services(request):
-    if request.module.__name__.endswith("test_semantic_duplicates"):
+    if request.module.__name__.endswith(("test_semantic_duplicates", "test_auth_cookie")):
         yield
         return
 

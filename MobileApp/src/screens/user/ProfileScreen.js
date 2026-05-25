@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
+import { backendLogout } from '../../lib/authBackend';
 import { COLORS, SHADOWS } from '../../styles/theme';
 import {
   User, Mail, Building2, ShieldCheck, Calendar, Ticket, Zap,
@@ -224,6 +225,7 @@ const ProfileScreen = () => {
 
   const handleLogout = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    await backendLogout();
     await supabase.auth.signOut();
   };
 

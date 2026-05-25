@@ -64,6 +64,7 @@ from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
 from backend.services.sla_engine import SLAEngine, compute_sla_breach_at, get_sla_policy
 from backend.services.semantic_duplicate_service import SemanticDuplicateService
+from backend.auth_cookie import router as auth_cookie_router, get_current_user  # noqa: F401
 
 
 # ---------------------------------------------------------------------------
@@ -466,6 +467,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(auth_cookie_router)
 
 
 # ---------------------------------------------------------------------------
