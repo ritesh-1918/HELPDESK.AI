@@ -1,0 +1,64 @@
+# Git history
+.git
+.gitignore
+
+# Node modules (installed during build)
+**/node_modules
+**/node_modules/**/*
+
+# IDE and OS files
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Frontend (not needed for backend Docker image)
+Frontend
+MobileApp
+
+# Documentation and templates (not needed in image)
+docs
+templates
+CHANGES.md
+CODE_OF_CONDUCT.md
+CONTRIBUTING.md
+PLATFORM_MAP.md
+README.md
+SECURITY.md
+LICENSE
+
+# Data files (not needed in image)
+final_dataset.xlsx
+issue_tracker_state.json
+pages_config.json
+Model/
+
+# Supabase config (not needed in image)
+supabase
+
+# Scripts (not needed in image)
+scripts
+
+# Build artifacts
+**/*.pyc
+**/__pycache__
+**/*.egg-info
+
+# Environment files
+.env
+.env.*
+**/.env
+**/.env.*
+
+# npm cache
+.npm-cache
+
+# EAS/Expo
+.easignore
+
+# HuggingFace
+.hfignore
+.gitattributes
+
+# GitHub
+.github
