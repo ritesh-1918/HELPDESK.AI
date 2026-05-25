@@ -10,6 +10,8 @@ import torch
 import torch.nn.functional as F
 from transformers import DistilBertTokenizerFast, DistilBertForSequenceClassification
 
+from backend.services.redis_cache import redis_cache, text_hash, CLASSIFIER_PREFIX
+
 SAVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "models", "classifier")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 MAX_LEN = 128
@@ -85,7 +87,13 @@ class ClassifierService:
     def predict(self, text: str) -> dict:
         """
         Predict category, subcategory, priority, auto_resolve, assigned_team, and confidence.
+        Cached in Redis (when USE_REDIS_CACHE=True) keyed by md5(text).
         """
+        cache_key = CLASSIFIER_PREFIX + text_hash(text)
+        cached = redis_cache.get_json(cache_key)
+        if cached is not None:
+            return cached
+
         self.load()
 
         encoding = self.tokenizer(
@@ -140,7 +148,7 @@ class ClassifierService:
                     confidence = max(confidence, 0.92) 
                     break
 
-        return {
+        result = {
             "category": category,
             "subcategory": subcategory,
             "priority": priority,
@@ -148,3 +156,5 @@ class ClassifierService:
             "assigned_team": assigned_team,
             "confidence": confidence,
         }
+        redis_cache.set_json(cache_key, result)
+        return result

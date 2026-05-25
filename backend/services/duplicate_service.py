@@ -6,6 +6,8 @@ Uses sentence-transformers all-MiniLM-L6-v2 to detect similar tickets.
 import uuid
 from sentence_transformers import SentenceTransformer, util
 
+from backend.services.redis_cache import redis_cache, text_hash, EMBEDDING_PREFIX
+
 SIMILARITY_THRESHOLD = 0.70
 
 
@@ -20,15 +22,25 @@ class DuplicateService:
         self.storage_file = os.path.join(os.path.dirname(__file__), "..", "data", "case_history_cache.json")
         os.makedirs(os.path.dirname(self.storage_file), exist_ok=True)
 
+    def _encode(self, text: str):
+        """Encode text into an embedding, using Redis cache when available."""
+        cache_key = EMBEDDING_PREFIX + text_hash(text)
+        cached = redis_cache.get_pickle(cache_key)
+        if cached is not None:
+            return cached
+        embedding = self.model.encode(text, convert_to_tensor=True)
+        redis_cache.set_pickle(cache_key, embedding)
+        return embedding
+
     def load(self):
         """Load the sentence-transformer model and saved tickets."""
         if self._loaded:
             return
-        
+
         print("[DuplicateService] Loading model...")
         self.model = SentenceTransformer("all-MiniLM-L6-v2")
         self._loaded = True
-        
+
         if os.path.exists(self.storage_file):
             print(f"[DuplicateService] Syncing previous ticket history from {self.storage_file}...")
             import json
@@ -37,7 +49,7 @@ class DuplicateService:
                     data = json.load(f)
                     for item in data:
                         text = item["text"]
-                        embedding = self.model.encode(text, convert_to_tensor=True)
+                        embedding = self._encode(text)
                         self._tickets.append((item["ticket_id"], embedding, text))
                 print(f"[DuplicateService] Loaded {len(self._tickets)} tickets.")
             except Exception as e:
@@ -68,7 +80,7 @@ class DuplicateService:
     def add_ticket(self, ticket_id: str, text: str):
         """Add a ticket to the in-memory store and persist to disk."""
         self.load()
-        embedding = self.model.encode(text, convert_to_tensor=True)
+        embedding = self._encode(text)
         self._tickets.append((ticket_id, embedding, text))
         self.save_to_disk(ticket_id, text)
 
@@ -99,7 +111,7 @@ class DuplicateService:
                 "similarity": 0.0,
             }
 
-        query_embedding = self.model.encode(text, convert_to_tensor=True)
+        query_embedding = self._encode(text)
 
         best_score = 0.0
         best_id = None

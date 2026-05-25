@@ -58,6 +58,7 @@ from backend.services.classifier_v2 import classifier_v2
 from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
+from backend.services.redis_cache import redis_cache
 from backend.services.rag_service import RagService
 
 
@@ -200,6 +201,10 @@ except ImportError:
 async def lifespan(app: FastAPI):
     """Load all models at startup."""
     print("[Startup] Loading AI models ...")
+    try:
+        redis_cache.load()
+    except Exception as e:
+        print(f"[WARNING] Redis cache not loaded: {e}")
     try:
         classifier_service.load()
     except FileNotFoundError as e:
