@@ -266,7 +266,15 @@ def fake_supabase(fake_db):
 
 
 @pytest.fixture(autouse=True)
-def mock_ai_services():
+def mock_ai_services(request):
+    if request.node.fspath.basename in {
+        "test_redis_cache.py",
+        "test_semantic_duplicates.py",
+        "test_auth_cookie.py",
+    }:
+        yield
+        return
+
     import backend.main as main
 
     with patch.object(main.classifier_service, "predict") as mock_v1_predict, \

@@ -101,12 +101,20 @@ class DuplicateService:
 
     def generate_embedding(self, text: str) -> list[float] | None:
         """Generate a 384-d embedding for the provided ticket text."""
+        from backend.services.redis_cache import redis_cache
+
+        cached = redis_cache.get_embedding(text)
+        if cached is not None:
+            return cached
+
         self.load()
         if not self.is_available():
             return None
 
         embedding = self.model.encode(text, convert_to_tensor=False, normalize_embeddings=True)
-        return [float(value) for value in embedding.tolist()]
+        values = [float(value) for value in embedding.tolist()]
+        redis_cache.set_embedding(text, values)
+        return values
 
     def _build_result(
         self,

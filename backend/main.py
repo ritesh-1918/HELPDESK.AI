@@ -64,6 +64,7 @@ from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
 from backend.services.sla_engine import SLAEngine, compute_sla_breach_at, get_sla_policy
 from backend.services.semantic_duplicate_service import SemanticDuplicateService
+from backend.services.redis_cache import redis_cache
 
 
 # ---------------------------------------------------------------------------
@@ -116,6 +117,16 @@ def detect_semantic_duplicate(text: str, *, company_id: str | None, threshold: f
 
 def classify_ticket_text(text: str) -> dict:
     """Run the local classifier cascade with ONNX as the offline fallback path."""
+    cached = redis_cache.get_classification(text)
+    if cached:
+        return cached
+
+    result = _classify_ticket_text_uncached(text)
+    redis_cache.set_classification(text, result)
+    return result
+
+
+def _classify_ticket_text_uncached(text: str) -> dict:
     try:
         classification_v3_res = classifier_v3.predict(text)
         if "error" not in classification_v3_res:
@@ -388,6 +399,10 @@ def detect_and_translate_ticket_text(text: str) -> dict:
 async def lifespan(app: FastAPI):
     """Load all models at startup."""
     print("[Startup] Loading AI models ...")
+    try:
+        redis_cache.connect()
+    except Exception as e:
+        print(f"[WARNING] Redis cache not available: {e}")
     try:
         classifier_service.load()
     except FileNotFoundError as e:
