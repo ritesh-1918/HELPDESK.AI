@@ -21,6 +21,7 @@ const AutoResolveChat = () => {
     const [messages, setMessages] = useState([]);
     const [isThinking, setIsThinking] = useState(false);
     const [isFinal, setIsFinal] = useState(false);
+    const [steps, setSteps] = useState([]);
     const [inputText, setInputText] = useState('');
     const [isListening, setIsListening] = useState(false);
     const { showToast } = useToastStore();
@@ -77,7 +78,7 @@ const AutoResolveChat = () => {
                 }
 
                 if (newSteps.length >= 2) {
-                    // Steps parsed successfully; welcome message sent below
+                    setSteps(newSteps);
                 } else {
                     const sentences = response
                         .replace(/\*\*/g, '')
@@ -87,7 +88,8 @@ const AutoResolveChat = () => {
                         .slice(0, 4);
 
                     if (sentences.length >= 2) {
-                        // Plan parsed but not rendered; welcome message sent below
+                        const fallbackSteps = sentences.map((s, i) => ({ id: i + 1, task: s, completed: false }));
+                        setSteps(fallbackSteps);
                     } else {
                         throw new Error("Could not parse steps from AI response.");
                     }
@@ -255,7 +257,40 @@ const AutoResolveChat = () => {
                         className="flex-1 overflow-y-auto px-10 py-8 space-y-10 scroll-smooth"
                     >
                         <AnimatePresence>
-                            {messages.map((msg, idx) => (
+                            
+                {/* Troubleshooting Steps */}
+                {steps.length > 0 && (
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-4">
+                        <div className="flex items-center gap-2 mb-3">
+                            <ListChecks className="w-5 h-5 text-emerald-700" />
+                            <h3 className="font-bold text-emerald-800">Troubleshooting Plan</h3>
+                        </div>
+                        <div className="space-y-2">
+                            {steps.map((step) => (
+                                <div key={step.id} className="flex items-start gap-3">
+                                    <button
+                                        onClick={() => {
+                                            setSteps(prev => prev.map(s => 
+                                                s.id === step.id ? { ...s, completed: !s.completed } : s
+                                            ));
+                                        }}
+                                        className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                                            step.completed 
+                                                ? 'bg-emerald-500 border-emerald-500' 
+                                                : 'border-emerald-400 hover:border-emerald-600'
+                                        }`}
+                                    >
+                                        {step.completed && <CheckCircle2 className="w-3 h-3 text-white" />}
+                                    </button>
+                                    <span className={`text-sm ${step.completed ? 'line-through text-gray-500' : 'text-gray-700'}`}>
+                                        {step.task}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+                {messages.map((msg, idx) => (
                                 <motion.div
                                     key={idx}
                                     initial={{ opacity: 0, y: 15, scale: 0.98 }}
