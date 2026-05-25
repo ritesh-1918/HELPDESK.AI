@@ -104,6 +104,7 @@ const AdminDashboard = () => {
             const interval = setInterval(fetchStats, 30000);
             return () => clearInterval(interval);
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [profile]);
 
     const metrics = useMemo(() => {

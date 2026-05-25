@@ -20,7 +20,6 @@ const TicketTracking = () => {
     const [error, setError] = useState(null);
     const [createdTicket, setCreatedTicket] = useState(null);
     const hasCreated = useRef(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     const resolutionSteps = location.state?.resolutionSteps || [];
     useEffect(() => {
         if (!aiTicket) {
@@ -91,6 +90,7 @@ const TicketTracking = () => {
         };
 
         finalizeTracking();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [aiTicket, navigate, user, profile?.company, resolutionSteps]);
 
     if (!aiTicket) return null;
