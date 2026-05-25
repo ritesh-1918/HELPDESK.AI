@@ -1212,15 +1212,6 @@ async def analyze_stream(request_body: TicketRequest):
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
-@app.post("/ai/analyze_ticket")
-async def legacy_analyze_and_save(request_body: TicketRequest):
-    """
-    BACKWARD COMPATIBILITY: Strictly performs analysis only. 
-    Does NOT persist to DB to avoid foreign key violations.
-    """
-    return await analyze_only(request_body)
-
-
 @app.post("/ai/analyze_ticket/legacy")
 async def legacy_analyze_ticket_route(request_body: TicketRequest):
     """Explicit legacy route kept for backward compatibility."""
