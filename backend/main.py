@@ -20,6 +20,7 @@ warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
 from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -375,6 +376,7 @@ app = FastAPI(
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+bearer_scheme = HTTPBearer(auto_error=False)
 
 # CORS — locked to production + local dev only
 app.add_middleware(
@@ -623,22 +625,121 @@ async def log_correction(raw_request: Request):
         return {"status": "error", "message": str(e)}
 
 
+def _is_master_admin(role: str | None) -> bool:
+    role_value = (role or "").strip().lower()
+    return role_value in {"master_admin", "master-admin", "super_admin", "super-admin"}
+
+
+async def get_auth_context(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+):
+    """Validate bearer token and resolve server-side access scope."""
+    if not credentials or not credentials.credentials:
+        raise HTTPException(status_code=401, detail="Missing bearer token")
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    token = credentials.credentials
+    try:
+        user_result = supabase.auth.get_user(token)
+    except Exception as error:
+        raise HTTPException(status_code=401, detail="Invalid or expired token") from error
+
+    auth_user = None
+    if hasattr(user_result, "user"):
+        auth_user = user_result.user
+    elif isinstance(user_result, dict):
+        auth_user = user_result.get("user")
+
+    user_id = getattr(auth_user, "id", None)
+    if not user_id and isinstance(auth_user, dict):
+        user_id = auth_user.get("id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid auth context")
+
+    try:
+        profile_res = (
+            supabase.table("profiles")
+            .select("id, company_id, company, role, status")
+            .eq("id", user_id)
+            .single()
+            .execute()
+        )
+        profile = profile_res.data or {}
+    except Exception as error:
+        raise HTTPException(status_code=503, detail="Failed to resolve auth profile") from error
+
+    if not profile:
+        raise HTTPException(status_code=403, detail="Profile not found")
+
+    return {
+        "user_id": user_id,
+        "company_id": profile.get("company_id"),
+        "company": profile.get("company"),
+        "role": profile.get("role"),
+        "is_master_admin": _is_master_admin(profile.get("role")),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None):
+async def get_tickets(company_id: str | None = None, auth_ctx: dict = Depends(get_auth_context)):
     """Fetch persistent tickets from Supabase."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
-    
+
+    scoped_company_id = auth_ctx.get("company_id")
+    if auth_ctx.get("is_master_admin"):
+        scoped_company_id = company_id or scoped_company_id
+    elif company_id and company_id != scoped_company_id:
+        raise HTTPException(status_code=403, detail="Cross-tenant access denied")
+
+    if not scoped_company_id:
+        raise HTTPException(status_code=403, detail="No tenant scope available")
+
     query = supabase.table("tickets").select("*").order("created_at", desc=True)
-    if company_id:
-        query = query.eq("company_id", company_id)
-        
+    query = query.eq("company_id", scoped_company_id)
+
     res = query.execute()
     return res.data
 
+@app.get("/tickets/search")
+async def search_tickets(
+    q: str | None = None,
+    company_id: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+    auth_ctx: dict = Depends(get_auth_context),
+):
+    """Search tickets using tenant-safe full-text search."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    if not q:
+        raise HTTPException(status_code=400, detail="Search query is required")
+    scoped_company_id = auth_ctx.get("company_id")
+    if auth_ctx.get("is_master_admin"):
+        scoped_company_id = company_id or scoped_company_id
+    elif company_id and company_id != scoped_company_id:
+        raise HTTPException(status_code=403, detail="Cross-tenant access denied")
+    if not scoped_company_id:
+        raise HTTPException(status_code=403, detail="No tenant scope available")
+
+    try:
+        result = supabase.rpc(
+            "search_tickets",
+            {
+                "query_text": q,
+                "company_id": scoped_company_id,
+                "limit_rows": limit,
+                "offset_rows": offset,
+            },
+        ).execute()
+        return result.data or []
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Search failed: {e}")
 @app.post("/tickets/save")
 async def save_ticket(request_body: TicketSaveRequest):
     """
@@ -797,14 +898,18 @@ async def save_ticket(request_body: TicketSaveRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/tickets/{ticket_id}")
-async def get_ticket_by_id(ticket_id: str):
+async def get_ticket_by_id(ticket_id: str, auth_ctx: dict = Depends(get_auth_context)):
     """Fetch single persistent ticket."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
-    
+
     res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Ticket not found")
+    if not auth_ctx.get("is_master_admin"):
+        ticket_company_id = res.data.get("company_id")
+        if not auth_ctx.get("company_id") or ticket_company_id != auth_ctx.get("company_id"):
+            raise HTTPException(status_code=403, detail="Cross-tenant access denied")
     return res.data
 
 
