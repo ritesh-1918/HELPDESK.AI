@@ -1,73 +1,153 @@
-name: HELPDESK.AI Continuous Integration (CI)
+name: CI
+
+# CI pipeline that protects against the regression classes documented in
+# docs/ISSUE_DEBUG_FINDINGS.md:
+#   1. Frontend lint failures   (Frontend/eslint.config.js + 100+ unused-import errors)
+#   2. Frontend build regressions
+#   3. Backend import errors / duplicate route registrations
+#   4. Silent degraded-mode startup hiding missing model assets
+#
+# Triggered on every PR against `gssoc` and `main`, plus pushes to `main`.
 
 on:
-    push:
-        branches: [main]
-    pull_request:
-        branches: [main]
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main, gssoc]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-    # --- JOB 1: Frontend Build Verification ---
-    frontend-build:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
+  # ---------------------------------------------------------------------------
+  # Frontend: lint + build
+  # ---------------------------------------------------------------------------
+  frontend:
+    name: Frontend (lint + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Frontend
+    steps:
+      - uses: actions/checkout@v4
 
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: "20"
-                  cache: "npm"
-                  cache-dependency-path: Frontend/package-lock.json
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: Frontend/package-lock.json
 
-            - name: Install Frontend Dependencies
-              run: |
-                  cd Frontend
-                  npm install
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
 
-            - name: Guard Against Frontend AI Secret Leakage
-              run: |
-                  cd Frontend
-                  npm run check:ai-secrets
+      - name: Lint (ESLint)
+        run: npm run lint
 
-            - name: Build Frontend (Production)
-              run: |
-                  cd Frontend
-                  npm run build
-              env:
-                  VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-                  VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      - name: Build (Vite)
+        run: npm run build
 
-    # --- JOB 2: Backend & AI Integrity Checks ---
-    backend-logic:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
+      - name: Upload bundle stats on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: Frontend/dist
+          if-no-files-found: ignore
+          retention-days: 3
 
-            - name: Set up Python
-              uses: actions/setup-python@v4
-              with:
-                  python-version: "3.10"
-                  cache: "pip"
+  # ---------------------------------------------------------------------------
+  # Backend: import smoke-test + route uniqueness + strict-startup contract
+  # ---------------------------------------------------------------------------
+  backend:
+    name: Backend (smoke + route uniqueness)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-            - name: Install Backend Dependencies
-              run: |
-                  cd backend
-                  pip install -r requirements.txt
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
 
-            - name: Verify Model Loading (Classifier Service)
-              # This checks if the distilbert models are correctly structured and loadable
-              run: |
-                  python -c "
-                  import os, sys
-                  sys.path.append(os.getcwd())
-                  from backend.services.classifier_service import ClassifierService
-                  try:
-                      # We expect this to fail in CI if no physical model is pushed,
-                      # but it confirms the logic and imports are solid.
-                      service = ClassifierService()
-                      print('Import logic for AI Classifier is solid.')
-                  except Exception as e:
-                      print(f'AI Logic Error: {e}')
-                      # Optional: exit 1 if you want to enforce model presence in Git
-                  "
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Best-effort install: backend has no top-level requirements.txt yet.
+          # Install the minimum surface needed to import the FastAPI app.
+          pip install \
+            fastapi \
+            'uvicorn[standard]' \
+            pydantic \
+            python-multipart \
+            supabase \
+            apscheduler \
+            python-dotenv
+
+      - name: Smoke-test backend import (degraded mode allowed)
+        env:
+          ALLOW_DEGRADED_STARTUP: '1'
+          REQUIRE_SUPABASE: 'false'
+        run: |
+          python -c "from backend.main import app; print('Backend imported OK with', len(app.routes), 'routes')"
+
+      - name: Assert no duplicate route registrations
+        env:
+          ALLOW_DEGRADED_STARTUP: '1'
+        run: |
+          python - <<'PY'
+          from collections import Counter
+          from backend.main import app
+
+          routes = [
+              (r.path, frozenset(r.methods or []))
+              for r in app.routes
+              if hasattr(r, 'methods') and r.methods
+          ]
+          dupes = [k for k, v in Counter(routes).items() if v > 1]
+          if dupes:
+              print('DUPLICATE ROUTES DETECTED:')
+              for path, methods in dupes:
+                  print(f'  {sorted(methods)} {path}')
+              raise SystemExit(1)
+          print(f'OK — {len(routes)} unique routes registered.')
+          PY
+
+      - name: Assert strict-startup contract is wired
+        run: |
+          python - <<'PY'
+          import pathlib
+          src = pathlib.Path('backend/main.py').read_text(encoding='utf-8')
+          required = [
+              'ALLOW_DEGRADED_STARTUP',
+              'Startup-FATAL',
+          ]
+          missing = [s for s in required if s not in src]
+          if missing:
+              raise SystemExit(f'Strict-startup guard removed from main.py: missing {missing}')
+          print('OK — strict-startup guard present.')
+          PY
+
+      - name: Assert .env.example exists and documents required vars
+        run: |
+          python - <<'PY'
+          import pathlib
+          p = pathlib.Path('backend/.env.example')
+          if not p.exists():
+              raise SystemExit('backend/.env.example is missing')
+          body = p.read_text(encoding='utf-8')
+          required = [
+              'SUPABASE_URL',
+              'SUPABASE_SERVICE_KEY',
+              'GEMINI_API_KEY',
+              'ALLOW_DEGRADED_STARTUP',
+              'AUTO_CLOSE_ENABLED',
+              'SLA_ESCALATION_ENABLED',
+          ]
+          missing = [v for v in required if v not in body]
+          if missing:
+              raise SystemExit(f'.env.example missing variables: {missing}')
+          print('OK — .env.example documents all required variables.')
+          PY

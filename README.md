@@ -58,7 +58,9 @@ pinned: false
 
 ## 🌟 GSSoC '26 Contributor & Community Campaign
 
-We are extremely proud to be part of the **GirlScript Summer of Code (GSSoC) 2026**! To support the project and get real-time open-source project updates, please make sure you participate in our community campaign:
+We are extremely proud to be part of the **GirlScript Summer of Code (GSSoC) 2026**! To ensure high-quality contributions and maximum rewards for both developers and mentors, please review our official [GSSoC Mentorship Guide & Review Standard](MENTORSHIP.md).
+
+To support the project and get real-time open-source project updates, please make sure you participate in our community campaign:
 
 <div align="center">
 
