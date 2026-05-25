@@ -340,6 +340,11 @@ const AdminTickets = () => {
                                                 {ticket.category} 
                                                 <span className="text-[9px] font-medium text-slate-300">• {formatTimelineDate(ticket.created_at)}</span>
                                             </span>
+                                            {ticket?.metadata?.translation?.translated && (
+                                                <span className="text-[10px] text-sky-700 mt-1">
+                                                    Translated from {ticket.metadata.translation.source_language_name || ticket.metadata.translation.source_language || 'Unknown'}
+                                                </span>
+                                            )}
                                         </div>
                                     </td>
 

@@ -1,10 +1,23 @@
-name: HELPDESK.AI Continuous Integration (CI)
+name: CI
+
+# CI pipeline that protects against the regression classes documented in
+# docs/ISSUE_DEBUG_FINDINGS.md:
+#   1. Frontend lint failures   (Frontend/eslint.config.js + 100+ unused-import errors)
+#   2. Frontend build regressions
+#   3. Backend import errors / duplicate route registrations
+#   4. Silent degraded-mode startup hiding missing model assets
+#
+# Triggered on every PR against `gssoc` and `main`, plus pushes to `main`.
 
 on:
-    push:
-        branches: [main]
-    pull_request:
-        branches: [main]
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main, gssoc]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
     # --- JOB 1: Frontend Build Verification ---

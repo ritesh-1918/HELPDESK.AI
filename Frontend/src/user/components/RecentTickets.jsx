@@ -150,6 +150,11 @@ const RecentTickets = () => {
                                             <p style={{ fontSize: '14px', fontWeight: 500, color: '#111827', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '320px' }}>
                                                 {ticket.summary || ticket.subject || ticket.description || "No description provided"}
                                             </p>
+                                            {ticket?.metadata?.translation?.translated && (
+                                                <p style={{ fontSize: '11px', color: '#0369a1', margin: '4px 0 0' }}>
+                                                    Translated from {ticket.metadata.translation.source_language_name || ticket.metadata.translation.source_language || 'Unknown'}
+                                                </p>
+                                            )}
                                         </td>
                                         <td style={{ padding: '16px 28px' }}>
                                             {getStatusBadge(ticket.status)}

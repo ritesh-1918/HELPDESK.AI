@@ -35,6 +35,7 @@ const AdminTicketDetail = () => {
     const [imageUrl, setImageUrl] = useState(null);
     const [isUpdating, setIsUpdating] = useState(null);
     const [isLive, setIsLive] = useState(false);
+    const [showOriginalText, setShowOriginalText] = useState(false);
 
     const [correctionForm, setCorrectionForm] = useState({
         category: '',
@@ -198,6 +199,11 @@ const AdminTicketDetail = () => {
     const displayPriority = ticket.priority || 'Medium';
     const displaySummary = ticket.summary || ticket.subject || 'No Summary';
     const displayText = ticket.description || ticket.text || displaySummary;
+    const translationMeta = ticket.metadata?.translation;
+    const originalTextMeta = ticket.metadata?.original_text;
+    const isTranslated = Boolean(translationMeta?.translated && originalTextMeta?.description);
+    const sourceLanguageName = translationMeta?.source_language_name || translationMeta?.source_language || 'Unknown';
+    const renderedText = showOriginalText && isTranslated ? originalTextMeta.description : displayText;
 
     return (
         <div style={{ background: '#f8faf9', minHeight: '100vh', paddingBottom: '80px' }} className="-m-6 p-6 md:-m-10 md:p-10 space-y-6 animate-in fade-in duration-700">
@@ -313,8 +319,22 @@ const AdminTicketDetail = () => {
                             <span style={{ fontSize: '10px', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase' }}>{formatFullTimestamp(ticket.created_at)}</span>
                         </div>
                         <div style={{ padding: '28px' }}>
+                            {isTranslated && (
+                                <div style={{ marginBottom: '16px', border: '1px solid #bae6fd', background: '#f0f9ff', borderRadius: '12px', padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                    <span style={{ fontSize: '12px', fontWeight: 600, color: '#0c4a6e' }}>
+                                        Translated from {sourceLanguageName}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowOriginalText(prev => !prev)}
+                                        style={{ fontSize: '11px', fontWeight: 700, color: '#0369a1', background: 'transparent', border: 'none', cursor: 'pointer' }}
+                                    >
+                                        {showOriginalText ? 'View English' : 'View Original'}
+                                    </button>
+                                </div>
+                            )}
                             <div style={{ background: 'linear-gradient(135deg, #0f1f12, #1a3320)', color: '#ffffff', borderRadius: '16px', padding: '24px 28px', fontSize: '15px', fontStyle: 'italic', lineHeight: 1.7 }}>
-                                "{displayText}"
+                                "{renderedText}"
                             </div>
 
                             {imageUrl && (
