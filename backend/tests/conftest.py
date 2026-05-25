@@ -266,7 +266,11 @@ def fake_supabase(fake_db):
 
 
 @pytest.fixture(autouse=True)
-def mock_ai_services():
+def mock_ai_services(request):
+    if request.module.__name__.endswith("test_semantic_duplicates"):
+        yield
+        return
+
     import backend.main as main
 
     with patch.object(main.classifier_service, "predict") as mock_v1_predict, \
