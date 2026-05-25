@@ -838,6 +838,36 @@ async def get_ticket_audit_logs(ticket_id: str, company_id: str):
         raise HTTPException(status_code=err.status_code, detail=err.detail)
 
 
+@app.get("/tickets/search")
+async def search_tickets(q: str, company_id: str | None = None):
+    """Search tickets by query text, optionally scoped by company_id."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+    query_text = (q or "").strip()
+    if not query_text:
+        raise HTTPException(status_code=400, detail="Query text is required")
+
+    try:
+        rpc_res = supabase.rpc(
+            "search_tickets",
+            {"query_text": query_text, "company_id": company_id},
+        ).execute()
+        return rpc_res.data or []
+    except Exception:
+        # Fallback for environments without RPC function support.
+        fallback = supabase.table("tickets").select("*").order("created_at", desc=True).execute()
+        rows = fallback.data or []
+        lowered = query_text.lower()
+        filtered = [
+            row for row in rows
+            if lowered in str(row.get("subject", "")).lower()
+            or lowered in str(row.get("description", "")).lower()
+        ]
+        if company_id:
+            filtered = [row for row in filtered if row.get("company_id") == company_id]
+        return filtered
+
+
 @app.post("/tickets", response_model=TicketRecord)
 async def create_ticket(ticket: TicketRecord):
     """Save a new ticket into the system."""
@@ -1190,6 +1220,12 @@ async def legacy_analyze_and_save(request_body: TicketRequest):
     """
     return await analyze_only(request_body)
 
+
+@app.post("/ai/analyze_ticket/legacy")
+async def legacy_analyze_ticket_route(request_body: TicketRequest):
+    """Explicit legacy route kept for backward compatibility."""
+    return await analyze_only(request_body)
+
 @app.post("/ai/analyze-v2")
 async def analyze_ticket_v2(request: TicketRequest):
     text = request.text
@@ -1394,7 +1430,7 @@ async def reindex_embeddings():
 
 
 @app.get("/system/settings")
-async def get_system_settings():
+async def get_system_settings_endpoint():
     """Fetch all system settings."""
     if not supabase:
         raise HTTPException(status_code=503, detail="Database not connected")
