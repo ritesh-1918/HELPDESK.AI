@@ -351,7 +351,7 @@ export default function LandingPage() {
                                 <button onClick={() => navigate('/login')} className="w-full text-center py-2.5 text-gray-700 font-semibold border border-gray-100 rounded-lg">
                                     Sign In
                                 </button>
-                                <button onClick={() => navigate('/admin-signup')} className="w-full bg-emerald-900 text-white py-3 rounded-lg font-semibold shadow">
+                                <button onClick={() => navigate('/admin-signup')} className="w-full bg-emerald-900 text-white py-3 rounded-lg font-semibold shadow shadow-emerald-900/20 hover:scale-105">
                                     Get Started Free
                                 </button>
                             </div>
@@ -382,7 +382,7 @@ export default function LandingPage() {
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
                         <button
                             onClick={() => navigate('/admin-signup')}
-                            className="w-full sm:w-auto px-8 py-4 bg-emerald-900 text-white rounded-xl font-bold shadow-xl shadow-emerald-900/25 hover:bg-emerald-800 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-base"
+                            className="w-full sm:w-auto px-8 py-4 bg-emerald-900 text-white rounded-xl font-bold shadow-xl shadow-emerald-900/25 hover:bg-emerald-800 hover:scale-105 active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-base shadow-emerald-900/20"
                         >
                             Get Started Free <ArrowRight className="w-5 h-5" />
                         </button>
