@@ -5,80 +5,81 @@ import {
   Navigate,
   useLocation
 } from "react-router-dom";
-import React, { useEffect } from "react";
-import { AnimatePresence } from "framer-motion";
-import { NotFound } from "./components/ui/not-found-2";
+import React, { Suspense, useEffect, lazy } from "react";
 import useTicketStore from "./store/ticketStore";
-import Toaster from "./components/shared/Toaster";
-import BugReportWidget from "./components/shared/BugReportWidget";
 import useRealtimeNotifications from "./hooks/useRealtimeNotifications";
-
-// Auth Components
-import Login from "./pages/Login";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import Signup from "./pages/Signup";
-import AdminSignup from "./pages/AdminSignup";
-import AdminLobby from "./pages/AdminLobby";
-import UserLobby from "./pages/UserLobby";
-import LandingPage from "./pages/LandingPage";
-import ContactSales from "./pages/ContactSales";
-
-// Legacy components
-import DuplicateDetection from "./user/pages/DuplicateDetection";
-import AutoResolveChat from "./user/pages/AutoResolveChat";
-import Resolved from "./user/pages/Resolved";
-import TicketTracking from "./user/pages/TicketTracking";
-// Layouts
-import UserLayout from "./user/UserLayout";
-import AdminLayout from "./admin/layout/AdminLayout";
-
-// User Pages
-import Dashboard from "./user/pages/Dashboard";
-import CreateTicket from "./user/pages/CreateTicket";
-import MyTickets from "./user/pages/MyTickets";
-import TicketResult from "./user/pages/TicketResult";
-import Profile from "./user/pages/Profile";
-import TicketDetail from "./user/pages/TicketDetail";
-import TicketProcessing from "./user/pages/AIProcessing"; // Renamed generic import just in case, but keeping AIProcessing
-import AIProcessing from "./user/pages/AIProcessing";
-import AIUnderstanding from "./user/pages/AIUnderstanding";
-import Notifications from "./user/pages/Notifications";
-import Help from "./user/pages/Help";
-
-// NEW Admin Pages (Refactored)
-import AdminDashboard from "./admin/pages/AdminDashboard";
-import AdminTickets from "./admin/pages/AdminTickets";
-import AdminTicketDetail from "./admin/pages/AdminTicketDetail";
-import AdminUsers from "./admin/pages/AdminUsers";
-import AdminAnalytics from "./admin/pages/AdminAnalytics";
-import AdminProfile from "./admin/pages/AdminProfile";
-import AdminSettings from "./admin/pages/AdminSettings";
-import MasterBugReports from "./master-admin/pages/MasterBugReports";
-
-// Feature Pages
-import AutoCategorizationFeature from "./pages/features/AutoCategorizationFeature";
-import PriorityDetectionFeature from "./pages/features/PriorityDetectionFeature";
-import SmartResolutionFeature from "./pages/features/SmartResolutionFeature";
-
-// Legal Pages
-import TermsOfService from "./pages/legal/TermsOfService";
-import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
-import Security from "./pages/legal/Security";
 import AdminProtectedRoute from "./components/shared/AdminProtectedRoute";
 import MasterAdminProtectedRoute from "./components/shared/MasterAdminProtectedRoute";
 import ProtectedRoute from "./components/shared/ProtectedRoute";
 import useAuthStore from "./store/authStore";
 import NotApproved from "./pages/NotApproved";
+const Login = lazy(() => import("./pages/Login"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Signup = lazy(() => import("./pages/Signup"));
+const AdminSignup = lazy(() => import("./pages/AdminSignup"));
+const AdminLobby = lazy(() => import("./pages/AdminLobby"));
+const UserLobby = lazy(() => import("./pages/UserLobby"));
+const LandingPage = lazy(() => import("./pages/LandingPage"));
+const ContactSales = lazy(() => import("./pages/ContactSales"));
 
-// Master Admin Components
-import MasterAdminLogin from "./pages/MasterAdminLogin";
-import MasterAdminLayout from "./master-admin/layout/MasterAdminLayout";
-import MasterAdminDashboard from "./master-admin/pages/MasterAdminDashboard";
-import PendingAdminRequests from "./master-admin/pages/PendingAdminRequests";
-import AllCompanies from "./master-admin/pages/AllCompanies";
-import AllAdmins from "./master-admin/pages/AllAdmins";
-import Changelog from "./pages/Changelog";
+const DuplicateDetection = lazy(() => import("./user/pages/DuplicateDetection"));
+const AutoResolveChat = lazy(() => import("./user/pages/AutoResolveChat"));
+const Resolved = lazy(() => import("./user/pages/Resolved"));
+const TicketTracking = lazy(() => import("./user/pages/TicketTracking"));
+
+const UserLayout = lazy(() => import("./user/UserLayout"));
+const AdminLayout = lazy(() => import("./admin/layout/AdminLayout"));
+
+const Dashboard = lazy(() => import("./user/pages/Dashboard"));
+const CreateTicket = lazy(() => import("./user/pages/CreateTicket"));
+const MyTickets = lazy(() => import("./user/pages/MyTickets"));
+const TicketResult = lazy(() => import("./user/pages/TicketResult"));
+const Profile = lazy(() => import("./user/pages/Profile"));
+const TicketDetail = lazy(() => import("./user/pages/TicketDetail"));
+const AIProcessing = lazy(() => import("./user/pages/AIProcessing"));
+const AIUnderstanding = lazy(() => import("./user/pages/AIUnderstanding"));
+const Notifications = lazy(() => import("./user/pages/Notifications"));
+const Help = lazy(() => import("./user/pages/Help"));
+
+const AdminDashboard = lazy(() => import("./admin/pages/AdminDashboard"));
+const AdminTickets = lazy(() => import("./admin/pages/AdminTickets"));
+const AdminTicketDetail = lazy(() => import("./admin/pages/AdminTicketDetail"));
+const AdminUsers = lazy(() => import("./admin/pages/AdminUsers"));
+const AdminAnalytics = lazy(() => import("./admin/pages/AdminAnalytics"));
+const AdminProfile = lazy(() => import("./admin/pages/AdminProfile"));
+const AdminSettings = lazy(() => import("./admin/pages/AdminSettings"));
+const SLAPage = lazy(() => import("./admin/pages/SLAPage"));
+const MasterBugReports = lazy(() => import("./master-admin/pages/MasterBugReports"));
+
+const AutoCategorizationFeature = lazy(() => import("./pages/features/AutoCategorizationFeature"));
+const PriorityDetectionFeature = lazy(() => import("./pages/features/PriorityDetectionFeature"));
+const SmartResolutionFeature = lazy(() => import("./pages/features/SmartResolutionFeature"));
+
+const TermsOfService = lazy(() => import("./pages/legal/TermsOfService"));
+const PrivacyPolicy = lazy(() => import("./pages/legal/PrivacyPolicy"));
+const Security = lazy(() => import("./pages/legal/Security"));
+
+const MasterAdminLogin = lazy(() => import("./pages/MasterAdminLogin"));
+const MasterAdminLayout = lazy(() => import("./master-admin/layout/MasterAdminLayout"));
+const MasterAdminDashboard = lazy(() => import("./master-admin/pages/MasterAdminDashboard"));
+const PendingAdminRequests = lazy(() => import("./master-admin/pages/PendingAdminRequests"));
+const AllCompanies = lazy(() => import("./master-admin/pages/AllCompanies"));
+const AllAdmins = lazy(() => import("./master-admin/pages/AllAdmins"));
+const Changelog = lazy(() => import("./pages/Changelog"));
+const NotFoundPage = lazy(() => import("./components/ui/not-found-2").then((module) => ({ default: module.NotFound })));
+const Toaster = lazy(() => import("./components/shared/Toaster"));
+const BugReportWidget = lazy(() => import("./components/shared/BugReportWidget"));
+
+function RouteFallback() {
+  return (
+    <div className="flex min-h-[40vh] items-center justify-center px-6 py-16">
+      <div className="rounded-2xl border border-slate-200 bg-white px-6 py-4 text-sm font-semibold text-slate-500 shadow-sm">
+        Loading...
+      </div>
+    </div>
+  );
+}
 
 
 function TitleUpdater() {
@@ -96,6 +97,7 @@ function TitleUpdater() {
     else if (path.startsWith('/admin/analytics')) title = 'Analytics | Admin';
     else if (path.startsWith('/admin/profile')) title = 'Admin Profile';
     else if (path.startsWith('/admin/settings')) title = 'Settings | Admin';
+    else if (path.startsWith('/admin/sla')) title = 'SLA Monitor | Admin';
     // Master Admin Routes
     else if (path.startsWith('/master-admin/dashboard')) title = 'Master Dashboard';
     else if (path.startsWith('/master-admin/admin-requests')) title = 'Pending Requests | Master Admin';
@@ -191,10 +193,11 @@ function AppLayout() {
             <Route path="/admin/analytics" element={<AdminAnalytics />} />
             <Route path="/admin/profile" element={<AdminProfile />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
+            <Route path="/admin/sla" element={<SLAPage />} />
           </Route>
         </Route>
 
-        <Route path="*" element={<NotFound />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </>
   );
@@ -206,63 +209,60 @@ function App() {
 
   useEffect(() => {
     initialize();
-    // Dark mode initialize
-    const saved = localStorage.getItem('theme');
-    if (saved === 'dark') {
-      document.documentElement.classList.add('dark');
-    }
   }, [initialize]);
 
   return (
     <BrowserRouter>
       <TitleUpdater />
       <ScrollToTop />
-      <Toaster />
-      <BugReportWidget />
-      <Routes>
-        {/* Public */}
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/admin-signup" element={<AdminSignup />} />
-        <Route path="/admin-lobby" element={<AdminLobby />} />
-        <Route path="/user-lobby" element={<UserLobby />} />
-        <Route path="/not-approved" element={<NotApproved />} />
-        <Route path="/contact-sales" element={<ContactSales />} />
+      <Suspense fallback={<RouteFallback />}>
+        <Toaster />
+        <BugReportWidget />
+        <Routes>
+          {/* Public */}
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/admin-signup" element={<AdminSignup />} />
+          <Route path="/admin-lobby" element={<AdminLobby />} />
+          <Route path="/user-lobby" element={<UserLobby />} />
+          <Route path="/not-approved" element={<NotApproved />} />
+          <Route path="/contact-sales" element={<ContactSales />} />
 
-        {/* Feature Pages */}
-        <Route path="/features/categorization" element={<AutoCategorizationFeature />} />
-        <Route path="/features/priority" element={<PriorityDetectionFeature />} />
-        <Route path="/features/resolution" element={<SmartResolutionFeature />} />
+          {/* Feature Pages */}
+          <Route path="/features/categorization" element={<AutoCategorizationFeature />} />
+          <Route path="/features/priority" element={<PriorityDetectionFeature />} />
+          <Route path="/features/resolution" element={<SmartResolutionFeature />} />
 
-        {/* Resources Pages */}
-        <Route path="/changelog" element={<Changelog />} />
-        
-        {/* Legal Pages */}
-        <Route path="/terms" element={<TermsOfService />} />
-        <Route path="/privacy" element={<PrivacyPolicy />} />
-        <Route path="/security" element={<Security />} />
+            {/* Resources Pages */}
+            <Route path="/changelog" element={<Changelog />} />
 
-        {/* Master Admin Portal */}
-        <Route path="/master-admin-login" element={<MasterAdminLogin />} />
+            {/* Legal Pages */}
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/security" element={<Security />} />
 
-        <Route element={<MasterAdminProtectedRoute />}>
-          <Route element={<MasterAdminLayout />}>
-            <Route path="/master-admin/dashboard" element={<MasterAdminDashboard />} />
-            <Route path="/master-admin/admin-requests" element={<PendingAdminRequests />} />
-            <Route path="/master-admin/companies" element={<AllCompanies />} />
-            <Route path="/master-admin/all-admins" element={<AllAdmins />} />
-            <Route path="/master-admin/bug-reports" element={<MasterBugReports />} />
+          {/* Master Admin Portal */}
+          <Route path="/master-admin-login" element={<MasterAdminLogin />} />
+
+          <Route element={<MasterAdminProtectedRoute />}>
+            <Route element={<MasterAdminLayout />}>
+              <Route path="/master-admin/dashboard" element={<MasterAdminDashboard />} />
+              <Route path="/master-admin/admin-requests" element={<PendingAdminRequests />} />
+              <Route path="/master-admin/companies" element={<AllCompanies />} />
+              <Route path="/master-admin/all-admins" element={<AllAdmins />} />
+              <Route path="/master-admin/bug-reports" element={<MasterBugReports />} />
+            </Route>
           </Route>
-        </Route>
 
-        {/* Protected */}
-        <Route element={<ProtectedRoute />}>
-          <Route path="/*" element={<AppLayout />} />
-        </Route>
-      </Routes>
+          {/* Protected */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/*" element={<AppLayout />} />
+          </Route>
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

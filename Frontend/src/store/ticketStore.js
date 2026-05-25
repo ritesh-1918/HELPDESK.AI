@@ -30,6 +30,27 @@ const useTicketStore = create(
                     tickets: [...state.tickets, ticket]
                 };
             }),
+            upsertTicket: (ticket) => set((state) => {
+                const ticketId = ticket?.id ?? ticket?.ticket_id;
+                if (!ticketId) return state;
+
+                const exists = state.tickets.some(t => (t.id ?? t.ticket_id) === ticketId);
+                const tickets = exists
+                    ? state.tickets.map(t => (t.id ?? t.ticket_id) === ticketId ? { ...t, ...ticket } : t)
+                    : [ticket, ...state.tickets];
+                const shouldUpdateActive = (state.activeTicket?.id ?? state.activeTicket?.ticket_id) === ticketId;
+
+                return {
+                    tickets,
+                    activeTicket: shouldUpdateActive ? { ...state.activeTicket, ...ticket } : state.activeTicket
+                };
+            }),
+            removeTicket: (ticketId) => set((state) => ({
+                tickets: state.tickets.filter(t => (t.id ?? t.ticket_id) !== ticketId),
+                activeTicket: (state.activeTicket?.id ?? state.activeTicket?.ticket_id) === ticketId
+                    ? null
+                    : state.activeTicket
+            })),
             updateTicket: (ticketId, updates) => set((state) => {
 // eslint-disable-next-line no-unused-vars
                 const existingTicket = state.tickets.find(t => t.ticket_id === ticketId);

@@ -1,5 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { API_CONFIG } from "../config";
+import { supabase } from "../lib/supabaseClient";
 
 // ============================================================
 // MULTI-API FAILOVER CONFIGURATION
@@ -8,45 +7,30 @@ import { API_CONFIG } from "../config";
 // ============================================================
 
 const buildConfigList = () => {
-    const env = import.meta.env;
     const configs = [];
 
     // Priority 1: Native Gemini — try modern flash models
-    const geminiKeys = [
-        env.VITE_GEMINI_API_KEY_1, env.VITE_GEMINI_API_KEY_2,
-        env.VITE_GEMINI_API_KEY_3, env.VITE_GEMINI_API_KEY_4
-    ].filter(Boolean);
-    // Try each key with gemini-2.5-flash first (most robust, active free tier), then gemini-2.5-flash-lite
-    geminiKeys.forEach(key => {
-        configs.push({ provider: 'gemini', key, model: 'gemini-2.5-flash' });
-        configs.push({ provider: 'gemini', key, model: 'gemini-2.5-flash-lite' });
-        configs.push({ provider: 'gemini', key, model: 'gemini-2.0-flash' });
-    });
+    configs.push(
+        { provider: 'gemini', model: 'gemini-2.5-flash' },
+        { provider: 'gemini', model: 'gemini-2.5-flash-lite' },
+        { provider: 'gemini', model: 'gemini-2.0-flash' }
+    );
 
     // Priority 2: OpenRouter — updated model slugs (verified working as of 2025)
-    const openrouterKeys = [
-        env.VITE_OPENROUTER_API_KEY_1, env.VITE_OPENROUTER_API_KEY_2,
-        env.VITE_OPENROUTER_API_KEY_3, env.VITE_OPENROUTER_API_KEY_4,
-    ].filter(Boolean);
     const openrouterModels = [
         'meta-llama/llama-3.2-3b-instruct:free',
         'microsoft/phi-3-mini-128k-instruct:free',
         'mistralai/mistral-7b-instruct:free',
         'google/gemma-2-9b-it:free',
     ];
-    openrouterKeys.forEach((key, idx) => {
-        // Each key tries two models for extra redundancy
-        configs.push({ provider: 'openrouter', key, model: openrouterModels[idx % openrouterModels.length] });
-        configs.push({ provider: 'openrouter', key, model: openrouterModels[(idx + 1) % openrouterModels.length] });
+    openrouterModels.forEach((model) => {
+        configs.push({ provider: 'openrouter', model });
     });
 
     // Priority 3: Groq — use stable, currently-available models
-    const groqKeys = [
-        env.VITE_GROQ_API_KEY_1, env.VITE_GROQ_API_KEY_2, env.VITE_GROQ_API_KEY_3
-    ].filter(Boolean);
     const groqModels = ['llama-3.1-8b-instant', 'mixtral-8x7b-32768', 'gemma2-9b-it'];
-    groqKeys.forEach((key, idx) => {
-        configs.push({ provider: 'groq', key, model: groqModels[idx % groqModels.length] });
+    groqModels.forEach((model) => {
+        configs.push({ provider: 'groq', model });
     });
 
     return configs;
@@ -57,11 +41,8 @@ const buildConfigList = () => {
 // PROVIDER HANDLERS
 // ============================================================
 
-const callGemini = async (config, promptText, history, image) => {
-    const genAI = new GoogleGenerativeAI(config.key);
-    const model = genAI.getGenerativeModel({ model: config.model });
-
-    let formattedHistory = history.map(msg => {
+const buildGeminiMessages = (promptText, history, image) => {
+    const formattedHistory = history.map(msg => {
         const parts = [{ text: msg.text || "" }];
         if (msg.image) {
             const [mime, data] = msg.image.split(';base64,');
@@ -70,72 +51,110 @@ const callGemini = async (config, promptText, history, image) => {
         return { role: msg.role === 'bot' ? 'model' : 'user', parts };
     });
 
-    // Gemini requires history to start with 'user' role
-    const firstUserIdx = formattedHistory.findIndex(h => h.role === 'user');
-    if (firstUserIdx > 0) formattedHistory = formattedHistory.slice(firstUserIdx);
-    else if (firstUserIdx === -1) formattedHistory = [];
-
-    const chat = model.startChat({ history: formattedHistory, generationConfig: { maxOutputTokens: 2048 } });
-
     const messageParts = [{ text: promptText }];
     if (image) {
         const [mime, data] = image.split(';base64,');
         messageParts.push({ inlineData: { mimeType: mime.split(':')[1] || 'image/png', data } });
     }
 
-    const result = await chat.sendMessage(messageParts);
-    return result.response.text();
+    return formattedHistory.length > 0
+        ? [...formattedHistory, { role: 'user', parts: messageParts }]
+        : [{ role: 'user', parts: messageParts }];
 };
 
-const callOpenAICompat = async (config, promptText, history, image, baseUrl, extraHeaders = {}) => {
-    const messages = history.map(msg => ({
-        role: msg.role === 'bot' ? 'assistant' : 'user',
-        content: msg.text || ""
-    }));
+const buildOpenAICompatMessages = (promptText, history, image) => {
+    const messages = history.map(msg => {
+        const content = msg.image
+            ? [
+                { type: 'text', text: msg.text || '' },
+                { type: 'image_url', image_url: { url: msg.image } }
+            ]
+            : msg.text || '';
+
+        return {
+            role: msg.role === 'bot' ? 'assistant' : 'user',
+            content,
+        };
+    });
 
     const userContent = image
         ? [{ type: "text", text: promptText }, { type: "image_url", image_url: { url: image } }]
         : promptText;
 
     messages.push({ role: "user", content: userContent });
+    return messages;
+};
 
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.key}`, ...extraHeaders },
-        body: JSON.stringify({ model: config.model, messages, max_tokens: 2048 })
-    });
+const extractResponseText = (data) => {
+    if (typeof data === 'string') return data;
+    if (!data || typeof data !== 'object') return '';
 
-    if (!response.ok) {
-        const err = new Error(`HTTP ${response.status}`);
-        err.status = response.status;
-        throw err;
+    const openAiContent = data.choices?.[0]?.message?.content;
+    if (typeof openAiContent === 'string') return openAiContent;
+    if (Array.isArray(openAiContent)) {
+        return openAiContent
+            .map(part => part?.text || part?.content || '')
+            .filter(Boolean)
+            .join('');
     }
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content || "No response received.";
+
+    const geminiParts = data.candidates?.[0]?.content?.parts;
+    if (Array.isArray(geminiParts)) {
+        return geminiParts
+            .map(part => part?.text || '')
+            .filter(Boolean)
+            .join('');
+    }
+
+    if (typeof data.candidates?.[0]?.content === 'string') {
+        return data.candidates[0].content;
+    }
+
+    if (typeof data.text === 'string') return data.text;
+
+    return '';
+};
+
+const callProxy = async (config, promptText, history, image) => {
+    const body = config.provider === 'gemini'
+        ? {
+            provider: config.provider,
+            model: config.model,
+            messages: buildGeminiMessages(promptText, history, image),
+        }
+        : {
+            provider: config.provider,
+            model: config.model,
+            messages: buildOpenAICompatMessages(promptText, history, config.provider === 'groq' ? null : image),
+        };
+
+    const { data, error } = await supabase.functions.invoke('ai-proxy', { body });
+
+    if (error) {
+        const invokeError = new Error(error.message || 'AI proxy request failed');
+        invokeError.status = error.status || error?.context?.status;
+        throw invokeError;
+    }
+
+    const responseText = extractResponseText(data);
+    if (!responseText) {
+        throw new Error(`No response received from ${config.provider}`);
+    }
+
+    return responseText;
 };
 
 // Core failover runner — shared by both exported functions
 const runWithFailover = async (promptText, history, image) => {
     const configList = buildConfigList();
-    if (configList.length === 0) throw new Error("No AI API keys configured in .env");
+    if (configList.length === 0) throw new Error("No AI providers configured");
 
     for (let i = 0; i < configList.length; i++) {
         const config = configList[i];
         console.log(`[AI Failover] Trying ${i + 1}/${configList.length}: ${config.provider} (${config.model})`);
 
         try {
-            if (config.provider === 'gemini') {
-                return await callGemini(config, promptText, history, image);
-            } else if (config.provider === 'openrouter') {
-                return await callOpenAICompat(config, promptText, history, image,
-                    'https://openrouter.ai/api/v1',
-                    { 'HTTP-Referer': API_CONFIG.FRONTEND_URL, 'X-Title': 'AI Helpdesk' }
-                );
-            } else if (config.provider === 'groq') {
-                return await callOpenAICompat(config, promptText, history, null, // Groq = text only
-                    'https://api.groq.com/openai/v1'
-                );
-            }
+            return await callProxy(config, promptText, history, image);
         } catch (error) {
             const isRateLimit = error.status === 429
                 || error.message?.includes('429')

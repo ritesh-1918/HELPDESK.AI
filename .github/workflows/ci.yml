@@ -25,6 +25,11 @@ jobs:
                   cd Frontend
                   npm install
 
+            - name: Guard Against Frontend AI Secret Leakage
+              run: |
+                  cd Frontend
+                  npm run check:ai-secrets
+
             - name: Build Frontend (Production)
               run: |
                   cd Frontend

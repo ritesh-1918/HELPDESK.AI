@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
  
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -145,7 +145,7 @@ export default function LandingPage() {
     const [activeStep, setActiveStep] = useState(0);
     const [isRedirecting, setIsRedirecting] = useState(false);
 
-    const steps = [
+    const steps = useMemo(() => [
         {
             num: '01',
             title: 'Messy User Input',
@@ -208,7 +208,7 @@ export default function LandingPage() {
                 </div>
             )
         }
-    ];
+    ], []);
 
     useEffect(() => {
         if (!loading && user && profile) {
@@ -427,7 +427,7 @@ export default function LandingPage() {
                                         <div className="mb-4">
                                             <h3 className="text-sm font-bold text-gray-800 mb-1">Subject: Wifi down again in Lab 3??</h3>
                                             <p className="text-sm text-gray-600 leading-relaxed">
-                                                Hey support, the wifi in <span className="bg-yellow-100 px-1 rounded">downstairs lab 3</span> is acting up again.
+                                                Hey support, the wifi in <span className="bg-yellow-200 dark:bg-yellow-500/30 dark:text-yellow-200 text-yellow-900 px-1 rounded font-medium">downstairs lab 3</span> is acting up again.
                                                 Can't connect at all. Class starts in 20 mins, need this fixed ASAP!<br /><br />
                                                 Thanks,<br />Sarah
                                             </p>
@@ -658,7 +658,7 @@ export default function LandingPage() {
                             <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-widest border border-emerald-500/20 mb-4 md:mb-6">
                                 The Journey
                             </div>
-                            <h2 className="text-3xl sm:text-4xl md:text-6xl font-black text-white tracking-tight leading-[0.9] mb-8 md:mb-12 italic uppercase">
+                            <h2 className="text-3xl sm:text-4xl md:text-6xl font-extrabold text-white tracking-tight leading-[0.95] mb-8 md:mb-12">
                                 From Chaos <br />
                                 to <span className="text-emerald-500">Clarity.</span>
                             </h2>
@@ -669,28 +669,25 @@ export default function LandingPage() {
                                         key={idx}
                                         onMouseEnter={() => setActiveStep(idx)}
                                         onClick={() => setActiveStep(idx)}
-                                        className={`group cursor-pointer p-6 rounded-3xl transition-all duration-500 border ${activeStep === idx
+                                        className={`group cursor-pointer p-6 rounded-3xl transition-all duration-300 border ${activeStep === idx
                                             ? 'bg-white/10 border-white/20 shadow-2xl shadow-black/20'
                                             : 'bg-transparent border-transparent hover:bg-white/5 opacity-40 hover:opacity-100'
                                             }`}
                                     >
                                         <div className="flex items-start gap-4 md:gap-6">
-                                            <div className={`shrink-0 w-10 md:w-12 h-10 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center font-black text-lg md:text-xl italic transition-all duration-500 ${activeStep === idx ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 rotate-12 scale-110' : 'bg-white/10 text-white/40'}`}>
+                                            <div className={`shrink-0 w-10 md:w-12 h-10 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center font-bold text-lg md:text-xl transition-all duration-300 ${activeStep === idx ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 scale-105' : 'bg-white/10 text-white/40'}`}>
                                                 {step.num}
                                             </div>
                                             <div>
-                                                <h3 className={`text-xl font-black italic uppercase transition-colors duration-500 ${activeStep === idx ? 'text-white' : 'text-white/60'}`}>
+                                                <h3 className={`text-xl font-semibold tracking-tight transition-colors duration-300 ${activeStep === idx ? 'text-white' : 'text-white/60'}`}>
                                                     {step.title}
                                                 </h3>
-                                                {activeStep === idx && (
-                                                    <motion.p
-                                                        initial={{ opacity: 0, height: 0 }}
-                                                        animate={{ opacity: 1, height: 'auto' }}
-                                                        className="text-white/60 text-sm mt-3 leading-relaxed max-w-sm"
-                                                    >
-                                                        {step.desc}
-                                                    </motion.p>
-                                                )}
+                                                <p
+                                                    aria-hidden={activeStep !== idx}
+                                                    className={`text-white/60 text-sm mt-3 leading-relaxed max-w-sm overflow-hidden transition-all duration-300 ${activeStep === idx ? 'opacity-100 max-h-24' : 'opacity-0 max-h-0'}`}
+                                                >
+                                                    {step.desc}
+                                                </p>
                                             </div>
                                         </div>
                                     </div>
@@ -701,14 +698,14 @@ export default function LandingPage() {
                         {/* Right: Visual Display */}
                         <div className="w-full md:w-1/2 h-[350px] md:h-[500px] relative">
                             <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-[32px] md:rounded-[40px] border border-white/5 backdrop-blur-3xl overflow-hidden p-6 md:p-12 flex items-center justify-center">
-                                <AnimatePresence mode="wait">
+                                <AnimatePresence mode="sync">
                                     <motion.div
                                         key={activeStep}
-                                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                        initial={{ opacity: 0, scale: 0.98, y: 10 }}
                                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                                        exit={{ opacity: 0, scale: 1.1, y: -20 }}
-                                        transition={{ type: 'spring', damping: 20, stiffness: 100 }}
-                                        className="w-full h-full flex flex-col items-center justify-center"
+                                        exit={{ opacity: 0, scale: 1.01, y: -8 }}
+                                        transition={{ duration: 0.28, ease: 'easeOut' }}
+                                        className="w-full h-full flex flex-col items-center justify-center will-change-transform"
                                     >
                                         <div className="mb-6 inline-flex items-center gap-2 px-4 py-1.5 bg-white/5 text-white/50 rounded-full text-[10px] font-black uppercase tracking-[0.2em]">
                                             <div className={`w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse`} />

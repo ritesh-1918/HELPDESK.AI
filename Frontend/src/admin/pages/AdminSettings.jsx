@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     Settings,
     Cpu,
@@ -8,6 +8,14 @@ import {
     ShieldCheck
 } from 'lucide-react';
 import useAdminStore from '../store/adminStore';
+import useAuthStore from '../../store/authStore';
+import { supabase } from '../../lib/supabaseClient';
+import {
+    DEFAULT_ADMIN_SETTINGS,
+    resolveCompanyId,
+    settingsFromSystemSettingsRow,
+    settingsToSystemSettingsRow
+} from '../../utils/adminSettingsPersistence';
 import { Card, CardContent } from "../../components/ui/card";
 import { Select } from "../../components/ui/select";
 
@@ -17,11 +25,96 @@ import { Select } from "../../components/ui/select";
  */
 const AdminSettings = () => {
     const { settings, updateSettings } = useAdminStore();
+    const { user, profile } = useAuthStore();
+    const [isLoadingSettings, setIsLoadingSettings] = useState(false);
+    const [isSavingSettings, setIsSavingSettings] = useState(false);
+    const [statusMessage, setStatusMessage] = useState('');
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-    // Handlers
+    const companyId = useMemo(() => resolveCompanyId(profile, user), [profile, user]);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadCompanySettings = async () => {
+            if (!companyId) {
+                setStatusMessage('Company profile is required before settings can be synced.');
+                return;
+            }
+
+            setIsLoadingSettings(true);
+            setStatusMessage('');
+
+            const { data, error } = await supabase
+                .from('system_settings')
+                .select('ai_confidence_threshold, duplicate_sensitivity, enable_auto_resolve, auto_close_days, email_notifications, admin_alerts')
+                .eq('company_id', companyId)
+                .maybeSingle();
+
+            if (!isMounted) return;
+
+            if (error) {
+                setStatusMessage(`Unable to load saved settings: ${error.message}`);
+            } else if (data) {
+                updateSettings(settingsFromSystemSettingsRow(data, DEFAULT_ADMIN_SETTINGS));
+                setHasUnsavedChanges(false);
+                setStatusMessage('Saved company settings loaded.');
+            }
+
+            setIsLoadingSettings(false);
+        };
+
+        loadCompanySettings();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [companyId, updateSettings]);
+
+    const saveCompanySettings = useCallback(async (nextSettings, { silent = false } = {}) => {
+        if (!companyId) {
+            setStatusMessage('Company profile is required before settings can be saved.');
+            return;
+        }
+
+        setIsSavingSettings(true);
+        if (!silent) {
+            setStatusMessage('');
+        }
+
+        const { error } = await supabase
+            .from('system_settings')
+            .upsert(settingsToSystemSettingsRow(nextSettings, companyId), { onConflict: 'company_id' });
+
+        if (error) {
+            setStatusMessage(`Unable to save settings: ${error.message}`);
+        } else {
+            setHasUnsavedChanges(false);
+            setStatusMessage('Settings saved for this company.');
+        }
+
+        setIsSavingSettings(false);
+    }, [companyId]);
+
     const handleChange = (key, value) => {
         updateSettings({ [key]: value });
+        setHasUnsavedChanges(true);
+        setStatusMessage('Saving changes...');
     };
+
+    const handleSaveSettings = useCallback(() => {
+        saveCompanySettings(settings);
+    }, [saveCompanySettings, settings]);
+
+    useEffect(() => {
+        if (!hasUnsavedChanges || isLoadingSettings || isSavingSettings) return undefined;
+
+        const saveTimer = window.setTimeout(() => {
+            saveCompanySettings(settings, { silent: true });
+        }, 800);
+
+        return () => window.clearTimeout(saveTimer);
+    }, [hasUnsavedChanges, isLoadingSettings, isSavingSettings, saveCompanySettings, settings]);
 
     return (
         <div className="max-w-4xl mx-auto py-6 space-y-10 pb-20 animate-in fade-in duration-700">
@@ -34,6 +127,22 @@ const AdminSettings = () => {
                     <p className="text-sm font-bold text-slate-400 mt-1 flex items-center gap-2 uppercase tracking-[0.2em]">
                         <ShieldCheck size={14} className="text-emerald-500" /> Administrator Account
                     </p>
+                </div>
+                <div className="flex flex-col items-start md:items-end gap-2">
+                    <button
+                        type="button"
+                        onClick={handleSaveSettings}
+                        disabled={!companyId || isLoadingSettings || isSavingSettings || !hasUnsavedChanges}
+                        className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-xs font-black uppercase tracking-widest text-white shadow-xl shadow-slate-200 transition-all hover:bg-indigo-600 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+                    >
+                        <Save size={16} />
+                        {isSavingSettings ? 'Saving...' : 'Save Now'}
+                    </button>
+                    {statusMessage && (
+                        <p className="max-w-xs text-left md:text-right text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                            {statusMessage}
+                        </p>
+                    )}
                 </div>
             </div>
 

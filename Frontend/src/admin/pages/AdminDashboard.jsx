@@ -4,6 +4,7 @@ import { Activity, AlertTriangle, Clock, ShieldCheck } from 'lucide-react';
 
 import useAuthStore from "../../store/authStore";
 import { supabase } from "../../lib/supabaseClient";
+import useTicketsRealtime from "../../hooks/useTicketsRealtime";
 import StatCard from "../components/StatCard";
 import TicketTable from "../components/TicketTable";
 import { formatTimelineDate } from "../../utils/dateUtils";
@@ -107,6 +108,13 @@ const AdminDashboard = () => {
     const [isLoading, setIsLoading] = React.useState(true);
     const [nowMs, setNowMs] = React.useState(() => Date.now());
 
+    useTicketsRealtime({
+        company: profile?.company,
+        enabled: Boolean(profile),
+        onTicketsChange: setTickets,
+        channelName: 'admin_dashboard_tickets_realtime',
+    });
+
     React.useEffect(() => {
         if (profile) {
             const fetchStats = async () => {
@@ -135,8 +143,6 @@ const AdminDashboard = () => {
             };
 
             fetchStats();
-            const interval = setInterval(fetchStats, 30000);
-            return () => clearInterval(interval);
         }
     }, [profile]);
 
