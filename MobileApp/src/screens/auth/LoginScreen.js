@@ -5,6 +5,7 @@ import {
   ScrollView, StatusBar, Animated,
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
+import { backendLogin } from '../../lib/authBackend';
 import { COLORS, SHADOWS } from '../../styles/theme';
 import { Lock, Mail, Eye, EyeOff, Zap, ArrowRight, ShieldCheck } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -54,6 +55,10 @@ const LoginScreen = () => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+
+      // Mirror to backend gateway so it sets an HttpOnly cookie holding
+      // the Supabase JWT (issue #130 — moves session out of AsyncStorage).
+      backendLogin(email, password);
 
       // Fetch profile to check status
       const { data: profile } = await supabase

@@ -53,6 +53,7 @@ except (ImportError, Exception) as e:
 # Ensure project root is on path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+from backend.auth_cookie import router as auth_cookie_router, get_current_user  # noqa: F401
 from backend.services.classifier_service import ClassifierService
 from backend.services.classifier_v2 import classifier_v2
 from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
@@ -255,6 +256,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Auth cookie middleware — issues HttpOnly Secure SameSite=Strict cookies
+# for Supabase JWTs so the frontend never touches them via JS (XSS hardening).
+app.include_router(auth_cookie_router)
 
 
 # ---------------------------------------------------------------------------

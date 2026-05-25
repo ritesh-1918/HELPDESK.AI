@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
+import { backendLogout, getAuthHeaders } from '../../lib/authBackend';
 import { COLORS, SHADOWS } from '../../styles/theme';
 import {
   User, Mail, Building2, ShieldCheck, Calendar, Ticket, Zap,
@@ -187,8 +188,18 @@ const ProfileScreen = () => {
 
   const handleLogout = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    // Clear backend HttpOnly cookie session before tearing down the local
+    // Supabase session (issue #130).
+    await backendLogout();
     await supabase.auth.signOut();
   };
+
+  // Exposed for backend calls that should attach the Supabase JWT as an
+  // Authorization header when the HttpOnly cookie isn't available on this
+  // platform (issue #130). Kept here so future profile-aware backend calls
+  // pick it up without duplicating the helper.
+  // eslint-disable-next-line no-unused-vars
+  const buildAuthHeaders = getAuthHeaders;
 
   if (loading) {
     return (
