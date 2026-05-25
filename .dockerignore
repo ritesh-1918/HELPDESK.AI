@@ -1,0 +1,53 @@
+# Git
+.git/
+.gitattributes
+.github/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+.ipynb_checkpoints/
+venv/
+env/
+backend/venv/
+.env
+
+# Node / Frontend
+node_modules/
+Frontend/node_modules/
+Frontend/dist/
+dist/
+.vercel
+*.local
+package-lock.json
+
+# Mobile app (not needed for the backend image)
+MobileApp/
+
+# Model files and data (handled separately, not baked into the image)
+backend/models/
+backend/data/
+Model/
+
+# Docs, templates, scratch, and other dev-only artifacts
+docs/
+templates/
+scratch/
+*.md
+LICENSE
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Logs
+*.log
+
+# CI / local caches
+.npm-cache/
+
+# Large data files
+*.xlsx
