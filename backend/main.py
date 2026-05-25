@@ -814,7 +814,10 @@ async def save_ticket(request_body: TicketSaveRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/tickets/{ticket_id}")
-async def get_ticket_by_id(ticket_id: str, request: Request):
+async def get_ticket_by_id(
+    request: Request,
+    ticket_id: str,
+):
     """Fetch single persistent ticket."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
@@ -825,7 +828,7 @@ async def get_ticket_by_id(ticket_id: str, request: Request):
             q=request.query_params.get("q", ""),
             company_id=request.query_params.get("company_id"),
         )
-    
+
     res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Ticket not found")
