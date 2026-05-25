@@ -8,6 +8,7 @@ import os
 import sys
 import uuid
 import json
+import re
 import datetime
 import traceback
 import warnings
@@ -191,6 +192,10 @@ class TicketResponse(BaseModel):
     timeline: dict = {} # Map of step_name: timestamp
     env_metadata: dict = {} # IP, Hostname, Browser/OS
     sla_breach_at: str | None = None
+    original_text: str | None = None
+    source_language: str = "en"
+    source_language_name: str = "English"
+    was_translated: bool = False
     version: str = "2.1.0-Neural-Diagnostic"
 
 
@@ -252,6 +257,78 @@ try:
     ocr_service = OCRService()
 except ImportError:
     ocr_service = None
+
+LANGUAGE_NAMES = {
+    "en": "English",
+    "es": "Spanish",
+    "de": "German",
+    "hi": "Hindi",
+    "fr": "French",
+    "it": "Italian",
+    "pt": "Portuguese",
+    "ja": "Japanese",
+    "ko": "Korean",
+    "zh": "Chinese",
+    "ar": "Arabic",
+    "ru": "Russian",
+}
+
+def _heuristic_language_detection(text: str) -> dict:
+    sample = (text or "").strip()
+    if not sample:
+        return {"code": "en", "name": "English"}
+    ascii_chars = sum(1 for c in sample if ord(c) < 128)
+    ratio = ascii_chars / max(len(sample), 1)
+    if ratio > 0.97:
+        return {"code": "en", "name": "English"}
+    return {"code": "unknown", "name": "Unknown"}
+
+def detect_and_translate_ticket_text(text: str) -> dict:
+    original_text = (text or "").strip()
+    if not original_text:
+        return {
+            "text_for_analysis": text or "",
+            "source_language": "en",
+            "source_language_name": "English",
+            "was_translated": False,
+            "original_text": "",
+        }
+
+    detected = _heuristic_language_detection(original_text)
+    if gemini_service and getattr(gemini_service, "_initialized", False):
+        detected = gemini_service.detect_language(original_text)
+
+    source_code = str(detected.get("code", "en")).lower()
+    source_name = detected.get("name") or LANGUAGE_NAMES.get(source_code, source_code.upper())
+    if source_code in ("en", "eng"):
+        return {
+            "text_for_analysis": original_text,
+            "source_language": "en",
+            "source_language_name": "English",
+            "was_translated": False,
+            "original_text": original_text,
+        }
+
+    translated_text = original_text
+    if gemini_service and getattr(gemini_service, "_initialized", False):
+        translated_text = gemini_service.translate_to_english(original_text, source_name)
+
+    if not translated_text or translated_text.strip() == original_text:
+        return {
+            "text_for_analysis": original_text,
+            "source_language": source_code,
+            "source_language_name": source_name,
+            "was_translated": False,
+            "original_text": original_text,
+        }
+
+    return {
+        "text_for_analysis": translated_text.strip(),
+        "source_language": source_code,
+        "source_language_name": source_name,
+        "was_translated": True,
+        "original_text": original_text,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -648,6 +725,28 @@ async def save_ticket(request_body: TicketSaveRequest):
 
     logger = logging.getLogger(__name__)
     final_data = request_body.model_dump()
+    original_subject = final_data.get("subject", "") or ""
+    original_description = final_data.get("description", "") or ""
+
+    # Detect language and translate subject/description into English before downstream routing/indexing.
+    translation_probe_text = (original_description.strip() or original_subject.strip())
+    translation_ctx = detect_and_translate_ticket_text(translation_probe_text)
+    metadata = final_data.get("metadata") or {}
+    if translation_ctx["was_translated"]:
+        translated_subject = gemini_service.translate_to_english(original_subject, translation_ctx["source_language_name"]) if original_subject else original_subject
+        translated_description = gemini_service.translate_to_english(original_description, translation_ctx["source_language_name"]) if original_description else original_description
+        final_data["subject"] = translated_subject or original_subject
+        final_data["description"] = translated_description or original_description
+        metadata["original_text"] = {
+            "subject": original_subject,
+            "description": original_description,
+        }
+    metadata["translation"] = {
+        "translated": bool(translation_ctx["was_translated"]),
+        "source_language": translation_ctx["source_language"],
+        "source_language_name": translation_ctx["source_language_name"],
+    }
+    final_data["metadata"] = metadata
 
     # Resolve tenant linkage from user profile with authorization validation.
     profile = {}
@@ -877,6 +976,8 @@ async def analyze_only(request_body: TicketRequest):
     and duplicate check before committing to a ticket creation.
     """
     text = request_body.text
+    translation_ctx = detect_and_translate_ticket_text(text)
+    text = translation_ctx["text_for_analysis"]
     print(f"[AI] Starting Analysis (READ-ONLY) for: {text[:50]}...") 
     settings = get_system_settings(request_body.company)
     confidence_threshold = settings["ai_confidence_threshold"]
@@ -921,6 +1022,10 @@ async def analyze_only(request_body: TicketRequest):
             is_potential_duplicate=False,
             parent_ticket_id=None,
             sla_breach_at=_sla_breach.isoformat().replace("+00:00", "Z"),
+            original_text=request_body.text,
+            source_language=translation_ctx["source_language"],
+            source_language_name=translation_ctx["source_language_name"],
+            was_translated=translation_ctx["was_translated"],
         )
     
     # --- Context & Environment ---
@@ -1077,7 +1182,11 @@ async def analyze_only(request_body: TicketRequest):
         env_metadata=env_metadata,
         is_potential_duplicate=dup_result.get("is_potential_duplicate", False),
         parent_ticket_id=dup_result.get("parent_ticket_id"),
-        sla_breach_at=sla_breach_dt.isoformat().replace("+00:00", "Z")
+        sla_breach_at=sla_breach_dt.isoformat().replace("+00:00", "Z"),
+        original_text=translation_ctx["original_text"],
+        source_language=translation_ctx["source_language"],
+        source_language_name=translation_ctx["source_language_name"],
+        was_translated=translation_ctx["was_translated"],
     )
 
 @app.post("/ai/analyze_stream")
