@@ -342,6 +342,7 @@ def detect_and_translate_ticket_text(text: str) -> dict:
             "source_language_name": "English",
             "was_translated": False,
             "original_text": "",
+            "metadata":{},
         }
 
     detected = _heuristic_language_detection(original_text)
@@ -357,6 +358,7 @@ def detect_and_translate_ticket_text(text: str) -> dict:
             "source_language_name": "English",
             "was_translated": False,
             "original_text": original_text,
+            "metadata":{},
         }
 
     translated_text = original_text
@@ -370,6 +372,7 @@ def detect_and_translate_ticket_text(text: str) -> dict:
             "source_language_name": source_name,
             "was_translated": False,
             "original_text": original_text,
+            "metadata":{},
         }
 
     return {
@@ -378,6 +381,7 @@ def detect_and_translate_ticket_text(text: str) -> dict:
         "source_language_name": source_name,
         "was_translated": True,
         "original_text": original_text,
+        "metadata":{},
     }
 
 
