@@ -105,7 +105,7 @@ export default function SLAPage() {
   const [escalations, setEscalations] = useState([]);
   const [policies, setPolicies] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [_error, setError] = useState(null);
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPriority, setFilterPriority] = useState('all');
   const [expandedEsc, setExpandedEsc] = useState(null);

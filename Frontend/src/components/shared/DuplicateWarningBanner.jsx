@@ -10,7 +10,6 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
   Copy,
@@ -39,20 +38,6 @@ function formatSimilarity(score) {
 }
 
 /**
- * Format an ISO date string to a relative time.
- */
-function formatDate(iso) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  const now = new Date();
-  const diffMs = now - d;
-  const diffHr = Math.floor(diffMs / (1000 * 60 * 60));
-  if (diffHr < 1) return 'just now';
-  if (diffHr < 24) return `${diffHr}h ago`;
-  return `${Math.floor(diffHr / 24)}d ago`;
-}
-
-/**
  * DuplicateWarningBanner
  *
  * Props:
@@ -69,7 +54,6 @@ export default function DuplicateWarningBanner({
   onDismiss,
   ticketId,
 }) {
-  const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
   const [visible, setVisible] = useState(false);
 
