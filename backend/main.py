@@ -814,10 +814,17 @@ async def save_ticket(request_body: TicketSaveRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/tickets/{ticket_id}")
-async def get_ticket_by_id(ticket_id: str):
+async def get_ticket_by_id(ticket_id: str, request: Request):
     """Fetch single persistent ticket."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    # Guard route overlap where '/tickets/search' may be matched here first.
+    if ticket_id == "search":
+        return await search_tickets(
+            q=request.query_params.get("q", ""),
+            company_id=request.query_params.get("company_id"),
+        )
     
     res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
     if not res.data:
