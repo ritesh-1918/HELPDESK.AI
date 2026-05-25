@@ -19,14 +19,16 @@ serve(async (req) => {
             throw new Error('Email is required');
         }
 
-        // Initialize Resend or another mail provider (Assuming user configures this later)
-        // const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-        // Currently simulating a successfully sent email.
+        const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+        const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'HelpDesk.ai <noreply@yourdomain.com>';
+        const FRONTEND_URL = Deno.env.get('FRONTEND_URL') || 'https://your-frontend-url.com';
+
+        if (!RESEND_API_KEY) {
+            throw new Error('RESEND_API_KEY environment variable is not configured');
+        }
 
         console.log(`Sending approval email to ${email} for user ${name} in company ${company}...`);
 
-        // The email content could be sent via Resend:
-        /*
         const res = await fetch('https://api.resend.com/emails', {
             method: 'POST',
             headers: {
@@ -34,23 +36,30 @@ serve(async (req) => {
                 'Authorization': `Bearer ${RESEND_API_KEY}`,
             },
             body: JSON.stringify({
-                from: 'HelpDesk.ai <noreply@yourdomain.com>',
+                from: FROM_EMAIL,
                 to: [email],
                 subject: 'Account Approved! Welcome to HelpDesk.ai',
                 html: `
                     <h2>Hello ${name},</h2>
                     <p>Your account for <strong>${company}</strong> has been approved by your administrator!</p>
                     <p>You can now log in to the system and access your dashboard.</p>
-                    <a href="https://your-frontend-url.com/dashboard" style="background-color: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Go to Dashboard</a>
+                    <a href="${FRONTEND_URL}/dashboard" style="background-color: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Go to Dashboard</a>
                 `
             })
         });
-        */
+
+        if (!res.ok) {
+            const errorData = await res.text();
+            throw new Error(`Resend API error (${res.status}): ${errorData}`);
+        }
+
+        const data = await res.json();
 
         return new Response(
             JSON.stringify({
                 success: true,
-                message: `Approval email simulated for ${email}`
+                message: `Approval email sent to ${email}`,
+                emailId: data.id
             }),
             {
                 status: 200,
@@ -58,6 +67,7 @@ serve(async (req) => {
             }
         );
     } catch (error) {
+        console.error('Error sending approval email:', error.message);
         return new Response(
             JSON.stringify({ error: error.message }),
             {
