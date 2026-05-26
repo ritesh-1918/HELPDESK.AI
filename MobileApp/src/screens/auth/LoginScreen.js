@@ -233,10 +233,15 @@ const LoginScreen = () => {
           </Animated.View>
 
           {/* Footer */}
-          <Animated.View style={[styles.footer, { opacity: fadeAnim, paddingBottom: insets.bottom + 40 }]}>
-            <Text style={styles.footerText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
-              <Text style={styles.footerLink}>Create Account</Text>
+          <Animated.View style={[styles.footer, { opacity: fadeAnim, paddingBottom: insets.bottom + 40, gap: 12, flexDirection: 'column', alignItems: 'center' }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={styles.footerText}>Don't have an account? </Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
+                <Text style={styles.footerLink}>Create Account</Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity onPress={() => navigation.navigate('AdminSignup')}>
+              <Text style={styles.adminLink}>Register as Admin Agent / Company</Text>
             </TouchableOpacity>
           </Animated.View>
         </ScrollView>

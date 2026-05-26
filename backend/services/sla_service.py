@@ -14,6 +14,10 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Optional
 
+from fastapi import BackgroundTasks
+
+from backend.sla_checker import dispatch_slack_alert
+
 try:
     from dotenv import load_dotenv
 except ImportError:
@@ -114,7 +118,7 @@ class SlaEscalationService:
         self.now_fn = now_fn
         self.notification_router = notification_router
 
-    def run_once(self) -> dict[str, int | str]:
+    def run_once(self, background_tasks: BackgroundTasks | None = None) -> dict[str, int | str]:
         stats: dict[str, int | str] = {
             "processed_count": 0,
             "breached_count": 0,
@@ -136,7 +140,7 @@ class SlaEscalationService:
                 if not self._should_breach(ticket, now):
                     stats["skipped_count"] = int(stats["skipped_count"]) + 1
                     continue
-                self._breach_ticket(ticket, now)
+                self._breach_ticket(ticket, now, background_tasks=background_tasks)
                 stats["breached_count"] = int(stats["breached_count"]) + 1
             except Exception as exc:
                 stats["error_count"] = int(stats["error_count"]) + 1
@@ -169,7 +173,13 @@ class SlaEscalationService:
             return False
         return classify_sla_status(ticket.get("sla_breach_at"), now) == "BREACHED"
 
-    def _breach_ticket(self, ticket: dict[str, Any], now: datetime) -> None:
+    def _breach_ticket(
+        self,
+        ticket: dict[str, Any],
+        now: datetime,
+        *,
+        background_tasks: BackgroundTasks | None = None,
+    ) -> None:
         ticket_id = str(ticket.get("id"))
         company_id = ticket.get("company_id")
         escalation_level = int(ticket.get("escalation_level") or 0) + 1
@@ -185,6 +195,7 @@ class SlaEscalationService:
 
         self._insert_audit_log(ticket, escalation_level, timestamp)
         self._emit_system_message(ticket, escalation_level, timestamp)
+        self._dispatch_breach_alert(ticket, now, background_tasks=background_tasks)
 
         logger.warning(
             "SLA breached | ticket_id=%s | company_id=%s | priority=%s | level=%s",
@@ -193,6 +204,31 @@ class SlaEscalationService:
             ticket.get("priority") or "unknown",
             escalation_level,
         )
+
+    def _dispatch_breach_alert(
+        self,
+        ticket: dict[str, Any],
+        breach_time: datetime,
+        *,
+        background_tasks: BackgroundTasks | None = None,
+    ) -> None:
+        ticket_id = str(ticket.get("id") or "")
+        subject = str(ticket.get("subject") or "Untitled ticket")
+        category = str(ticket.get("priority") or "Uncategorized")
+        assignee = str(ticket.get("assigned_team") or "Unassigned")
+
+        if background_tasks is not None:
+            background_tasks.add_task(
+                dispatch_slack_alert,
+                ticket_id,
+                subject,
+                category,
+                assignee,
+                breach_time,
+            )
+            return
+
+        dispatch_slack_alert(ticket_id, subject, category, assignee, breach_time)
 
     def _insert_audit_log(self, ticket: dict[str, Any], escalation_level: int, timestamp: str) -> None:
         ticket_id = str(ticket.get("id"))

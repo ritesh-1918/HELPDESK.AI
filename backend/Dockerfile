@@ -1,36 +1,40 @@
-# Use an official Python runtime as a parent image
-FROM python:3.10-slim
+# syntax=docker/dockerfile:1
 
-LABEL version="1.1.1" rebuild_trigger="2026-03-08-2032"
+FROM python:3.10-slim AS builder
 
-# Set the working directory to /app
-WORKDIR /app
-
-# Install system dependencies required for EasyOCR and OpenCV
-RUN apt-get update && apt-get install -y \
-    libgl1 \
-    libglib2.0-0 \
+WORKDIR /build
+RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the requirements file into the container
 COPY requirements.txt .
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
-# Install dependencies (no-cache-dir keeps the docker image smaller)
-RUN pip install --no-cache-dir -r requirements.txt
+FROM python:3.10-slim AS runtime
 
-# Copy all the remaining files into the container as a 'backend' directory
-# This allows absolute imports like 'from backend.services...' to work perfectly
+LABEL org.opencontainers.image.title="helpdesk-backend"
+LABEL org.opencontainers.image.description="HELPDESK.AI FastAPI backend (multi-stage)"
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --create-home --shell /usr/sbin/nologin appuser
+
+COPY --from=builder /install /usr/local
 COPY . /app/backend
 
-# Tell Python where to look for modules (so it can find the 'backend' folder)
-ENV PYTHONPATH=/app
+ENV PYTHONPATH=/app \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-# Expose port 7860 (Hugging Face Spaces default)
 EXPOSE 7860
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
     CMD ["python", "backend/healthcheck.py"]
 
-# Run the FastAPI server via Uvicorn
+USER appuser
+
 CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "7860"]

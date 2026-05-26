@@ -16,6 +16,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
 import { useFocusEffect } from '@react-navigation/native';
 import { useNotification } from '../../components/NotificationProvider';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ProfileScreen = () => {
   const { success, error: notifyError } = useNotification();
@@ -223,8 +224,19 @@ const ProfileScreen = () => {
   };
 
   const handleLogout = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    await supabase.auth.signOut();
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      // Forcefully wipe all Supabase session keys from AsyncStorage first to trigger instant navigation resetting
+      const keys = await AsyncStorage.getAllKeys();
+      const supabaseKeys = keys.filter(k => k.startsWith('sb-') || k.includes('supabase'));
+      for (const key of supabaseKeys) {
+        await AsyncStorage.removeItem(key);
+      }
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.warn("Logout error, forcing full wipe:", e);
+      await AsyncStorage.clear();
+    }
   };
 
   if (loading) {

@@ -16,11 +16,8 @@ import {
   Eye,
   Bell,
   X,
-  ExternalLink,
   ChevronDown,
   ChevronUp,
-  Users,
-  Clock,
   ArrowRight,
   Send,
 } from 'lucide-react';
@@ -45,14 +42,12 @@ function formatSimilarity(score) {
  *   - onSubscribe: () => void — User wants to subscribe to existing ticket
  *   - onCreateAnyway: () => void — User wants to create ticket regardless
  *   - onDismiss: () => void — Dismiss warning
- *   - ticketId: string — ID of the current ticket being created
  */
 export default function DuplicateWarningBanner({
   duplicate,
   onSubscribe,
   onCreateAnyway,
   onDismiss,
-  ticketId,
 }) {
   const [expanded, setExpanded] = useState(false);
   const [visible, setVisible] = useState(false);

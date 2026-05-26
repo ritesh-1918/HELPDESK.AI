@@ -1,0 +1,73 @@
+# =============================================================================
+# .dockerignore — Exclude unnecessary files from Docker build context
+# =============================================================================
+# The root Dockerfile only requires the `backend/` directory for the Python
+# FastAPI application. Everything else is excluded to:
+#   - Reduce build context size (was sending entire repo including .git/ ~400MB+)
+#   - Speed up Docker builds (especially in CI/CD pipelines)
+#   - Prevent accidental inclusion of secrets, node_modules, etc.
+# =============================================================================
+
+# ── Version Control ──────────────────────────────────────────────────────────
+.git/
+.gitattributes
+.gitignore
+
+# ── CI / Dev Configs ─────────────────────────────────────────────────────────
+.github/
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Other Top-Level Projects (not needed for backend Docker image) ───────────
+Frontend/
+MobileApp/
+docs/
+templates/
+scratch/
+supabase/
+Model/
+node_modules/
+.npm-cache/
+.easignore
+
+# ── Python Cache ─────────────────────────────────────────────────────────────
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/.pytest_cache/
+**/*.egg-info/
+
+# ── Virtual Environments ─────────────────────────────────────────────────────
+**/venv/
+**/.venv/
+venv/
+.venv/
+
+# ── Environment / Secrets ────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+backend/.env
+
+# ── Data & Model Artifacts (should be handled separately, not in Docker image)
+backend/data/
+backend/models/
+backend/*.csv
+backend/training/
+
+# ── Generated / Build Files ──────────────────────────────────────────────────
+dist/
+build/
+*.tsbuildinfo
+
+# ── OS Files ─────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
+
+# ── Documentation (not needed at runtime) ────────────────────────────────────
+**/*.md
+LICENSE

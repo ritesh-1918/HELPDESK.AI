@@ -30,6 +30,10 @@ docs/helpdesk*.pdf
 docs/logs/
 *.log
 
+# Scratch and local cache
+scratch/
+.npm-cache/
+
 # GSSoC Score Tracking and Temporary Scripts
 scratch/
 .npm-cache/

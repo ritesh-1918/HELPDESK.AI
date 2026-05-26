@@ -66,10 +66,18 @@ class SemanticDuplicateService:
         Generate a 384-dimensional embedding vector for the given text.
         Returns None if the model isn't loaded.
         """
+        from backend.services.redis_cache import redis_cache
+
+        cached = redis_cache.get_embedding(text)
+        if cached is not None:
+            return cached
+
         if not self.model:
             return None
         try:
-            return self.model.encode(text).tolist()
+            embedding = self.model.encode(text).tolist()
+            redis_cache.set_embedding(text, embedding)
+            return embedding
         except Exception as e:
             logger.error(f"[SemanticDuplicate] Embedding error: {e}")
             return None

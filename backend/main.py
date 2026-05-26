@@ -36,6 +36,13 @@ from dotenv import load_dotenv
 env_path = Path(__file__).parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
+# CI smoke tests allow degraded startup so the app can import without heavy ML assets.
+ALLOW_DEGRADED_STARTUP = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") == "1"
+
+
+def _startup_fatal(message: str) -> None:
+    print(f"[Startup-FATAL] {message}")
+
 # Initialize Supabase Client (Service Role for backend bypass)
 try:
     from supabase import create_client, Client
@@ -64,6 +71,7 @@ from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
 from backend.services.sla_engine import SLAEngine, compute_sla_breach_at, get_sla_policy
 from backend.services.semantic_duplicate_service import SemanticDuplicateService
+from backend.services.redis_cache import redis_cache
 
 
 # ---------------------------------------------------------------------------
@@ -116,6 +124,16 @@ def detect_semantic_duplicate(text: str, *, company_id: str | None, threshold: f
 
 def classify_ticket_text(text: str) -> dict:
     """Run the local classifier cascade with ONNX as the offline fallback path."""
+    cached = redis_cache.get_classification(text)
+    if cached:
+        return cached
+
+    result = _classify_ticket_text_uncached(text)
+    redis_cache.set_classification(text, result)
+    return result
+
+
+def _classify_ticket_text_uncached(text: str) -> dict:
     try:
         classification_v3_res = classifier_v3.predict(text)
         if "error" not in classification_v3_res:
@@ -342,6 +360,7 @@ def detect_and_translate_ticket_text(text: str) -> dict:
             "source_language_name": "English",
             "was_translated": False,
             "original_text": "",
+            "metadata":{},
         }
 
     detected = _heuristic_language_detection(original_text)
@@ -357,6 +376,7 @@ def detect_and_translate_ticket_text(text: str) -> dict:
             "source_language_name": "English",
             "was_translated": False,
             "original_text": original_text,
+            "metadata":{},
         }
 
     translated_text = original_text
@@ -370,6 +390,7 @@ def detect_and_translate_ticket_text(text: str) -> dict:
             "source_language_name": source_name,
             "was_translated": False,
             "original_text": original_text,
+            "metadata":{},
         }
 
     return {
@@ -378,6 +399,7 @@ def detect_and_translate_ticket_text(text: str) -> dict:
         "source_language_name": source_name,
         "was_translated": True,
         "original_text": original_text,
+        "metadata":{},
     }
 
 
@@ -388,6 +410,10 @@ def detect_and_translate_ticket_text(text: str) -> dict:
 async def lifespan(app: FastAPI):
     """Load all models at startup."""
     print("[Startup] Loading AI models ...")
+    try:
+        redis_cache.connect()
+    except Exception as e:
+        print(f"[WARNING] Redis cache not available: {e}")
     try:
         classifier_service.load()
     except FileNotFoundError as e:
@@ -806,6 +832,27 @@ async def save_ticket(request_body: TicketSaveRequest):
         if not final_data.get("company") and profile.get("company"):
             final_data["company"] = profile["company"]
 
+        priority = final_data.get("priority")
+        if not final_data.get("sla_response_due_at"):
+            final_data["sla_response_due_at"] = calculate_sla_response_at(priority).isoformat().replace("+00:00", "Z")
+        if not final_data.get("sla_breach_at"):
+            final_data["sla_breach_at"] = calculate_sla_breach_at(priority).isoformat().replace("+00:00", "Z")
+        final_data["sla_status"] = final_data.get("sla_status") or classify_sla_status(final_data.get("sla_breach_at"))
+        final_data["escalation_level"] = int(final_data.get("escalation_level") or 0)
+
+        import hashlib
+        user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+        logger.info(f"Tenant linkage: user_hash={user_hash}, company_id={final_data.get('company_id')}")
+
+        duplicate_text = (request_body.description or "").strip() or (request_body.subject or "").strip()
+        duplicate_threshold = get_duplicate_threshold(final_data.get("company_id"), 0.85)
+        duplicate_result = {
+            "is_duplicate": False,
+            "duplicate_ticket_id": None,
+            "parent_ticket_id": None,
+            "is_potential_duplicate": False,
+            "similarity": 0.0,
+        }
         user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
         logger.info(f"Tenant linkage: user_hash={user_hash}, company_id={final_data.get('company_id')}")
 

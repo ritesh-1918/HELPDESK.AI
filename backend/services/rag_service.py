@@ -1,5 +1,10 @@
 import os
-from sentence_transformers import SentenceTransformer
+try:
+    from sentence_transformers import SentenceTransformer
+    _HAS_SENTENCE = True
+except Exception:  # pragma: no cover - optional runtime dependency
+    SentenceTransformer = None
+    _HAS_SENTENCE = False
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
@@ -27,6 +32,17 @@ class RagService:
             return
         
         print("[RAG] Loading SentenceTransformer for Knowledge Base...")
+        if not _HAS_SENTENCE:
+            allow_degraded = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") == "1"
+            self._load_failed = True
+            print("[RAG] sentence-transformers not installed")
+            if allow_degraded:
+                print("[RAG] DEGRADED: Continuing without model (ALLOW_DEGRADED_STARTUP=1)")
+                self.model = None
+                self._loaded = False
+                return
+            else:
+                raise ImportError("sentence-transformers is required for RagService")
         try:
             # Check if a local model path is provided
             model_path = os.environ.get("SENTENCE_TRANSFORMER_MODEL_PATH")
