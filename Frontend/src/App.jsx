@@ -67,6 +67,7 @@ const PendingAdminRequests = lazy(() => import("./master-admin/pages/PendingAdmi
 const AllCompanies = lazy(() => import("./master-admin/pages/AllCompanies"));
 const AllAdmins = lazy(() => import("./master-admin/pages/AllAdmins"));
 const Changelog = lazy(() => import("./pages/Changelog"));
+const AboutUs = lazy(() => import("./pages/AboutUs"));
 const NotFoundPage = lazy(() => import("./components/ui/not-found-2").then((module) => ({ default: module.NotFound })));
 const Toaster = lazy(() => import("./components/shared/Toaster"));
 const BugReportWidget = lazy(() => import("./components/shared/BugReportWidget"));
@@ -119,6 +120,7 @@ function TitleUpdater() {
     else if (path === '/admin-signup') title = 'Admin Signup';
     else if (path === '/user-lobby') title = 'User Lobby';
     else if (path === '/admin-lobby') title = 'Admin Lobby';
+    else if (path === '/about-us') title = 'About Us';
     else if (path === '/') title = 'Welcome';
 
     document.title = title === 'HELPDESK.AI' ? title : `${title} | HELPDESK.AI`;
@@ -238,6 +240,7 @@ function App() {
 
             {/* Resources Pages */}
             <Route path="/changelog" element={<Changelog />} />
+            <Route path="/about-us" element={<AboutUs />} />
 
             {/* Legal Pages */}
             <Route path="/terms" element={<TermsOfService />} />

@@ -887,7 +887,7 @@ export default function LandingPage() {
                             {
                                 heading: 'Company',
                                 links: [
-                                    { label: 'About Us', href: '#' },
+                                    { label: 'About Us', href: '/about-us' },
                                     { label: 'Careers', href: '#' },
                                     { label: 'Privacy Policy', href: '/privacy' },
                                     { label: 'Terms of Service', href: '/terms' },
