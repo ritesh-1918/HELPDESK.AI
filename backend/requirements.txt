@@ -21,4 +21,5 @@ redis>=5.0.0
 pytest
 pytest-asyncio
 httpx
+websockets>=12.0
 

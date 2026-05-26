@@ -20,7 +20,7 @@ from contextlib import asynccontextmanager
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -68,10 +68,127 @@ from backend.services.audit_service import AuditLogService, AuditLogAccessError
 from backend.services.onnx_service import onnx_classifier
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
+from backend.services.semantic_duplicate_service import SemanticDuplicateService
 from backend.services.rag_service import RagService
 from backend.services.sla_engine import SLAEngine, compute_sla_breach_at, get_sla_policy
 from backend.services.redis_cache import redis_cache
 from backend.auth_cookie import router as auth_cookie_router, get_current_user  # noqa: F401
+
+
+# ---------------------------------------------------------------------------
+# WebSocket Connection Manager — real-time ticket dashboards
+# ---------------------------------------------------------------------------
+
+HEARTBEAT_INTERVAL = 30  # seconds between ping broadcasts
+HEARTBEAT_TIMEOUT = 10   # seconds to wait for a pong before disconnect
+
+
+class ConnectionManager:
+    """Tracks active WebSocket connections grouped by ``company_id``.
+
+    Thread-safe for concurrent connect/disconnect calls from multiple
+    ASGI workers (single-process via ``asyncio.Lock``).
+    """
+
+    def __init__(self) -> None:
+        self._connections: dict[str, set[WebSocket]] = {}
+        self._lock = asyncio.Lock()
+
+    async def connect(self, company_id: str, ws: WebSocket) -> None:
+        """Accept a new WebSocket and register it under ``company_id``."""
+        await ws.accept()
+        async with self._lock:
+            self._connections.setdefault(company_id, set()).add(ws)
+
+    async def disconnect(self, company_id: str, ws: WebSocket) -> None:
+        """Remove a WebSocket from the pool."""
+        async with self._lock:
+            connections = self._connections.get(company_id)
+            if connections:
+                connections.discard(ws)
+                # Clean up empty company groups
+                if not connections:
+                    del self._connections[company_id]
+
+    async def broadcast(self, company_id: str, message: dict) -> int:
+        """Send a JSON message to every client in a company group.
+
+        Returns:
+            Number of successfully sent messages.
+        """
+        payload = json.dumps(message, default=str)
+        sent = 0
+        async with self._lock:
+            connections = set(self._connections.get(company_id, []))
+
+        for ws in connections:
+            try:
+                await ws.send_text(payload)
+                sent += 1
+            except Exception:
+                await self.disconnect(company_id, ws)
+        return sent
+
+    async def broadcast_all(self, message: dict) -> int:
+        """Send a JSON message to **all** connected clients."""
+        payload = json.dumps(message, default=str)
+        sent = 0
+        async with self._lock:
+            all_connections = {
+                ws for group in self._connections.values() for ws in group
+            }
+
+        for ws in all_connections:
+            try:
+                await ws.send_text(payload)
+                sent += 1
+            except Exception:
+                pass
+        return sent
+
+    async def ping_all(self) -> None:
+        """Send a ``{"type": "ping"}`` heartbeat to every connection.
+
+        Connections that fail to receive the ping are removed.
+        """
+        async with self._lock:
+            # Snapshot all connections under lock so iteration is safe
+            snapshot = {
+                cid: set(ws_set) for cid, ws_set in self._connections.items()
+            }
+
+        for cid, ws_set in snapshot.items():
+            for ws in list(ws_set):
+                try:
+                    await ws.send_json({"type": "ping"})
+                except Exception:
+                    await self.disconnect(cid, ws)
+
+    @property
+    def active_count(self) -> int:
+        """Total number of connected clients across all companies."""
+        return sum(len(ws_set) for ws_set in self._connections.values())
+
+
+# Singleton — reused across lifespan and WebSocket route
+connection_manager = ConnectionManager()
+
+
+async def _heartbeat_loop() -> None:
+    """Background task: broadcast ping every ``HEARTBEAT_INTERVAL`` seconds.
+
+    Clients that fail the ping are disconnected automatically by
+    ``ConnectionManager.ping_all()``.
+    """
+    while True:
+        await asyncio.sleep(HEARTBEAT_INTERVAL)
+        try:
+            await connection_manager.ping_all()
+            count = connection_manager.active_count
+            if count:
+                print(f"[WS] Heartbeat sent to {count} active connection(s)")
+        except Exception as exc:
+            print(f"[WS] Heartbeat error: {exc}")
 
 
 # ---------------------------------------------------------------------------
@@ -461,7 +578,19 @@ async def lifespan(app: FastAPI):
     print("[Startup] Classifier V2 Shadow: Ready.")
     print(f"[Startup] ONNX MiniLM Fallback: {'READY' if getattr(onnx_classifier, '_loaded', False) else 'DEGRADED (artifacts missing)'}")
     print("[Startup] Ready.")
+
+    # Start WebSocket heartbeat background loop
+    heartbeat_task = asyncio.create_task(_heartbeat_loop())
+    print("[Startup] WebSocket heartbeat loop started (interval=30s).")
+
     yield
+
+    # Cancel background tasks on shutdown
+    heartbeat_task.cancel()
+    try:
+        await heartbeat_task
+    except asyncio.CancelledError:
+        pass
     print("[Shutdown] Cleaning up ...")
 
 
@@ -955,11 +1084,70 @@ async def save_ticket(request_body: TicketSaveRequest):
             response["parent_subject"] = duplicate_check_result.get("parent_subject")
             response["similarity"] = duplicate_check_result["similarity"]
             response["candidates"] = duplicate_check_result.get("candidates", [])
+        
+        # Broadcast the new/updated ticket to all WebSocket clients for this company
+        company_id = final_data.get("company_id")
+        if company_id:
+            asyncio.create_task(
+                connection_manager.broadcast(
+                    company_id,
+                    {
+                        "type": "ticket_update",
+                        "event": "created",
+                        "ticket": insert_data,
+                        "ticket_id": str(ticket_id),
+                    },
+                )
+            )
         return response
 
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.websocket("/ws/{company_id}")
+async def websocket_endpoint(ws: WebSocket, company_id: str):
+    """Real-time WebSocket feed for a company's ticket dashboard.
+
+    Protocol:
+        - Server sends ``{"type": "ping"}`` every 30s (heartbeat).
+        - Client must respond with ``{"type": "pong"}`` within 10s.
+        - Server pushes ``{"type": "ticket_update", ...}`` on changes.
+
+    Usage (frontend):
+        const socket = new WebSocket("ws://host:7860/ws/{company_id}");
+        socket.onmessage = (event) => { const msg = JSON.parse(event.data); };
+    """
+    if not company_id or not company_id.strip():
+        await ws.close(code=4000, reason="Missing company_id")
+        return
+
+    company_id = company_id.strip()
+    await connection_manager.connect(company_id, ws)
+    print(f"[WS] Client connected — company_id={company_id}")
+
+    try:
+        while True:
+            raw = await ws.receive_text()
+            if not raw.strip():
+                continue
+            try:
+                data = json.loads(raw)
+            except json.JSONDecodeError:
+                continue  # ignore malformed frames
+
+            # Handle pong response
+            if data.get("type") == "pong":
+                continue
+
+    except WebSocketDisconnect:
+        pass
+    except Exception as exc:
+        print(f"[WS] Connection error for company_id={company_id}: {exc}")
+    finally:
+        await connection_manager.disconnect(company_id, ws)
+        print(f"[WS] Client disconnected — company_id={company_id}")
+
 
 @app.get("/tickets/{ticket_id}")
 async def get_ticket_by_id(

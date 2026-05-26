@@ -1,13 +1,13 @@
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, AlertTriangle, Clock, ShieldCheck } from 'lucide-react';
+import { Activity, AlertTriangle, Clock, ShieldCheck, Wifi, WifiOff } from 'lucide-react';
 
 import useAuthStore from "../../store/authStore";
+import useTicketStore from "../../store/ticketStore";
+import useWebSocket from "../../hooks/useWebSocket";
 import { supabase } from "../../lib/supabaseClient";
-import useTicketsRealtime from "../../hooks/useTicketsRealtime";
 import StatCard from "../components/StatCard";
 import TicketTable from "../components/TicketTable";
-import { formatTimelineDate } from "../../utils/dateUtils";
 
 // Inline SVG icon components
 const TicketIcon = () => (
@@ -104,17 +104,32 @@ function formatSlaCountdown(deadlineMs, nowMs) {
 const AdminDashboard = () => {
     const navigate = useNavigate();
     const { profile } = useAuthStore();
-    const [tickets, setTickets] = React.useState([]);
     const [isLoading, setIsLoading] = React.useState(true);
     const [nowMs, setNowMs] = React.useState(() => Date.now());
 
-    useTicketsRealtime({
-        company: profile?.company,
-        enabled: Boolean(profile),
-        onTicketsChange: setTickets,
-        channelName: 'admin_dashboard_tickets_realtime',
-    });
+    // WebSocket connection for real-time ticket updates
+    const { isConnected: wsConnected, lastMessage } = useWebSocket(profile?.company);
 
+    // Read tickets from the Zustand store (populated below and updated by WS)
+    const tickets = useTicketStore((s) => s.tickets);
+    const handleWsMessage = useTicketStore((s) => s.handleWsMessage);
+    const setWsConnected = useTicketStore((s) => s.setWsConnected);
+    const upsertTicket = useTicketStore((s) => s.upsertTicket);
+    const removeTicket = useTicketStore((s) => s.removeTicket);
+
+    // Sync WebSocket connection status to store
+    React.useEffect(() => {
+        setWsConnected(wsConnected);
+    }, [wsConnected, setWsConnected]);
+
+    // Route incoming WebSocket messages into the ticket store
+    React.useEffect(() => {
+        if (lastMessage) {
+            handleWsMessage(lastMessage);
+        }
+    }, [lastMessage, handleWsMessage]);
+
+    // Initial fetch — populate store from Supabase on mount
     React.useEffect(() => {
         if (profile) {
             const fetchStats = async () => {
@@ -134,9 +149,14 @@ const AdminDashboard = () => {
                         console.warn("Retrying dashboard fetch without relation...", error);
                         const { data: basicData, error: basicError } = await supabase.from('tickets').select('*').eq('company', profile?.company).order('created_at', { ascending: false });
                         if (basicError) throw basicError;
-                        setTickets(basicData || []);
+                        // Bulk-load into store (avoid duplicates)
+                        for (const t of basicData || []) {
+                            upsertTicket(t);
+                        }
                     } else {
-                        setTickets(data || []);
+                        for (const t of data || []) {
+                            upsertTicket(t);
+                        }
                     }
                 } catch (err) { console.error("Dashboard fetch error:", err); }
                 finally { setIsLoading(false); }
@@ -144,7 +164,7 @@ const AdminDashboard = () => {
 
             fetchStats();
         }
-    }, [profile]);
+    }, [profile, upsertTicket]);
 
     React.useEffect(() => {
         const timer = setInterval(() => setNowMs(Date.now()), 60 * 1000);
@@ -200,13 +220,17 @@ const AdminDashboard = () => {
                         Dashboard
                     </h1>
                     <p style={{ color: '#6b7280', fontSize: '13px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 500 }}>
-                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }}></span>
-                        Real-time updates active
+                        {wsConnected ? (
+                            <Wifi size={14} color="#22c55e" />
+                        ) : (
+                            <WifiOff size={14} color="#f97316" />
+                        )}
+                        {wsConnected ? 'WebSocket connected' : 'Reconnecting...'}
                     </p>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 16px', background: '#F0FDF4', border: '1.5px solid #BBF7D0', borderRadius: '100px' }}>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block', animation: 'pulse-dot 2s infinite' }}></span>
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#15803d', letterSpacing: '0.08em', textTransform: 'uppercase' }}>System Active</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 16px', background: wsConnected ? '#F0FDF4' : '#FFF7ED', border: wsConnected ? '1.5px solid #BBF7D0' : '1.5px solid #FED7AA', borderRadius: '100px' }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: wsConnected ? '#22c55e' : '#f97316', display: 'inline-block', animation: 'pulse-dot 2s infinite' }}></span>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: wsConnected ? '#15803d' : '#c2410c', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{wsConnected ? 'Live' : 'Reconnecting'}</span>
                 </div>
             </div>
 
@@ -283,9 +307,9 @@ const AdminDashboard = () => {
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
                             AI Status
                         </h2>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '100px', padding: '3px 10px' }}>
-                            <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#22c55e', display: 'inline-block', animation: 'pulse-dot 2s infinite' }}></span>
-                            <span style={{ fontSize: '10px', fontWeight: 700, color: '#15803d' }}>LIVE SYNC</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: wsConnected ? '#F0FDF4' : '#FFF7ED', border: wsConnected ? '1px solid #BBF7D0' : '1px solid #FED7AA', borderRadius: '100px', padding: '3px 10px' }}>
+                            <span style={{ width: 5, height: 5, borderRadius: '50%', background: wsConnected ? '#22c55e' : '#f97316', display: 'inline-block', animation: 'pulse-dot 2s infinite' }}></span>
+                            <span style={{ fontSize: '10px', fontWeight: 700, color: wsConnected ? '#15803d' : '#c2410c' }}>{wsConnected ? 'WS CONNECTED' : 'RECONNECTING'}</span>
                         </div>
                     </div>
                     <div style={{ background: '#fff', borderRadius: '20px', border: '1px solid #f0fdf4', padding: '24px' }}>
@@ -310,9 +334,9 @@ const AdminDashboard = () => {
                             <div className="pt-4 mt-4 border-t border-gray-100 flex flex-col items-center gap-2">
                                 <p style={{ fontSize: '10px', color: '#9ca3af', letterSpacing: '0.14em', fontWeight: 600, textTransform: 'uppercase' }}>All systems operating normally</p>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 10px', background: '#f8faf9', borderRadius: '100px', border: '1px solid #e5e7eb' }}>
-                                    <Activity size={10} color="#9ca3af" />
-                                    <span style={{ fontSize: '9px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                                        Last Synced: {formatTimelineDate(new Date())}
+                                    {wsConnected ? <Activity size={10} color="#22c55e" /> : <Activity size={10} color="#f97316" />}
+                                    <span style={{ fontSize: '9px', fontWeight: 600, color: wsConnected ? '#16a34a' : '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                                        {wsConnected ? 'Live via WebSocket' : 'Reconnecting via WebSocket...'}
                                     </span>
                                 </div>
                             </div>
