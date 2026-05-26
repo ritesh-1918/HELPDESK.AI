@@ -43,6 +43,7 @@ export default function useWebSocket(companyId) {
   const pongTimeoutRef = useRef(null);
   const reconnectTimerRef = useRef(null);
   const reconnectAttemptRef = useRef(0);
+  const connectRef = useRef(null);
   const mountedRef = useRef(true);
   const companyIdRef = useRef(companyId);
 
@@ -87,6 +88,25 @@ export default function useWebSocket(companyId) {
         wsRef.current.send(JSON.stringify({ type: "pong" }));
       }
     }, PING_INTERVAL_MS);
+  }, []);
+
+  // ---- Reconnection with exponential backoff -----------------------------
+
+  const scheduleReconnect = useCallback(() => {
+    if (!mountedRef.current || !companyIdRef.current) return;
+
+    const attempt = reconnectAttemptRef.current;
+    const delay = Math.min(
+      INITIAL_RECONNECT_DELAY_MS * Math.pow(2, attempt),
+      MAX_RECONNECT_DELAY_MS
+    );
+    reconnectAttemptRef.current = attempt + 1;
+
+    setConnectionError(`Reconnecting in ${Math.round(delay / 1000)}s...`);
+
+    reconnectTimerRef.current = setTimeout(() => {
+      if (mountedRef.current) connectRef.current?.();
+    }, delay);
   }, []);
 
   // ---- WebSocket lifecycle -----------------------------------------------
@@ -153,25 +173,10 @@ export default function useWebSocket(companyId) {
     socket.onerror = () => {
       // onclose fires immediately after onerror, so reconnect is handled there
     };
-  }, [cleanup, clearTimers, startHeartbeat]);
+  }, [cleanup, clearTimers, startHeartbeat, scheduleReconnect]);
 
-  // ---- Reconnection with exponential backoff -----------------------------
-
-  const scheduleReconnect = useCallback(() => {
-    if (!mountedRef.current || !companyIdRef.current) return;
-
-    const attempt = reconnectAttemptRef.current;
-    const delay = Math.min(
-      INITIAL_RECONNECT_DELAY_MS * Math.pow(2, attempt),
-      MAX_RECONNECT_DELAY_MS
-    );
-    reconnectAttemptRef.current = attempt + 1;
-
-    setConnectionError(`Reconnecting in ${Math.round(delay / 1000)}s...`);
-
-    reconnectTimerRef.current = setTimeout(() => {
-      if (mountedRef.current) connect();
-    }, delay);
+  useEffect(() => {
+    connectRef.current = connect;
   }, [connect]);
 
   // ---- Send helper -------------------------------------------------------

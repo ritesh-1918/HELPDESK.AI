@@ -83,6 +83,7 @@ jobs:
             pydantic \
             python-multipart \
             slowapi \
+            prometheus-client \
             supabase \
             apscheduler \
             python-dotenv

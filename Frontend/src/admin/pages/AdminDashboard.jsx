@@ -115,7 +115,6 @@ const AdminDashboard = () => {
     const handleWsMessage = useTicketStore((s) => s.handleWsMessage);
     const setWsConnected = useTicketStore((s) => s.setWsConnected);
     const upsertTicket = useTicketStore((s) => s.upsertTicket);
-    const removeTicket = useTicketStore((s) => s.removeTicket);
 
     // Sync WebSocket connection status to store
     React.useEffect(() => {
