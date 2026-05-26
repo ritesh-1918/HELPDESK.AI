@@ -37,6 +37,19 @@ const mirrorBackendAuth = async (path, payload) => {
 
 let currentUserPromise = null;
 
+const getProfileCache = (profile) => {
+    if (!profile?.id) return null;
+
+    return {
+        id: profile.id,
+        email: profile.email,
+        full_name: profile.full_name,
+        company: profile.company,
+        company_id: profile.company_id,
+        profile_picture: profile.profile_picture,
+    };
+};
+
 const useAuthStore = create(
     persist(
         (set, get) => ({
@@ -53,38 +66,25 @@ const useAuthStore = create(
                 if (!user) return null;
 
                 const metadata = user.user_metadata || {};
-                const currentProfile = get().profile;
+                set({ profile: null });
 
-                // 1. Resolve FROM METADATA or PERSISTED state
-                // Priority 1: If we have a persisted session for THIS user and it's active, keep it 
-                // to prevent temporary lobbies during refresh/tab switching.
-                if (currentProfile && currentProfile.id === user.id && currentProfile.status === 'active') {
-                    console.log("Active profile retained from state.");
-                    // Background fetch to ensure session is still valid/synced
-                    get()._syncProfile(user.id);
-                    return currentProfile;
-                }
-
-                // Priority 2: Use Auth Metadata (Instant fallback)
-                const isMasterAdmin = user.email === 'masteradmin@helpdesk.ai';
-
-                const instantProfile = {
-                    id: user.id,
-                    email: user.email,
-                    full_name: isMasterAdmin ? 'Master Admin' : (metadata.full_name || 'User'),
-                    role: isMasterAdmin ? 'master_admin' : (metadata.role || 'user'),
-                    status: isMasterAdmin ? 'active' : 'pending_email_verification',
-                    company: metadata.company || ''
-                };
-
-                // 2. Sync with Database First before setting a fallback
-                // This prevents flashes of 'pending_email_verification' when returning from magic links
+                // Always resolve authorization fields from the database. Local storage and
+                // user_metadata are client-controlled surfaces and must not grant roles.
                 const dbProfile = await get()._syncProfile(user.id);
                 if (dbProfile) {
                     return dbProfile;
                 }
 
-                console.log("Falling back to instant profile resolved from metadata:", instantProfile.role);
+                const instantProfile = {
+                    id: user.id,
+                    email: user.email,
+                    full_name: metadata.full_name || 'User',
+                    role: 'user',
+                    status: 'pending_email_verification',
+                    company: metadata.company || ''
+                };
+
+                console.log("Falling back to non-authoritative profile:", instantProfile.role);
                 set({ profile: instantProfile });
                 return instantProfile;
             },
@@ -124,7 +124,7 @@ const useAuthStore = create(
                         const cookieUser = await verifyServerCookieSession();
                         if (cookieUser) {
                             set({ user: cookieUser });
-                            get().getProfile(cookieUser);
+                            await get().getProfile(cookieUser);
                             return cookieUser;
                         }
 
@@ -133,8 +133,7 @@ const useAuthStore = create(
 
                         if (user) {
                             set({ user });
-                            // Don't 'await' here because we want 'loading: false' ASAP
-                            get().getProfile(user);
+                            await get().getProfile(user);
                         } else {
                             set({ user: null, profile: null });
                         }
@@ -351,8 +350,8 @@ const useAuthStore = create(
                 supabase.auth.onAuthStateChange(async (event, session) => {
                     console.log("Auth state change:", event);
                     if (session?.user) {
-                        set({ user: session.user });
-                        get().getProfile(session.user);
+                        set({ user: session.user, loading: true, isCheckingSession: true });
+                        await get().getProfile(session.user);
                     } else {
                         set({ user: null, profile: null });
                     }
@@ -363,8 +362,8 @@ const useAuthStore = create(
         {
             name: 'auth-storage',
             partialize: (state) => ({
-                // Profile only — JWT session lives in HttpOnly cookies (issue #130)
-                profile: state.profile
+                // Cache display-only profile fields. Role/status must come from the DB.
+                profile: getProfileCache(state.profile)
             }),
         }
     )

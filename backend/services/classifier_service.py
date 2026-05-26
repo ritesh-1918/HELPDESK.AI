@@ -22,6 +22,16 @@ SAVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "model
 DEVICE = torch.device("cuda" if torch and torch.cuda.is_available() else "cpu") if _HAS_TORCH else None
 MAX_LEN = 128
 
+try:
+    from backend.services.metrics_service import (
+        CLASSIFIER_LATENCY,
+        CLASSIFIER_REQUESTS,
+        CLASSIFIER_TOKENS,
+    )
+    _METRICS_ENABLED = True
+except Exception:
+    _METRICS_ENABLED = False
+
 # Priority mapping based on sub-category severity
 PRIORITY_MAP = {
     "Blue Screen": "Critical", "Overheating": "Critical", "Data Loss": "Critical",
@@ -111,11 +121,22 @@ class ClassifierService:
         input_ids = encoding["input_ids"].to(DEVICE)
         attention_mask = encoding["attention_mask"].to(DEVICE)
 
-        with torch.no_grad():
-            outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
-            logits = outputs.logits
-            probs = F.softmax(logits, dim=1)
-            confidence, pred_idx = torch.max(probs, dim=1)
+        import time
+        _t0 = time.perf_counter()
+        try:
+            with torch.no_grad():
+                outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
+                logits = outputs.logits
+                probs = F.softmax(logits, dim=1)
+                confidence, pred_idx = torch.max(probs, dim=1)
+        except Exception:
+            if _METRICS_ENABLED:
+                CLASSIFIER_REQUESTS.labels(model="distilbert", status="error").inc()
+            raise
+        if _METRICS_ENABLED:
+            CLASSIFIER_LATENCY.labels(model="distilbert").observe(time.perf_counter() - _t0)
+            CLASSIFIER_REQUESTS.labels(model="distilbert", status="ok").inc()
+            CLASSIFIER_TOKENS.labels(model="distilbert").inc(int(attention_mask.sum().item()))
 
         pred_idx = pred_idx.item()
         confidence = round(confidence.item(), 4)

@@ -1,5 +1,14 @@
 import pytest
 from unittest.mock import patch, MagicMock
+from backend.auth_cookie import get_current_user
+
+
+def authenticate_as(test_client, user_id):
+    test_client.app.dependency_overrides[get_current_user] = lambda: {"id": user_id}
+
+
+def clear_authentication(test_client):
+    test_client.app.dependency_overrides.pop(get_current_user, None)
 
 def test_route_registration(test_client):
     """
@@ -92,6 +101,7 @@ def test_multi_tenant_data_isolation_on_read(test_client, fake_db):
         {"id": 1, "company_id": "company_A", "subject": "Ticket A", "created_at": "2026-05-23T10:00:00Z"},
         {"id": 2, "company_id": "company_B", "subject": "Ticket B", "created_at": "2026-05-23T11:00:00Z"},
     ]
+    authenticate_as(test_client, "user_A")
     
     # Query for company A
     res_a = test_client.get("/tickets?company_id=company_A")
@@ -100,12 +110,44 @@ def test_multi_tenant_data_isolation_on_read(test_client, fake_db):
     assert len(tickets_a) == 1
     assert tickets_a[0]["company_id"] == "company_A"
     
-    # Query for company B
+    # Query for company B as company A user
     res_b = test_client.get("/tickets?company_id=company_B")
-    assert res_b.status_code == 200
-    tickets_b = res_b.json()
-    assert len(tickets_b) == 1
-    assert tickets_b[0]["company_id"] == "company_B"
+    assert res_b.status_code == 403
+    clear_authentication(test_client)
+
+
+def test_ticket_reads_require_authentication(test_client, fake_db):
+    fake_db["tickets"] = [
+        {"id": 1, "company_id": "company_A", "subject": "Ticket A", "created_at": "2026-05-23T10:00:00Z"},
+    ]
+
+    assert test_client.get("/tickets").status_code == 401
+    assert test_client.get("/tickets/search?q=Ticket").status_code == 401
+    assert test_client.get("/tickets/1").status_code == 401
+
+
+def test_ticket_reads_scope_to_authenticated_tenant(test_client, fake_db):
+    fake_db["tickets"] = [
+        {"id": 1, "company_id": "company_A", "subject": "VPN issue", "description": "A", "created_at": "2026-05-23T10:00:00Z"},
+        {"id": 2, "company_id": "company_B", "subject": "VPN issue", "description": "B", "created_at": "2026-05-23T11:00:00Z"},
+    ]
+    authenticate_as(test_client, "user_A")
+
+    all_tickets = test_client.get("/tickets")
+    assert all_tickets.status_code == 200
+    assert [ticket["company_id"] for ticket in all_tickets.json()] == ["company_A"]
+
+    search_results = test_client.get("/tickets/search?q=VPN")
+    assert search_results.status_code == 200
+    assert [ticket["company_id"] for ticket in search_results.json()] == ["company_A"]
+
+    own_ticket = test_client.get("/tickets/1")
+    assert own_ticket.status_code == 200
+    assert own_ticket.json()["company_id"] == "company_A"
+
+    other_ticket = test_client.get("/tickets/2")
+    assert other_ticket.status_code == 403
+    clear_authentication(test_client)
 
 
 def test_analyze_ticket_mock_model_prediction(test_client):

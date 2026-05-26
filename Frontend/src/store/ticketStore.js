@@ -3,14 +3,19 @@ import { persist } from 'zustand/middleware';
 
 const useTicketStore = create(
     persist(
-        (set) => ({
+        (set, get) => ({
             aiTicket: null,
             activeTicket: null,
             autoResolvedTickets: [], // For analytics
             tickets: [], // Global queue for admins
             notifications: [], // User notifications
+            wsConnected: false, // WebSocket connection status
+
             setAITicket: (data) => set({ aiTicket: data }),
             setActiveTicket: (ticket) => set({ activeTicket: ticket }),
+
+            setWsConnected: (connected) => set({ wsConnected: connected }),
+
             addAutoResolvedTicket: (record) => set((state) => ({
                 autoResolvedTickets: [...state.autoResolvedTickets, record]
             })),
@@ -52,19 +57,46 @@ const useTicketStore = create(
                     : state.activeTicket
             })),
             updateTicket: (ticketId, updates) => set((state) => {
-// eslint-disable-next-line no-unused-vars
-                const existingTicket = state.tickets.find(t => t.ticket_id === ticketId);
-                const updatedTickets = state.tickets.map(t => t.ticket_id === ticketId ? { ...t, ...updates } : t);
-                const shouldUpdateActive = state.activeTicket?.ticket_id === ticketId;
-
-
-
-
+                const existingTicket = state.tickets.find(t => (t.id ?? t.ticket_id) === ticketId);
+                if (!existingTicket) return state;
+                const updatedTickets = state.tickets.map(t => (t.id ?? t.ticket_id) === ticketId ? { ...t, ...updates } : t);
+                const shouldUpdateActive = (state.activeTicket?.id ?? state.activeTicket?.ticket_id) === ticketId;
                 return {
                     tickets: updatedTickets,
                     activeTicket: shouldUpdateActive ? { ...state.activeTicket, ...updates } : state.activeTicket
                 };
             }),
+
+            /**
+             * Route an incoming WebSocket message to the correct store action.
+             *
+             * Call this from the component that owns the WebSocket connection
+             * (e.g. AdminDashboard) whenever a message arrives.
+             */
+            handleWsMessage: (msg) => {
+                if (!msg || !msg.type) return;
+
+                const { type, event, ticket, ticket_id } = msg;
+
+                switch (type) {
+                    case "ticket_update": {
+                        if (!ticket) break;
+                        if (event === "created") {
+                            // Avoid duplicates — use upsert
+                            get().upsertTicket(ticket);
+                        } else if (event === "updated") {
+                            get().upsertTicket(ticket);
+                        } else if (event === "deleted") {
+                            get().removeTicket(ticket_id);
+                        }
+                        break;
+                    }
+                    default:
+                        // Ignore unknown message types (e.g. heartbeat)
+                        break;
+                }
+            },
+
             appendMessage: (ticketId, message) => set((state) => {
                 const updatedTickets = state.tickets.map(t =>
                     t.ticket_id === ticketId
