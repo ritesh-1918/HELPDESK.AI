@@ -48,9 +48,9 @@ def build_slack_payload(ticket: dict[str, Any]) -> dict:
     ticket_id = str(ticket.get("id", "???"))
     ticket_ref = f"#T-{ticket_id[-4:]}" if len(ticket_id) >= 4 else f"#T-{ticket_id}"
     subject = ticket.get("subject") or "Untitled ticket"
-    priority = str(ticket.get("priority", "unknown")).upper()
+    priority = str(ticket.get("priority") or "unknown").upper()
     assigned_team = ticket.get("assigned_team") or "Unassigned"
-    company = ticket.get("company") or ticket.get("company_id") or "Unknown"
+    company = ticket.get("company") or ticket.get("company_id") or "UNKNOWN"
     breach_at = ticket.get("sla_breach_at") or "N/A"
 
     # Color based on priority
