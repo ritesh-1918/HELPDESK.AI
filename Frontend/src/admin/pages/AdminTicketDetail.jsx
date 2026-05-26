@@ -4,7 +4,7 @@ import {
     CheckCircle2, Clock, AlertCircle, User,
     Activity, ShieldCheck, Briefcase, Globe, BarChart3,
     ImageIcon, CornerUpLeft, CheckSquare, XCircle,
-    Cpu, Eye, MessageSquare, MoveRight, Loader2, Star, Eraser
+    Cpu, Eye, MessageSquare, MoveRight, Loader2, Star, Eraser, ShieldAlert
 } from 'lucide-react';
 import { supabase } from "../../lib/supabaseClient";
 import useAuthStore from "../../store/authStore";
@@ -299,6 +299,67 @@ const AdminTicketDetail = () => {
                     )}
                 </div>
             </div>
+
+            {ticket.metadata?.spam_analysis?.is_spam && (
+                <div style={{
+                    background: ticket.metadata.spam_analysis.risk_level === 'high' ? '#fef2f2' : '#fffbeb',
+                    border: `1.5px solid ${ticket.metadata.spam_analysis.risk_level === 'high' ? '#fca5a5' : '#fde047'}`,
+                    borderRadius: '16px',
+                    padding: '16px 24px',
+                    color: ticket.metadata.spam_analysis.risk_level === 'high' ? '#991b1b' : '#92400e',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '16px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
+                }}>
+                    <ShieldAlert size={24} style={{ flexShrink: 0, marginTop: '2px', color: ticket.metadata.spam_analysis.risk_level === 'high' ? '#dc2626' : '#d97706' }} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <h4 style={{ margin: 0, fontWeight: 800, fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            SECURITY PROTOCOL ALERT // POTENTIAL {ticket.metadata.spam_analysis.risk_level.toUpperCase()} RISK SPAM/PHISHING
+                        </h4>
+                        <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, lineHeight: 1.5 }}>
+                            This incident contains potential phishing patterns or malicious URLs. To protect system infrastructure, support agents must not click or copy any untrusted hyperlinks below.
+                        </p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                            {ticket.metadata.spam_analysis.reasons.map((reason, i) => (
+                                <span key={i} style={{
+                                    fontSize: '9px',
+                                    fontWeight: 700,
+                                    textTransform: 'uppercase',
+                                    background: ticket.metadata.spam_analysis.risk_level === 'high' ? '#fee2e2' : '#fef3c7',
+                                    color: ticket.metadata.spam_analysis.risk_level === 'high' ? '#991b1b' : '#92400e',
+                                    padding: '2px 8px',
+                                    borderRadius: '100px',
+                                    border: `1px solid ${ticket.metadata.spam_analysis.risk_level === 'high' ? '#fca5a5' : '#fde047'}`
+                                }}>
+                                    {reason}
+                                </span>
+                            ))}
+                        </div>
+                        {ticket.metadata.spam_analysis.suspicious_urls?.length > 0 && (
+                            <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <span style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', color: ticket.metadata.spam_analysis.risk_level === 'high' ? '#991b1b' : '#92400e' }}>Suspicious links locked:</span>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    {ticket.metadata.spam_analysis.suspicious_urls.map((url, idx) => (
+                                        <code key={idx} style={{
+                                            fontSize: '11px',
+                                            fontFamily: 'monospace',
+                                            padding: '4px 8px',
+                                            background: ticket.metadata.spam_analysis.risk_level === 'high' ? '#fee2e240' : '#fef3c740',
+                                            color: '#dc2626',
+                                            borderRadius: '6px',
+                                            border: '1.5px dashed #fca5a5',
+                                            wordBreak: 'break-all'
+                                        }}>
+                                            [LOCKED] {url}
+                                        </code>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Primary Column */}

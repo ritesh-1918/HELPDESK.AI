@@ -19,8 +19,9 @@ from contextlib import asynccontextmanager
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
-from fastapi import FastAPI, Depends, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Depends, Header, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
 from slowapi import Limiter, _rate_limit_exceeded_handler
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from slowapi.util import get_remote_address
 from backend.auth.crypto import ws_manager
 from slowapi.errors import RateLimitExceeded
@@ -75,6 +76,7 @@ from backend.services.sla_service import (
     load as load_sla_service,
     run_sla_escalation_loop,
 )
+from backend.services.spam_detector_service import analyze_spam_phishing
 
 
 # ---------------------------------------------------------------------------
@@ -202,6 +204,7 @@ class TicketResponse(BaseModel):
     timeline: dict = {} # Map of step_name: timestamp
     env_metadata: dict = {} # IP, Hostname, Browser/OS
     sla_breach_at: str | None = None
+    spam_analysis: dict | None = None
     version: str = "2.1.0-Neural-Diagnostic"
 
 
@@ -471,6 +474,17 @@ async def root():
     </body>
     </html>
     """
+
+
+async def verify_metrics_token(x_metrics_token: str | None = Header(default=None)):
+    expected_token = os.environ.get("METRICS_TOKEN")
+    if expected_token and x_metrics_token != expected_token:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
+@app.get("/metrics", dependencies=[Depends(verify_metrics_token)])
+def metrics():
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.websocket("/ws/{company_id}")
@@ -807,7 +821,8 @@ async def save_ticket(request_body: TicketSaveRequest):
         existing_metadata = final_data.get("metadata") or {}
         extra_keys = (
             "entities", "solution_steps", "ocr_text", "needs_review", "routing_confidence",
-            "is_potential_duplicate", "parent_ticket_id", "sla_response_due_at", "sla_status", "escalation_level"
+            "is_potential_duplicate", "parent_ticket_id", "sla_response_due_at", "sla_status", "escalation_level",
+            "spam_analysis"
         )
         for extra_key in extra_keys:
             if extra_key in final_data and final_data[extra_key] not in (None, "", [], {}):
@@ -1028,6 +1043,9 @@ async def analyze_only(request_body: TicketRequest):
 
     summary = text[:100] + ("…" if len(text) > 100 else "") 
 
+    # --- Spam & Phishing Detection Layer ---
+    spam_result = analyze_spam_phishing(text, gemini_analysis.get("ocr_text", ""))
+
     # --- Classification ---
     try:
         classification_v3_res = classifier_v3.predict(text)
@@ -1059,6 +1077,20 @@ async def analyze_only(request_body: TicketRequest):
             "category": "Unknown", "subcategory": "Unknown", "priority": "Medium",
             "auto_resolve": False, "assigned_team": "General Support", "confidence": 0.0,
         }
+
+    # Apply Spam overrides if spam/phishing is detected
+    if spam_result["is_spam"]:
+        classification["category"] = "Spam"
+        if spam_result["risk_level"] == "high":
+            classification["subcategory"] = "Suspicious Phishing"
+        elif spam_result["risk_level"] == "medium":
+            classification["subcategory"] = "Spam Inquiry"
+        else:
+            classification["subcategory"] = "Low-Risk Spam"
+        classification["priority"] = "Low"
+        classification["assigned_team"] = "Security Unit"
+        classification["auto_resolve"] = False
+        classification["confidence"] = max(classification["confidence"], 0.95)
 
     timeline["ai_analyzed"] = get_now_ist()
     timeline["triaged"] = get_now_ist()
@@ -1102,26 +1134,30 @@ async def analyze_only(request_body: TicketRequest):
 
     # --- Reasoning ---
     decision_factors = []
-    if classification["confidence"] > confidence_threshold:
-        decision_factors.append(f"High confidence match for '{classification['subcategory']}'")
-    if entities:
-        decision_factors.append(f"Detected entities: {', '.join([e['text'] for e in entities[:2]])}")
-    if dup_result["is_duplicate"]:
-        decision_factors.append(f"Found similar incident ({int(dup_result['similarity']*100)}%)")
-    if rag_match:
-        decision_factors.append(f"Found solution article: '{rag_match['title']}'")
-
-    reasoning = f"Categorized as '{classification['category']}' - {classification['subcategory']}."
-    if (
-        enable_auto_resolve
-        and classification["confidence"] >= confidence_threshold
-        and classification["auto_resolve"]
-    ):
-        classification["auto_resolve"] = True
+    if spam_result["is_spam"]:
+        decision_factors.append(f"Spam/Phishing detected (Risk: {spam_result['risk_level'].upper()})")
+        reasoning = f"Flagged as potential spam/phishing. Reasons: {', '.join(spam_result['reasons'])}"
     else:
-        classification["auto_resolve"] = False
-    if classification["auto_resolve"]:
-        reasoning += " Flagged for AI auto-resolution via Knowledge Base." if rag_match else " Flagged for auto-resolution."
+        if classification["confidence"] > confidence_threshold:
+            decision_factors.append(f"High confidence match for '{classification['subcategory']}'")
+        if entities:
+            decision_factors.append(f"Detected entities: {', '.join([e['text'] for e in entities[:2]])}")
+        if dup_result["is_duplicate"]:
+            decision_factors.append(f"Found similar incident ({int(dup_result['similarity']*100)}%)")
+        if rag_match:
+            decision_factors.append(f"Found solution article: '{rag_match['title']}'")
+
+        reasoning = f"Categorized as '{classification['category']}' - {classification['subcategory']}."
+        if (
+            enable_auto_resolve
+            and classification["confidence"] >= confidence_threshold
+            and classification["auto_resolve"]
+        ):
+            classification["auto_resolve"] = True
+        else:
+            classification["auto_resolve"] = False
+        if classification["auto_resolve"]:
+            reasoning += " Flagged for AI auto-resolution via Knowledge Base." if rag_match else " Flagged for auto-resolution."
     
     timeline["routed"] = get_now_ist()
     
@@ -1151,6 +1187,7 @@ async def analyze_only(request_body: TicketRequest):
         highlights=entities, # Use entities as highlights for now
         timeline=timeline,
         env_metadata=env_metadata,
+        spam_analysis=spam_result,
         is_potential_duplicate=dup_result.get("is_potential_duplicate", False),
         parent_ticket_id=dup_result.get("parent_ticket_id"),
         sla_breach_at=sla_breach_dt.isoformat().replace("+00:00", "Z")
