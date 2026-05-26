@@ -24,7 +24,8 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from fastapi.encoders import jsonable_encoder
 import asyncio
 from pathlib import Path
@@ -340,6 +341,12 @@ async def root():
     </body>
     </html>
     """
+
+
+@app.get("/metrics")
+async def metrics():
+    """Prometheus scrape endpoint — exposes AI inference latency, request counts, and tokens."""
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/health", response_model=HealthResponse)
