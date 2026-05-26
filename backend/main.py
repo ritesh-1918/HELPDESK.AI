@@ -73,6 +73,32 @@ from backend.services.sla_engine import SLAEngine, compute_sla_breach_at, get_sl
 from backend.services.redis_cache import redis_cache
 from backend.auth_cookie import router as auth_cookie_router, get_current_user  # noqa: F401
 
+# Cryptographic helper for PII field encryption at rest
+from backend.auth.crypto import encrypt_field, decrypt_field, crypto_available
+
+# Fields in the tickets table that contain PII and must be encrypted at rest
+PII_FIELDS = ("description", "contact_email", "raw_text")
+
+
+def _decrypt_ticket_pii(ticket: dict) -> dict:
+    """Decrypt PII fields on a single ticket dict **in-place**.
+
+    If the crypto key is missing or decryption fails, the original
+    (potentially encrypted) value is preserved and a warning is logged.
+    """
+    if not ticket:
+        return ticket
+    for field in PII_FIELDS:
+        raw = ticket.get(field)
+        if not raw:
+            continue
+        try:
+            ticket[field] = decrypt_field(raw) or raw
+        except Exception as exc:
+            logger = logging.getLogger(__name__)
+            logger.warning(f"[PII] Failed to decrypt '{field}' on ticket {ticket.get('id', '?')}: {exc}")
+    return ticket
+
 
 # ---------------------------------------------------------------------------
 # Request / Response models
@@ -184,6 +210,8 @@ class TicketSaveRequest(BaseModel):
     user_id: str
     subject: str
     description: str
+    contact_email: str | None = None
+    raw_text: str | None = None
     category: str
     subcategory: str
     priority: str
@@ -743,6 +771,11 @@ async def get_tickets(company_id: str | None = None):
         query = query.eq("company_id", company_id)
         
     res = query.execute()
+
+    # Decrypt PII fields on all returned tickets
+    if res.data:
+        for ticket in res.data:
+            _decrypt_ticket_pii(ticket)
     return res.data
 
 @app.post("/tickets/save")
@@ -881,7 +914,8 @@ async def save_ticket(request_body: TicketSaveRequest):
         # Extra AI telemetry and non-existent schema fields are merged into the metadata JSONB column
         # to avoid 400/500 errors from unknown column names in the insert call.
         VALID_TICKET_COLUMNS = {
-            "user_id", "subject", "description", "category", "subcategory",
+            "user_id", "subject", "description", "contact_email", "raw_text",
+            "category", "subcategory",
             "priority", "assigned_team", "status", "auto_resolve", "is_duplicate",
             "confidence", "image_url", "company", "company_id",
             "sla_breach_at", "sla_response_due_at", "sla_status", "escalation_level", "metadata",
@@ -899,6 +933,16 @@ async def save_ticket(request_body: TicketSaveRequest):
 
         # Strip keys not accepted by the DB schema
         insert_data = {k: v for k, v in final_data.items() if k in VALID_TICKET_COLUMNS}
+
+        # Encrypt PII fields at rest before persisting to database
+        for pii_field in ("description", "contact_email", "raw_text"):
+            if pii_field in insert_data and insert_data[pii_field]:
+                insert_data[pii_field] = encrypt_field(insert_data[pii_field])
+                if not crypto_available:
+                    logger.warning(
+                        f"[PII] Storing '{pii_field}' in plaintext — "
+                        "set DB_ENCRYPTION_SECRET_KEY to enable AES-256-GCM encryption."
+                    )
 
         res = supabase.table("tickets").insert(insert_data).execute()
         
@@ -980,7 +1024,7 @@ async def get_ticket_by_id(
     res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Ticket not found")
-    return res.data
+    return _decrypt_ticket_pii(dict(res.data))
 
 
 @app.get("/tickets/{ticket_id}/audit_logs", response_model=list[AuditLogRecord])
