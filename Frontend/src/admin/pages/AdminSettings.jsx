@@ -1,3 +1,5 @@
+import { Card, CardContent } from "../../components/ui/card";
+import WebhookSettings from "../../components/shared/WebhookSettings";
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     Settings,
@@ -16,7 +18,7 @@ import {
     settingsFromSystemSettingsRow,
     settingsToSystemSettingsRow
 } from '../../utils/adminSettingsPersistence';
-import { Card, CardContent } from "../../components/ui/card";
+
 import { Select } from "../../components/ui/select";
 
 /**
@@ -276,8 +278,21 @@ const AdminSettings = () => {
                                 <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all duration-300 shadow-md ${settings.adminAlerts ? 'right-1' : 'left-1'}`}></div>
                             </button>
                         </div>
+                   </CardContent>
+                </Card>
+
+                {/* 5. Webhook Notification Settings */}
+                <Card className="border-none shadow-2xl shadow-slate-200/40 rounded-[2rem] overflow-hidden bg-white">
+                    <div className="px-8 py-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                        <h3 className="text-sm font-black text-slate-900 uppercase italic tracking-tight flex items-center gap-3">
+                            <Bell size={18} className="text-blue-500" /> Slack & Teams Webhooks
+                        </h3>
+                    </div>
+                    <CardContent className="p-8">
+                        <WebhookSettings />
                     </CardContent>
                 </Card>
+
             </div>
         </div>
     );
