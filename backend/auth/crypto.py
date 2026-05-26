@@ -1,6 +1,7 @@
 import os
 import hashlib
 import base64
+import asyncio
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 # Initialize AESGCM with 32-byte key derived from secret key
@@ -51,6 +52,39 @@ def decrypt(cipher_text: str) -> str:
         # If decryption fails, it might be unencrypted plaintext (graceful degrade for old records)
         return cipher_text
 
+
+class ConnectionManager:
+    """WebSocket Connection Pool Manager mapping active connections to company_id."""
+    def __init__(self):
+        self.active_connections = {}
+
+    async def connect(self, websocket, company_id: str):
+        await websocket.accept()
+        if company_id not in self.active_connections:
+            self.active_connections[company_id] = []
+        self.active_connections[company_id].append(websocket)
+        print(f"[WS] Connected client for company_id={company_id}")
+
+    def disconnect(self, websocket, company_id: str):
+        if company_id in self.active_connections:
+            if websocket in self.active_connections[company_id]:
+                self.active_connections[company_id].remove(websocket)
+            if not self.active_connections[company_id]:
+                del self.active_connections[company_id]
+        print(f"[WS] Disconnected client for company_id={company_id}")
+
+    async def broadcast_to_company(self, company_id: str, message: dict):
+        if company_id in self.active_connections:
+            for connection in list(self.active_connections[company_id]):
+                try:
+                    await connection.send_json(message)
+                except Exception:
+                    # Connection might be dead, clean up safely
+                    self.disconnect(connection, company_id)
+
+ws_manager = ConnectionManager()
+
+
 def apply_db_encryption_patch():
     """Apply transparent monkeypatch to Postgrest/Supabase client execute method for 'tickets' table."""
     try:
@@ -89,6 +123,28 @@ def apply_db_encryption_patch():
                             for field in ["contact_email", "description", "raw_text"]:
                                 if field in item and item[field] is not None:
                                     item[field] = decrypt(str(item[field]))
+                
+                # Broadcast database mutations transparently to connected WebSocket clients
+                try:
+                    http_method = str(self.request.http_method).split('.')[-1].upper()
+                    if http_method in ["POST", "PATCH", "DELETE"]:
+                        event_type = "INSERT" if http_method == "POST" else ("UPDATE" if http_method == "PATCH" else "DELETE")
+                        rows = data if isinstance(data, list) else [data]
+                        for row in rows:
+                            if isinstance(row, dict):
+                                company_id = row.get("company_id")
+                                if company_id:
+                                    message = {
+                                        "event": event_type,
+                                        "record": row
+                                    }
+                                    try:
+                                        loop = asyncio.get_running_loop()
+                                        loop.create_task(ws_manager.broadcast_to_company(str(company_id), message))
+                                    except RuntimeError:
+                                        pass  # No active loop (e.g. unit tests)
+                except Exception as ex:
+                    print(f"[WS Broadcast Error] {ex}")
                                     
             return res
 

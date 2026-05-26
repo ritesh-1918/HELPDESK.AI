@@ -19,9 +19,10 @@ from contextlib import asynccontextmanager
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
+from backend.auth.crypto import ws_manager
 from slowapi.errors import RateLimitExceeded
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
@@ -308,7 +309,23 @@ async def lifespan(app: FastAPI):
     if strict_mode and not classifier_loaded_flag:
         raise RuntimeError("[Startup-FATAL] Classifier assets not loaded. Set ALLOW_DEGRADED_STARTUP=1 to bypass.")
 
+    async def websocket_heartbeat_loop():
+        while True:
+            try:
+                await asyncio.sleep(30)
+                for company_id, connections in list(ws_manager.active_connections.items()):
+                    for websocket in list(connections):
+                        try:
+                            await websocket.send_text("ping")
+                        except Exception:
+                            ws_manager.disconnect(websocket, company_id)
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                print(f"[WS Heartbeat Error] {e}")
+
     sla_task = None
+    ws_heartbeat_task = None
     try:
         if supabase and os.environ.get("SLA_ESCALATION_ENABLED", "true").lower() == "true":
             notification_router = None
@@ -322,12 +339,21 @@ async def lifespan(app: FastAPI):
             sla_task = asyncio.create_task(run_sla_escalation_loop(sla_service, interval_seconds=interval))
             print(f"[Startup] SLA escalation loop enabled ({interval}s interval).")
 
+        ws_heartbeat_task = asyncio.create_task(websocket_heartbeat_loop())
+        print("[Startup] WebSocket heartbeat loop enabled (30s interval).")
+
         yield
     finally:
         if sla_task:
             sla_task.cancel()
             try:
                 await sla_task
+            except asyncio.CancelledError:
+                pass
+        if ws_heartbeat_task:
+            ws_heartbeat_task.cancel()
+            try:
+                await ws_heartbeat_task
             except asyncio.CancelledError:
                 pass
         print("[Shutdown] Cleaning up ...")
@@ -445,6 +471,21 @@ async def root():
     </body>
     </html>
     """
+
+
+@app.websocket("/ws/{company_id}")
+async def websocket_endpoint(websocket: WebSocket, company_id: str):
+    await ws_manager.connect(websocket, company_id)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            if data == "pong":
+                pass
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket, company_id)
+    except Exception as e:
+        print(f"[WS Error] {e}")
+        ws_manager.disconnect(websocket, company_id)
 
 
 @app.get("/health", response_model=HealthResponse)

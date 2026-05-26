@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
-import { supabase } from '../lib/supabaseClient';
 import useAuthStore from '../store/authStore';
 import useTicketStore from '../store/ticketStore';
+import { API_CONFIG } from '../config';
 
 const useTicketsRealtime = () => {
     const { user, profile } = useAuthStore();
-    const { addTicket, updateTicket, removeTicket } = useTicketStore();
+    const { connectWebSocket, disconnectWebSocket } = useTicketStore();
 
     useEffect(() => {
         if (!user || !profile) return;
@@ -14,38 +14,12 @@ const useTicketsRealtime = () => {
         const isAdmin = profile.role === 'admin' || profile.role === 'master_admin';
         if (!isAdmin) return;
 
-        const channel = supabase
-            .channel('tickets-realtime-dashboard')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'tickets',
-                    filter: `company_id=eq.${profile.company_id}`,
-                },
-                (payload) => {
-                    const { eventType, new: newRecord, old: oldRecord } = payload;
-
-                    if (eventType === 'INSERT') {
-                        addTicket(newRecord);
-                    }
-
-                    if (eventType === 'UPDATE') {
-                        updateTicket(newRecord.ticket_id, newRecord);
-                    }
-
-                    if (eventType === 'DELETE') {
-                        removeTicket(oldRecord.ticket_id);
-                    }
-                }
-            )
-            .subscribe();
+        connectWebSocket(profile.company_id, API_CONFIG.BACKEND_URL);
 
         return () => {
-            supabase.removeChannel(channel);
+            disconnectWebSocket();
         };
-    }, [user, profile, addTicket, updateTicket, removeTicket]);
+    }, [user, profile, connectWebSocket, disconnectWebSocket]);
 };
 
 export default useTicketsRealtime;

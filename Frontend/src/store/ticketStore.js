@@ -85,10 +85,81 @@ const useTicketStore = create(
                 notifications: (state.notifications || []).map(n => ({ ...n, read: true }))
             })),
             clearTicket: () => set({ aiTicket: null, activeTicket: null, autoResolvedTickets: [] }),
+            ws: null,
+            connectWebSocket: (companyId, backendUrl) => {
+                const state = useTicketStore.getState();
+                if (state.ws) {
+                    state.ws.close();
+                }
+
+                const wsBase = backendUrl.replace(/^http/, 'ws');
+                const wsUrl = `${wsBase}/ws/${companyId}`;
+                console.log(`[WS Store] Connecting to: ${wsUrl}`);
+
+                const socket = new WebSocket(wsUrl);
+                let reconnectTimeout;
+                let isClosed = false;
+
+                socket.onopen = () => {
+                    console.log('[WS Store] Connected to real-time sync server');
+                };
+
+                socket.onmessage = (event) => {
+                    if (event.data === 'ping') {
+                        socket.send('pong');
+                        return;
+                    }
+
+                    try {
+                        const message = JSON.parse(event.data);
+                        console.log('[WS Store] Received event:', message);
+                        if (message.event === 'INSERT') {
+                            useTicketStore.getState().addTicket(message.record);
+                        } else if (message.event === 'UPDATE') {
+                            useTicketStore.getState().updateTicket(message.record.ticket_id, message.record);
+                        } else if (message.event === 'DELETE') {
+                            useTicketStore.getState().removeTicket(message.record.ticket_id);
+                        }
+                    } catch (e) {
+                        console.error('[WS Store] Error parsing message:', e);
+                    }
+                };
+
+                socket.onclose = () => {
+                    if (isClosed) return;
+                    console.warn('[WS Store] Connection closed. Reconnecting in 5 seconds...');
+                    reconnectTimeout = setTimeout(() => {
+                        useTicketStore.getState().connectWebSocket(companyId, backendUrl);
+                    }, 5000);
+                };
+
+                socket.onerror = (err) => {
+                    console.error('[WS Store] Socket error:', err);
+                    socket.close();
+                };
+
+                set({
+                    ws: {
+                        close: () => {
+                            isClosed = true;
+                            socket.close();
+                            if (reconnectTimeout) clearTimeout(reconnectTimeout);
+                        }
+                    }
+                });
+            },
+            disconnectWebSocket: () => {
+                const state = useTicketStore.getState();
+                if (state.ws) {
+                    state.ws.close();
+                    set({ ws: null });
+                }
+            },
         }),
         {
             name: 'ticket-storage', // unique name for localStorage key
         }
+
     )
 );
 
