@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 FastAPI Backend — AI Helpdesk Ticket Analyzer
 POST /ai/analyze_ticket  →  full analysis of a support ticket
@@ -19,9 +21,6 @@ warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
 from fastapi import FastAPI, Depends, HTTPException, Request
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.encoders import jsonable_encoder
@@ -29,6 +28,39 @@ import asyncio
 from pathlib import Path
 from pydantic import BaseModel
 from dotenv import load_dotenv
+
+try:
+    from slowapi import Limiter, _rate_limit_exceeded_handler
+    from slowapi.util import get_remote_address
+    from slowapi.errors import RateLimitExceeded
+    SLOWAPI_AVAILABLE = True
+except ImportError:
+    if os.environ.get("ALLOW_DEGRADED_STARTUP", "0") != "1":
+        raise
+
+    SLOWAPI_AVAILABLE = False
+
+    class RateLimitExceeded(Exception):
+        """Fallback exception placeholder when slowapi is unavailable."""
+
+    def get_remote_address(request: Request) -> str:
+        client = getattr(request, "client", None)
+        return getattr(client, "host", "unknown")
+
+    class Limiter:
+        """No-op limiter used only for degraded import/startup mode."""
+
+        def __init__(self, *args, **kwargs):
+            return None
+
+        def limit(self, *_args, **_kwargs):
+            def decorator(func):
+                return func
+
+            return decorator
+
+    _rate_limit_exceeded_handler = None
+    print("[WARNING] slowapi not installed; rate limiting disabled (ALLOW_DEGRADED_STARTUP=1)")
 
 # Load environment variables from backend/.env
 env_path = Path(__file__).parent / '.env'
@@ -52,13 +84,7 @@ except (ImportError, Exception) as e:
 # Ensure project root is on path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from backend.services.classifier_service import ClassifierService
-from backend.services.classifier_v2 import classifier_v2
-from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.onnx_service import onnx_classifier
-from backend.services.ner_service import NERService
-from backend.services.duplicate_service import DuplicateService
-from backend.services.rag_service import RagService
 from backend.services.sla_service import (
     calculate_sla_breach_at,
     calculate_sla_response_at,
@@ -66,6 +92,147 @@ from backend.services.sla_service import (
     load as load_sla_service,
     run_sla_escalation_loop,
 )
+
+ALLOW_DEGRADED_STARTUP = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") == "1"
+TEAM_MAP = {
+    "Access": "IAM Team",
+    "Network": "Network Support",
+    "Software": "Application Support",
+    "Hardware": "Hardware Support",
+}
+AUTO_RESOLVE_SUBS = {
+    "Password Reset", "Account Unlock", "Software Install",
+    "WiFi Issue", "Printer Error", "Monitor Problem",
+}
+
+
+def _handle_optional_backend_import(service_name: str, error: ImportError) -> None:
+    if not ALLOW_DEGRADED_STARTUP:
+        raise error
+    print(
+        f"[WARNING] {service_name} unavailable during degraded startup: {error}. "
+        "Using fallback implementation."
+    )
+
+
+try:
+    from backend.services.classifier_service import AUTO_RESOLVE_SUBS, TEAM_MAP, ClassifierService
+except ImportError as error:
+    _handle_optional_backend_import("ClassifierService", error)
+
+    class ClassifierService:
+        def __init__(self):
+            self._loaded = False
+
+        def load(self):
+            return None
+
+        def predict(self, _text: str) -> dict:
+            return {
+                "category": "Unknown",
+                "subcategory": "Unknown",
+                "priority": "Medium",
+                "auto_resolve": False,
+                "assigned_team": "General Support",
+                "confidence": 0.0,
+            }
+
+
+try:
+    from backend.services.classifier_v2 import classifier_v2
+except ImportError as error:
+    _handle_optional_backend_import("ClassifierServiceV2", error)
+
+    class _FallbackClassifierV2:
+        def predict(self, _text: str) -> dict:
+            return {"error": "V2 Model not loaded"}
+
+    classifier_v2 = _FallbackClassifierV2()
+
+
+try:
+    from backend.services.classifier_v3 import classifier_v3  # V3 Power Model
+except ImportError as error:
+    _handle_optional_backend_import("ClassifierServiceV3", error)
+
+    class _FallbackClassifierV3:
+        def predict(self, _text: str) -> dict:
+            return {"error": "V3 Model not loaded"}
+
+    classifier_v3 = _FallbackClassifierV3()
+
+
+try:
+    from backend.services.ner_service import NERService
+except ImportError as error:
+    _handle_optional_backend_import("NERService", error)
+
+    class NERService:
+        def __init__(self):
+            self._loaded = False
+
+        def load(self):
+            return None
+
+        def extract_entities(self, _text: str) -> list[dict]:
+            return []
+
+
+try:
+    from backend.services.duplicate_service import DuplicateService
+except ImportError as error:
+    _handle_optional_backend_import("DuplicateService", error)
+
+    class DuplicateService:
+        def __init__(self):
+            self._loaded = False
+
+        def load(self):
+            return None
+
+        def is_available(self) -> bool:
+            return False
+
+        def find_semantic_duplicate(self, _text: str, **_kwargs) -> dict:
+            return {
+                "is_duplicate": False,
+                "duplicate_ticket_id": None,
+                "parent_ticket_id": None,
+                "is_potential_duplicate": False,
+                "similarity": 0.0,
+            }
+
+        def check_duplicate(self, _text: str, threshold=None):
+            return {
+                "is_duplicate": False,
+                "duplicate_ticket_id": None,
+                "similarity": 0.0,
+            }
+
+        def generate_embedding(self, _text: str):
+            return None
+
+        def add_ticket(self, _ticket_id: str, _text: str):
+            return None
+
+
+try:
+    from backend.services.rag_service import RagService
+except ImportError as error:
+    _handle_optional_backend_import("RagService", error)
+
+    class RagService:
+        def __init__(self):
+            self._loaded = False
+
+        def load(self):
+            return None
+
+        def is_available(self) -> bool:
+            return False
+
+        def search_knowledge_base(self, _text: str, threshold: float = 0.85, match_count: int = 1):
+            return None
 
 
 # ---------------------------------------------------------------------------
@@ -126,7 +293,6 @@ def classify_ticket_text(text: str) -> dict:
             pri = classification_v3_res.get("priority", {}).get("prediction", "Medium")
             conf = classification_v3_res.get("Category", {}).get("confidence", 0.0)
 
-            from backend.services.classifier_service import TEAM_MAP, AUTO_RESOLVE_SUBS
             return {
                 "category": cat,
                 "subcategory": sub,
@@ -381,7 +547,8 @@ app = FastAPI(
 # Rate limiter — 10 AI requests per minute per IP (free tier protection)
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+if SLOWAPI_AVAILABLE and _rate_limit_exceeded_handler is not None:
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS — locked to production + local dev only
 app.add_middleware(
