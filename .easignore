@@ -1,0 +1,29 @@
+# ====================================================
+# EAS Build & Update Ignore Configuration (.easignore)
+# ====================================================
+# Exclude heavy non-mobile project directories from EAS cloud bundle
+# to keep archive sizes under 5MB instead of 700MB+.
+
+# Exclude non-mobile services
+/Frontend/
+/backend/
+/Model/
+/docs/
+/scratch/
+/scripts/
+/templates/
+/final_dataset.xlsx
+
+# Exclude package caches and git configs
+/.npm-cache/
+/.git/
+/.github/
+/.vscode/
+
+# Exclude local mobile development artifacts
+/MobileApp/node_modules/
+/MobileApp/.expo/
+/MobileApp/android/
+/MobileApp/ios/
+/MobileApp/web-build/
+/MobileApp/dist/

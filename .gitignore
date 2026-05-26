@@ -29,3 +29,15 @@ dist/
 docs/helpdesk*.pdf
 docs/logs/
 *.log
+
+# Scratch and local cache
+scratch/
+.npm-cache/
+
+# GSSoC Score Tracking and Temporary Scripts
+scratch/
+.npm-cache/
+*.tmp
+../MOBILE_SETUP_TEMP.md
+../CI_YML_TEMP.yml
+../ENV_EXAMPLE_TEMP.example

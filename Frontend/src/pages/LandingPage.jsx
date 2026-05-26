@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
  
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -13,6 +13,12 @@ import {
 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import TeamSection from '../components/landing/TeamSection';
+
+const CTA_TRANSITION = 'transition-all duration-200 ease-out transform-gpu will-change-transform';
+const CTA_SCALE = 'hover:scale-105 active:scale-[0.98]';
+const CTA_PRIMARY_GLOW = 'shadow-lg shadow-emerald-900/20 hover:shadow-emerald-900/35';
+const CTA_ICON_SHIFT = 'transition-transform duration-200 group-hover:translate-x-1';
+const CTA_PLAY_SHIFT = 'transition-transform duration-200 group-hover:translate-x-0.5';
 
 // ---- Count-up animation component ----
 function AnimatedStat({ target, suffix = '', prefix = '', label, isWord = false }) {
@@ -124,9 +130,9 @@ function DemoModal({ onClose }) {
                     <div className="flex gap-3 w-full md:w-auto">
                         <button
                             onClick={() => { onClose(); window.location.href = '/admin-signup'; }}
-                            className="flex-1 md:px-8 bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl font-black italic uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
+                            className={`group flex-1 md:px-8 bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl font-black italic uppercase tracking-wider ${CTA_TRANSITION} ${CTA_SCALE} ${CTA_PRIMARY_GLOW} flex items-center justify-center gap-2`}
                         >
-                            Start Free <ArrowRight className="w-4 h-4 ml-1" />
+                            Start Free <ArrowRight className={`w-4 h-4 ml-1 ${CTA_ICON_SHIFT}`} />
                         </button>
                     </div>
                 </div>
@@ -145,7 +151,7 @@ export default function LandingPage() {
     const [activeStep, setActiveStep] = useState(0);
     const [isRedirecting, setIsRedirecting] = useState(false);
 
-    const steps = [
+    const steps = useMemo(() => [
         {
             num: '01',
             title: 'Messy User Input',
@@ -208,7 +214,7 @@ export default function LandingPage() {
                 </div>
             )
         }
-    ];
+    ], []);
 
     useEffect(() => {
         if (!loading && user && profile) {
@@ -225,7 +231,7 @@ export default function LandingPage() {
             period: '/mo',
             desc: 'Perfect for small teams exploring AI helpdesk.',
             cta: 'Get Started Free',
-            ctaStyle: 'border border-gray-200 text-gray-700 hover:border-emerald-900 hover:text-emerald-800',
+            ctaStyle: `border border-gray-200 text-gray-700 hover:border-emerald-900 hover:text-emerald-800 group ${CTA_TRANSITION} ${CTA_SCALE}`,
             features: ['Up to 50 tickets/mo', 'Basic AI Categorization', 'Email Support', '1 Team Member', 'Public API Access'],
             popular: false,
         },
@@ -235,7 +241,7 @@ export default function LandingPage() {
             period: '/mo',
             desc: 'For growing IT teams needing full automation.',
             cta: 'Start Free Trial',
-            ctaStyle: 'bg-emerald-900 text-white hover:bg-emerald-800 shadow-lg shadow-emerald-900/20',
+            ctaStyle: `bg-emerald-900 text-white hover:bg-emerald-800 group ${CTA_TRANSITION} ${CTA_SCALE} ${CTA_PRIMARY_GLOW}`,
             features: ['Up to 500 tickets/mo', 'Advanced AI Parsing', 'Priority Detection Engine', 'Duplicate Detection', '5 Team Members', 'Priority Email Support'],
             popular: true,
         },
@@ -245,7 +251,7 @@ export default function LandingPage() {
             period: '',
             desc: 'For large organizations with complex IT landscapes.',
             cta: 'Contact Sales',
-            ctaStyle: 'border border-gray-200 text-gray-700 hover:border-emerald-900 hover:text-emerald-800',
+            ctaStyle: `border border-gray-200 text-gray-700 hover:border-emerald-900 hover:text-emerald-800 group ${CTA_TRANSITION} ${CTA_SCALE}`,
             features: ['Unlimited tickets', 'Custom AI Fine-Tuning', 'SSO & Audit Logs', 'Dedicated SLA Manager', 'Unlimited Members', 'VAPT & Compliance Reports'],
             popular: false,
         },
@@ -316,13 +322,13 @@ export default function LandingPage() {
                             </button>
                             <button
                                 onClick={() => setShowDemo(true)}
-                                className="text-sm font-semibold text-emerald-800 border border-emerald-200 px-4 py-2 rounded-lg hover:bg-emerald-50 transition-all flex items-center gap-1.5"
+                                className={`group text-sm font-semibold text-emerald-800 border border-emerald-200 px-4 py-2 rounded-lg hover:bg-emerald-50 ${CTA_TRANSITION} ${CTA_SCALE} flex items-center gap-1.5`}
                             >
-                                <Play className="w-3.5 h-3.5 fill-emerald-700" /> Watch Demo
+                                <Play className={`w-3.5 h-3.5 fill-emerald-700 ${CTA_PLAY_SHIFT}`} /> Watch Demo
                             </button>
                             <button
                                 onClick={() => navigate('/admin-signup')}
-                                className="bg-emerald-900 hover:bg-emerald-800 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-all shadow-lg shadow-emerald-900/20"
+                                className={`group bg-emerald-900 hover:bg-emerald-800 text-white px-5 py-2.5 rounded-lg text-sm font-semibold ${CTA_TRANSITION} ${CTA_SCALE} ${CTA_PRIMARY_GLOW}`}
                             >
                                 Get Started Free
                             </button>
@@ -345,13 +351,13 @@ export default function LandingPage() {
                             <a href="#how-it-works" onClick={() => setIsMenuOpen(false)} className="block text-base font-semibold text-gray-700 hover:text-emerald-800 py-2">How It Works</a>
                             <a href="#pricing" onClick={() => setIsMenuOpen(false)} className="block text-base font-semibold text-gray-700 hover:text-emerald-800 py-2">Pricing</a>
                             <div className="pt-4 flex flex-col gap-3 border-t border-gray-100">
-                                <button onClick={() => { setIsMenuOpen(false); setShowDemo(true); }} className="w-full text-center py-2.5 text-emerald-800 font-semibold border border-emerald-200 rounded-lg flex items-center justify-center gap-2">
-                                    <Play className="w-4 h-4 fill-emerald-700" /> Watch Demo
+                                <button onClick={() => { setIsMenuOpen(false); setShowDemo(true); }} className={`group w-full text-center py-2.5 text-emerald-800 font-semibold border border-emerald-200 rounded-lg flex items-center justify-center gap-2 ${CTA_TRANSITION} ${CTA_SCALE}`}>
+                                    <Play className={`w-4 h-4 fill-emerald-700 ${CTA_PLAY_SHIFT}`} /> Watch Demo
                                 </button>
                                 <button onClick={() => navigate('/login')} className="w-full text-center py-2.5 text-gray-700 font-semibold border border-gray-100 rounded-lg">
                                     Sign In
                                 </button>
-                                <button onClick={() => navigate('/admin-signup')} className="w-full bg-emerald-900 text-white py-3 rounded-lg font-semibold shadow">
+                                <button onClick={() => navigate('/admin-signup')} className={`group w-full bg-emerald-900 text-white py-3 rounded-lg font-semibold ${CTA_TRANSITION} ${CTA_SCALE} ${CTA_PRIMARY_GLOW}`}>
                                     Get Started Free
                                 </button>
                             </div>
@@ -382,15 +388,15 @@ export default function LandingPage() {
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
                         <button
                             onClick={() => navigate('/admin-signup')}
-                            className="w-full sm:w-auto px-8 py-4 bg-emerald-900 text-white rounded-xl font-bold shadow-xl shadow-emerald-900/25 hover:bg-emerald-800 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-base"
+                            className={`group w-full sm:w-auto px-8 py-4 bg-emerald-900 text-white rounded-xl font-bold ${CTA_PRIMARY_GLOW} hover:bg-emerald-800 ${CTA_TRANSITION} ${CTA_SCALE} flex items-center justify-center gap-2 text-base`}
                         >
-                            Get Started Free <ArrowRight className="w-5 h-5" />
+                            Get Started Free <ArrowRight className={`w-5 h-5 ${CTA_ICON_SHIFT}`} />
                         </button>
                         <button
                             onClick={() => setShowDemo(true)}
-                            className="w-full sm:w-auto px-8 py-4 bg-white text-gray-700 border border-gray-200 rounded-xl font-semibold hover:border-emerald-500 hover:text-emerald-700 transition-all flex items-center justify-center gap-2 text-base"
+                            className={`group w-full sm:w-auto px-8 py-4 bg-white text-gray-700 border border-gray-200 rounded-xl font-semibold hover:border-emerald-500 hover:text-emerald-700 ${CTA_TRANSITION} ${CTA_SCALE} flex items-center justify-center gap-2 text-base`}
                         >
-                            <Play className="w-4 h-4 fill-gray-500" /> Watch a Demo
+                            <Play className={`w-4 h-4 fill-gray-500 ${CTA_PLAY_SHIFT}`} /> Watch a Demo
                         </button>
                     </div>
 
@@ -427,7 +433,7 @@ export default function LandingPage() {
                                         <div className="mb-4">
                                             <h3 className="text-sm font-bold text-gray-800 mb-1">Subject: Wifi down again in Lab 3??</h3>
                                             <p className="text-sm text-gray-600 leading-relaxed">
-                                                Hey support, the wifi in <span className="bg-yellow-100 px-1 rounded">downstairs lab 3</span> is acting up again.
+                                                Hey support, the wifi in <span className="bg-yellow-200 dark:bg-yellow-500/30 dark:text-yellow-200 text-yellow-900 px-1 rounded font-medium">downstairs lab 3</span> is acting up again.
                                                 Can't connect at all. Class starts in 20 mins, need this fixed ASAP!<br /><br />
                                                 Thanks,<br />Sarah
                                             </p>
@@ -658,7 +664,7 @@ export default function LandingPage() {
                             <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-widest border border-emerald-500/20 mb-4 md:mb-6">
                                 The Journey
                             </div>
-                            <h2 className="text-3xl sm:text-4xl md:text-6xl font-black text-white tracking-tight leading-[0.9] mb-8 md:mb-12 italic uppercase">
+                            <h2 className="text-3xl sm:text-4xl md:text-6xl font-extrabold text-white tracking-tight leading-[0.95] mb-8 md:mb-12">
                                 From Chaos <br />
                                 to <span className="text-emerald-500">Clarity.</span>
                             </h2>
@@ -669,28 +675,25 @@ export default function LandingPage() {
                                         key={idx}
                                         onMouseEnter={() => setActiveStep(idx)}
                                         onClick={() => setActiveStep(idx)}
-                                        className={`group cursor-pointer p-6 rounded-3xl transition-all duration-500 border ${activeStep === idx
+                                        className={`group cursor-pointer p-6 rounded-3xl transition-all duration-300 border ${activeStep === idx
                                             ? 'bg-white/10 border-white/20 shadow-2xl shadow-black/20'
                                             : 'bg-transparent border-transparent hover:bg-white/5 opacity-40 hover:opacity-100'
                                             }`}
                                     >
                                         <div className="flex items-start gap-4 md:gap-6">
-                                            <div className={`shrink-0 w-10 md:w-12 h-10 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center font-black text-lg md:text-xl italic transition-all duration-500 ${activeStep === idx ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 rotate-12 scale-110' : 'bg-white/10 text-white/40'}`}>
+                                            <div className={`shrink-0 w-10 md:w-12 h-10 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center font-bold text-lg md:text-xl transition-all duration-300 ${activeStep === idx ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 scale-105' : 'bg-white/10 text-white/40'}`}>
                                                 {step.num}
                                             </div>
                                             <div>
-                                                <h3 className={`text-xl font-black italic uppercase transition-colors duration-500 ${activeStep === idx ? 'text-white' : 'text-white/60'}`}>
+                                                <h3 className={`text-xl font-semibold tracking-tight transition-colors duration-300 ${activeStep === idx ? 'text-white' : 'text-white/60'}`}>
                                                     {step.title}
                                                 </h3>
-                                                {activeStep === idx && (
-                                                    <motion.p
-                                                        initial={{ opacity: 0, height: 0 }}
-                                                        animate={{ opacity: 1, height: 'auto' }}
-                                                        className="text-white/60 text-sm mt-3 leading-relaxed max-w-sm"
-                                                    >
-                                                        {step.desc}
-                                                    </motion.p>
-                                                )}
+                                                <p
+                                                    aria-hidden={activeStep !== idx}
+                                                    className={`text-white/60 text-sm mt-3 leading-relaxed max-w-sm overflow-hidden transition-all duration-300 ${activeStep === idx ? 'opacity-100 max-h-24' : 'opacity-0 max-h-0'}`}
+                                                >
+                                                    {step.desc}
+                                                </p>
                                             </div>
                                         </div>
                                     </div>
@@ -701,14 +704,14 @@ export default function LandingPage() {
                         {/* Right: Visual Display */}
                         <div className="w-full md:w-1/2 h-[350px] md:h-[500px] relative">
                             <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-[32px] md:rounded-[40px] border border-white/5 backdrop-blur-3xl overflow-hidden p-6 md:p-12 flex items-center justify-center">
-                                <AnimatePresence mode="wait">
+                                <AnimatePresence mode="sync">
                                     <motion.div
                                         key={activeStep}
-                                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                        initial={{ opacity: 0, scale: 0.98, y: 10 }}
                                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                                        exit={{ opacity: 0, scale: 1.1, y: -20 }}
-                                        transition={{ type: 'spring', damping: 20, stiffness: 100 }}
-                                        className="w-full h-full flex flex-col items-center justify-center"
+                                        exit={{ opacity: 0, scale: 1.01, y: -8 }}
+                                        transition={{ duration: 0.28, ease: 'easeOut' }}
+                                        className="w-full h-full flex flex-col items-center justify-center will-change-transform"
                                     >
                                         <div className="mb-6 inline-flex items-center gap-2 px-4 py-1.5 bg-white/5 text-white/50 rounded-full text-[10px] font-black uppercase tracking-[0.2em]">
                                             <div className={`w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse`} />
@@ -772,7 +775,7 @@ export default function LandingPage() {
                                 <button
                                     onClick={() => handlePricingClick(name)}
                                     disabled={isRedirecting && name === 'Growth'}
-                                    className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold transition-all mb-8 text-sm ${ctaStyle} ${isRedirecting && name === 'Growth' ? 'opacity-80 cursor-not-allowed' : ''}`}
+                                    className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold mb-8 text-sm ${ctaStyle} ${isRedirecting && name === 'Growth' ? 'opacity-80 cursor-not-allowed' : ''}`}
                                 >
                                     {isRedirecting && name === 'Growth' ? (
                                         <>
@@ -815,15 +818,15 @@ export default function LandingPage() {
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                         <button
                             onClick={() => navigate('/admin-signup')}
-                            className="w-full sm:w-auto px-8 py-4 bg-white text-emerald-900 font-bold rounded-xl hover:bg-green-50 transition-all shadow-xl"
+                            className={`group w-full sm:w-auto px-8 py-4 bg-white text-emerald-900 font-bold rounded-xl hover:bg-green-50 ${CTA_TRANSITION} ${CTA_SCALE} shadow-xl`}
                         >
                             Get Started Free
                         </button>
                         <button
                             onClick={() => setShowDemo(true)}
-                            className="w-full sm:w-auto px-8 py-4 border border-white/30 text-white font-semibold rounded-xl hover:bg-white/10 transition-all flex items-center justify-center gap-2"
+                            className={`group w-full sm:w-auto px-8 py-4 border border-white/30 text-white font-semibold rounded-xl hover:bg-white/10 ${CTA_TRANSITION} ${CTA_SCALE} flex items-center justify-center gap-2`}
                         >
-                            <Play className="w-4 h-4 fill-white" /> Watch Demo
+                            <Play className={`w-4 h-4 fill-white ${CTA_PLAY_SHIFT}`} /> Watch Demo
                         </button>
                     </div>
                     <div className="mt-8">

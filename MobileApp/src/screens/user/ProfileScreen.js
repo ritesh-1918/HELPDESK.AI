@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
+import { backendLogout } from '../../lib/authBackend';
 import { COLORS, SHADOWS } from '../../styles/theme';
 import {
   User, Mail, Building2, ShieldCheck, Calendar, Ticket, Zap,
@@ -16,6 +17,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
 import { useFocusEffect } from '@react-navigation/native';
 import { useNotification } from '../../components/NotificationProvider';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ProfileScreen = () => {
   const { success, error: notifyError } = useNotification();
@@ -223,8 +225,21 @@ const ProfileScreen = () => {
   };
 
   const handleLogout = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    await supabase.auth.signOut();
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await backendLogout();
+      // Forcefully wipe all Supabase session keys from AsyncStorage first to trigger instant navigation resetting
+      const keys = await AsyncStorage.getAllKeys();
+      const supabaseKeys = keys.filter(k => k.startsWith('sb-') || k.includes('supabase'));
+      for (const key of supabaseKeys) {
+        await AsyncStorage.removeItem(key);
+      }
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.warn("Logout error, forcing full wipe:", e);
+      await AsyncStorage.clear();
+      await supabase.auth.signOut();
+    }
   };
 
   if (loading) {

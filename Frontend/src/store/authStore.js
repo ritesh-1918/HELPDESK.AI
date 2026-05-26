@@ -1,9 +1,54 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '../lib/supabaseClient';
+import { API_CONFIG } from '../config';
 import useTicketStore from './ticketStore';
 
+const BACKEND_URL = API_CONFIG.BACKEND_URL;
+
+const verifyServerCookieSession = async () => {
+    try {
+        const res = await fetch(`${BACKEND_URL}/auth/me`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: { Accept: 'application/json' },
+        });
+        if (!res.ok) return null;
+        const body = await res.json();
+        return body?.user || null;
+    } catch (e) {
+        console.warn('Server cookie session check failed:', e?.message || e);
+        return null;
+    }
+};
+
+const mirrorBackendAuth = async (path, payload) => {
+    try {
+        await fetch(`${BACKEND_URL}${path}`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+    } catch (e) {
+        console.warn(`Backend auth ${path} failed:`, e?.message || e);
+    }
+};
+
 let currentUserPromise = null;
+
+const getProfileCache = (profile) => {
+    if (!profile?.id) return null;
+
+    return {
+        id: profile.id,
+        email: profile.email,
+        full_name: profile.full_name,
+        company: profile.company,
+        company_id: profile.company_id,
+        profile_picture: profile.profile_picture,
+    };
+};
 
 const useAuthStore = create(
     persist(
@@ -21,38 +66,25 @@ const useAuthStore = create(
                 if (!user) return null;
 
                 const metadata = user.user_metadata || {};
-                const currentProfile = get().profile;
+                set({ profile: null });
 
-                // 1. Resolve FROM METADATA or PERSISTED state
-                // Priority 1: If we have a persisted session for THIS user and it's active, keep it 
-                // to prevent temporary lobbies during refresh/tab switching.
-                if (currentProfile && currentProfile.id === user.id && currentProfile.status === 'active') {
-                    console.log("Active profile retained from state.");
-                    // Background fetch to ensure session is still valid/synced
-                    get()._syncProfile(user.id);
-                    return currentProfile;
-                }
-
-                // Priority 2: Use Auth Metadata (Instant fallback)
-                const isMasterAdmin = user.email === 'masteradmin@helpdesk.ai';
-
-                const instantProfile = {
-                    id: user.id,
-                    email: user.email,
-                    full_name: isMasterAdmin ? 'Master Admin' : (metadata.full_name || 'User'),
-                    role: isMasterAdmin ? 'master_admin' : (metadata.role || 'user'),
-                    status: isMasterAdmin ? 'active' : 'pending_email_verification',
-                    company: metadata.company || ''
-                };
-
-                // 2. Sync with Database First before setting a fallback
-                // This prevents flashes of 'pending_email_verification' when returning from magic links
+                // Always resolve authorization fields from the database. Local storage and
+                // user_metadata are client-controlled surfaces and must not grant roles.
                 const dbProfile = await get()._syncProfile(user.id);
                 if (dbProfile) {
                     return dbProfile;
                 }
 
-                console.log("Falling back to instant profile resolved from metadata:", instantProfile.role);
+                const instantProfile = {
+                    id: user.id,
+                    email: user.email,
+                    full_name: metadata.full_name || 'User',
+                    role: 'user',
+                    status: 'pending_email_verification',
+                    company: metadata.company || ''
+                };
+
+                console.log("Falling back to non-authoritative profile:", instantProfile.role);
                 set({ profile: instantProfile });
                 return instantProfile;
             },
@@ -89,13 +121,19 @@ const useAuthStore = create(
                 currentUserPromise = (async () => {
                     try {
                         set({ isCheckingSession: true });
+                        const cookieUser = await verifyServerCookieSession();
+                        if (cookieUser) {
+                            set({ user: cookieUser });
+                            await get().getProfile(cookieUser);
+                            return cookieUser;
+                        }
+
                         const { data: { user }, error } = await supabase.auth.getUser();
                         if (error) throw error;
 
                         if (user) {
                             set({ user });
-                            // Don't 'await' here because we want 'loading: false' ASAP
-                            get().getProfile(user);
+                            await get().getProfile(user);
                         } else {
                             set({ user: null, profile: null });
                         }
@@ -117,6 +155,8 @@ const useAuthStore = create(
                 set({ loading: true });
                 console.log("Attempting login for:", email);
                 try {
+                    await mirrorBackendAuth('/auth/login', { email, password });
+
                     const { data, error } = await supabase.auth.signInWithPassword({
                         email,
                         password,
@@ -205,6 +245,14 @@ const useAuthStore = create(
                 console.log("Starting signup for:", email);
 
                 try {
+                    await mirrorBackendAuth('/auth/signup', {
+                        email,
+                        password,
+                        full_name: fullName,
+                        role,
+                        company,
+                    });
+
                     // 1. Auth Signup with Metadata
                     console.log("Step 1: Auth.signUp...");
                     const { data, error } = await supabase.auth.signUp({
@@ -245,6 +293,15 @@ const useAuthStore = create(
             logout: async () => {
                 set({ loading: true });
                 try {
+                    try {
+                        await fetch(`${BACKEND_URL}/auth/logout`, {
+                            method: 'POST',
+                            credentials: 'include',
+                        });
+                    } catch (e) {
+                        console.warn('Backend cookie logout failed:', e?.message || e);
+                    }
+
                     const { error } = await supabase.auth.signOut();
                     if (error) throw error;
                     set({ user: null, profile: null });
@@ -293,8 +350,8 @@ const useAuthStore = create(
                 supabase.auth.onAuthStateChange(async (event, session) => {
                     console.log("Auth state change:", event);
                     if (session?.user) {
-                        set({ user: session.user });
-                        get().getProfile(session.user);
+                        set({ user: session.user, loading: true, isCheckingSession: true });
+                        await get().getProfile(session.user);
                     } else {
                         set({ user: null, profile: null });
                     }
@@ -305,9 +362,8 @@ const useAuthStore = create(
         {
             name: 'auth-storage',
             partialize: (state) => ({
-                // We keep profile persisted for quick UI transitions, 
-                // but session is handled by Supabase cookie/localStorage
-                profile: state.profile
+                // Cache display-only profile fields. Role/status must come from the DB.
+                profile: getProfileCache(state.profile)
             }),
         }
     )

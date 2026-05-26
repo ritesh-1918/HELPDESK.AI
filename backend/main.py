@@ -10,19 +10,22 @@ import os
 import sys
 import uuid
 import json
+import re
 import datetime
 import traceback
 import warnings
 import logging
+import hashlib
 from contextlib import asynccontextmanager
 
 # Suppress harmless PyTorch CPU pin_memory warning
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from fastapi.encoders import jsonable_encoder
 import asyncio
 from pathlib import Path
@@ -66,6 +69,13 @@ except ImportError:
 env_path = Path(__file__).parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
+# CI smoke tests allow degraded startup so the app can import without heavy ML assets.
+ALLOW_DEGRADED_STARTUP = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") == "1"
+
+
+def _startup_fatal(message: str) -> None:
+    print(f"[Startup-FATAL] {message}")
+
 # Initialize Supabase Client (Service Role for backend bypass)
 try:
     from supabase import create_client, Client
@@ -75,7 +85,8 @@ try:
         print("[ERROR] SUPABASE_URL or SUPABASE_SERVICE_KEY not set in backend/.env")
         supabase = None
     else:
-        supabase = create_client(url, key)
+        from backend.auth.crypto import wrap_client
+        supabase = wrap_client(create_client(url, key))
 except (ImportError, Exception) as e:
     print(f"[WARNING] Supabase initialization failed: {e}")
     supabase = None
@@ -86,12 +97,150 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from backend.services.onnx_service import onnx_classifier
 from backend.services.sla_service import (
-    calculate_sla_breach_at,
-    calculate_sla_response_at,
     classify_sla_status,
     load as load_sla_service,
     run_sla_escalation_loop,
 )
+from backend.services.audit_service import AuditLogService, AuditLogAccessError
+from backend.services.semantic_duplicate_service import SemanticDuplicateService
+from backend.services.spam_service import SpamService
+from backend.services.sla_engine import SLAEngine, compute_sla_breach_at, get_sla_policy
+from backend.services.redis_cache import redis_cache
+from backend.auth_cookie import router as auth_cookie_router, get_current_user  # noqa: F401
+
+
+# ---------------------------------------------------------------------------
+# WebSocket Connection Manager — real-time ticket dashboards
+# ---------------------------------------------------------------------------
+
+HEARTBEAT_INTERVAL = 30  # seconds between ping broadcasts
+HEARTBEAT_TIMEOUT = 10   # seconds to wait for a pong before disconnect
+
+
+class ConnectionManager:
+    """Tracks active WebSocket connections grouped by ``company_id``.
+
+    Thread-safe for concurrent connect/disconnect calls from multiple
+    ASGI workers (single-process via ``asyncio.Lock``).
+    """
+
+    def __init__(self) -> None:
+        self._connections: dict[str, set[WebSocket]] = {}
+        self._lock = asyncio.Lock()
+
+    async def connect(self, company_id: str, ws: WebSocket) -> None:
+        """Accept a new WebSocket and register it under ``company_id``."""
+        await ws.accept()
+        async with self._lock:
+            self._connections.setdefault(company_id, set()).add(ws)
+
+    async def disconnect(self, company_id: str, ws: WebSocket) -> None:
+        """Remove a WebSocket from the pool."""
+        async with self._lock:
+            connections = self._connections.get(company_id)
+            if connections:
+                connections.discard(ws)
+                # Clean up empty company groups
+                if not connections:
+                    del self._connections[company_id]
+
+    async def broadcast(self, company_id: str, message: dict) -> int:
+        """Send a JSON message to every client in a company group.
+
+        Returns:
+            Number of successfully sent messages.
+        """
+        payload = json.dumps(message, default=str)
+        sent = 0
+        async with self._lock:
+            connections = set(self._connections.get(company_id, []))
+
+        for ws in connections:
+            try:
+                await ws.send_text(payload)
+                sent += 1
+            except Exception:
+                await self.disconnect(company_id, ws)
+        return sent
+
+    async def broadcast_all(self, message: dict) -> int:
+        """Send a JSON message to **all** connected clients."""
+        payload = json.dumps(message, default=str)
+        sent = 0
+        async with self._lock:
+            all_connections = {
+                ws for group in self._connections.values() for ws in group
+            }
+
+        for ws in all_connections:
+            try:
+                await ws.send_text(payload)
+                sent += 1
+            except Exception:
+                pass
+        return sent
+
+    async def ping_all(self) -> None:
+        """Send a ``{"type": "ping"}`` heartbeat to every connection.
+
+        Connections that fail to receive the ping are removed.
+        """
+        async with self._lock:
+            # Snapshot all connections under lock so iteration is safe
+            snapshot = {
+                cid: set(ws_set) for cid, ws_set in self._connections.items()
+            }
+
+        for cid, ws_set in snapshot.items():
+            for ws in list(ws_set):
+                try:
+                    await ws.send_json({"type": "ping"})
+                except Exception:
+                    await self.disconnect(cid, ws)
+
+    @property
+    def active_count(self) -> int:
+        """Total number of connected clients across all companies."""
+        return sum(len(ws_set) for ws_set in self._connections.values())
+
+
+# Singleton — reused across lifespan and WebSocket route
+connection_manager = ConnectionManager()
+
+
+async def _heartbeat_loop() -> None:
+    """Background task: broadcast ping every ``HEARTBEAT_INTERVAL`` seconds.
+
+    Clients that fail the ping are disconnected automatically by
+    ``ConnectionManager.ping_all()``.
+    """
+    while True:
+        await asyncio.sleep(HEARTBEAT_INTERVAL)
+        try:
+            await connection_manager.ping_all()
+            count = connection_manager.active_count
+            if count:
+                print(f"[WS] Heartbeat sent to {count} active connection(s)")
+        except Exception as exc:
+            print(f"[WS] Heartbeat error: {exc}")
+
+
+# ---------------------------------------------------------------------------
+# SLA helper functions (must be defined before save_ticket uses them)
+# ---------------------------------------------------------------------------
+
+def calculate_sla_breach_at(priority: str) -> datetime.datetime:
+    """Return the UTC datetime by which the ticket must be resolved."""
+    hours_map = {"critical": 2, "high": 8, "medium": 24, "low": 72}
+    hours = hours_map.get(str(priority).lower().strip(), 72)
+    return datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=hours)
+
+
+def calculate_sla_response_at(priority: str) -> datetime.datetime:
+    """Return the UTC datetime by which the ticket must receive a first response."""
+    hours_map = {"critical": 0.5, "high": 2, "medium": 6, "low": 18}
+    hours = hours_map.get(str(priority).lower().strip(), 6)
+    return datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=hours)
 
 ALLOW_DEGRADED_STARTUP = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") == "1"
 TEAM_MAP = {
@@ -285,6 +434,16 @@ def detect_semantic_duplicate(text: str, *, company_id: str | None, threshold: f
 
 def classify_ticket_text(text: str) -> dict:
     """Run the local classifier cascade with ONNX as the offline fallback path."""
+    cached = redis_cache.get_classification(text)
+    if cached:
+        return cached
+
+    result = _classify_ticket_text_uncached(text)
+    redis_cache.set_classification(text, result)
+    return result
+
+
+def _classify_ticket_text_uncached(text: str) -> dict:
     try:
         classification_v3_res = classifier_v3.predict(text)
         if "error" not in classification_v3_res:
@@ -319,13 +478,13 @@ def classify_ticket_text(text: str) -> dict:
             "category": "Unknown", "subcategory": "Unknown", "priority": "Medium",
             "auto_resolve": False, "assigned_team": "General Support", "confidence": 0.0,
         }
+
 class TicketRequest(BaseModel):
     text: str
     image_base64: str = ""
     image_text: str = "" # Keep for backward compatibility
     user_id: str | None = None
     company: str | None = None
-    company_id: str | None = None
     image_url: str | None = None
     confidence_threshold: float = 0.20
     duplicate_sensitivity: float = 0.85
@@ -345,26 +504,21 @@ class TicketSaveRequest(BaseModel):
     image_url: str | None = None
     company: str | None = None
     company_id: str | None = None
-    description_vector: list[float] | None = None
-    is_potential_duplicate: bool = False
-    parent_ticket_id: str | None = None
-    sla_response_due_at: str | None = None
     sla_breach_at: str
     sla_status: str | None = None
     escalation_level: int = 0
-    metadata: dict
+    metadata: dict = {}
     entities: list = []
     solution_steps: list = []
     ocr_text: str = ""
     needs_review: bool = False
-    routing_confidence: float
+    routing_confidence: float = 0.0
+
 
 
 class DuplicateInfo(BaseModel):
     is_duplicate: bool
     duplicate_ticket_id: str | None = None
-    parent_ticket_id: str | None = None
-    is_potential_duplicate: bool = False
     similarity: float = 0.0
 
 
@@ -372,6 +526,14 @@ class EntityInfo(BaseModel):
     text: str
     label: str
     confidence: float
+
+
+class SpamCheck(BaseModel):
+    is_spam: bool = False
+    risk_score: float = 0.0
+    reasons: list[str] = []
+    suspicious_urls: list[str] = []
+    matched_keywords: list[str] = []
 
 
 class TicketResponse(BaseModel):
@@ -386,8 +548,6 @@ class TicketResponse(BaseModel):
     entities: list[EntityInfo]
     duplicate_ticket: DuplicateInfo
     confidence: float
-    is_potential_duplicate: bool = False
-    parent_ticket_id: str | None = None
     needs_review: bool = False
     reasoning: str = ""
     decision_factors: list[str] = []
@@ -397,6 +557,11 @@ class TicketResponse(BaseModel):
     timeline: dict = {} # Map of step_name: timestamp
     env_metadata: dict = {} # IP, Hostname, Browser/OS
     sla_breach_at: str | None = None
+    original_text: str | None = None
+    source_language: str = "en"
+    source_language_name: str = "English"
+    was_translated: bool = False
+    spam_check: SpamCheck = SpamCheck()
     version: str = "2.1.0-Neural-Diagnostic"
 
 
@@ -424,6 +589,24 @@ class TicketRecord(BaseModel):
     timeline: dict = {} # Milestones: created, analyzed, triaged, routed, in_progress, resolved
 
 
+class AuditLogProfile(BaseModel):
+    full_name: str | None = None
+    email: str | None = None
+    profile_picture: str | None = None
+
+
+class AuditLogRecord(BaseModel):
+    id: str
+    ticket_id: str
+    company_id: str
+    performed_by: str | None = None
+    action: str
+    old_value: dict | list | str | None = None
+    new_value: dict | list | str | None = None
+    created_at: str
+    performed_by_profile: AuditLogProfile | None = None
+
+
 # --- In-Memory Database (to be replaced with SQL later) ---
 TICKETS_DB: list[TicketRecord] = []
 
@@ -446,6 +629,9 @@ classifier_service = ClassifierService()
 ner_service = NERService()
 duplicate_service = DuplicateService()
 rag_service = RagService()
+spam_service = SpamService()
+sla_engine = SLAEngine(supabase_client=None)  # Will be reassigned after supabase init
+semantic_dupe_service = SemanticDuplicateService(supabase_client=None)  # wired in lifespan
 
 try:
     from backend.services.gemini_service import GeminiService
@@ -459,6 +645,82 @@ try:
 except ImportError:
     ocr_service = None
 
+LANGUAGE_NAMES = {
+    "en": "English",
+    "es": "Spanish",
+    "de": "German",
+    "hi": "Hindi",
+    "fr": "French",
+    "it": "Italian",
+    "pt": "Portuguese",
+    "ja": "Japanese",
+    "ko": "Korean",
+    "zh": "Chinese",
+    "ar": "Arabic",
+    "ru": "Russian",
+}
+
+def _heuristic_language_detection(text: str) -> dict:
+    sample = (text or "").strip()
+    if not sample:
+        return {"code": "en", "name": "English"}
+    ascii_chars = sum(1 for c in sample if ord(c) < 128)
+    ratio = ascii_chars / max(len(sample), 1)
+    if ratio > 0.97:
+        return {"code": "en", "name": "English"}
+    return {"code": "unknown", "name": "Unknown"}
+
+def detect_and_translate_ticket_text(text: str) -> dict:
+    original_text = (text or "").strip()
+    if not original_text:
+        return {
+            "text_for_analysis": text or "",
+            "source_language": "en",
+            "source_language_name": "English",
+            "was_translated": False,
+            "original_text": "",
+            "metadata":{},
+        }
+
+    detected = _heuristic_language_detection(original_text)
+    if gemini_service and getattr(gemini_service, "_initialized", False):
+        detected = gemini_service.detect_language(original_text)
+
+    source_code = str(detected.get("code", "en")).lower()
+    source_name = detected.get("name") or LANGUAGE_NAMES.get(source_code, source_code.upper())
+    if source_code in ("en", "eng"):
+        return {
+            "text_for_analysis": original_text,
+            "source_language": "en",
+            "source_language_name": "English",
+            "was_translated": False,
+            "original_text": original_text,
+            "metadata":{},
+        }
+
+    translated_text = original_text
+    if gemini_service and getattr(gemini_service, "_initialized", False):
+        translated_text = gemini_service.translate_to_english(original_text, source_name)
+
+    if not translated_text or translated_text.strip() == original_text:
+        return {
+            "text_for_analysis": original_text,
+            "source_language": source_code,
+            "source_language_name": source_name,
+            "was_translated": False,
+            "original_text": original_text,
+            "metadata":{},
+        }
+
+    return {
+        "text_for_analysis": translated_text.strip(),
+        "source_language": source_code,
+        "source_language_name": source_name,
+        "was_translated": True,
+        "original_text": original_text,
+        "metadata":{},
+    }
+
 
 # ---------------------------------------------------------------------------
 # Lifespan (startup / shutdown)
@@ -467,6 +729,10 @@ except ImportError:
 async def lifespan(app: FastAPI):
     """Load all models at startup."""
     print("[Startup] Loading AI models ...")
+    try:
+        redis_cache.connect()
+    except Exception as e:
+        print(f"[WARNING] Redis cache not available: {e}")
     try:
         classifier_service.load()
     except FileNotFoundError as e:
@@ -487,51 +753,47 @@ async def lifespan(app: FastAPI):
         onnx_classifier.load()
     except Exception as e:
         print(f"[WARNING] ONNX classifier fallback not loaded: {e}")
-    
+
     if gemini_service:
         print(f"[Startup] Gemini Service: {'Initialized' if gemini_service._initialized else 'FAILED (Key missing or SDK error)'}")
     else:
         print("[Startup] Gemini Service: NOT LOADED (Import failed)")
 
+    # Wire services with supabase client
+    sla_engine.supabase = supabase
+    semantic_dupe_service.supabase = supabase
+
+    # Pre-load embedding model so first ticket save is fast
+    try:
+        semantic_dupe_service.load()
+        print(f"[Startup] Semantic Duplicate Detection: {'Loaded' if semantic_dupe_service._loaded else 'Failed (model missing)'}")
+    except Exception as e:
+        print(f"[Startup] Semantic Duplicate Detection load error: {e}")
+    print(f"[Startup] SLA Engine: {'Initialized' if supabase else 'Offline (no DB)'}")
+
+    # Start background SLA checker as an async task (every 5 minutes)
+    if supabase:
+        from backend.sla_checker import sla_checker_loop_async
+        asyncio.create_task(sla_checker_loop_async(supabase, interval_seconds=300))
+        print("[Startup] SLA background checker started (interval=300s)")
+
     print("[Startup] Classifier V2 Shadow: Ready.")
     print(f"[Startup] ONNX MiniLM Fallback: {'READY' if getattr(onnx_classifier, '_loaded', False) else 'DEGRADED (artifacts missing)'}")
     print("[Startup] Ready.")
-    # Strict health checks: fail loudly when core model assets are unavailable.
-    # Set ALLOW_DEGRADED_STARTUP=1 to permit degraded startup for local/dev convenience.
+
+    # Start WebSocket heartbeat background loop
+    heartbeat_task = asyncio.create_task(_heartbeat_loop())
+    print("[Startup] WebSocket heartbeat loop started (interval=30s).")
+
+    yield
+
+    # Cancel background tasks on shutdown
+    heartbeat_task.cancel()
     try:
-        strict_mode = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") != "1"
-    except Exception:
-        strict_mode = True
-
-    classifier_loaded_flag = getattr(classifier_service, "_loaded", False)
-    ner_loaded_flag = getattr(ner_service, "_loaded", False)
-
-    if strict_mode and not classifier_loaded_flag:
-        raise RuntimeError("[Startup-FATAL] Classifier assets not loaded. Set ALLOW_DEGRADED_STARTUP=1 to bypass.")
-
-    sla_task = None
-    try:
-        if supabase and os.environ.get("SLA_ESCALATION_ENABLED", "true").lower() == "true":
-            notification_router = None
-            try:
-                from backend.services.notification_routing import load as load_notification_router
-                notification_router = load_notification_router()
-            except Exception as e:
-                print(f"[WARNING] Notification router not loaded for SLA service: {e}")
-            sla_service = load_sla_service(supabase, notification_router)
-            interval = int(os.environ.get("SLA_ESCALATION_INTERVAL_SECONDS", "300"))
-            sla_task = asyncio.create_task(run_sla_escalation_loop(sla_service, interval_seconds=interval))
-            print(f"[Startup] SLA escalation loop enabled ({interval}s interval).")
-
-        yield
-    finally:
-        if sla_task:
-            sla_task.cancel()
-            try:
-                await sla_task
-            except asyncio.CancelledError:
-                pass
-        print("[Shutdown] Cleaning up ...")
+        await heartbeat_task
+    except asyncio.CancelledError:
+        pass
+    print("[Shutdown] Cleaning up ...")
 
 
 # ---------------------------------------------------------------------------
@@ -562,6 +824,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(auth_cookie_router)
 
 
 # ---------------------------------------------------------------------------
@@ -596,7 +860,7 @@ async def root():
         </style>
     </head>
     <body class="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
-        
+
         <!-- Abstract Background Orbs -->
         <div class="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] rounded-full bg-emerald-600/20 blur-[120px] pointer-events-none"></div>
         <div class="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] rounded-full bg-blue-600/20 blur-[120px] pointer-events-none"></div>
@@ -607,7 +871,7 @@ async def root():
                     <svg class="w-12 h-12 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                 </div>
             </div>
-            
+
             <h1 class="text-4xl md:text-5xl font-bold mb-4">HELPDESK<span class="gradient-text">.AI</span></h1>
             <p class="text-slate-400 text-lg mb-8">Next-Generation IT Ticket Inference Engine</p>
             <div class="inline-flex items-center space-x-2 bg-emerald-500/10 text-emerald-400 px-4 py-2 rounded-full border border-emerald-500/20 mb-10 text-sm font-semibold tracking-wide">
@@ -621,7 +885,7 @@ async def root():
                     <h3 class="font-bold text-white mb-1 group-hover:text-emerald-400 transition-colors">Interactive API Docs</h3>
                     <p class="text-slate-400 text-sm text-center md:text-left">Test endpoints natively via Swagger UI</p>
                 </a>
-                
+
                 <!-- Frontend Button -->
                 <a href="https://helpdeskaiv1.vercel.app/" target="_blank" class="btn-hover block w-full bg-slate-800/80 border border-slate-700 hover:border-blue-500/50 hover:bg-slate-700/80 rounded-xl p-5 group">
                     <h3 class="font-bold text-white mb-1 group-hover:text-blue-400 transition-colors">Client Web Portal</h3>
@@ -639,7 +903,7 @@ async def root():
                     </div>
                 </a>
             </div>
-            
+
             <div class="mt-10 pt-6 border-t border-slate-800 text-sm text-slate-500">
                 Powered by FastAPI & Hugging Face Transformers
             </div>
@@ -661,29 +925,18 @@ async def health_check():
 @app.get("/ready", response_model=ReadinessResponse)
 async def readiness_check():
     require_supabase = os.environ.get("REQUIRE_SUPABASE", "false").lower() == "true"
-    allow_degraded = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") == "1"
-    
     checks = {
         "api": True,
         "classifier_loaded": classifier_service._loaded,
         "ner_loaded": ner_service._loaded,
-        "duplicate_index_loaded": duplicate_service.is_available(),
-        "rag_loaded": rag_service.is_available(),
+        "duplicate_index_loaded": duplicate_service._loaded,
+        "rag_loaded": rag_service._loaded,
     }
     if require_supabase:
         checks["supabase_configured"] = supabase is not None
 
-    # In degraded mode, duplicate and RAG services are optional
-    if allow_degraded:
-        required_checks = {k: v for k, v in checks.items() if k not in ["duplicate_index_loaded", "rag_loaded"]}
-        all_required_pass = all(required_checks.values())
-        
-        if all_required_pass:
-            return ReadinessResponse(status="ready", checks=checks)
-    else:
-        # Strict mode: all checks must pass
-        if all(checks.values()):
-            return ReadinessResponse(status="ready", checks=checks)
+    if all(checks.values()):
+        return ReadinessResponse(status="ready", checks=checks)
 
     return JSONResponse(
         status_code=503,
@@ -710,7 +963,7 @@ async def troubleshoot(request: TroubleshootRequest):
             options=["Continue to tracking"],
             is_final=True
         )
-    
+
     result = gemini_service.get_troubleshooting_step(
         request.text,
         request.history,
@@ -735,7 +988,7 @@ async def analyze_bug(request: BugReportAnalysisRequest):
         return BugReportAnalysisResponse(
             probable_cause="AI Diagnostics are currently unavailable."
         )
-    
+
     cause = gemini_service.analyze_bug_report(
         request.bug_title,
         request.description,
@@ -811,43 +1064,65 @@ async def log_correction(raw_request: Request):
 # ---------------------------------------------------------------------------
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
+MASTER_TICKET_ROLES = {"master_admin", "super_admin", "superadmin", "owner"}
+
+
+def _get_auth_user_id(user: dict) -> str:
+    user_id = user.get("id") or user.get("sub") or user.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid authenticated user")
+    return str(user_id)
+
+
+def _get_authenticated_profile(user: dict) -> dict:
+    user_id = _get_auth_user_id(user)
+    res = (
+        supabase.table("profiles")
+        .select("id, company_id, company, role")
+        .eq("id", user_id)
+        .single()
+        .execute()
+    )
+    if not res.data:
+        raise HTTPException(status_code=403, detail="User profile not found")
+    return res.data
+
+
+def _is_master_ticket_reader(profile: dict) -> bool:
+    role = str(profile.get("role") or "").lower()
+    return role in MASTER_TICKET_ROLES
+
+
+def _ticket_company_scope(profile: dict, requested_company_id: str | None = None) -> str | None:
+    if _is_master_ticket_reader(profile):
+        return requested_company_id
+
+    company_id = profile.get("company_id")
+    if not company_id:
+        raise HTTPException(status_code=403, detail="User tenant is not configured")
+    if requested_company_id and requested_company_id != company_id:
+        raise HTTPException(status_code=403, detail="User not authorized for this tenant")
+    return str(company_id)
+
+
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None):
+async def get_tickets(
+    company_id: str | None = None,
+    current_user: dict = Depends(get_current_user),
+):
     """Fetch persistent tickets from Supabase."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
-    
+
+    profile = _get_authenticated_profile(current_user)
+    company_scope = _ticket_company_scope(profile, company_id)
+
     query = supabase.table("tickets").select("*").order("created_at", desc=True)
-    if company_id:
-        query = query.eq("company_id", company_id)
-        
+    if company_scope:
+        query = query.eq("company_id", company_scope)
+
     res = query.execute()
     return res.data
-
-@app.get("/tickets/search")
-async def search_tickets(q: str | None = None, company_id: str | None = None, limit: int = 50, offset: int = 0):
-    """Search tickets using tenant-safe full-text search."""
-    if not supabase:
-        raise HTTPException(status_code=500, detail="Database connection not initialized")
-
-    if not q:
-        raise HTTPException(status_code=400, detail="Search query is required")
-    if not company_id:
-        raise HTTPException(status_code=400, detail="company_id is required for tenant-safe search")
-
-    try:
-        result = supabase.rpc(
-            "search_tickets",
-            {
-                "query_text": q,
-                "company_id": company_id,
-                "limit_rows": limit,
-                "offset_rows": offset,
-            },
-        ).execute()
-        return result.data or []
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Search failed: {e}")
 
 @app.post("/tickets/save")
 async def save_ticket(request_body: TicketSaveRequest):
@@ -859,43 +1134,80 @@ async def save_ticket(request_body: TicketSaveRequest):
         raise HTTPException(status_code=500, detail="Supabase connection not initialized.")
 
     logger = logging.getLogger(__name__)
+    final_data = request_body.model_dump()
+    original_subject = final_data.get("subject", "") or ""
+    original_description = final_data.get("description", "") or ""
+
+    # Detect language and translate subject/description into English before downstream routing/indexing.
+    translation_probe_text = (original_description.strip() or original_subject.strip())
+    translation_ctx = detect_and_translate_ticket_text(translation_probe_text)
+    metadata = final_data.get("metadata") or {}
+    if translation_ctx["was_translated"]:
+        translated_subject = gemini_service.translate_to_english(original_subject, translation_ctx["source_language_name"]) if original_subject else original_subject
+        translated_description = gemini_service.translate_to_english(original_description, translation_ctx["source_language_name"]) if original_description else original_description
+        final_data["subject"] = translated_subject or original_subject
+        final_data["description"] = translated_description or original_description
+        metadata["original_text"] = {
+            "subject": original_subject,
+            "description": original_description,
+        }
+    metadata["translation"] = {
+        "translated": bool(translation_ctx["was_translated"]),
+        "source_language": translation_ctx["source_language"],
+        "source_language_name": translation_ctx["source_language_name"],
+    }
+    final_data["metadata"] = metadata
+
+    # Backfill SLA deadlines/status when the client omits or sends empty values.
+    priority_key = str(final_data.get("priority") or "medium").lower().strip()
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
+
+    if not str(final_data.get("sla_breach_at") or "").strip():
+        final_data["sla_breach_at"] = compute_sla_breach_at(priority_key, now_utc)
+
+    if not str(final_data.get("sla_response_due_at") or "").strip():
+        policy = get_sla_policy(priority_key)
+        response_hours = max(1, int(round(float(policy["max_hours"]) * 0.25)))
+        response_due_at = now_utc + datetime.timedelta(hours=response_hours)
+        final_data["sla_response_due_at"] = response_due_at.isoformat()
+
+    if not str(final_data.get("sla_status") or "").strip():
+        final_data["sla_status"] = "ACTIVE"
+    # Resolve tenant linkage from user profile with authorization validation.
+    profile = {}
+    if request_body.user_id:
+        try:
+            profile_res = (
+                supabase.table("profiles")
+                .select("company_id, company")
+                .eq("id", request_body.user_id)
+                .single()
+                .execute()
+            )
+            profile = profile_res.data or {}
+            if not profile:
+                raise HTTPException(status_code=404, detail="User profile not found")
+        except HTTPException:
+            raise
+        except Exception as profile_error:
+            logger.error(f"Tenant resolution error for user {request_body.user_id}: {profile_error}")
+            raise HTTPException(status_code=503, detail="Failed to resolve tenant linkage") from profile_error
+
+    # Validate tenant consistency and authorization.
+    profile_company_id = profile.get("company_id")
+    if final_data.get("company_id"):
+        # User provided company_id: verify it matches their profile.
+        if profile_company_id and final_data["company_id"] != profile_company_id:
+            logger.warning(f"Tenant mismatch: user {request_body.user_id} attempted {final_data['company_id']}, assigned to {profile_company_id}")
+            raise HTTPException(status_code=403, detail="User not authorized for this tenant")
+    elif profile_company_id:
+        # Backfill company_id from profile.
+        final_data["company_id"] = profile_company_id
+    elif request_body.user_id:
+        # User has no tenant assignment.
+        raise HTTPException(status_code=400, detail="User has no tenant assignment")
+
     try:
-        final_data = request_body.dict()
-
-        # Resolve tenant linkage from user profile with authorization validation.
-        profile = {}
-        if request_body.user_id:
-            try:
-                profile_res = (
-                    supabase.table("profiles")
-                    .select("company_id, company")
-                    .eq("id", request_body.user_id)
-                    .single()
-                    .execute()
-                )
-                profile = profile_res.data or {}
-                if not profile:
-                    raise HTTPException(status_code=404, detail="User profile not found")
-            except HTTPException:
-                raise
-            except Exception as profile_error:
-                logger.error(f"Tenant resolution error for user {request_body.user_id}: {profile_error}")
-                raise HTTPException(status_code=503, detail="Failed to resolve tenant linkage") from profile_error
-
-        # Validate tenant consistency and authorization.
-        profile_company_id = profile.get("company_id")
-        if final_data.get("company_id"):
-            # User provided company_id: verify it matches their profile.
-            if profile_company_id and final_data["company_id"] != profile_company_id:
-                logger.warning(f"Tenant mismatch: user {request_body.user_id} attempted {final_data['company_id']}, assigned to {profile_company_id}")
-                raise HTTPException(status_code=403, detail="User not authorized for this tenant")
-        elif profile_company_id:
-            # Backfill company_id from profile.
-            final_data["company_id"] = profile_company_id
-        elif request_body.user_id:
-            # User has no tenant assignment.
-            raise HTTPException(status_code=400, detail="User has no tenant assignment")
-
         # Backfill company name if missing.
         if not final_data.get("company") and profile.get("company"):
             final_data["company"] = profile["company"]
@@ -908,44 +1220,48 @@ async def save_ticket(request_body: TicketSaveRequest):
         final_data["sla_status"] = final_data.get("sla_status") or classify_sla_status(final_data.get("sla_breach_at"))
         final_data["escalation_level"] = int(final_data.get("escalation_level") or 0)
 
-        logger.info(f"Tenant linkage: user_id={request_body.user_id}, company_id={final_data.get('company_id')}")
+        user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+        logger.info(f"Tenant linkage: user_hash={user_hash}, company_id={final_data.get('company_id')}")
 
         duplicate_text = (request_body.description or "").strip() or (request_body.subject or "").strip()
-        duplicate_threshold = get_duplicate_threshold(final_data.get("company_id"), 0.85)
-        duplicate_result = {
-            "is_duplicate": False,
-            "duplicate_ticket_id": None,
-            "parent_ticket_id": None,
-            "is_potential_duplicate": False,
-            "similarity": 0.0,
-        }
+        duplicate_threshold = get_duplicate_threshold(final_data.get("company_id"), 0.85)  # noqa: F841
 
-        if duplicate_text:
-            duplicate_result = detect_semantic_duplicate(
-                duplicate_text,
-                company_id=final_data.get("company_id"),
-                threshold=duplicate_threshold,
-            )
-            final_data["description_vector"] = duplicate_service.generate_embedding(duplicate_text)
-        else:
-            final_data["description_vector"] = None
 
-        final_data["is_potential_duplicate"] = duplicate_result.get("is_potential_duplicate", False)
-        final_data["parent_ticket_id"] = duplicate_result.get("parent_ticket_id")
+        # Semantic duplicate check BEFORE inserting the ticket
+        # This allows us to warn the user before confirming
+        duplicate_check_result = None
+        try:
+            dupe_text = (request_body.description or request_body.subject or "").strip()
+            if dupe_text:
+                duplicate_check_result = await semantic_dupe_service.check_duplicate(
+                    text=dupe_text,
+                    company_id=final_data.get("company_id"),
+                )
+                if duplicate_check_result["is_duplicate"]:
+                    logger.info(
+                        f"[DUPLICATE] Ticket flagged as potential duplicate of "
+                        f"{duplicate_check_result['duplicate_ticket_id']} "
+                        f"(similarity: {duplicate_check_result['similarity']})"
+                    )
+        except Exception as e:
+            logger.warning(f"[DUPLICATE] Semantic check error (non-fatal): {e}")
 
         # --- Sanitize payload to only include valid Supabase DB columns ---
-        # Extra AI telemetry fields are merged into the metadata JSONB column
+        # Extra AI telemetry and non-existent schema fields are merged into the metadata JSONB column
         # to avoid 400/500 errors from unknown column names in the insert call.
         VALID_TICKET_COLUMNS = {
             "user_id", "subject", "description", "category", "subcategory",
             "priority", "assigned_team", "status", "auto_resolve", "is_duplicate",
-            "confidence", "image_url", "company", "company_id", "description_vector",
-            "is_potential_duplicate", "parent_ticket_id", "sla_response_due_at",
-            "sla_breach_at", "sla_status", "escalation_level", "metadata",
+            "confidence", "image_url", "company", "company_id",
+            "sla_breach_at", "sla_response_due_at", "sla_status", "escalation_level", "metadata",
         }
-        # Merge any extra telemetry fields into metadata before filtering
+        # Merge any extra telemetry and SLA/duplicate fields into metadata before filtering
         existing_metadata = final_data.get("metadata") or {}
-        for extra_key in ("entities", "solution_steps", "ocr_text", "needs_review", "routing_confidence"):
+        extra_keys = (
+            "entities", "solution_steps", "ocr_text", "needs_review", "routing_confidence",
+            "is_potential_duplicate", "parent_ticket_id"
+        )
+        for extra_key in extra_keys:
             if extra_key in final_data and final_data[extra_key] not in (None, "", [], {}):
                 existing_metadata[extra_key] = final_data[extra_key]
         final_data["metadata"] = existing_metadata
@@ -954,26 +1270,36 @@ async def save_ticket(request_body: TicketSaveRequest):
         insert_data = {k: v for k, v in final_data.items() if k in VALID_TICKET_COLUMNS}
 
         res = supabase.table("tickets").insert(insert_data).execute()
-        
+
         if not res.data:
             raise Exception("Failed to insert ticket into database.")
-            
+
         ticket_id = res.data[0]["id"]
 
-        duplicate_indexed = True
-        duplicate_index_warning = None
+        # If duplicate detected, link parent ticket
+        if duplicate_check_result and duplicate_check_result["is_duplicate"]:
+            try:
+                supabase.table("tickets").update({
+                    "is_potential_duplicate": True,
+                    "parent_ticket_id": duplicate_check_result["duplicate_ticket_id"],
+                }).eq("id", ticket_id).execute()
+            except Exception as e:
+                logger.warning(f"[DUPLICATE] Failed to link parent ticket: {e}")
+
+        # Index the new ticket's embedding for future duplicate checks
+        embedding_indexed = False
+        description_text = (request_body.description or "").strip()
+        subject_text = (request_body.subject or "").strip()
+        duplicate_text = description_text or subject_text
         if duplicate_text:
             try:
+                # Both: old in-memory index (for backward compat) and new pgvector index
                 duplicate_service.add_ticket(str(ticket_id), duplicate_text)
+                asyncio.create_task(semantic_dupe_service.index_ticket(ticket_id, duplicate_text))
+                embedding_indexed = True
             except Exception as index_error:
-                duplicate_indexed = False
-                duplicate_index_warning = "Duplicate index update failed."
-                print(f"[WARNING] {duplicate_index_warning} ticket_id={ticket_id} error={index_error}")
-        else:
-            duplicate_indexed = False
-            duplicate_index_warning = "Duplicate index update skipped: no description or subject text was provided."
-            print(f"[WARNING] {duplicate_index_warning}")
-        
+                logger.warning(f"[INDEX] Failed to index ticket {ticket_id}: {index_error}")
+
         # Add initial system diagnostic message
         msg = "Our Neural Engine has successfully triaged your issue and routed it to the designated team."
         if final_data["auto_resolve"]:
@@ -986,32 +1312,159 @@ async def save_ticket(request_body: TicketSaveRequest):
             "sender_role": "admin",
             "message": msg
         }).execute()
-        
+
         response = {
             "status": "success",
             "ticket_id": ticket_id,
-            "duplicate_indexed": duplicate_indexed,
-            "is_potential_duplicate": final_data["is_potential_duplicate"],
-            "parent_ticket_id": final_data["parent_ticket_id"],
+            "duplicate_indexed": embedding_indexed,
         }
-        if duplicate_index_warning:
-            response["duplicate_index_warning"] = duplicate_index_warning
+        if duplicate_check_result and duplicate_check_result["is_duplicate"]:
+            response["duplicate_warning"] = True
+            response["parent_ticket_id"] = duplicate_check_result["duplicate_ticket_id"]
+            response["parent_subject"] = duplicate_check_result.get("parent_subject")
+            response["similarity"] = duplicate_check_result["similarity"]
+            response["candidates"] = duplicate_check_result.get("candidates", [])
+
+        # Broadcast the new/updated ticket to all WebSocket clients for this company
+        company_id = final_data.get("company_id")
+        if company_id:
+            asyncio.create_task(
+                connection_manager.broadcast(
+                    company_id,
+                    {
+                        "type": "ticket_update",
+                        "event": "created",
+                        "ticket": insert_data,
+                        "ticket_id": str(ticket_id),
+                    },
+                )
+            )
         return response
 
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.websocket("/ws/{company_id}")
+async def websocket_endpoint(ws: WebSocket, company_id: str):
+    """Real-time WebSocket feed for a company's ticket dashboard.
+
+    Protocol:
+        - Server sends ``{"type": "ping"}`` every 30s (heartbeat).
+        - Client must respond with ``{"type": "pong"}`` within 10s.
+        - Server pushes ``{"type": "ticket_update", ...}`` on changes.
+
+    Usage (frontend):
+        const socket = new WebSocket("ws://host:7860/ws/{company_id}");
+        socket.onmessage = (event) => { const msg = JSON.parse(event.data); };
+    """
+    if not company_id or not company_id.strip():
+        await ws.close(code=4000, reason="Missing company_id")
+        return
+
+    company_id = company_id.strip()
+    await connection_manager.connect(company_id, ws)
+    print(f"[WS] Client connected — company_id={company_id}")
+
+    try:
+        while True:
+            raw = await ws.receive_text()
+            if not raw.strip():
+                continue
+            try:
+                data = json.loads(raw)
+            except json.JSONDecodeError:
+                continue  # ignore malformed frames
+
+            # Handle pong response
+            if data.get("type") == "pong":
+                continue
+
+    except WebSocketDisconnect:
+        pass
+    except Exception as exc:
+        print(f"[WS] Connection error for company_id={company_id}: {exc}")
+    finally:
+        await connection_manager.disconnect(company_id, ws)
+        print(f"[WS] Client disconnected — company_id={company_id}")
+
+
 @app.get("/tickets/{ticket_id}")
-async def get_ticket_by_id(ticket_id: str):
+async def get_ticket_by_id(
+    request: Request,
+    ticket_id: str,
+    current_user: dict = Depends(get_current_user),
+):
     """Fetch single persistent ticket."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
-    
+
+    # Guard route overlap where '/tickets/search' may be matched here first.
+    if ticket_id == "search":
+        return await search_tickets(
+            q=request.query_params.get("q", ""),
+            company_id=request.query_params.get("company_id"),
+            current_user=current_user,
+        )
+
+    profile = _get_authenticated_profile(current_user)
+    company_scope = _ticket_company_scope(profile)
     res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Ticket not found")
+    if company_scope and res.data.get("company_id") != company_scope:
+        raise HTTPException(status_code=403, detail="User not authorized for this tenant")
     return res.data
+
+
+@app.get("/tickets/{ticket_id}/audit_logs", response_model=list[AuditLogRecord])
+async def get_ticket_audit_logs(ticket_id: str, company_id: str):
+    """Return a company-scoped chronological audit trail for a ticket."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    try:
+        service = AuditLogService(supabase)
+        return service.get_ticket_audit_logs(ticket_id, company_id)
+    except AuditLogAccessError as err:
+        raise HTTPException(status_code=err.status_code, detail=err.detail)
+
+
+@app.get("/tickets/search")
+async def search_tickets(
+    q: str,
+    company_id: str | None = None,
+    current_user: dict = Depends(get_current_user),
+):
+    """Search tickets by query text, optionally scoped by company_id."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+    query_text = (q or "").strip()
+    if not query_text:
+        raise HTTPException(status_code=400, detail="Query text is required")
+
+    profile = _get_authenticated_profile(current_user)
+    company_scope = _ticket_company_scope(profile, company_id)
+
+    try:
+        rpc_res = supabase.rpc(
+            "search_tickets",
+            {"query_text": query_text, "company_id": company_scope},
+        ).execute()
+        return rpc_res.data or []
+    except Exception:
+        # Fallback for environments without RPC function support.
+        fallback = supabase.table("tickets").select("*").order("created_at", desc=True).execute()
+        rows = fallback.data or []
+        lowered = query_text.lower()
+        filtered = [
+            row for row in rows
+            if lowered in str(row.get("subject", "")).lower()
+            or lowered in str(row.get("description", "")).lower()
+        ]
+        if company_scope:
+            filtered = [row for row in filtered if row.get("company_id") == company_scope]
+        return filtered
 
 
 @app.post("/tickets", response_model=TicketRecord)
@@ -1021,7 +1474,7 @@ async def create_ticket(ticket: TicketRecord):
     existing = next((t for t in TICKETS_DB if t.ticket_id == ticket.ticket_id), None)
     if existing:
         return existing
-        
+
     TICKETS_DB.append(ticket)
     print(f"[DB] Ticket #{ticket.ticket_id} created for user {ticket.owner_id}")
     return ticket
@@ -1038,7 +1491,7 @@ async def update_ticket(ticket_id: str, updates: dict):
             updated_ticket = TicketRecord(**ticket_dict)
             TICKETS_DB[i] = updated_ticket
             return updated_ticket
-    
+
     raise HTTPException(status_code=404, detail="Ticket not found")
 
 
@@ -1053,16 +1506,11 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     """
     text = request_body.text
 
-    settings = get_system_settings(request_body.company_id)
-    confidence_threshold = settings["ai_confidence_threshold"]
-    duplicate_sensitivity = settings["duplicate_sensitivity"]
-    enable_auto_resolve = settings["enable_auto_resolve"]
-    
     # Grab client metadata
     client_ip = request.client.host if request.client else "unknown"
     user_agent = request.headers.get("user-agent", "unknown")
     origin_host = request.headers.get("origin", "unknown")
-    
+
     env_metadata = {
         "ip": client_ip,
         "user_agent": user_agent,
@@ -1078,18 +1526,21 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
             text = f"{text} {local_ocr_text}".strip()
             print(f"[AI] OCR added {len(local_ocr_text)} chars to context.")
 
-    # Initalize Timeline
-    return await analyze_only(request_body)
+    # Pass OCR-enriched text downstream so the analyze_only endpoint uses it.
+    enriched = request_body.model_copy(update={"text": text, "image_text": local_ocr_text})
+    return await analyze_only(enriched)
 
 @app.post("/ai/analyze")
 async def analyze_only(request_body: TicketRequest):
     """
-    PERFORMANCE UPGRADE: AI Analysis phase only. 
-    Does NOT persist to DB. This allows the user to review the analysis 
+    PERFORMANCE UPGRADE: AI Analysis phase only.
+    Does NOT persist to DB. This allows the user to review the analysis
     and duplicate check before committing to a ticket creation.
     """
     text = request_body.text
-    print(f"[AI] Starting Analysis (READ-ONLY) for: {text[:50]}...") 
+    translation_ctx = detect_and_translate_ticket_text(text)
+    text = translation_ctx["text_for_analysis"]
+    print(f"[AI] Starting Analysis (READ-ONLY) for: {text[:50]}...")
     settings = get_system_settings(request_body.company)
     confidence_threshold = settings["ai_confidence_threshold"]
     duplicate_sensitivity = settings["duplicate_sensitivity"]
@@ -1130,11 +1581,13 @@ async def analyze_only(request_body: TicketRequest):
             highlights=[],
             timeline={"received": _dt.datetime.utcnow().isoformat() + "Z"},
             env_metadata={},
-            is_potential_duplicate=False,
-            parent_ticket_id=None,
             sla_breach_at=_sla_breach.isoformat().replace("+00:00", "Z"),
+            original_text=request_body.text,
+            source_language=translation_ctx["source_language"],
+            source_language_name=translation_ctx["source_language_name"],
+            was_translated=translation_ctx["was_translated"],
         )
-    
+
     # --- Context & Environment ---
     import datetime
     def get_now_ist():
@@ -1145,7 +1598,7 @@ async def analyze_only(request_body: TicketRequest):
         "model_version": "3.0.0-PRO",
         "api_endpoint": "/ai/analyze"
     }
-    
+
     timeline = {"received": get_now_ist()}
 
     # --- Vision Logic (OCR Awareness) ---
@@ -1153,7 +1606,7 @@ async def analyze_only(request_body: TicketRequest):
         "ocr_text": request_body.image_text or "",
         "image_description": ""
     }
-    
+
     if request_body.image_base64 and not gemini_analysis["ocr_text"]:
         try:
             print("[AI] Detecting visual context via Gemini...")
@@ -1162,7 +1615,17 @@ async def analyze_only(request_body: TicketRequest):
         except Exception as e:
             print(f"[VISION ERROR] {e}")
 
-    summary = text[:100] + ("…" if len(text) > 100 else "") 
+    summary = text[:100] + ("…" if len(text) > 100 else "")
+
+    # --- Spam / Phishing Detection (runs before classification) ---
+    try:
+        spam_result = spam_service.check(text, gemini_analysis.get("ocr_text", ""))
+    except Exception as e:
+        print(f"[SPAM ERROR] {e}")
+        spam_result = {
+            "is_spam": False, "risk_score": 0.0, "reasons": [],
+            "suspicious_urls": [], "matched_keywords": [],
+        }
 
     # --- Classification ---
     classification = classify_ticket_text(text)
@@ -1175,25 +1638,14 @@ async def analyze_only(request_body: TicketRequest):
         entities = ner_service.extract_entities(text)
     except Exception:
         entities = []
-    
+
     timeline["metadata_harvested"] = get_now_ist()
 
     # --- Duplicate detection ---
-    duplicate_threshold = get_duplicate_threshold(request_body.company_id, duplicate_sensitivity)
     try:
-        dup_result = detect_semantic_duplicate(
-            text,
-            company_id=request_body.company_id,
-            threshold=duplicate_threshold,
-        )
+        dup_result = duplicate_service.check_duplicate(text, threshold=request_body.duplicate_sensitivity)
     except Exception:
-        dup_result = {
-            "is_duplicate": False,
-            "duplicate_ticket_id": None,
-            "parent_ticket_id": None,
-            "is_potential_duplicate": False,
-            "similarity": 0.0,
-        }
+        dup_result = {"is_duplicate": False, "duplicate_ticket_id": None, "similarity": 0.0}
 
     # --- RAG Knowledge Base Check ---
     rag_match = None
@@ -1209,7 +1661,7 @@ async def analyze_only(request_body: TicketRequest):
 
     # --- Reasoning ---
     decision_factors = []
-    if classification["confidence"] > confidence_threshold:
+    if classification["confidence"] > request_body.confidence_threshold:
         decision_factors.append(f"High confidence match for '{classification['subcategory']}'")
     if entities:
         decision_factors.append(f"Detected entities: {', '.join([e['text'] for e in entities[:2]])}")
@@ -1217,27 +1669,29 @@ async def analyze_only(request_body: TicketRequest):
         decision_factors.append(f"Found similar incident ({int(dup_result['similarity']*100)}%)")
     if rag_match:
         decision_factors.append(f"Found solution article: '{rag_match['title']}'")
+    if spam_result["is_spam"]:
+        decision_factors.append(
+            f"Flagged as spam/phishing (risk {spam_result['risk_score']:.2f})"
+        )
+        classification["assigned_team"] = "Spam / Suspicious"
+        classification["auto_resolve"] = False
 
     reasoning = f"Categorized as '{classification['category']}' - {classification['subcategory']}."
-    if (
-        enable_auto_resolve
-        and classification["confidence"] >= confidence_threshold
-        and classification["auto_resolve"]
-    ):
-        classification["auto_resolve"] = True
-    else:
-        classification["auto_resolve"] = False
     if classification["auto_resolve"]:
         reasoning += " Flagged for AI auto-resolution via Knowledge Base." if rag_match else " Flagged for auto-resolution."
-    
+    if spam_result["is_spam"]:
+        reasoning += " Ticket flagged as spam/phishing and quarantined from agent inbox."
+
     timeline["routed"] = get_now_ist()
-    
+
     # --- Gemini Summary ---
     if gemini_service and gemini_service._initialized:
         summary = gemini_service.get_summary(text)
-    
-    # Convert priority to the SLA resolution target timestamp for preview.
-    sla_breach_dt = calculate_sla_breach_at(classification["priority"])
+
+    # Convert priority to SLA breached timestamp (for preview)
+    hours_map = {"Critical": 2, "High": 8, "Medium": 24, "Low": 72}
+    sla_hours = hours_map.get(classification["priority"], 72)
+    sla_breach_dt = datetime.datetime.utcnow() + datetime.timedelta(hours=sla_hours)
 
     return TicketResponse(
         ticket_id=str(uuid.uuid4()), # Temporary ID
@@ -1250,17 +1704,22 @@ async def analyze_only(request_body: TicketRequest):
         entities=[EntityInfo(**e) for e in entities],
         duplicate_ticket=DuplicateInfo(**dup_result),
         confidence=classification["confidence"],
-        needs_review=classification["confidence"] < confidence_threshold,
+        needs_review=classification["confidence"] < 0.20,
         reasoning=reasoning,
         decision_factors=decision_factors,
         image_description=gemini_analysis["image_description"],
         ocr_text=gemini_analysis["ocr_text"],
-        highlights=entities, # Use entities as highlights for now
+        highlights=[e.get("text", "") for e in entities], # Use entity texts as highlights for now
         timeline=timeline,
         env_metadata=env_metadata,
+        spam_check=SpamCheck(**spam_result),
         is_potential_duplicate=dup_result.get("is_potential_duplicate", False),
         parent_ticket_id=dup_result.get("parent_ticket_id"),
-        sla_breach_at=sla_breach_dt.isoformat().replace("+00:00", "Z")
+        sla_breach_at=sla_breach_dt.isoformat().replace("+00:00", "Z"),
+        original_text=translation_ctx["original_text"],
+        source_language=translation_ctx["source_language"],
+        source_language_name=translation_ctx["source_language_name"],
+        was_translated=translation_ctx["was_translated"],
     )
 
 @app.post("/ai/analyze_stream")
@@ -1279,11 +1738,7 @@ async def analyze_stream(request_body: TicketRequest):
             "model_version": "3.0.0-PRO",
             "api_endpoint": "/ai/analyze_stream"
         }
-        timeline = {"received": get_now_ist()} 
-        settings = get_system_settings(request_body.company_id)
-        confidence_threshold = settings["ai_confidence_threshold"]
-        duplicate_sensitivity = settings["duplicate_sensitivity"]
-        enable_auto_resolve = settings["enable_auto_resolve"]
+        timeline = {"received": get_now_ist()}
 
         # 1. Reading
         yield f"data: {json.dumps({'step': 'Reading your message', 'status': 'in_progress'})}\n\n"
@@ -1297,7 +1752,16 @@ async def analyze_stream(request_body: TicketRequest):
             except Exception as e:
                 pass
 
-        summary = text[:100] + ("…" if len(text) > 100 else "") 
+        summary = text[:100] + ("…" if len(text) > 100 else "")
+
+        # Spam / Phishing check (silent step — does not get its own SSE event)
+        try:
+            spam_result = spam_service.check(text, gemini_analysis.get("ocr_text", ""))
+        except Exception:
+            spam_result = {
+                "is_spam": False, "risk_score": 0.0, "reasons": [],
+                "suspicious_urls": [], "matched_keywords": [],
+            }
 
         # 2. NER
         yield f"data: {json.dumps({'step': 'Extracting technical entities', 'status': 'in_progress'})}\n\n"
@@ -1319,20 +1783,9 @@ async def analyze_stream(request_body: TicketRequest):
         yield f"data: {json.dumps({'step': 'Checking duplicate issues', 'status': 'in_progress'})}\n\n"
         await asyncio.sleep(0.2)
         try:
-            duplicate_threshold = get_duplicate_threshold(request_body.company_id, duplicate_sensitivity)
-            dup_result = detect_semantic_duplicate(
-                text,
-                company_id=request_body.company_id,
-                threshold=duplicate_threshold,
-            )
+            dup_result = duplicate_service.check_duplicate(text, threshold=request_body.duplicate_sensitivity)
         except Exception:
-            dup_result = {
-                "is_duplicate": False,
-                "duplicate_ticket_id": None,
-                "parent_ticket_id": None,
-                "is_potential_duplicate": False,
-                "similarity": 0.0,
-            }
+            dup_result = {"is_duplicate": False, "duplicate_ticket_id": None, "similarity": 0.0}
 
         # 5. RAG / Solutions
         yield f"data: {json.dumps({'step': 'Finding possible solutions', 'status': 'in_progress'})}\n\n"
@@ -1348,7 +1801,7 @@ async def analyze_stream(request_body: TicketRequest):
             pass
 
         decision_factors = []
-        if classification["confidence"] > confidence_threshold:
+        if classification["confidence"] > request_body.confidence_threshold:
             decision_factors.append(f"High confidence match for '{classification['subcategory']}'")
         if entities:
             decision_factors.append(f"Detected entities: {', '.join([e['text'] for e in entities[:2]])}")
@@ -1356,19 +1809,27 @@ async def analyze_stream(request_body: TicketRequest):
             decision_factors.append(f"Found similar incident ({int(dup_result['similarity']*100)}%)")
         if rag_match:
             decision_factors.append(f"Found solution article: '{rag_match['title']}'")
-
-        if not enable_auto_resolve:
+        if spam_result["is_spam"]:
+            decision_factors.append(
+                f"Flagged as spam/phishing (risk {spam_result['risk_score']:.2f})"
+            )
+            classification["assigned_team"] = "Spam / Suspicious"
             classification["auto_resolve"] = False
+
         reasoning = f"Categorized as '{classification['category']}' - {classification['subcategory']}."
         if classification["auto_resolve"]:
             reasoning += " Flagged for AI auto-resolution via Knowledge Base." if rag_match else " Flagged for auto-resolution."
-        
+        if spam_result["is_spam"]:
+            reasoning += " Ticket flagged as spam/phishing and quarantined from agent inbox."
+
         timeline["routed"] = get_now_ist()
 
         if gemini_service and gemini_service._initialized:
             summary = gemini_service.get_summary(text)
-        
-        sla_breach_dt = calculate_sla_breach_at(classification["priority"])
+
+        hours_map = {"Critical": 2, "High": 8, "Medium": 24, "Low": 72}
+        sla_hours = hours_map.get(classification["priority"], 72)
+        sla_breach_dt = datetime.datetime.utcnow() + datetime.timedelta(hours=sla_hours)
 
         ticket_response_dict = {
             "ticket_id": str(uuid.uuid4()),
@@ -1381,17 +1842,16 @@ async def analyze_stream(request_body: TicketRequest):
             "entities": [e for e in entities],
             "duplicate_ticket": dup_result,
             "confidence": classification["confidence"],
-            "needs_review": classification["confidence"] < confidence_threshold,
+            "needs_review": classification["confidence"] < 0.20,
             "reasoning": reasoning,
             "decision_factors": decision_factors,
             "image_description": gemini_analysis["image_description"],
             "ocr_text": gemini_analysis["ocr_text"],
-            "highlights": entities,
+            "highlights": [e.get("text", "") for e in entities],
             "timeline": timeline,
             "env_metadata": env_metadata,
-            "is_potential_duplicate": dup_result.get("is_potential_duplicate", False),
-            "parent_ticket_id": dup_result.get("parent_ticket_id"),
-            "sla_breach_at": sla_breach_dt.isoformat().replace("+00:00", "Z")
+            "spam_check": spam_result,
+            "sla_breach_at": sla_breach_dt.isoformat() + "Z"
         }
 
         # 6. Final Result
@@ -1402,7 +1862,7 @@ async def analyze_stream(request_body: TicketRequest):
 @app.post("/ai/analyze_ticket/legacy")
 async def legacy_analyze_and_save(request_body: TicketRequest):
     """
-    BACKWARD COMPATIBILITY: Strictly performs analysis only. 
+    BACKWARD COMPATIBILITY: Strictly performs analysis only.
     Does NOT persist to DB to avoid foreign key violations.
     """
     return await analyze_only(request_body)
@@ -1423,3 +1883,266 @@ async def analyze_ticket_v2(request: TicketRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# SLA Engine Endpoints
+# ---------------------------------------------------------------------------
+
+class SLAStatsResponse(BaseModel):
+    total: int = 0
+    active: int = 0
+    breached: int = 0
+    warning: int = 0
+    met: int = 0
+    breach_rate: float = 0.0
+    by_priority: dict = {}
+
+
+@app.get("/sla/stats", response_model=SLAStatsResponse)
+async def sla_stats():
+    """Get aggregated SLA dashboard statistics across all tickets."""
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not connected")
+    stats = await sla_engine.get_dashboard_stats()
+    if "error" in stats:
+        raise HTTPException(status_code=500, detail=stats["error"])
+    return stats
+
+
+class SLATicketInfo(BaseModel):
+    id: str
+    ticket_id: str | None = None
+    subject: str | None = None
+    summary: str | None = None
+    priority: str = "medium"
+    status: str | None = None
+    assigned_team: str | None = None
+    sla_status: str = "active"
+    escalation_level: int = 0
+    remaining_seconds: int = 0
+    created_at: str | None = None
+    sla_breach_at: str | None = None
+    sla_warning_at: str | None = None
+    last_escalated_at: str | None = None
+
+
+@app.get("/sla/tickets")
+async def sla_tickets(
+    status: str | None = None,
+    priority: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
+):
+    """
+    List tickets with SLA status. Filter by sla_status and/or priority.
+    """
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not connected")
+
+    query = (
+        supabase.table("tickets")
+        .select("id, ticket_id, subject, summary, priority, status, assigned_team, sla_status, escalation_level, remaining_seconds, created_at, sla_breach_at, sla_warning_at, last_escalated_at")
+        .order("created_at", desc=True)
+    )
+
+    if status and status != "all":
+        query = query.eq("sla_status", status)
+    if priority and priority != "all":
+        query = query.eq("priority", priority.capitalize())
+
+    query = query.range(offset, offset + limit - 1)
+    res = query.execute()
+    return {"tickets": res.data or [], "total": len(res.data or [])}
+
+
+class EscalationLogEntry(BaseModel):
+    id: str
+    ticket_id: str | None = None
+    ticket_subject: str = ""
+    priority: str = "medium"
+    sla_status: str = ""
+    escalation_level: int = 0
+    remaining_seconds: int = 0
+    assigned_team: str = ""
+    notification_channels: list = []
+    triggered_at: str | None = None
+    resolved_at: str | None = None
+    notes: str = ""
+
+
+@app.get("/sla/escalations")
+async def sla_escalations(limit: int = 50, offset: int = 0):
+    """Fetch escalation log history."""
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not connected")
+
+    try:
+        res = (
+            supabase.table("escalation_logs")
+            .select("*")
+            .order("triggered_at", desc=True)
+            .range(offset, offset + limit - 1)
+            .execute()
+        )
+        return {"escalations": res.data or [], "total": len(res.data or [])}
+    except Exception as e:
+        # Table might not exist yet
+        print(f"[SLA] Escalation logs query failed: {e}")
+        return {"escalations": [], "total": 0}
+
+
+class SLAPolicyInfo(BaseModel):
+    id: str
+    priority: str
+    max_hours: int
+    warning_pct: float
+    auto_escalate: bool
+    l2_after_minutes: int
+    l3_after_minutes: int
+
+
+@app.get("/sla/policies")
+async def sla_policies():
+    """Get configured SLA policies."""
+    if not supabase:
+        # Return defaults from code
+        policies = []
+        policy_source = sla_engine.SLA_POLICIES if hasattr(sla_engine, "SLA_POLICIES") else {}
+        for pri, cfg in policy_source.items():
+            policies.append({
+                "priority": pri,
+                "max_hours": cfg["max_hours"],
+                "warning_pct": cfg["warning_pct"],
+                "auto_escalate": cfg.get("auto_escalate_on_breach", False),
+                "l2_after_minutes": cfg.get("l2_escalation_mins", 0),
+                "l3_after_minutes": cfg.get("l3_escalation_mins", 0),
+            })
+        return {"policies": policies}
+
+    try:
+        res = supabase.table("sla_policies").select("*").execute()
+        return {"policies": res.data or []}
+    except Exception as e:
+        print(f"[SLA] Policies query failed: {e}")
+        return {"policies": []}
+
+
+@app.post("/sla/check")
+async def trigger_sla_check():
+    """Manually trigger an SLA evaluation cycle (admin)."""
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not connected")
+
+    asyncio.create_task(sla_engine.check_all_active_tickets())
+    return {"status": "triggered", "message": "SLA check cycle started in background"}
+
+
+# ---------------------------------------------------------------------------
+# Semantic Duplicate Detection Endpoints
+# ---------------------------------------------------------------------------
+
+@app.post("/ai/check_duplicate")
+async def check_duplicate_endpoint(
+    body: TicketRequest,
+    company_id: str | None = None,
+):
+    """
+    Check a ticket text for potential duplicates using semantic vector search.
+    Returns top candidates with similarity scores.
+    """
+    text = (body.text or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="No text provided")
+
+    threshold = body.duplicate_sensitivity if hasattr(body, 'duplicate_sensitivity') else None
+    result = await semantic_dupe_service.check_duplicate(
+        text=text,
+        company_id=company_id or body.company,
+        threshold=threshold,
+    )
+    return result
+
+
+@app.post("/ai/reindex_embeddings")
+async def reindex_embeddings():
+    """Re-generate vector embeddings for all tickets."""
+    result = await semantic_dupe_service.reindex_all()
+    return result
+
+
+@app.get("/system/settings")
+async def get_system_settings_endpoint():
+    """Fetch all system settings."""
+    _logger = logging.getLogger(__name__)
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not connected")
+    try:
+        res = supabase.table("system_settings").select("*").execute()
+        settings = {}
+        for row in res.data or []:
+            settings[row["key"]] = row["value"]
+        return settings
+    except Exception as e:
+        _logger.warning(f"[SETTINGS] Query failed: {e}")
+        return {}
+
+
+@app.patch("/system/settings")
+async def update_system_settings(body: dict):
+    """Update a specific system setting."""
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not connected")
+    key = body.get("key")
+    value = body.get("value")
+    if not key or value is None:
+        raise HTTPException(status_code=400, detail="key and value required")
+    try:
+        supabase.table("system_settings").upsert({
+            "key": key,
+            "value": value,
+            "updated_at": datetime.datetime.utcnow().isoformat() + "Z",
+        }).execute()
+        return {"status": "updated", "key": key}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/sla/tickets/{ticket_id}")
+async def sla_ticket_detail(ticket_id: str):
+    """Get detailed SLA info for a specific ticket."""
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not connected")
+
+    # Fetch ticket
+    res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    ticket = res.data
+    result = sla_engine.evaluate_ticket(ticket)
+
+    # Fetch escalation history for this ticket
+    try:
+        esc_res = (
+            supabase.table("escalation_logs")
+            .select("*")
+            .eq("ticket_id", ticket_id)
+            .order("triggered_at", desc=True)
+            .execute()
+        )
+        escalations = esc_res.data or []
+    except Exception:
+        escalations = []
+
+    return {
+        "ticket": ticket,
+        "sla_evaluation": result,
+        "escalations": escalations,
+    }
+
+
+@app.get("/metrics")
+async def metrics():
+    """Prometheus scrape endpoint — exposes AI inference latency, request counts, and tokens."""
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)

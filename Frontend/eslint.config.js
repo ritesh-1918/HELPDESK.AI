@@ -35,4 +35,25 @@ export default defineConfig([
       'react-refresh/only-export-components': 'off',
         },
   },
+  {
+    files: [
+      '**/*.{test,spec}.{js,jsx}',
+      '**/__tests__/**/*.{js,jsx}',
+      'jest.setup.js',
+      'jest.fileMock.js',
+    ],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        ...globals.jest,
+      },
+    },
+  },
+  {
+    files: ['jest.fileMock.js'],
+    languageOptions: {
+      sourceType: 'commonjs',
+    },
+  },
 ])
