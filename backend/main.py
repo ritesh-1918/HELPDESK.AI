@@ -53,6 +53,11 @@ except (ImportError, Exception) as e:
 # Ensure project root is on path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+from backend.auth.crypto import (
+    TICKET_PII_FIELDS,
+    decrypt_rows,
+    encrypt_fields,
+)
 from backend.services.classifier_service import ClassifierService
 from backend.services.classifier_v2 import classifier_v2
 from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
@@ -504,7 +509,7 @@ async def get_tickets(company_id: str | None = None):
         query = query.eq("company_id", company_id)
         
     res = query.execute()
-    return res.data
+    return decrypt_rows(res.data, TICKET_PII_FIELDS)
 
 @app.post("/tickets/save")
 async def save_ticket(request_body: TicketSaveRequest):
@@ -563,6 +568,9 @@ async def save_ticket(request_body: TicketSaveRequest):
         logger.info(f"Tenant linkage: user_hash={user_hash}, company_id={final_data.get('company_id')}")
 
 
+        # Encrypt PII fields (contact_email, description, raw_text) at rest.
+        encrypt_fields(final_data, TICKET_PII_FIELDS)
+
         res = supabase.table("tickets").insert(final_data).execute()
         
         if not res.data:
@@ -618,7 +626,7 @@ async def get_ticket_by_id(ticket_id: str):
     res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Ticket not found")
-    return res.data
+    return decrypt_rows(res.data, TICKET_PII_FIELDS)
 
 
 @app.post("/tickets", response_model=TicketRecord)
