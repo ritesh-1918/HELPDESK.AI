@@ -47,8 +47,10 @@ export default function useWebSocket(companyId) {
   const mountedRef = useRef(true);
   const companyIdRef = useRef(companyId);
 
-  // Keep a ref to latest companyId so the effect closure always has it
-  companyIdRef.current = companyId;
+  // Keep a ref to latest companyId so async handlers always see the current value.
+  useEffect(() => {
+    companyIdRef.current = companyId;
+  }, [companyId]);
 
   // ---- Cleanup helpers ---------------------------------------------------
 
