@@ -59,6 +59,7 @@ from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
+from backend.services.spam_service import SpamService
 
 
 # ---------------------------------------------------------------------------
@@ -110,6 +111,14 @@ class EntityInfo(BaseModel):
     confidence: float
 
 
+class SpamCheck(BaseModel):
+    is_spam: bool = False
+    risk_score: float = 0.0
+    reasons: list[str] = []
+    suspicious_urls: list[str] = []
+    matched_keywords: list[str] = []
+
+
 class TicketResponse(BaseModel):
     id: str | int | None = None
     ticket_id: str | None = None
@@ -130,6 +139,7 @@ class TicketResponse(BaseModel):
     highlights: list[str] = []
     timeline: dict = {} # Map of step_name: timestamp
     env_metadata: dict = {} # IP, Hostname, Browser/OS
+    spam_check: SpamCheck = SpamCheck()
     version: str = "2.1.0-Neural-Diagnostic"
 
 
@@ -179,6 +189,7 @@ classifier_service = ClassifierService()
 ner_service = NERService()
 duplicate_service = DuplicateService()
 rag_service = RagService()
+spam_service = SpamService()
 
 try:
     from backend.services.gemini_service import GeminiService
@@ -720,7 +731,17 @@ async def analyze_only(request_body: TicketRequest):
         except Exception as e:
             print(f"[VISION ERROR] {e}")
 
-    summary = text[:100] + ("…" if len(text) > 100 else "") 
+    summary = text[:100] + ("…" if len(text) > 100 else "")
+
+    # --- Spam / Phishing Detection (runs before classification) ---
+    try:
+        spam_result = spam_service.check(text, gemini_analysis.get("ocr_text", ""))
+    except Exception as e:
+        print(f"[SPAM ERROR] {e}")
+        spam_result = {
+            "is_spam": False, "risk_score": 0.0, "reasons": [],
+            "suspicious_urls": [], "matched_keywords": [],
+        }
 
     # --- Classification ---
     try:
@@ -793,13 +814,21 @@ async def analyze_only(request_body: TicketRequest):
         decision_factors.append(f"Found similar incident ({int(dup_result['similarity']*100)}%)")
     if rag_match:
         decision_factors.append(f"Found solution article: '{rag_match['title']}'")
+    if spam_result["is_spam"]:
+        decision_factors.append(
+            f"Flagged as spam/phishing (risk {spam_result['risk_score']:.2f})"
+        )
+        classification["assigned_team"] = "Spam / Suspicious"
+        classification["auto_resolve"] = False
 
     reasoning = f"Categorized as '{classification['category']}' - {classification['subcategory']}."
     if classification["auto_resolve"]:
         reasoning += " Flagged for AI auto-resolution via Knowledge Base." if rag_match else " Flagged for auto-resolution."
-    
+    if spam_result["is_spam"]:
+        reasoning += " Ticket flagged as spam/phishing and quarantined from agent inbox."
+
     timeline["routed"] = get_now_ist()
-    
+
     # --- Gemini Summary ---
     if gemini_service and gemini_service._initialized:
         summary = gemini_service.get_summary(text)
@@ -828,6 +857,7 @@ async def analyze_only(request_body: TicketRequest):
         highlights=entities, # Use entities as highlights for now
         timeline=timeline,
         env_metadata=env_metadata,
+        spam_check=SpamCheck(**spam_result),
         sla_breach_at=sla_breach_dt.isoformat() + "Z"
     )
 
@@ -861,7 +891,16 @@ async def analyze_stream(request_body: TicketRequest):
             except Exception as e:
                 pass
 
-        summary = text[:100] + ("…" if len(text) > 100 else "") 
+        summary = text[:100] + ("…" if len(text) > 100 else "")
+
+        # Spam / Phishing check (silent step — does not get its own SSE event)
+        try:
+            spam_result = spam_service.check(text, gemini_analysis.get("ocr_text", ""))
+        except Exception:
+            spam_result = {
+                "is_spam": False, "risk_score": 0.0, "reasons": [],
+                "suspicious_urls": [], "matched_keywords": [],
+            }
 
         # 2. NER
         yield f"data: {json.dumps({'step': 'Extracting technical entities', 'status': 'in_progress'})}\n\n"
@@ -935,11 +974,19 @@ async def analyze_stream(request_body: TicketRequest):
             decision_factors.append(f"Found similar incident ({int(dup_result['similarity']*100)}%)")
         if rag_match:
             decision_factors.append(f"Found solution article: '{rag_match['title']}'")
+        if spam_result["is_spam"]:
+            decision_factors.append(
+                f"Flagged as spam/phishing (risk {spam_result['risk_score']:.2f})"
+            )
+            classification["assigned_team"] = "Spam / Suspicious"
+            classification["auto_resolve"] = False
 
         reasoning = f"Categorized as '{classification['category']}' - {classification['subcategory']}."
         if classification["auto_resolve"]:
             reasoning += " Flagged for AI auto-resolution via Knowledge Base." if rag_match else " Flagged for auto-resolution."
-        
+        if spam_result["is_spam"]:
+            reasoning += " Ticket flagged as spam/phishing and quarantined from agent inbox."
+
         timeline["routed"] = get_now_ist()
 
         if gemini_service and gemini_service._initialized:
@@ -968,6 +1015,7 @@ async def analyze_stream(request_body: TicketRequest):
             "highlights": entities,
             "timeline": timeline,
             "env_metadata": env_metadata,
+            "spam_check": spam_result,
             "sla_breach_at": sla_breach_dt.isoformat() + "Z"
         }
 
