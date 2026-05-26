@@ -1,6 +1,28 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+// Module-scoped state for the real-time socket so it survives store rehydration.
+let _socket = null;
+let _socketCompanyId = null;
+let _reconnectTimer = null;
+let _reconnectAttempt = 0;
+let _shouldReconnect = false;
+
+const _resolveWsBase = () => {
+    const httpBase = import.meta?.env?.VITE_API_BASE || 'http://localhost:8000';
+    return httpBase.replace(/^http/i, 'ws');
+};
+
+const _scheduleReconnect = (companyId, store) => {
+    if (!_shouldReconnect || _reconnectTimer) return;
+    const delay = Math.min(30000, 1000 * Math.pow(2, _reconnectAttempt));
+    _reconnectAttempt += 1;
+    _reconnectTimer = setTimeout(() => {
+        _reconnectTimer = null;
+        store.getState().connectSocket(companyId);
+    }, delay);
+};
+
 const useTicketStore = create(
     persist(
         (set) => ({
@@ -9,6 +31,7 @@ const useTicketStore = create(
             autoResolvedTickets: [], // For analytics
             tickets: [], // Global queue for admins
             notifications: [], // User notifications
+            socketStatus: 'disconnected', // 'connecting' | 'connected' | 'disconnected'
             setAITicket: (data) => set({ aiTicket: data }),
             setActiveTicket: (ticket) => set({ activeTicket: ticket }),
             addAutoResolvedTicket: (record) => set((state) => ({
@@ -75,6 +98,57 @@ const useTicketStore = create(
                 notifications: (state.notifications || []).map(n => ({ ...n, read: true }))
             })),
             clearTicket: () => set({ aiTicket: null, activeTicket: null, autoResolvedTickets: [] }),
+            connectSocket: (companyId) => {
+                if (!companyId || typeof window === 'undefined') return;
+                if (_socket && _socketCompanyId === companyId &&
+                    (_socket.readyState === WebSocket.OPEN || _socket.readyState === WebSocket.CONNECTING)) {
+                    return;
+                }
+                if (_socket) {
+                    try { _socket.close(); } catch (_) { /* noop */ }
+                }
+                _socketCompanyId = companyId;
+                _shouldReconnect = true;
+                set({ socketStatus: 'connecting' });
+                const url = `${_resolveWsBase()}/ws/tickets/${encodeURIComponent(companyId)}`;
+                const ws = new WebSocket(url);
+                _socket = ws;
+                ws.onopen = () => {
+                    _reconnectAttempt = 0;
+                    set({ socketStatus: 'connected' });
+                };
+                ws.onmessage = (event) => {
+                    let payload;
+                    try { payload = JSON.parse(event.data); } catch (_) { return; }
+                    // Heartbeat: reply to server pings so the connection isn't evicted.
+                    if (payload?.type === 'ping') {
+                        try { ws.send(JSON.stringify({ type: 'pong' })); } catch (_) { /* noop */ }
+                        return;
+                    }
+                };
+                ws.onclose = () => {
+                    set({ socketStatus: 'disconnected' });
+                    if (_socket === ws) _socket = null;
+                    _scheduleReconnect(companyId, useTicketStore);
+                };
+                ws.onerror = () => {
+                    try { ws.close(); } catch (_) { /* noop */ }
+                };
+            },
+            disconnectSocket: () => {
+                _shouldReconnect = false;
+                if (_reconnectTimer) {
+                    clearTimeout(_reconnectTimer);
+                    _reconnectTimer = null;
+                }
+                if (_socket) {
+                    try { _socket.close(); } catch (_) { /* noop */ }
+                    _socket = null;
+                }
+                _socketCompanyId = null;
+                _reconnectAttempt = 0;
+                set({ socketStatus: 'disconnected' });
+            },
         }),
         {
             name: 'ticket-storage', // unique name for localStorage key

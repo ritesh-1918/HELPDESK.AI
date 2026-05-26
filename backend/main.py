@@ -19,7 +19,7 @@ from contextlib import asynccontextmanager
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -194,6 +194,86 @@ except ImportError:
 
 
 # ---------------------------------------------------------------------------
+# WebSocket Connection Pool Manager (with ping-pong heartbeat)
+# ---------------------------------------------------------------------------
+class ConnectionManager:
+    """
+    Tracks active WebSocket connections grouped by company_id and runs a
+    self-healing ping/pong heartbeat to evict stale clients.
+    """
+    PING_INTERVAL = 30  # seconds between heartbeats
+    PONG_TIMEOUT = 10   # seconds to wait for client pong
+
+    def __init__(self):
+        self._connections: dict[str, set[WebSocket]] = {}
+        self._pong_waiters: dict[WebSocket, asyncio.Event] = {}
+        self._lock = asyncio.Lock()
+
+    async def connect(self, websocket: WebSocket, company_id: str):
+        await websocket.accept()
+        async with self._lock:
+            self._connections.setdefault(company_id, set()).add(websocket)
+            self._pong_waiters[websocket] = asyncio.Event()
+
+    async def disconnect(self, websocket: WebSocket, company_id: str):
+        async with self._lock:
+            bucket = self._connections.get(company_id)
+            if bucket and websocket in bucket:
+                bucket.discard(websocket)
+                if not bucket:
+                    self._connections.pop(company_id, None)
+            self._pong_waiters.pop(websocket, None)
+        try:
+            await websocket.close()
+        except Exception:
+            pass
+
+    def notify_pong(self, websocket: WebSocket):
+        waiter = self._pong_waiters.get(websocket)
+        if waiter is not None:
+            waiter.set()
+
+    async def broadcast(self, company_id: str, message: dict):
+        for ws in list(self._connections.get(company_id, set())):
+            try:
+                await ws.send_json(message)
+            except Exception:
+                await self.disconnect(ws, company_id)
+
+    async def heartbeat_loop(self):
+        while True:
+            try:
+                await asyncio.sleep(self.PING_INTERVAL)
+                async with self._lock:
+                    snapshot = [(cid, ws) for cid, bucket in self._connections.items() for ws in bucket]
+                    for _, ws in snapshot:
+                        waiter = self._pong_waiters.get(ws)
+                        if waiter is not None:
+                            waiter.clear()
+                for company_id, ws in snapshot:
+                    try:
+                        await ws.send_json({"type": "ping"})
+                    except Exception:
+                        await self.disconnect(ws, company_id)
+                        continue
+                    waiter = self._pong_waiters.get(ws)
+                    if waiter is None:
+                        continue
+                    try:
+                        await asyncio.wait_for(waiter.wait(), timeout=self.PONG_TIMEOUT)
+                    except asyncio.TimeoutError:
+                        print(f"[WS] Pong timeout — evicting client for company_id={company_id}")
+                        await self.disconnect(ws, company_id)
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                print(f"[WS] Heartbeat loop error: {e}")
+
+
+connection_manager = ConnectionManager()
+
+
+# ---------------------------------------------------------------------------
 # Lifespan (startup / shutdown)
 # ---------------------------------------------------------------------------
 @asynccontextmanager
@@ -223,9 +303,17 @@ async def lifespan(app: FastAPI):
         print("[Startup] Gemini Service: NOT LOADED (Import failed)")
 
     print("[Startup] Classifier V2 Shadow: Ready.")
+
+    heartbeat_task = asyncio.create_task(connection_manager.heartbeat_loop())
+    print("[Startup] WebSocket heartbeat loop scheduled.")
     print("[Startup] Ready.")
     yield
     print("[Shutdown] Cleaning up ...")
+    heartbeat_task.cancel()
+    try:
+        await heartbeat_task
+    except asyncio.CancelledError:
+        pass
 
 
 # ---------------------------------------------------------------------------
@@ -647,6 +735,28 @@ async def update_ticket(ticket_id: str, updates: dict):
             return updated_ticket
     
     raise HTTPException(status_code=404, detail="Ticket not found")
+
+
+# ---------------------------------------------------------------------------
+# Real-time ticket dashboard WebSocket
+# ---------------------------------------------------------------------------
+@app.websocket("/ws/tickets/{company_id}")
+async def tickets_ws(websocket: WebSocket, company_id: str):
+    """
+    Real-time dashboard channel for a given tenant. The server pings every
+    30s; clients must reply with {"type": "pong"} within 10s or be evicted.
+    """
+    await connection_manager.connect(websocket, company_id)
+    try:
+        while True:
+            data = await websocket.receive_json()
+            if isinstance(data, dict) and data.get("type") == "pong":
+                connection_manager.notify_pong(websocket)
+    except WebSocketDisconnect:
+        await connection_manager.disconnect(websocket, company_id)
+    except Exception as e:
+        print(f"[WS] Error on company_id={company_id}: {e}")
+        await connection_manager.disconnect(websocket, company_id)
 
 
 # ---------------------------------------------------------------------------
