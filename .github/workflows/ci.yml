@@ -82,6 +82,7 @@ jobs:
             'uvicorn[standard]' \
             pydantic \
             python-multipart \
+            slowapi \
             supabase \
             apscheduler \
             python-dotenv

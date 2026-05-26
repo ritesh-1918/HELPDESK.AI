@@ -12,6 +12,7 @@ import {
   HelpCircle, Video, Play, X, ExternalLink 
 } from 'lucide-react-native';
 import { YOUTUBE_RESOURCES, VIDEO_CATEGORIES } from '../../data/youtubeResources';
+import { WebView } from 'react-native-webview';
 
 const DEFAULT_ARTICLES = [
   {
@@ -46,6 +47,13 @@ const KnowledgeBaseScreen = ({ navigation }) => {
   const [activeVideoCategory, setActiveVideoCategory] = useState('All');
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+
+  // New Premium Playback & YouTube States
+  const [selectedVideo, setSelectedVideo] = useState(null);
+  const [videoModalVisible, setVideoModalVisible] = useState(false);
+  const [videos, setVideos] = useState([]);
+  const [loadingVideos, setLoadingVideos] = useState(false);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
   // Debounced real-time articles search
   useEffect(() => {
@@ -120,29 +128,62 @@ const KnowledgeBaseScreen = ({ navigation }) => {
   };
 
   const handleVideoPress = (video) => {
-    Linking.openURL(video.url).catch(err => {
-      Alert.alert("Error", "Could not open YouTube link on your device.");
-    });
+    setSelectedVideo(video);
+    setVideoModalVisible(true);
   };
+
+  // Debounce the search query to keep typing fluid
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 600);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  // Sync and fetch videos dynamically matching category and search filter
+  useEffect(() => {
+    const fetchVideos = async () => {
+      setLoadingVideos(true);
+      try {
+        const fallbackList = activeVideoCategory === 'All' 
+          ? YOUTUBE_RESOURCES 
+          : YOUTUBE_RESOURCES.filter(v => v.category === activeVideoCategory);
+        
+        let formatted = fallbackList.map(item => {
+          const videoId = item.url.split('v=')[1] || item.id;
+          return {
+            id: videoId,
+            title: item.title,
+            description: item.description,
+            category: item.category,
+            url: item.url,
+            thumbnail_url: item.thumbnail_url || `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+          };
+        });
+
+        if (debouncedSearch.trim()) {
+          const q = debouncedSearch.toLowerCase().trim();
+          formatted = formatted.filter(v => 
+            v.title.toLowerCase().includes(q) || 
+            v.description.toLowerCase().includes(q) ||
+            v.category.toLowerCase().includes(q)
+          );
+        }
+
+        setVideos(formatted);
+      } catch (err) {
+        console.warn("YouTube videos fetch error:", err);
+      } finally {
+        setLoadingVideos(false);
+      }
+    };
+
+    fetchVideos();
+  }, [activeVideoCategory, debouncedSearch]);
 
   // Filter video guides locally in real-time
   const getFilteredVideos = () => {
-    let filtered = YOUTUBE_RESOURCES;
-    
-    if (activeVideoCategory !== 'All') {
-      filtered = filtered.filter(v => v.category === activeVideoCategory);
-    }
-    
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter(v => 
-        v.title.toLowerCase().includes(q) || 
-        v.description.toLowerCase().includes(q) ||
-        v.category.toLowerCase().includes(q)
-      );
-    }
-    
-    return filtered;
+    return videos;
   };
 
   const renderArticle = ({ item }) => (
@@ -311,6 +352,7 @@ const KnowledgeBaseScreen = ({ navigation }) => {
         transparent={true}
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
+        statusBarTranslucent
       >
         <View style={styles.modalOverlay}>
           <TouchableOpacity 
@@ -344,6 +386,50 @@ const KnowledgeBaseScreen = ({ navigation }) => {
             </TouchableOpacity>
           </View>
         </View>
+      </Modal>
+
+      {/* Premium Video Guides Inline WebView Player Modal */}
+      <Modal
+        animationType="slide"
+        transparent={false}
+        visible={videoModalVisible}
+        onRequestClose={() => setVideoModalVisible(false)}
+      >
+        <SafeAreaView style={styles.videoPlayerContainer} edges={['top', 'bottom']}>
+          <StatusBar barStyle="light-content" />
+          <View style={styles.videoPlayerHeader}>
+            <Text style={styles.videoPlayerTitle} numberOfLines={1}>
+              {selectedVideo?.title || 'Video Tutorial'}
+            </Text>
+            <TouchableOpacity 
+              onPress={() => setVideoModalVisible(false)} 
+              style={styles.videoPlayerCloseBtn}
+            >
+              <X size={20} color="#ffffff" strokeWidth={2.5} />
+            </TouchableOpacity>
+          </View>
+
+          {selectedVideo ? (
+            <WebView
+              style={styles.webView}
+              javaScriptEnabled={true}
+              domStorageEnabled={true}
+              allowsFullscreenVideo={true}
+              mediaPlaybackRequiresUserAction={false}
+              source={{ uri: `https://www.youtube.com/embed/${selectedVideo.id}?autoplay=1&modestbranding=1&rel=0` }}
+            />
+          ) : (
+            <View style={styles.videoPlayerLoading}>
+              <ActivityIndicator size="large" color="#ffffff" />
+            </View>
+          )}
+          
+          <View style={styles.videoPlayerFooter}>
+            <Text style={styles.videoPlayerDesc}>
+              {selectedVideo?.description}
+            </Text>
+          </View>
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );
@@ -612,6 +698,24 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
   },
+
+  // Premium video player styling definitions
+  videoPlayerContainer: { flex: 1, backgroundColor: '#090d16' },
+  videoPlayerHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    paddingHorizontal: 20, 
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.08)'
+  },
+  videoPlayerTitle: { fontSize: 15, fontWeight: '900', color: '#ffffff', flex: 1, marginRight: 16 },
+  videoPlayerCloseBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
+  webView: { flex: 1, backgroundColor: '#000000' },
+  videoPlayerLoading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  videoPlayerFooter: { padding: 20, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)' },
+  videoPlayerDesc: { fontSize: 13.5, color: '#94a3b8', lineHeight: 20, fontWeight: '500' }
 });
 
 export default KnowledgeBaseScreen;

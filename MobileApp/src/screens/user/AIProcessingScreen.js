@@ -138,7 +138,7 @@ const AIProcessingScreen = () => {
   const steps = [
     { label: "Initializing AI Core", icon: "🧠" },
     { label: "Scanning for OCR Data", icon: "🔍" },
-    { label: "Neural Classification", icon: "⚡" },
+    { label: "AI Classification", icon: "⚡" },
     { label: "Searching Knowledge Base", icon: "📚" },
     { label: "Extracting Technical Entities", icon: "🔗" },
     { label: "Checking for Duplicates", icon: "🛡️" },
@@ -201,9 +201,22 @@ const AIProcessingScreen = () => {
         return;
       }
       console.error('AI Analysis Error:', err);
+      let errorMsg = '';
+      if (err.response?.data?.detail) {
+        if (typeof err.response.data.detail === 'string') {
+          errorMsg = err.response.data.detail;
+        } else if (Array.isArray(err.response.data.detail)) {
+          errorMsg = err.response.data.detail.map(d => `${d.loc?.join('.') || 'field'}: ${d.msg}`).join(', ');
+        } else {
+          errorMsg = JSON.stringify(err.response.data.detail);
+        }
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      
       setError(err.response?.status === 503 
         ? 'The AI engine is waking up. Please wait a moment and try again.'
-        : (err.message || 'AI engine is currently busy. Please try again.'));
+        : (errorMsg || 'AI engine is currently busy. Please try again.'));
       setLoading(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
@@ -362,7 +375,7 @@ const AIProcessingScreen = () => {
 
         {/* Title */}
         <View style={styles.loadingHeader}>
-          <Text style={styles.loadingTitle}>Neural Processing</Text>
+          <Text style={styles.loadingTitle}>AI Triage & Analysis</Text>
           <Text style={styles.loadingSubtitle}>HelpDesk.ai is orchestrating your request</Text>
         </View>
 

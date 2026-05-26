@@ -463,36 +463,36 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', paddingTop: 40, paddingBottom: 20, gap: 10, marginHorizontal: 20 },
   emptyTitle: { fontSize: 17, fontWeight: '800', color: COLORS.text },
   emptyMsg: { fontSize: 13, color: COLORS.textLight, textAlign: 'center' },
-  // OTA Update Banner
+  // OTA Update Banner (Green Theme Harmony)
   updateBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#0f172a',
+    backgroundColor: COLORS.secondary, // Premium Dark Green-Black (#0f1f12)
     borderWidth: 1,
-    borderColor: 'rgba(99,102,241,0.45)',
+    borderColor: 'rgba(22, 163, 74, 0.35)', // Translucent Green
     borderRadius: 18,
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginHorizontal: 20,
     marginBottom: 16,
-    shadowColor: '#6366f1',
-    shadowOpacity: 0.35,
-    shadowRadius: 14,
-    elevation: 10,
+    shadowColor: COLORS.primary, // Green Glow
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
     gap: 10,
   },
   updateBannerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   updateIconWrap: {
     width: 36, height: 36, borderRadius: 10,
-    backgroundColor: '#6366f1',
+    backgroundColor: COLORS.primary, // Green Accent
     justifyContent: 'center', alignItems: 'center',
   },
-  updateTitle: { fontSize: 13, fontWeight: '800', color: '#e0e7ff' },
-  updateSubtitle: { fontSize: 11, color: 'rgba(224,231,255,0.55)', fontWeight: '500' },
+  updateTitle: { fontSize: 13, fontWeight: '800', color: COLORS.primaryLight }, // Light Green (#dcfce7)
+  updateSubtitle: { fontSize: 11, color: 'rgba(220, 252, 231, 0.65)', fontWeight: '500' },
   updateActions: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0 },
   updateBtn: {
-    backgroundColor: '#6366f1',
+    backgroundColor: COLORS.primary, // Green Button
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 10,

@@ -36,6 +36,13 @@ from dotenv import load_dotenv
 env_path = Path(__file__).parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
+# CI smoke tests allow degraded startup so the app can import without heavy ML assets.
+ALLOW_DEGRADED_STARTUP = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") == "1"
+
+
+def _startup_fatal(message: str) -> None:
+    print(f"[Startup-FATAL] {message}")
+
 # Initialize Supabase Client (Service Role for backend bypass)
 try:
     from supabase import create_client, Client
@@ -64,6 +71,7 @@ from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
 from backend.services.sla_engine import SLAEngine, compute_sla_breach_at, get_sla_policy
 from backend.services.semantic_duplicate_service import SemanticDuplicateService
+from backend.services.redis_cache import redis_cache
 
 
 # ---------------------------------------------------------------------------
@@ -116,6 +124,16 @@ def detect_semantic_duplicate(text: str, *, company_id: str | None, threshold: f
 
 def classify_ticket_text(text: str) -> dict:
     """Run the local classifier cascade with ONNX as the offline fallback path."""
+    cached = redis_cache.get_classification(text)
+    if cached:
+        return cached
+
+    result = _classify_ticket_text_uncached(text)
+    redis_cache.set_classification(text, result)
+    return result
+
+
+def _classify_ticket_text_uncached(text: str) -> dict:
     try:
         classification_v3_res = classifier_v3.predict(text)
         if "error" not in classification_v3_res:
@@ -342,6 +360,7 @@ def detect_and_translate_ticket_text(text: str) -> dict:
             "source_language_name": "English",
             "was_translated": False,
             "original_text": "",
+            "metadata":{},
         }
 
     detected = _heuristic_language_detection(original_text)
@@ -357,6 +376,7 @@ def detect_and_translate_ticket_text(text: str) -> dict:
             "source_language_name": "English",
             "was_translated": False,
             "original_text": original_text,
+            "metadata":{},
         }
 
     translated_text = original_text
@@ -370,6 +390,7 @@ def detect_and_translate_ticket_text(text: str) -> dict:
             "source_language_name": source_name,
             "was_translated": False,
             "original_text": original_text,
+            "metadata":{},
         }
 
     return {
@@ -378,6 +399,7 @@ def detect_and_translate_ticket_text(text: str) -> dict:
         "source_language_name": source_name,
         "was_translated": True,
         "original_text": original_text,
+        "metadata":{},
     }
 
 
@@ -388,6 +410,10 @@ def detect_and_translate_ticket_text(text: str) -> dict:
 async def lifespan(app: FastAPI):
     """Load all models at startup."""
     print("[Startup] Loading AI models ...")
+    try:
+        redis_cache.connect()
+    except Exception as e:
+        print(f"[WARNING] Redis cache not available: {e}")
     try:
         classifier_service.load()
     except FileNotFoundError as e:
@@ -751,6 +777,60 @@ async def save_ticket(request_body: TicketSaveRequest):
     }
     final_data["metadata"] = metadata
 
+        # Resolve tenant linkage from user profile with authorization validation.
+        profile = {}
+        if request_body.user_id:
+            try:
+                profile_res = (
+                    supabase.table("profiles")
+                    .select("company_id, company")
+                    .eq("id", request_body.user_id)
+                    .single()
+                    .execute()
+                )
+                profile = profile_res.data or {}
+                if not profile:
+                    raise HTTPException(status_code=404, detail="User profile not found")
+                
+                # SELF-HEALING: If company_id is null in database but company name exists, resolve it!
+                if not profile.get("company_id") and profile.get("company"):
+                    try:
+                        comp_name = profile.get("company").strip()
+                        comp_res = (
+                            supabase.table("companies")
+                            .select("id")
+                            .ilike("name", comp_name)
+                            .execute()
+                        )
+                        if comp_res.data:
+                            resolved_company_id = comp_res.data[0]["id"]
+                            # Backfill the profile table in real-time
+                            supabase.table("profiles").update({"company_id": resolved_company_id}).eq("id", request_body.user_id).execute()
+                            profile["company_id"] = resolved_company_id
+                            logger.info(f"[SELF-HEALING] Backfilled company_id={resolved_company_id} for user={request_body.user_id}")
+                    except Exception as healing_err:
+                        logger.warning(f"[SELF-HEALING WARNING] Failed to backfill company_id: {healing_err}")
+            except HTTPException:
+                raise
+            except Exception as profile_error:
+                user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+                logger.error(f"Tenant resolution error for user {user_hash}: {profile_error}")
+                raise HTTPException(status_code=503, detail="Failed to resolve tenant linkage") from profile_error
+
+        # Validate tenant consistency and authorization.
+        profile_company_id = profile.get("company_id")
+        if final_data.get("company_id"):
+            # User provided company_id: verify it matches their profile.
+            if profile_company_id and final_data["company_id"] != profile_company_id:
+                user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+                logger.warning(f"Tenant mismatch: user {user_hash} attempted {final_data['company_id']}, assigned to {profile_company_id}")
+                raise HTTPException(status_code=403, detail="User not authorized for this tenant")
+        elif profile_company_id:
+            # Backfill company_id from profile.
+            final_data["company_id"] = profile_company_id
+        elif request_body.user_id:
+            # User has no tenant assignment.
+            raise HTTPException(status_code=400, detail="User has no tenant assignment")
     # Resolve tenant linkage from user profile with authorization validation.
     profile = {}
     if request_body.user_id:
@@ -790,6 +870,27 @@ async def save_ticket(request_body: TicketSaveRequest):
         if not final_data.get("company") and profile.get("company"):
             final_data["company"] = profile["company"]
 
+        priority = final_data.get("priority")
+        if not final_data.get("sla_response_due_at"):
+            final_data["sla_response_due_at"] = calculate_sla_response_at(priority).isoformat().replace("+00:00", "Z")
+        if not final_data.get("sla_breach_at"):
+            final_data["sla_breach_at"] = calculate_sla_breach_at(priority).isoformat().replace("+00:00", "Z")
+        final_data["sla_status"] = final_data.get("sla_status") or classify_sla_status(final_data.get("sla_breach_at"))
+        final_data["escalation_level"] = int(final_data.get("escalation_level") or 0)
+
+        import hashlib
+        user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+        logger.info(f"Tenant linkage: user_hash={user_hash}, company_id={final_data.get('company_id')}")
+
+        duplicate_text = (request_body.description or "").strip() or (request_body.subject or "").strip()
+        duplicate_threshold = get_duplicate_threshold(final_data.get("company_id"), 0.85)
+        duplicate_result = {
+            "is_duplicate": False,
+            "duplicate_ticket_id": None,
+            "parent_ticket_id": None,
+            "is_potential_duplicate": False,
+            "similarity": 0.0,
+        }
         user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
         logger.info(f"Tenant linkage: user_hash={user_hash}, company_id={final_data.get('company_id')}")
 
@@ -1277,7 +1378,7 @@ async def analyze_stream(request_body: TicketRequest):
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
-@app.post("/ai/analyze_ticket")
+@app.post("/ai/analyze_ticket/legacy")
 async def legacy_analyze_and_save(request_body: TicketRequest):
     """
     BACKWARD COMPATIBILITY: Strictly performs analysis only. 

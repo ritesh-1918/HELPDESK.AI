@@ -6,12 +6,20 @@ Priority and other fields are derived from the category mapping.
 
 import os
 import json
-import torch
-import torch.nn.functional as F
-from transformers import DistilBertTokenizerFast, DistilBertForSequenceClassification
+try:
+    import torch
+    import torch.nn.functional as F
+    from transformers import DistilBertTokenizerFast, DistilBertForSequenceClassification
+    _HAS_TORCH = True
+except Exception:  # pragma: no cover - optional CI/runtime dependency
+    torch = None
+    F = None
+    DistilBertTokenizerFast = None
+    DistilBertForSequenceClassification = None
+    _HAS_TORCH = False
 
 SAVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "models", "classifier")
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = torch.device("cuda" if torch and torch.cuda.is_available() else "cpu") if _HAS_TORCH else None
 MAX_LEN = 128
 
 # Priority mapping based on sub-category severity
@@ -55,6 +63,11 @@ class ClassifierService:
     def load(self):
         """Load model, tokenizer, and label mappings from disk."""
         if self._loaded:
+            return
+
+        if not _HAS_TORCH:
+            # Degraded environment: ML runtime not available. Delay failure until predict is called.
+            print("[INFO] ML runtime not available; classifier will remain unloaded until dependencies are installed.")
             return
 
         abs_dir = os.path.abspath(SAVE_DIR)

@@ -17,6 +17,7 @@ easyocr
 slowapi>=0.1.9
 supabase==2.22.4
 storage3==2.22.4
+redis>=5.0.0
 pytest
 pytest-asyncio
 httpx

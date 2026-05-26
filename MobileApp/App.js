@@ -1,5 +1,4 @@
 import 'react-native-gesture-handler';
-import LogRocket from '@logrocket/react-native';
 import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -7,7 +6,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
 import { supabase } from './src/lib/supabase';
 import { COLORS } from './src/styles/theme';
-import { LayoutDashboard, Ticket, User } from 'lucide-react-native';
+import { LayoutDashboard, Ticket, User, Settings, ShieldAlert, Users } from 'lucide-react-native';
 import { View, ActivityIndicator, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -33,6 +32,13 @@ import TicketTrackingScreen from './src/screens/user/TicketTrackingScreen';
 import AIProcessingScreen from './src/screens/user/AIProcessingScreen';
 import NotificationsScreen from './src/screens/user/NotificationsScreen';
 import KnowledgeBaseScreen from './src/screens/user/KnowledgeBaseScreen';
+
+// Admin Screens
+import AdminDashboardScreen from './src/screens/admin/AdminDashboardScreen';
+import AdminTicketsScreen from './src/screens/admin/AdminTicketsScreen';
+import AdminTicketDetailScreen from './src/screens/admin/AdminTicketDetailScreen';
+import AdminUsersScreen from './src/screens/admin/AdminUsersScreen';
+import AdminSettingsScreen from './src/screens/admin/AdminSettingsScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -72,6 +78,45 @@ const TabNavigator = () => {
   );
 };
 
+const AdminTabNavigator = () => {
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = 60 + insets.bottom;
+
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ color, size }) => {
+          if (route.name === 'AdminDashboard') return <LayoutDashboard size={size} color={color} />;
+          if (route.name === 'Tickets') return <Ticket size={size} color={color} />;
+          if (route.name === 'Users') return <Users size={size} color={color} />;
+          if (route.name === 'Settings') return <Settings size={size} color={color} />;
+          if (route.name === 'Profile') return <User size={size} color={color} />;
+        },
+        tabBarActiveTintColor: COLORS.primary,
+        tabBarInactiveTintColor: COLORS.textMuted,
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '700' },
+        tabBarStyle: {
+          height: tabBarHeight,
+          paddingBottom: insets.bottom + 8,
+          paddingTop: 10,
+          backgroundColor: '#ffffff',
+          borderTopWidth: 1,
+          borderTopColor: '#f0f0f0',
+          elevation: 0,
+          shadowOpacity: 0,
+        },
+        headerShown: false,
+      })}
+    >
+      <Tab.Screen name="AdminDashboard" component={AdminDashboardScreen} options={{ title: 'Dashboard' }} />
+      <Tab.Screen name="Tickets" component={AdminTicketsScreen} />
+      <Tab.Screen name="Users" component={AdminUsersScreen} />
+      <Tab.Screen name="Settings" component={AdminSettingsScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
+    </Tab.Navigator>
+  );
+};
+
 // Inner app that has access to SafeAreaProvider context
 const AppContent = () => {
   const insets = useSafeAreaInsets();
@@ -79,36 +124,48 @@ const AppContent = () => {
   const [loading, setLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(null);
   const [userStatus, setUserStatus] = useState(null); // 'active', 'pending_approval', 'rejected'
+  const [userRole, setUserRole] = useState('user'); // 'user', 'admin', 'master_admin'
 
   useEffect(() => {
-    // Initialize LogRocket
-    LogRocket.init('ky7sla/helpdeskai');
-
     const initialize = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         setSession(session);
 
         if (session?.user) {
-          // Identify user in LogRocket
-          LogRocket.identify(session.user.id, {
-            email: session.user.email,
-            name: session.user.user_metadata?.full_name || 'User',
-          });
-
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from('profiles')
-            .select('status')
+            .select('status, role')
             .eq('id', session.user.id)
             .single();
-          setUserStatus(data?.status || 'active');
+          
+          if (error) {
+            console.log('[AuthInit] Profile fetch error, validating session:', error.message);
+            // Verify if session is still validly active (GetUser forces refresh if expired)
+            const { data: userData, error: userError } = await supabase.auth.getUser();
+            if (userError) {
+              console.log('[AuthInit] Token validation failed. Clearing session.');
+              setSession(null);
+            } else {
+              // Valid token but profiles table is temporarily offline; default to user
+              setUserStatus('active');
+              setUserRole('user');
+            }
+          } else {
+            setUserStatus(data?.status || 'active');
+            setUserRole(data?.role || 'user');
+          }
         }
-
-        const onboardingDone = await AsyncStorage.getItem('@onboarding_complete');
-        setShowOnboarding(onboardingDone === null);
       } catch (e) {
-        console.log('Init error', e);
+        console.log('[AuthInit] Crash caught during initialization:', e);
       } finally {
+        // Guarantee showOnboarding is resolved to a boolean to prevent React Navigation stack layout mismatch
+        try {
+          const onboardingDone = await AsyncStorage.getItem('@onboarding_complete');
+          setShowOnboarding(onboardingDone === null);
+        } catch (err) {
+          setShowOnboarding(false);
+        }
         setLoading(false);
       }
     };
@@ -118,21 +175,30 @@ const AppContent = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       if (session?.user) {
-        // Identify user in LogRocket on auth change
-        LogRocket.identify(session.user.id, {
-          email: session.user.email,
-          name: session.user.user_metadata?.full_name || 'User',
-        });
-
-        // Fetch profile status for routing
-        const { data } = await supabase
-          .from('profiles')
-          .select('status')
-          .eq('id', session.user.id)
-          .single();
-        setUserStatus(data?.status || 'active');
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('status, role')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (error) {
+            console.log('[AuthChange] Profile query failed:', error.message);
+            // Default to safe values to avoid blank screens
+            setUserStatus('active');
+            setUserRole('user');
+          } else {
+            setUserStatus(data?.status || 'active');
+            setUserRole(data?.role || 'user');
+          }
+        } catch (err) {
+          console.warn('[AuthChange] Uncaught exception inside handler:', err);
+          setUserStatus('active');
+          setUserRole('user');
+        }
       } else {
         setUserStatus(null);
+        setUserRole('user');
       }
     });
 
@@ -152,6 +218,7 @@ const AppContent = () => {
         filter: `id=eq.${session.user.id}`,
       }, (payload) => {
         setUserStatus(payload.new.status);
+        setUserRole(payload.new.role || 'user');
       })
       .subscribe();
 
@@ -208,6 +275,7 @@ const AppContent = () => {
   const isActive = userStatus === 'active';
   const isPending = userStatus === 'pending_approval';
   const isRejected = userStatus === 'rejected';
+  const isAdmin = userRole === 'admin' || userRole === 'master_admin';
 
   return (
     <NotificationProvider topInset={insets.top}>
@@ -229,13 +297,20 @@ const AppContent = () => {
           ) : (
             // ─── Active user ───
             <>
-               <Stack.Screen name="MainTabs" component={TabNavigator} />
+               {isAdmin ? (
+                 <Stack.Screen name="MainTabs" component={AdminTabNavigator} />
+               ) : (
+                 <Stack.Screen name="MainTabs" component={TabNavigator} />
+               )}
               <Stack.Screen name="CreateTicket" component={CreateTicketScreen} options={{ animation: 'slide_from_bottom' }} />
               <Stack.Screen name="AIProcessing" component={AIProcessingScreen} options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="TicketTracking" component={TicketTrackingScreen} options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="TicketDetail" component={TicketDetailScreen} options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="KnowledgeBase" component={KnowledgeBaseScreen} options={{ animation: 'slide_from_right' }} />
+              
+              {/* Admin specific screens */}
+              <Stack.Screen name="AdminTicketDetail" component={AdminTicketDetailScreen} options={{ animation: 'slide_from_right' }} />
             </>
           )}
         </Stack.Navigator>

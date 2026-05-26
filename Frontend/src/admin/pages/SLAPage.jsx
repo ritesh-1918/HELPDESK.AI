@@ -24,8 +24,6 @@ import {
   ExternalLink,
   Gauge,
   Activity,
-  Users,
-  TrendingUp,
 } from 'lucide-react';
 import SLADashboard from '../components/SLADashboard';
 import SLABadge from '../components/SLABadge';
@@ -105,7 +103,6 @@ export default function SLAPage() {
   const [escalations, setEscalations] = useState([]);
   const [policies, setPolicies] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPriority, setFilterPriority] = useState('all');
   const [expandedEsc, setExpandedEsc] = useState(null);
@@ -114,7 +111,6 @@ export default function SLAPage() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       const [ticketData, escData, policyData] = await Promise.all([
         fetchSLATickets(filterStatus),
@@ -126,7 +122,6 @@ export default function SLAPage() {
       setPolicies(Array.isArray(policyData) ? policyData : policyData?.policies || []);
     } catch (err) {
       console.error('[SLAPage] Fetch error:', err);
-      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -150,23 +145,6 @@ export default function SLAPage() {
     });
     return result;
   }, [tickets, filterPriority]);
-
-  // ── Stats card component ────────────────────────────────────────────────────
-
-  const StatCard = ({ label, value, icon: Icon, color, bg, border, subtitle, pulse }) => (
-    <div
-      className="rounded-xl p-5 border transition-all hover:shadow-md"
-      style={{ background: bg, borderColor: border }}
-    >
-      <div className="flex items-center justify-between mb-3">
-        <Icon size={22} style={{ color }} />
-        {pulse && <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />}
-      </div>
-      <p className="text-3xl font-bold" style={{ color }}>{value}</p>
-      <p className="text-sm font-semibold text-gray-600 mt-1">{label}</p>
-      {subtitle && <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>}
-    </div>
-  );
 
   // ── Tab navigation ──────────────────────────────────────────────────────────
 
