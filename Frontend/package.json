@@ -27,7 +27,9 @@
     "date-fns": "^4.1.0",
     "framer-motion": "^12.39.0",
     "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
     "lucide-react": "^0.574.0",
+    "papaparse": "^5.5.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-is": "^19.2.4",
@@ -73,6 +75,9 @@
     "vite": "^7.3.1"
   },
   "lint-staged": {
-    "*.{js,jsx}": ["eslint --fix", "prettier --write"]
+    "*.{js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ]
   }
 }
