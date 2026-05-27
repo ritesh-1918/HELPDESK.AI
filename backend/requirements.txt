@@ -1,4 +1,5 @@
 torch>=2.0.0
+langdetect>=1.2.0
 transformers>=4.35.0
 datasets>=2.14.0
 pandas>=2.0.0

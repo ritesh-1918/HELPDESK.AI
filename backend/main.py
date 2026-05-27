@@ -509,6 +509,19 @@ LANGUAGE_NAMES = {
     "ru": "Russian",
 }
 
+try:
+    from backend.language_pipeline import (
+        detect_language as _lp_detect_language,
+        translate_to_english as _lp_translate_to_english,
+        translate_from_english as _lp_translate_from_english,
+        LANGUAGE_NAMES as _LP_LANGUAGE_NAMES,
+    )
+    LANGUAGE_NAMES.update(_LP_LANGUAGE_NAMES)
+    _LANGUAGE_PIPELINE_AVAILABLE = True
+except ImportError:
+    _LANGUAGE_PIPELINE_AVAILABLE = False
+
+
 def _heuristic_language_detection(text: str) -> dict:
     sample = (text or "").strip()
     if not sample:
@@ -531,13 +544,27 @@ def detect_and_translate_ticket_text(text: str) -> dict:
             "metadata":{},
         }
 
-    detected = _heuristic_language_detection(original_text)
-    if gemini_service and getattr(gemini_service, "_initialized", False):
-        detected = gemini_service.detect_language(original_text)
+    # --- Step 1: Language detection ---
+    # Primary: language_pipeline (langdetect); secondary: Gemini; fallback: heuristic
+    if _LANGUAGE_PIPELINE_AVAILABLE:
+        source_code = _lp_detect_language(original_text)
+        source_name = LANGUAGE_NAMES.get(source_code, source_code.upper())
+    else:
+        detected = _heuristic_language_detection(original_text)
+        if gemini_service and getattr(gemini_service, "_initialized", False):
+            detected = gemini_service.detect_language(original_text)
+        source_code = str(detected.get("code", "en")).lower()
+        source_name = detected.get("name") or LANGUAGE_NAMES.get(source_code, source_code.upper())
 
-    source_code = str(detected.get("code", "en")).lower()
-    source_name = detected.get("name") or LANGUAGE_NAMES.get(source_code, source_code.upper())
-    if source_code in ("en", "eng"):
+    # If langdetect returned "en" / "unknown", try Gemini for confirmation
+    if source_code in ("en", "unknown") and gemini_service and getattr(gemini_service, "_initialized", False):
+        gemini_detected = gemini_service.detect_language(original_text)
+        gemini_code = str(gemini_detected.get("code", "en")).lower()
+        if gemini_code not in ("en", "eng", "unknown"):
+            source_code = gemini_code
+            source_name = gemini_detected.get("name") or LANGUAGE_NAMES.get(gemini_code, gemini_code.upper())
+
+    if source_code in ("en", "eng", "unknown"):
         return {
             "text_for_analysis": original_text,
             "source_language": "en",
@@ -547,8 +574,14 @@ def detect_and_translate_ticket_text(text: str) -> dict:
             "metadata":{},
         }
 
+    # --- Step 2: Translation to English ---
+    # Primary: language_pipeline (Helsinki-NLP); fallback: Gemini
     translated_text = original_text
-    if gemini_service and getattr(gemini_service, "_initialized", False):
+    if _LANGUAGE_PIPELINE_AVAILABLE:
+        translated_text = _lp_translate_to_english(original_text, source_code)
+
+    # Fall back to Gemini if Helsinki-NLP returned the same text (model unavailable)
+    if translated_text == original_text and gemini_service and getattr(gemini_service, "_initialized", False):
         translated_text = gemini_service.translate_to_english(original_text, source_name)
 
     if not translated_text or translated_text.strip() == original_text:

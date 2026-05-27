@@ -4,6 +4,7 @@ import { Clock, ChevronRight, Inbox, Loader2, AlertCircle } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import { supabase } from '../../lib/supabaseClient';
 import { formatTimelineDate } from '../../utils/dateUtils';
+import LanguageBadge from '../../components/shared/LanguageBadge';
 
 const RecentTickets = () => {
     const navigate = useNavigate();
@@ -132,11 +133,9 @@ const RecentTickets = () => {
                                             <p className="text-sm font-semibold text-slate-900 dark:text-white truncate max-w-[320px]">
                                                 {ticket.summary || ticket.subject || ticket.description || "No description provided"}
                                             </p>
-                                            {ticket?.metadata?.translation?.translated && (
-                                                <p className="text-[11px] text-sky-600 dark:text-sky-400 mt-1">
-                                                    Translated from {ticket.metadata.translation.source_language_name || ticket.metadata.translation.source_language || 'Unknown'}
-                                                </p>
-                                            )}
+                                            <div className="mt-1">
+                                                <LanguageBadge translation={ticket?.metadata?.translation} compact />
+                                            </div>
                                         </td>
                                         <td className="px-7 py-4">
                                             {getStatusBadge(ticket.status)}
