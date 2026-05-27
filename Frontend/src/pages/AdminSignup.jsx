@@ -52,6 +52,15 @@ function AdminSignup() {
         }
     }, [user, profile, navigate]);
 
+    // Password complexity validator — mirrors Supabase's policy
+    const validatePassword = (pw) => {
+        if (pw.length < 8) return 'Password must be at least 8 characters long.';
+        if (!/[a-z]/.test(pw)) return 'Password must contain at least one lowercase letter (a-z).';
+        if (!/[A-Z]/.test(pw)) return 'Password must contain at least one uppercase letter (A-Z).';
+        if (!/[0-9]/.test(pw)) return 'Password must contain at least one number (0-9).';
+        return null; // valid
+    };
+
     // Password strength calculation
     useEffect(() => {
         const pw = formData.password;
@@ -60,9 +69,7 @@ function AdminSignup() {
         if (/[A-Z]/.test(pw)) strength += 25;
         if (/[0-9]/.test(pw)) strength += 25;
         if (/[^A-Za-z0-9]/.test(pw)) strength += 25;
-         
         setPasswordStrength(strength);
- 
     }, [formData.password]);
 
     const handleChange = (e) => {
@@ -80,8 +87,9 @@ function AdminSignup() {
                 setError("Please fill in all required personal information.");
                 return;
             }
-            if (formData.password.length < 8) {
-                setError("Password must be at least 8 characters long.");
+            const pwError = validatePassword(formData.password);
+            if (pwError) {
+                setError(pwError);
                 return;
             }
             if (formData.password !== formData.confirmPassword) {
@@ -420,13 +428,15 @@ function AdminSignup() {
                                                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                                 </button>
                                             </div>
-                                            {/* Strength Meter */}
-                                            {formData.password && (
-                                                <div className="mt-2 space-y-1">
+                                            {/* Password Requirements */}
+                                            <div className="mt-2 space-y-1">
+                                                {formData.password && (
                                                     <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-gray-400">
                                                         <span>Strength: {getStrengthText()}</span>
                                                         <span>{passwordStrength}%</span>
                                                     </div>
+                                                )}
+                                                {formData.password && (
                                                     <div className="h-1 w-full bg-gray-100 rounded-full overflow-hidden">
                                                         <motion.div
                                                             className={`h-full ${getStrengthColor()}`}
@@ -434,8 +444,22 @@ function AdminSignup() {
                                                             animate={{ width: `${passwordStrength}%` }}
                                                         />
                                                     </div>
+                                                )}
+                                                <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-2">
+                                                    {[
+                                                        { label: '8+ characters', ok: formData.password.length >= 8 },
+                                                        { label: 'Uppercase (A-Z)', ok: /[A-Z]/.test(formData.password) },
+                                                        { label: 'Lowercase (a-z)', ok: /[a-z]/.test(formData.password) },
+                                                        { label: 'Number (0-9)', ok: /[0-9]/.test(formData.password) },
+                                                    ].map(({ label, ok }) => (
+                                                        <span key={label} className={`text-[10px] font-semibold flex items-center gap-1 transition-colors ${
+                                                            formData.password ? (ok ? 'text-emerald-600' : 'text-red-400') : 'text-gray-300'
+                                                        }`}>
+                                                            <span>{ok ? '✓' : '○'}</span> {label}
+                                                        </span>
+                                                    ))}
                                                 </div>
-                                            )}
+                                            </div>
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
