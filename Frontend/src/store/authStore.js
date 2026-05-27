@@ -10,7 +10,7 @@ const verifyServerCookieSession = async () => {
    try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 5000);
-        const res = await fetch(`${BACKEND_URL}/api/auth/me`, {
+        const res = await fetch(`${BACKEND_URL}/auth/me`, {
             method: 'GET',
             credentials: 'include',
             headers: { Accept: 'application/json' },
@@ -163,7 +163,7 @@ const useAuthStore = create(
                 set({ loading: true });
                 console.log("Attempting login for:", email);
                 try {
-                    await mirrorBackendAuth('/api/auth/login', { email, password });
+                    await mirrorBackendAuth('/auth/login', { email, password });
 
                     const { data, error } = await supabase.auth.signInWithPassword({
                         email,
