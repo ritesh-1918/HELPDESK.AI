@@ -381,7 +381,7 @@ export default function LandingPage() {
 
   {/* Mobile Menu */}
   {isMenuOpen && (
-    <div className="lg:hidden border-t border-gray-100 bg-white">
+    <div className="lg:hidden absolute top-full left-0 w-full border-t border-gray-100 bg-white shadow-xl dark:bg-gray-900 dark:border-gray-800">
       <div className="flex flex-col px-4 py-5 gap-4">
 
         <a
