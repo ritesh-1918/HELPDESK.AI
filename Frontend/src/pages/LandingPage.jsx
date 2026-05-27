@@ -875,17 +875,17 @@ export default function LandingPage() {
                             {
                                 heading: 'Resources',
                                 links: [
-                                    { label: 'Documentation', href: '#' },
-                                    { label: 'API Reference', href: '#' },
+                                    { label: 'Documentation', href: '/docs' },
+                                    { label: 'API Reference', href: '/api-reference' },
                                     { label: 'Changelog', href: '/changelog' },
-                                    { label: 'Status Page', href: '#' },
+                                    { label: 'Status Page', href: '/status' },
                                 ]
                             },
                             {
                                 heading: 'Company',
                                 links: [
-                                    { label: 'About Us', href: '#' },
-                                    { label: 'Careers', href: '#' },
+                                    { label: 'About Us', href: '/about' },
+                                    { label: 'Careers', href: '/careers' },
                                     { label: 'Privacy Policy', href: '/privacy' },
                                     { label: 'Terms of Service', href: '/terms' },
                                 ]
@@ -896,7 +896,7 @@ export default function LandingPage() {
                                     { label: 'Security Overview', href: '/security' },
                                     { label: 'Privacy Policy', href: '/privacy' },
                                     { label: 'Terms of Service', href: '/terms' },
-                                    { label: 'Cookie Policy', href: '#' },
+                                    { label: 'Cookie Policy', href: '/cookie-policy' },
                                 ]
                             },
                         ].map(({ heading, links }) => (
