@@ -94,6 +94,7 @@
 html{
   overflow-y: scroll;
   scrollbar-width: none; /* Firefox */
+  scroll-behavior: smooth;
 }
 
 html::-webkit-scrollbar{
