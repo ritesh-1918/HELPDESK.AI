@@ -29,3 +29,10 @@ dist/
 docs/helpdesk*.pdf
 docs/logs/
 *.log
+
+
+# Large AI model files
+*.safetensors
+*.pt
+*.pth
+*.bin
