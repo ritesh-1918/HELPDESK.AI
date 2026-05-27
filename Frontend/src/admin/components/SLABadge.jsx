@@ -19,36 +19,43 @@ function formatDuration(ms) {
 }
 
 /**
- * SLABadge — shows SLA status for a ticket based on its priority and creation time.
- * 
+ * SLABadge — shows SLA countdown for a ticket.
+ *
  * Props:
- *  - priority: string ('critical' | 'high' | 'medium' | 'low')
- *  - createdAt: string (ISO date string)
- *  - status: string — if ticket is resolved/closed, show "Met" without countdown
- *  - compact: bool — if true, shows just the badge with no label text
+ *  - priority:    string ('critical' | 'high' | 'medium' | 'low')
+ *  - createdAt:   string (ISO date) — used as fallback when slaBreachAt is absent
+ *  - slaBreachAt: string (ISO date) — preferred; exact deadline from backend
+ *  - slaStatus:   string ('ACTIVE' | 'WARNING' | 'BREACHED') — skip timer when BREACHED
+ *  - status:      string — if ticket is resolved/closed, show "Met" without countdown
+ *  - compact:     bool  — if true, shows just the badge with no label text
  */
-export default function SLABadge({ priority, createdAt, status, compact = false }) {
+export default function SLABadge({ priority, createdAt, slaBreachAt, slaStatus, status, compact = false }) {
     const [remaining, setRemaining] = useState(null);
 
     const isResolved = ['resolved', 'closed', 'auto-resolved'].includes(status?.toLowerCase());
+    const isAlreadyBreached = slaStatus?.toUpperCase() === 'BREACHED';
 
     useEffect(() => {
-        if (isResolved || !priority || !createdAt) return;
+        if (isResolved) return;
 
-        const priorityKey = priority.toLowerCase();
-        const limit = SLA_LIMITS[priorityKey] || SLA_LIMITS.medium;
-        const createdMs = new Date(createdAt).getTime();
-
-        const calculate = () => {
-            const elapsed = Date.now() - createdMs;
-            const rem = limit - elapsed;
-            setRemaining(rem);
+        // Prefer slaBreachAt (exact backend deadline) over priority + createdAt heuristic
+        const getDeadlineMs = () => {
+            if (slaBreachAt) return new Date(slaBreachAt).getTime();
+            if (!priority || !createdAt) return null;
+            const priorityKey = priority.toLowerCase();
+            const limit = SLA_LIMITS[priorityKey] || SLA_LIMITS.medium;
+            return new Date(createdAt).getTime() + limit;
         };
 
+        const deadlineMs = getDeadlineMs();
+        if (deadlineMs === null) return;
+
+        const calculate = () => setRemaining(deadlineMs - Date.now());
+
         calculate();
-        const timer = setInterval(calculate, 60 * 1000); // update every minute
+        const timer = setInterval(calculate, 60 * 1000);
         return () => clearInterval(timer);
-    }, [priority, createdAt, isResolved]);
+    }, [priority, createdAt, slaBreachAt, isResolved]);
 
     if (isResolved) {
         return (
@@ -59,9 +66,9 @@ export default function SLABadge({ priority, createdAt, status, compact = false 
         );
     }
 
-    if (remaining === null) return null;
+    if (remaining === null && !isAlreadyBreached) return null;
 
-    const isBreached = remaining <= 0;
+    const isBreached = isAlreadyBreached || (remaining !== null && remaining <= 0);
     const isCritical = remaining <= 30 * 60 * 1000 && remaining > 0; // < 30 min
     const isWarning = remaining <= 60 * 60 * 1000 && remaining > 30 * 60 * 1000; // 30–60 min
 

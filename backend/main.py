@@ -75,6 +75,7 @@ from backend.services.rag_service import RagService
 from backend.services.spam_service import SpamService
 from backend.services.sla_engine import SLAEngine, compute_sla_breach_at, get_sla_policy
 from backend.services.redis_cache import redis_cache
+from backend.sla_predictor import get_sla_estimate
 from backend.auth_cookie import router as auth_cookie_router, get_current_user  # noqa: F401
 
 
@@ -1263,6 +1264,29 @@ async def get_ticket_by_id(
     if company_scope and res.data.get("company_id") != company_scope:
         raise HTTPException(status_code=403, detail="User not authorized for this tenant")
     return res.data
+
+
+@app.get("/tickets/{ticket_id}/sla-estimate")
+async def get_ticket_sla_estimate(
+    ticket_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Estimate resolution time and SLA breach risk for a ticket."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    profile = _get_authenticated_profile(current_user)
+    company_scope = _ticket_company_scope(profile)
+
+    res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    ticket = res.data
+    if company_scope and ticket.get("company_id") != company_scope:
+        raise HTTPException(status_code=403, detail="User not authorized for this tenant")
+
+    return get_sla_estimate(ticket, supabase)
 
 
 @app.get("/tickets/{ticket_id}/audit_logs", response_model=list[AuditLogRecord])
