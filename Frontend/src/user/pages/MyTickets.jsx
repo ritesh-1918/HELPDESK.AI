@@ -121,13 +121,6 @@ function MyTickets() {
         return 'text-gray-600';
     };
 
-    const getTranslationInfo = (ticket) => {
-        const t = ticket?.metadata?.translation;
-        if (!t?.translated) return null;
-        return {
-            sourceLanguageName: t.source_language_name || t.source_language || 'Unknown',
-        };
-    };
 
     return (
         <main className="flex-1 max-w-[1200px] w-full mx-auto px-6 py-10 flex flex-col gap-8">
