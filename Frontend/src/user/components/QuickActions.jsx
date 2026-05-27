@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Network, Laptop, ShieldCheck, ArrowRight } from 'lucide-react';
+import { Network, Laptop, ShieldCheck, ArrowRight, Mic } from 'lucide-react';
 
 const actions = [
     {
@@ -26,6 +26,15 @@ const actions = [
         icon: ShieldCheck,
         iconBg: '#F5F0FF',
         iconColor: '#7c3aed',
+    },
+    {
+        title: "Voice-to-Ticket",
+        description: "Describe your issue using voice. AI transcribes and creates your ticket instantly.",
+        category: "Voice",
+        icon: Mic,
+        iconBg: '#FEF3C7',
+        iconColor: '#d97706',
+        path: "/voice-ticket",
     }
 ];
 
@@ -33,8 +42,12 @@ const QuickActions = () => {
     const navigate = useNavigate();
     const [hoveredIdx, setHoveredIdx] = useState(null);
 
-    const handleActionClick = (category) => {
-        navigate('/create-ticket', { state: { prefilledCategory: category } });
+    const handleActionClick = (action) => {
+        if (action.path) {
+            navigate(action.path);
+        } else {
+            navigate('/create-ticket', { state: { prefilledCategory: action.category } });
+        }
     };
 
     return (
@@ -42,7 +55,7 @@ const QuickActions = () => {
             {actions.map((action, index) => (
                 <div
                     key={index}
-                    onClick={() => handleActionClick(action.category)}
+                    onClick={() => handleActionClick(action)}
                     onMouseEnter={() => setHoveredIdx(index)}
                     onMouseLeave={() => setHoveredIdx(null)}
                     style={{
@@ -69,8 +82,8 @@ const QuickActions = () => {
                         {action.description}
                     </p>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#16a34a', fontWeight: 600, fontSize: '13px' }}>
-                        Start Request →
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: action.iconColor || '#16a34a', fontWeight: 600, fontSize: '13px' }}>
+                        {action.path ? 'Speak Now →' : 'Start Request →'}
                     </div>
                 </div>
             ))}
@@ -79,4 +92,3 @@ const QuickActions = () => {
 };
 
 export default QuickActions;
-

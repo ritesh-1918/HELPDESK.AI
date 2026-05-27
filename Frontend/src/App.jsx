@@ -43,6 +43,7 @@ import TicketDetail from "./user/pages/TicketDetail";
 import TicketProcessing from "./user/pages/AIProcessing"; // Renamed generic import just in case, but keeping AIProcessing
 import AIProcessing from "./user/pages/AIProcessing";
 import AIUnderstanding from "./user/pages/AIUnderstanding";
+import VoiceToTicket from "./user/components/VoiceToTicket";
 import Notifications from "./user/pages/Notifications";
 import Help from "./user/pages/Help";
 import DocsPortal from "./docs/pages/DocsPortal";
@@ -116,6 +117,7 @@ function TitleUpdater() {
     else if (path.startsWith('/ai-processing')) title = 'AI Processing';
     else if (path === '/dashboard') title = 'User Dashboard';
     else if (path === '/create-ticket') title = 'Create Ticket';
+    else if (path === '/voice-ticket') title = 'Voice-to-Ticket';
     else if (path === '/my-tickets') title = 'My Tickets';
     else if (path === '/profile') title = 'User Profile';
     else if (path === '/notifications') title = 'Notifications';
@@ -184,6 +186,7 @@ function AppLayout() {
         }>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/create-ticket" element={<CreateTicket />} />
+          <Route path="/voice-ticket" element={<VoiceToTicket />} />
           <Route path="/my-tickets" element={<MyTickets />} />
           <Route path="/ticket/:ticket_id" element={<TicketDetail />} />
           <Route path="/ai-processing" element={<AIProcessing />} />
