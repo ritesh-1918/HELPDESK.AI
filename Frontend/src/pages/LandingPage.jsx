@@ -273,7 +273,7 @@ export default function LandingPage() {
     };
 
     return (
-        <div className="min-h-screen bg-white font-sans text-slate-800">
+        <div className="min-h-screen bg-white font-sans text-slate-800 scroll-smooth">
             {showDemo && <DemoModal onClose={() => setShowDemo(false)} />}
 
             {/* ==================== NAV ==================== */}
@@ -357,8 +357,8 @@ export default function LandingPage() {
                         <span>AI-Powered Helpdesk Automation · Made in India 🇮🇳</span>
                     </div>
 
-                    <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold text-gray-900 tracking-tight mb-6 leading-[1.1]">
-                        Your IT Helpdesk,<br />
+                    <h1 className="text-3xl sm:text-5xl md:text-7xl font-extrabold text-gray-900 tracking-tight mb-6 leading-[1.1]">
+                        Your IT Helpdesk,<br className="hidden sm:block" />
                         <span className="text-emerald-700">Fully Automated.</span>
                     </h1>
 
@@ -499,7 +499,7 @@ export default function LandingPage() {
             {/* ==================== STATS BAR ==================== */}
             <section className="bg-emerald-900 py-12 text-white">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center divide-y-2 sm:divide-y-0 sm:divide-x divide-white/10">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8 text-center divide-y-2 sm:divide-y-0 sm:divide-x divide-white/10">
                         <AnimatedStat prefix="+" target="80" suffix="%" label="Faster Ticket Triage" />
                         <AnimatedStat target="99" suffix="%" label="Classification Accuracy" />
                         <AnimatedStat target="Zero" label="Manual Routing Needed" isWord={true} />
@@ -740,7 +740,7 @@ export default function LandingPage() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto">
                         {pricingPlans.map(({ name, price, priceLabel, period, desc, cta, ctaStyle, features, popular }) => (
                             <div
                                 key={name}
@@ -910,7 +910,7 @@ export default function LandingPage() {
                     </div>
 
                     {/* Bottom bar */}
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-4 mt-16 pt-8 border-t border-white/10">
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-4 mt-12 md:mt-16 pt-6 md:pt-8 border-t border-white/10">
                         <p className="text-xs text-white/40">
                             © 2026 HelpDesk.ai. All rights reserved. · Registered in India
                         </p>
