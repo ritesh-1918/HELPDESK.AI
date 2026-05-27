@@ -32,7 +32,7 @@ const useTicketStore = create(
             })),
             addTicket: (ticket) => set((state) => {
                 return {
-                    tickets: [...state.tickets, ticket]
+                    tickets: [ticket, ...state.tickets]
                 };
             }),
             upsertTicket: (ticket) => set((state) => {
