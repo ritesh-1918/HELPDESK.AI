@@ -38,9 +38,10 @@ scratch/
 .npm-cache/
 
 # GSSoC Score Tracking and Temporary Scripts
-scratch/
-.npm-cache/
 *.tmp
 ../MOBILE_SETUP_TEMP.md
 ../CI_YML_TEMP.yml
 ../ENV_EXAMPLE_TEMP.example
+
+# Supabase local temp files (project ref, etc.)
+supabase/.temp/

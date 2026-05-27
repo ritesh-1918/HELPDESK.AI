@@ -7,16 +7,21 @@ create or replace function public.ticket_insert_webhook()
 returns trigger as $$
 declare
   service_key text;
+  project_ref text := '[YOUR_SUPABASE_PROJECT_REF]'; -- Set this to your Supabase project ref
 begin
-  -- SECURE: Fetching the service role key from the Supabase Vault
-  -- This prevents hardcoding sensitive secrets in version control.
+  -- Fetching the service role key from the Supabase Vault
   select decrypted_secret into service_key from vault.decrypted_secrets where name = 'SUPABASE_SERVICE_ROLE_KEY' limit 1;
 
+  if service_key is null then
+    raise warning 'SUPABASE_SERVICE_ROLE_KEY not found in vault. Run supabase/scripts/setup_vault.py to configure it.';
+    return NEW;
+  end if;
+
   perform net.http_post(
-    url:='https://aejuenhqciagpntcqoir.supabase.co/functions/v1/email-notifier',
+    url:='https://' || project_ref || '.supabase.co/functions/v1/email-notifier',
     headers:=jsonb_build_object(
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer ' || coalesce(service_key, 'FALLBACK_PLEASE_CONFIGURE_VAULT')
+      'Authorization', 'Bearer ' || service_key
     ),
     body:=jsonb_build_object(
       'type', 'INSERT',

@@ -7,7 +7,7 @@ const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
 // User Defined Secrets
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
-const FROM_EMAIL = "HELPDESK.AI <bonthalamadhavi1@gmail.com>";
+const FROM_EMAIL = Deno.env.get("FROM_EMAIL") || "HELPDESK.AI <noreply@helpdesk.ai>";
 
 serve(async (req: Request) => {
   try {
