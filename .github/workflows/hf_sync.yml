@@ -51,4 +51,4 @@ jobs:
         run: |
           cd deploy_dir
           # Force push to the Hugging Face Space repository
-          git push --force https://ritesh19180:$HF_TOKEN@huggingface.co/spaces/ritesh19180/ai-helpdesk-api main
+          git push --force https://${{ secrets.HF_USERNAME }}:$HF_TOKEN@huggingface.co/spaces/${{ secrets.HF_USERNAME }}/ai-helpdesk-api main
