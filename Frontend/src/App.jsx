@@ -11,6 +11,7 @@ import { NotFound } from "./components/ui/not-found-2";
 import useTicketStore from "./store/ticketStore";
 import Toaster from "./components/shared/Toaster";
 import BugReportWidget from "./components/shared/BugReportWidget";
+import BackToTop from "./components/shared/BackToTop";
 import useRealtimeNotifications from "./hooks/useRealtimeNotifications";
 
 // Auth Components
@@ -250,6 +251,7 @@ function App() {
       <ScrollToTop />
       <Toaster />
       <BugReportWidget />
+      <BackToTop />
       <Routes>
         {/* Public */}
         <Route path="/" element={<LandingPage />} />
