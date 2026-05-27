@@ -59,7 +59,10 @@ const TicketTracking = () => {
                         entities: aiTicket.entities,
                         decision_factors: aiTicket.decision_factors,
                         ocr_text: aiTicket.ocr_text,
-                        image_description: aiTicket.image_description
+                        image_description: aiTicket.image_description,
+                        detected_language: aiTicket.detected_language || null,
+                        detected_language_name: aiTicket.detected_language_name || null,
+                        language_confidence: aiTicket.language_confidence || null,
                     },
                     entities: aiTicket.entities,
                     solution_steps: resolutionSteps,

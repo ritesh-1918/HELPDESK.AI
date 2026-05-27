@@ -49,3 +49,44 @@ export async function translateText(text, fromLang = 'en', toLang = 'en') {
         return text;
     }
 }
+
+/**
+ * Client-side language detection using Unicode script heuristics
+ */
+export function detectLanguageClient(text) {
+    if (!text || text.trim().length < 3) return null;
+    
+    const scripts = [
+        { lang: 'hi', name: 'Hindi', pattern: /[\u0900-\u097F]/ },
+        { lang: 'te', name: 'Telugu', pattern: /[\u0C00-\u0C7F]/ },
+        { lang: 'ta', name: 'Tamil', pattern: /[\u0B80-\u0BFF]/ },
+        { lang: 'kn', name: 'Kannada', pattern: /[\u0C80-\u0CFF]/ },
+        { lang: 'ml', name: 'Malayalam', pattern: /[\u0D00-\u0D7F]/ },
+        { lang: 'bn', name: 'Bengali', pattern: /[\u0980-\u09FF]/ },
+        { lang: 'ar', name: 'Arabic', pattern: /[\u0600-\u06FF]/ },
+        { lang: 'zh', name: 'Chinese', pattern: /[\u4E00-\u9FFF]/ },
+        { lang: 'ja', name: 'Japanese', pattern: /[\u3040-\u309F\u30A0-\u30FF]/ },
+        { lang: 'ko', name: 'Korean', pattern: /[\uAC00-\uD7AF\u1100-\u11FF]/ },
+        { lang: 'th', name: 'Thai', pattern: /[\u0E00-\u0E7F]/ },
+        { lang: 'ru', name: 'Russian', pattern: /[\u0400-\u04FF]/ },
+    ];
+    
+    for (const { lang, name, pattern } of scripts) {
+        const matches = text.match(new RegExp(pattern.source, 'g'));
+        if (matches && matches.length > text.length * 0.2) {
+            return { code: lang, name, confidence: 0.85 };
+        }
+    }
+    
+    return { code: 'en', name: 'English', confidence: 0.5 };
+}
+
+export function getLanguageName(code) {
+    const lang = SUPPORTED_LANGUAGES.find(l => l.code === code);
+    return lang ? lang.nativeName : code;
+}
+
+export function getLanguageFlag(code) {
+    const flags = { en: '🇬🇧', hi: '🇮🇳', te: '🇮🇳', ta: '🇮🇳', kn: '🇮🇳', ml: '🇮🇳', mr: '🇮🇳', bn: '🇮🇳', fr: '🇫🇷', de: '🇩🇪', es: '🇪🇸', pt: '🇧🇷', it: '🇮🇹', ru: '🇷🇺', zh: '🇨🇳', ja: '🇯🇵', ko: '🇰🇷', th: '🇹🇭', vi: '🇻🇳', tr: '🇹🇷', nl: '🇳🇱', pl: '🇵🇱', sv: '🇸🇪', ar: '🇸🇦' };
+    return flags[code] || '🌐';
+}
