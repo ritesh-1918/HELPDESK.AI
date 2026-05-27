@@ -19,7 +19,7 @@ from contextlib import asynccontextmanager
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, HTTPException, Request, Response
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -59,6 +59,7 @@ from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
+from backend.services.digest_service import DigestService
 
 
 # ---------------------------------------------------------------------------
@@ -198,6 +199,7 @@ classifier_service = ClassifierService()
 ner_service = NERService()
 duplicate_service = DuplicateService()
 rag_service = RagService()
+digest_service = DigestService(supabase)
 
 try:
     from backend.services.gemini_service import GeminiService
@@ -1208,4 +1210,178 @@ async def auth_logout(response: Response):
 @app.get("/auth/me")
 async def auth_me(user: dict = Depends(get_current_user)):
     return {"user": user}
+
+
+# ---------------------------------------------------------------------------
+# Weekly Digest Email Report (Issue #208)
+# ---------------------------------------------------------------------------
+class DigestSettingsBody(BaseModel):
+    weekly_digest_enabled: bool | None = None
+    digest_recipients: list[str] | None = None
+    digest_day: str | None = None
+
+
+@app.get("/digest/preview")
+async def digest_preview(company_id: str | None = None, company_name: str = "Your Organization"):
+    """
+    Preview the weekly digest email HTML for a given company.
+    Returns the rendered HTML email.
+    """
+    stats = await digest_service.get_weekly_stats(company_id)
+    html = digest_service.generate_digest_html(stats, company_name)
+    return HTMLResponse(content=html)
+
+
+@app.get("/digest/stats")
+async def digest_stats(company_id: str | None = None):
+    """
+    Return the raw weekly digest statistics as JSON.
+    Useful for dashboards or programmatic consumers.
+    """
+    stats = await digest_service.get_weekly_stats(company_id)
+    return stats
+
+
+@app.get("/digest/settings")
+async def get_digest_settings(company_id: str | None = None):
+    """
+    Retrieve the digest email configuration for a company.
+    """
+    settings = await digest_service.get_digest_settings(company_id)
+    return settings
+
+
+@app.patch("/digest/settings")
+async def update_digest_settings(body: DigestSettingsBody, company_id: str | None = None):
+    """
+    Update digest email configuration (enable/disable, recipients, day).
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+    update_data = {}
+    if body.weekly_digest_enabled is not None:
+        update_data["weekly_digest_enabled"] = body.weekly_digest_enabled
+    if body.digest_recipients is not None:
+        update_data["digest_recipients"] = json.dumps(body.digest_recipients)
+    if body.digest_day is not None:
+        valid_days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+        if body.digest_day.lower() not in valid_days:
+            raise HTTPException(status_code=400, detail=f"Invalid day. Must be one of: {', '.join(valid_days)}")
+        update_data["digest_day"] = body.digest_day.lower()
+
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    try:
+        query = supabase.table("system_settings").update(update_data)
+        if company_id:
+            query = query.eq("company_id", company_id)
+        query.execute()
+        return {"status": "updated", "updated_fields": list(update_data.keys())}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/digest/send")
+async def send_digest(
+    company_id: str | None = None,
+    company_name: str = "Your Organization",
+    dry_run: bool = False,
+):
+    """
+    Trigger and send the weekly digest email to all configured recipients.
+    Set dry_run=true to generate the HTML without actually sending emails.
+
+    Uses the Resend API (RESEND_API_KEY env var) for email delivery.
+    Falls back to returning the HTML directly if no Resend key is configured.
+    """
+    import httpx
+
+    # Check digest settings
+    settings = await digest_service.get_digest_settings(company_id)
+    if not settings.get("weekly_digest_enabled") and not dry_run:
+        return {
+            "status": "disabled",
+            "message": "Weekly digest is disabled. Enable it in settings first.",
+        }
+
+    recipients = settings.get("digest_recipients", [])
+    if not recipients and not dry_run:
+        return {
+            "status": "no_recipients",
+            "message": "No recipients configured. Add emails in digest settings.",
+        }
+
+    # Generate digest
+    stats = await digest_service.get_weekly_stats(company_id)
+    html = digest_service.generate_digest_html(stats, company_name)
+
+    if dry_run:
+        return {
+            "status": "dry_run",
+            "stats": stats,
+            "recipients": recipients,
+            "html_preview": html[:500] + "..." if len(html) > 500 else html,
+        }
+
+    # Send via Resend API
+    resend_api_key = os.environ.get("RESEND_API_KEY")
+    if not resend_api_key:
+        return {
+            "status": "no_email_provider",
+            "message": "RESEND_API_KEY not configured. Set it in .env to enable email delivery.",
+            "html": html,
+            "stats": stats,
+            "recipients": recipients,
+        }
+
+    sender = os.environ.get("DIGEST_SENDER_EMAIL", "noreply@helpdesk-ai.com")
+    subject = f"📊 Weekly Digest — {company_name} ({stats.get('period_start', '')} – {stats.get('period_end', '')})"
+
+    send_results = []
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        for recipient in recipients:
+            try:
+                resp = await client.post(
+                    "https://api.resend.com/emails",
+                    headers={
+                        "Authorization": f"Bearer {resend_api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "from": sender,
+                        "to": [recipient],
+                        "subject": subject,
+                        "html": html,
+                    },
+                )
+                success = resp.status_code == 200
+                send_results.append({
+                    "recipient": recipient,
+                    "success": success,
+                    "status_code": resp.status_code,
+                })
+                if success:
+                    logging.getLogger(__name__).info(
+                        f"Digest email sent to {recipient} (HTTP {resp.status_code})"
+                    )
+                else:
+                    logging.getLogger(__name__).error(
+                        f"Failed to send digest to {recipient}: HTTP {resp.status_code} — {resp.text}"
+                    )
+            except Exception as exc:
+                send_results.append({
+                    "recipient": recipient,
+                    "success": False,
+                    "error": str(exc),
+                })
+                logging.getLogger(__name__).error(f"Digest send error for {recipient}: {exc}")
+
+    all_sent = all(r.get("success") for r in send_results)
+    return {
+        "status": "sent" if all_sent else "partial",
+        "sent_to": [r["recipient"] for r in send_results if r.get("success")],
+        "failed": [r["recipient"] for r in send_results if not r.get("success")],
+        "results": send_results,
+    }
 
