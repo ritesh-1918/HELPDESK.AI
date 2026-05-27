@@ -14,13 +14,36 @@ serve(async (req: Request) => {
     if (!RESEND_API_KEY) throw new Error("Missing RESEND_API_KEY");
 
     const payload = await req.json();
-    const { type, record, email, code, link } = payload;
+    const { type, record, email, code, link, subject: customSubject, html: customHtml } = payload;
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
     let recipientEmail = email || "support@helpdeskai.com";
     let subject = "[HELPDESK.AI] Notification";
     let templateData: any = {};
+
+    // DIGEST type: use pre-built HTML from backend (weekly digest email)
+    if (type === "DIGEST") {
+      if (!customHtml) throw new Error("DIGEST type requires 'html' field");
+      subject = customSubject || "[HELPDESK.AI] Weekly Performance Digest";
+
+      const resendRes = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${RESEND_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: FROM_EMAIL,
+          to: [recipientEmail],
+          subject: subject,
+          html: customHtml,
+        }),
+      });
+
+      const data = await resendRes.json();
+      return new Response(JSON.stringify(data), { status: resendRes.status });
+    }
 
     // 1. Resolve Recipient from Record if available
     if (record?.user_id && !email) {

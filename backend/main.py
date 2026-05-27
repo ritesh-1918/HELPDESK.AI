@@ -59,6 +59,7 @@ from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
+from backend.services import weekly_digest_service
 
 
 # ---------------------------------------------------------------------------
@@ -198,6 +199,7 @@ classifier_service = ClassifierService()
 ner_service = NERService()
 duplicate_service = DuplicateService()
 rag_service = RagService()
+weekly_digest = weekly_digest_service.load()
 
 try:
     from backend.services.gemini_service import GeminiService
@@ -240,6 +242,13 @@ async def lifespan(app: FastAPI):
         print(f"[Startup] Gemini Service: {'Initialized' if gemini_service._initialized else 'FAILED (Key missing or SDK error)'}")
     else:
         print("[Startup] Gemini Service: NOT LOADED (Import failed)")
+
+    # Wire Gemini into weekly digest service
+    if gemini_service and weekly_digest:
+        weekly_digest.set_gemini_service(gemini_service)
+        print("[Startup] WeeklyDigestService: Gemini integration active.")
+    elif weekly_digest:
+        print("[Startup] WeeklyDigestService: Loaded (Gemini not available, will use fallback insights).")
 
     print("[Startup] Classifier V2 Shadow: Ready.")
     print("[Startup] Ready.")
@@ -1208,4 +1217,60 @@ async def auth_logout(response: Response):
 @app.get("/auth/me")
 async def auth_me(user: dict = Depends(get_current_user)):
     return {"user": user}
+
+
+# ---------------------------------------------------------------------------
+# Weekly Digest Email Report endpoints
+# ---------------------------------------------------------------------------
+
+class WeeklyDigestRequest(BaseModel):
+    company_id: str | None = None
+    force: bool = False
+
+class WeeklyDigestPreviewRequest(BaseModel):
+    company_id: str
+
+@app.post("/admin/weekly-digest")
+async def trigger_weekly_digest(request_body: WeeklyDigestRequest):
+    """
+    Trigger weekly digest email generation and sending.
+
+    If company_id is provided, processes only that company.
+    Otherwise, processes all companies with weekly digest enabled.
+    Set force=true to skip duplicate-send checks.
+    """
+    if not weekly_digest:
+        raise HTTPException(status_code=503, detail="Weekly digest service not available")
+
+    try:
+        result = await weekly_digest.generate_and_send_digest(
+            company_id=request_body.company_id,
+            force=request_body.force
+        )
+        return {
+            "status": "success",
+            "companies_processed": result["companies_processed"],
+            "emails_sent": result["emails_sent"],
+            "errors": result["errors"],
+            "details": result["details"]
+        }
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/admin/weekly-digest/preview")
+async def preview_weekly_digest(request_body: WeeklyDigestPreviewRequest):
+    """
+    Preview the weekly digest for a company without sending emails.
+    Returns stats and AI insights for dashboard display.
+    """
+    if not weekly_digest:
+        raise HTTPException(status_code=503, detail="Weekly digest service not available")
+
+    try:
+        result = await weekly_digest.get_digest_preview(request_body.company_id)
+        return result
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
