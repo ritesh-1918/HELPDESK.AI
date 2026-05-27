@@ -179,7 +179,6 @@ function AppLayout() {
           <Route path="/ticket-result" element={<TicketResult />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/help" element={<Help />} />
-          <Route path="/docs" element={<DocsPortal />} />
           <Route path="/notifications" element={<Notifications />} />
         </Route>
 
@@ -234,6 +233,7 @@ function App() {
         <Route path="/user-lobby" element={<UserLobby />} />
         <Route path="/not-approved" element={<NotApproved />} />
         <Route path="/contact-sales" element={<ContactSales />} />
+        <Route path="/docs" element={<DocsPortal />} />
 
         {/* Feature Pages */}
         <Route path="/features/categorization" element={<AutoCategorizationFeature />} />
