@@ -30,7 +30,7 @@ function TicketDetailView() {
     const viewedRef = useRef(null);
 
     useEffect(() => {
-        const foundTicket = tickets.find(t => t.ticket_id.toString() === ticket_id);
+        const foundTicket = tickets.find(t => (t.ticket_id?.toString() === ticket_id) || (t.id?.toString() === ticket_id));
 
         if (!foundTicket) {
             // Only navigate if we've already loaded tickets and still don't find it

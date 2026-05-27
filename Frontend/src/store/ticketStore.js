@@ -27,14 +27,14 @@ const useTicketStore = create(
             })),
             addTicket: (ticket) => set((state) => {
                 return {
-                    tickets: [...state.tickets, ticket]
+                    tickets: [ticket, ...state.tickets]
                 };
             }),
             updateTicket: (ticketId, updates) => set((state) => {
 // eslint-disable-next-line no-unused-vars
-                const existingTicket = state.tickets.find(t => t.ticket_id === ticketId);
-                const updatedTickets = state.tickets.map(t => t.ticket_id === ticketId ? { ...t, ...updates } : t);
-                const shouldUpdateActive = state.activeTicket?.ticket_id === ticketId;
+                const existingTicket = state.tickets.find(t => t.ticket_id === ticketId || t.id === ticketId);
+                const updatedTickets = state.tickets.map(t => (t.ticket_id === ticketId || t.id === ticketId) ? { ...t, ...updates } : t);
+                const shouldUpdateActive = state.activeTicket?.ticket_id === ticketId || state.activeTicket?.id === ticketId;
 
 
 
@@ -46,18 +46,18 @@ const useTicketStore = create(
             }),
 
             removeTicket: (ticketId) => set((state) => ({
-    tickets: state.tickets.filter(t => t.ticket_id !== ticketId),
-    activeTicket: state.activeTicket?.ticket_id === ticketId
+    tickets: state.tickets.filter(t => t.ticket_id !== ticketId && t.id !== ticketId),
+    activeTicket: (state.activeTicket?.ticket_id === ticketId || state.activeTicket?.id === ticketId)
         ? null
         : state.activeTicket
 })),
             appendMessage: (ticketId, message) => set((state) => {
                 const updatedTickets = state.tickets.map(t =>
-                    t.ticket_id === ticketId
+                    (t.ticket_id === ticketId || t.id === ticketId)
                         ? { ...t, messages: [...(t.messages || []), message] }
                         : t
                 );
-                const shouldUpdateActive = state.activeTicket?.ticket_id === ticketId;
+                const shouldUpdateActive = state.activeTicket?.ticket_id === ticketId || state.activeTicket?.id === ticketId;
 
                 return {
                     tickets: updatedTickets,
@@ -68,11 +68,11 @@ const useTicketStore = create(
             }),
             appendNote: (ticketId, note) => set((state) => {
                 const updatedTickets = state.tickets.map(t =>
-                    t.ticket_id === ticketId
+                    (t.ticket_id === ticketId || t.id === ticketId)
                         ? { ...t, internal_notes: [...(t.internal_notes || []), note] }
                         : t
                 );
-                const shouldUpdateActive = state.activeTicket?.ticket_id === ticketId;
+                const shouldUpdateActive = state.activeTicket?.ticket_id === ticketId || state.activeTicket?.id === ticketId;
 
                 return {
                     tickets: updatedTickets,
