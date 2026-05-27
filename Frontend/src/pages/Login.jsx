@@ -11,12 +11,13 @@ function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [isMagicLink, setIsMagicLink] = useState(false);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
 
   const navigate = useNavigate();
-  const { login, signInWithMagicLink, loading, user, profile } = useAuthStore();
+  const { login, signInWithMagicLink, user, profile } = useAuthStore();
 
   // Auto-redirect if already logged in
   useEffect(() => {
@@ -42,6 +43,7 @@ function Login() {
     }
 
     setError("");
+    setIsSubmitting(true);
 
     try {
       const { profile } = await login(email, password);
@@ -56,7 +58,7 @@ function Login() {
 
       if (profile.status === "rejected") {
         navigate("/not-approved");
-        return; // Navigation will happen, but just return to prevent further execution
+        return;
       }
 
       if (profile.role === "master_admin" && profile.status === "active") {
@@ -75,6 +77,8 @@ function Login() {
         errMsg = "Network Error: Failed to fetch. This usually happens if your browser's ad-blocker (like Brave Shields, uBlock Origin, etc.) is blocking Supabase requests. Please try disabling your ad-blocker for this site and refresh!";
       }
       setError(errMsg);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -86,6 +90,7 @@ function Login() {
     }
 
     setError("");
+    setIsSubmitting(true);
     try {
       await signInWithMagicLink(email);
       setMagicLinkSent(true);
@@ -96,6 +101,8 @@ function Login() {
         errMsg = "Network Error: Failed to fetch. This usually happens if your browser's ad-blocker (like Brave Shields, uBlock Origin, etc.) is blocking Supabase requests. Please try disabling your ad-blocker for this site and refresh!";
       }
       setError(errMsg);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -113,7 +120,6 @@ function Login() {
             : 'linear-gradient(160deg, #f0fdf4 0%, #dcfce7 60%, #bbf7d0 100%)',
         }}
       >
-        {/* Radial glow */}
         <div
           className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full pointer-events-none"
           style={{
@@ -122,7 +128,6 @@ function Login() {
         />
 
         <div className="relative z-10 max-w-lg">
-          {/* Logo / Icon */}
           <div
             className="p-3 rounded-2xl w-fit mb-8"
             style={{ background: 'rgba(34,160,69,0.08)', border: '1px solid #d1fae5' }}
@@ -130,7 +135,6 @@ function Login() {
             <BrainCircuit className="w-10 h-10" style={{ color: '#16a34a' }} />
           </div>
 
-          {/* Headline */}
           <h1
             style={{
               fontFamily: "'Syne', sans-serif",
@@ -146,12 +150,10 @@ function Login() {
             <span style={{ color: '#16a34a' }}>IT Support</span>
           </h1>
 
-          {/* Subtext */}
           <p style={{ color: isDark ? '#d1fae5' : '#374151', fontSize: '16px', lineHeight: 1.7, marginBottom: '32px' }}>
             Join thousands of IT teams using HelpDesk.ai to categorize, route, and resolve tickets instantly.
           </p>
 
-          {/* System Status Badge */}
           <div
             style={{
               background: '#ffffff',
@@ -185,7 +187,6 @@ function Login() {
         className="flex w-full lg:w-1/2 items-center justify-center p-6 relative"
         style={{ background: document.documentElement.classList.contains('dark') ? '#111827' : '#ffffff', borderLeft: '1px solid #f0fdf4' }}
       >
-        {/* Back Button */}
         <Link
           to="/"
           className="absolute top-8 left-8 flex items-center gap-2 transition-all group"
@@ -200,7 +201,6 @@ function Login() {
         </Link>
 
         <div className="w-full max-w-md mt-8 lg:mt-0" style={{ padding: '32px' }}>
-          {/* Header */}
           <div className="text-center" style={{ marginBottom: '40px' }}>
             <h2
               style={{
@@ -216,8 +216,6 @@ function Login() {
             </h2>
             <p style={{ color: '#6b7280', fontSize: '14px' }}>Please sign in to continue</p>
           </div>
-
-          {/* Role Toggle Removed */}
 
           {error && (
             <div className="mb-6 flex items-start gap-3" style={{ background: '#fef2f2', border: '1px solid #fee2e2', borderRadius: '12px', padding: '14px 16px' }}>
@@ -245,7 +243,6 @@ function Login() {
             </div>
           ) : (
             <form onSubmit={currentSubmitHandler} className="space-y-5">
-              {/* Email Field */}
               <div>
                 <label
                   className="block mb-2"
@@ -274,7 +271,6 @@ function Login() {
                 />
               </div>
 
-              {/* Password Field */}
               {!isMagicLink && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
                   <div className="flex justify-between items-center mb-2">
@@ -326,10 +322,9 @@ function Login() {
                 </motion.div>
               )}
 
-              {/* Sign In Button */}
               <button
                 type="submit"
-                disabled={loading}
+                disabled={isSubmitting}
                 className="w-full flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
                 style={{
                   background: 'linear-gradient(135deg, #16a34a, #22c55e)',
@@ -346,18 +341,16 @@ function Login() {
                 onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 24px rgba(34,160,69,0.35)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(34,160,69,0.3)'; }}
               >
-                {loading && <Loader2 className="w-5 h-5 animate-spin" />}
-                {!loading && (isMagicLink ? "Send Magic Link" : "Sign In")}
+                {isSubmitting && <Loader2 className="w-5 h-5 animate-spin" />}
+                {!isSubmitting && (isMagicLink ? "Send Magic Link" : "Sign In")}
               </button>
 
-              {/* Divider */}
               <div className="relative flex items-center py-2">
                 <div className="flex-grow" style={{ borderTop: '1px solid #e5e7eb' }}></div>
                 <span className="flex-shrink-0 mx-4" style={{ color: '#9ca3af', fontSize: '13px', fontWeight: 500 }}>Or</span>
                 <div className="flex-grow" style={{ borderTop: '1px solid #e5e7eb' }}></div>
               </div>
 
-              {/* Magic Link Toggle */}
               <button
                 type="button"
                 onClick={() => { setIsMagicLink(!isMagicLink); setError(""); }}
@@ -379,7 +372,6 @@ function Login() {
                 {isMagicLink ? "Sign in with Password" : "Sign in with Magic Link"}
               </button>
 
-              {/* Create Account */}
               <p className="text-center" style={{ fontSize: '14px', color: '#6b7280', marginTop: '32px' }}>
                 Don't have an account?{" "}
                 <Link to="/signup" className="hover:underline transition-all" style={{ color: '#16a34a', fontWeight: 600 }}>
