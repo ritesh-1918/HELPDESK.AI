@@ -17,7 +17,7 @@ function Login() {
   const [magicLinkSent, setMagicLinkSent] = useState(false);
 
   const navigate = useNavigate();
-  const { login, signInWithMagicLink, user, profile } = useAuthStore();
+  const { login, signInWithMagicLink, loginWithGoogle, loading, user, profile } = useAuthStore();
 
   // Auto-redirect if already logged in
   useEffect(() => {
