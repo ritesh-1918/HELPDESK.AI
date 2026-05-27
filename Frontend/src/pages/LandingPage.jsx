@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
     Menu, X, Check, Activity,
-    MapPin, AlertCircle, Folder, Zap, Bot, ArrowRight,
+    MapPin, AlertCircle, Folder, Zap, Bot, ArrowRight, ArrowUp,
     Clock, CheckCircle,
     Star, Twitter, Linkedin, Github, Globe, MessageSquare,
     Mail, Search, Bell, Play, ChevronRight,
@@ -144,6 +144,19 @@ export default function LandingPage() {
     const [billingAnnual, setBillingAnnual] = useState(false);
     const [activeStep, setActiveStep] = useState(0);
     const [isRedirecting, setIsRedirecting] = useState(false);
+    const [showBackToTop, setShowBackToTop] = useState(false);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setShowBackToTop(window.scrollY > 400);
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    const scrollToTop = () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
 
     const steps = [
         {
@@ -926,6 +939,17 @@ export default function LandingPage() {
                     </div>
                 </div>
             </footer>
+
+            {/* Back to Top Button */}
+            {showBackToTop && (
+                <button
+                    onClick={scrollToTop}
+                    className="fixed bottom-6 right-6 z-50 w-12 h-12 bg-emerald-900 hover:bg-emerald-800 text-white rounded-full shadow-xl shadow-emerald-900/30 flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 animate-in fade-in zoom-in"
+                    aria-label="Back to top"
+                >
+                    <ArrowUp className="w-5 h-5" />
+                </button>
+            )}
         </div>
     );
 }
