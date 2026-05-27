@@ -27,7 +27,7 @@ const useTicketStore = create(
             })),
             addTicket: (ticket) => set((state) => {
                 return {
-                    tickets: [...state.tickets, ticket]
+                    tickets: [ticket, ...state.tickets]
                 };
             }),
             updateTicket: (ticketId, updates) => set((state) => {
