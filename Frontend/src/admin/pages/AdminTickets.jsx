@@ -24,6 +24,7 @@ import {
 import { Select } from "../../components/ui/select";
 import { formatTicketId } from "../../utils/format";
 import SLABadge from "../components/SLABadge";
+import ExportButtons from "../components/ExportButtons";
 import { formatTimelineDate } from "../../utils/dateUtils";
 
 const AdminTickets = () => {
@@ -217,6 +218,10 @@ const AdminTickets = () => {
                         <Activity size={14} className="text-indigo-500" /> {filteredTickets.length} tickets matching current filters.
                     </p>
                 </div>
+                <ExportButtons
+                    tickets={filteredTickets}
+                    filename={`helpdesk-tickets-${new Date().toISOString().split('T')[0]}`}
+                />
             </div>
 
             {/* 2. Advanced Filtering Station */}
