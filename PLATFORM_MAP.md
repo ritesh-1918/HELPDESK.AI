@@ -10,6 +10,7 @@ This document provides a comprehensive breakdown of all 30+ pages and interactio
 | **Login / Signup** | User & Admin entry points. | Secure JWT-based entry, Role-aware redirection. |
 | **Forgot/Reset Password** | Recovery workflows. | Email-based secure recovery flows. |
 | **Knowledge Check** | Pre-support interactive guide. | Self-service assessment before ticket submission. |
+| **About Us** | Project background and mission. | Information about the mission, 6-stage AI pipeline timeline, tech stack, and resource links. |
 
 ## 👤 Layer 2: Standard User Portal
 | Page | Description | Key Features |

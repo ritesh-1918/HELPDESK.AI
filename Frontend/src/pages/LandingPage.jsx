@@ -283,88 +283,159 @@ export default function LandingPage() {
             {showDemo && <DemoModal onClose={() => setShowDemo(false)} />}
 
             {/* ==================== NAV ==================== */}
-            <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-16">
-                        {/* Logo */}
-                        <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
-                            <img src="/favicon.png" alt="H" className="w-8 h-8 object-contain" />
-                            <span className="font-black text-2xl tracking-tighter text-emerald-900 italic uppercase">HelpDesk.ai</span>
-                        </div>
+<nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="flex items-center justify-between h-20">
 
-                        {/* Dark Mode Toggle */}
-                        <button
-                            onClick={() => {
-                                const isDark = document.documentElement.classList.toggle('dark');
-                                localStorage.setItem('theme', isDark ? 'dark' : 'light');
-                            }}
-                            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                            aria-label="Toggle dark mode"
-                        >
-                            <Moon className="w-5 h-5 text-gray-600 dark:hidden" />
-                            <Sun className="w-5 h-5 text-yellow-400 hidden dark:block" />
-                        </button>
+      {/* Logo */}
+      <div
+        className="flex items-center gap-3 cursor-pointer"
+        onClick={() => navigate('/')}
+      >
+        <img src="/favicon.png" alt="logo" className="w-10 h-10" />
+        <span className="font-black italic text-emerald-900 text-2xl">
+          HELPDESK.AI
+        </span>
+      </div>
 
-                        {/* Desktop Links */}
-                        <div className="hidden md:flex items-center gap-8">
-                            <a href="#features" className="text-sm font-semibold text-gray-600 hover:text-emerald-800 transition-colors">Features</a>
-                            <a href="#how-it-works" className="text-sm font-semibold text-gray-600 hover:text-emerald-800 transition-colors">How It Works</a>
-                            <a href="#pricing" className="text-sm font-semibold text-gray-600 hover:text-emerald-800 transition-colors">Pricing</a>
-                        </div>
+      {/* Desktop Nav */}
+      <div className="hidden lg:flex items-center gap-10">
 
-                        {/* CTA Buttons */}
-                        <div className="hidden md:flex items-center gap-3">
-                            <button
-                                onClick={() => navigate('/login')}
-                                className="text-sm font-semibold text-gray-700 hover:text-emerald-800 transition-colors px-4 py-2 rounded-lg hover:bg-gray-50"
-                            >
-                                Sign In
-                            </button>
-                            <button
-                                onClick={() => setShowDemo(true)}
-                                className={`group text-sm font-semibold text-emerald-800 border border-emerald-200 px-4 py-2 rounded-lg hover:bg-emerald-50 ${CTA_TRANSITION} ${CTA_SCALE} flex items-center gap-1.5`}
-                            >
-                                <Play className={`w-3.5 h-3.5 fill-emerald-700 ${CTA_PLAY_SHIFT}`} /> Watch Demo
-                            </button>
-                            <button
-                                onClick={() => navigate('/admin-signup')}
-                                className={`group bg-emerald-900 hover:bg-emerald-800 text-white px-5 py-2.5 rounded-lg text-sm font-semibold ${CTA_TRANSITION} ${CTA_SCALE} ${CTA_PRIMARY_GLOW}`}
-                            >
-                                Get Started Free
-                            </button>
-                        </div>
+        <button
+          className="p-2 rounded-lg hover:bg-gray-100 transition"
+        >
+          <Moon className="w-6 h-6 text-gray-600" />
+        </button>
 
-                        {/* Mobile Menu Button */}
-                        <div className="md:hidden">
-                            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-gray-600 hover:text-emerald-800 p-2">
-                                {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-                            </button>
-                        </div>
-                    </div>
-                </div>
+        <a
+          href="#features"
+          className="font-semibold text-gray-600 hover:text-emerald-700 transition"
+        >
+          Features
+        </a>
 
-                {/* Mobile Menu */}
-                {isMenuOpen && (
-                    <div className="md:hidden bg-white border-t border-gray-100 absolute w-full shadow-xl z-50">
-                        <div className="px-5 pt-3 pb-6 space-y-4">
-                            <a href="#features" onClick={() => setIsMenuOpen(false)} className="block text-base font-semibold text-gray-700 hover:text-emerald-800 py-2">Features</a>
-                            <a href="#how-it-works" onClick={() => setIsMenuOpen(false)} className="block text-base font-semibold text-gray-700 hover:text-emerald-800 py-2">How It Works</a>
-                            <a href="#pricing" onClick={() => setIsMenuOpen(false)} className="block text-base font-semibold text-gray-700 hover:text-emerald-800 py-2">Pricing</a>
-                            <div className="pt-4 flex flex-col gap-3 border-t border-gray-100">
-                                <button onClick={() => { setIsMenuOpen(false); setShowDemo(true); }} className={`group w-full text-center py-2.5 text-emerald-800 font-semibold border border-emerald-200 rounded-lg flex items-center justify-center gap-2 ${CTA_TRANSITION} ${CTA_SCALE}`}>
-                                    <Play className={`w-4 h-4 fill-emerald-700 ${CTA_PLAY_SHIFT}`} /> Watch Demo
-                                </button>
-                                <button onClick={() => navigate('/login')} className="w-full text-center py-2.5 text-gray-700 font-semibold border border-gray-100 rounded-lg">
-                                    Sign In
-                                </button>
-                                <button onClick={() => navigate('/admin-signup')} className={`group w-full bg-emerald-900 text-white py-3 rounded-lg font-semibold ${CTA_TRANSITION} ${CTA_SCALE} ${CTA_PRIMARY_GLOW}`}>
-                                    Get Started Free
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </nav>
+        <a
+          href="#how-it-works"
+          className="font-semibold text-gray-600 hover:text-emerald-700 transition"
+        >
+          How It Works
+        </a>
+
+        <a
+          href="#pricing"
+          className="font-semibold text-gray-600 hover:text-emerald-700 transition"
+        >
+          Pricing
+        </a>
+      </div>
+
+      {/* Desktop Actions */}
+      <div className="hidden lg:flex items-center gap-4">
+
+        <button
+          onClick={() => navigate('/login')}
+          className="font-semibold text-gray-700 hover:text-emerald-700"
+        >
+          Sign In
+        </button>
+
+        <button
+          onClick={() => setShowDemo(true)}
+          className="flex items-center gap-2 px-6 py-3 border border-emerald-200 rounded-xl text-emerald-700 font-semibold hover:bg-emerald-50 transition"
+        >
+          <Play size={16} fill="currentColor" />
+          Watch Demo
+        </button>
+
+        <button
+          onClick={() => navigate('/admin-signup')}
+          className="px-6 py-3 bg-emerald-900 hover:bg-emerald-800 text-white rounded-xl font-bold shadow-lg"
+        >
+          Get Started Free
+        </button>
+
+      </div>
+
+      {/* Mobile Buttons */}
+      <div className="flex lg:hidden items-center gap-2">
+
+        <button className="p-2">
+          <Moon className="w-5 h-5 text-gray-600" />
+        </button>
+
+        <button
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          className="p-2 border border-gray-200 rounded-lg"
+        >
+          {isMenuOpen ? (
+            <X className="w-6 h-6" />
+          ) : (
+            <Menu className="w-6 h-6" />
+          )}
+        </button>
+
+      </div>
+
+    </div>
+  </div>
+
+  {/* Mobile Menu */}
+  {isMenuOpen && (
+    <div className="lg:hidden border-t border-gray-100 bg-white">
+      <div className="flex flex-col px-4 py-5 gap-4">
+
+        <a
+          href="#features"
+          onClick={() => setIsMenuOpen(false)}
+          className="font-medium text-gray-700"
+        >
+          Features
+        </a>
+
+        <a
+          href="#how-it-works"
+          onClick={() => setIsMenuOpen(false)}
+          className="font-medium text-gray-700"
+        >
+          How It Works
+        </a>
+
+        <a
+          href="#pricing"
+          onClick={() => setIsMenuOpen(false)}
+          className="font-medium text-gray-700"
+        >
+          Pricing
+        </a>
+
+        <hr />
+
+        <button
+          onClick={() => navigate('/login')}
+          className="text-left font-medium"
+        >
+          Sign In
+        </button>
+
+        <button
+          onClick={() => setShowDemo(true)}
+          className="flex items-center gap-2 font-medium"
+        >
+          <Play size={16} />
+          Watch Demo
+        </button>
+
+        <button
+          onClick={() => navigate('/admin-signup')}
+          className="bg-emerald-900 text-white py-3 rounded-xl font-semibold"
+        >
+          Get Started Free
+        </button>
+
+      </div>
+    </div>
+  )}
+</nav>
 
             {/* ==================== HERO ==================== */}
             <section className="relative pt-12 md:pt-20 pb-20 md:pb-32 overflow-hidden">
@@ -887,7 +958,7 @@ export default function LandingPage() {
                             {
                                 heading: 'Company',
                                 links: [
-                                    { label: 'About Us', href: '#' },
+                                    { label: 'About Us', href: '/about-us' },
                                     { label: 'Careers', href: '#' },
                                     { label: 'Privacy Policy', href: '/privacy' },
                                     { label: 'Terms of Service', href: '/terms' },

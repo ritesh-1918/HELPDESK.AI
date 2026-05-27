@@ -195,6 +195,26 @@ const useAuthStore = create(
                 }
             },
 
+            loginWithGoogle: async () => {
+                const { error } =
+                    await supabase.auth.signInWithOAuth({
+                        provider: 'google',
+                        options: {
+                            redirectTo:
+                                `${window.location.origin}/auth/callback`
+                        }
+                    });
+
+                if (error) {
+                    console.error(
+                        "Google OAuth error:",
+                        error.message
+                    );
+
+                    throw error;
+                }
+            },
+
             signInWithMagicLink: async (email) => {
                 set({ loading: true });
                 console.log("Attempting magic link / OTP login for:", email);
