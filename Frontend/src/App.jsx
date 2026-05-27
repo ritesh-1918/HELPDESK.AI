@@ -229,6 +229,27 @@ function App() {
     }
   }, [initialize]);
 
+  const isDocsSubdomain = window.location.hostname.startsWith('docs.');
+
+  if (isDocsSubdomain) {
+    return (
+      <BrowserRouter>
+        <TitleUpdater />
+        <ScrollToTop />
+        <Toaster />
+        <BugReportWidget />
+        <Routes>
+          <Route path="/" element={<DocsPortal />} />
+          <Route path="/docs" element={<Navigate to="/" replace />} />
+          <Route path="/api-reference" element={<ApiReference />} />
+          <Route path="/changelog" element={<Changelog />} />
+          <Route path="/status" element={<StatusPage />} />
+          <Route path="*" element={<DocsPortal />} />
+        </Routes>
+      </BrowserRouter>
+    );
+  }
+
   return (
     <BrowserRouter>
       <TitleUpdater />
