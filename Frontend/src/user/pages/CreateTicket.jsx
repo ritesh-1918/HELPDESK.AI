@@ -23,6 +23,17 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../..
 import { Textarea } from "../../components/ui/textarea";
 import Tesseract from 'tesseract.js';
 import { translateText, SUPPORTED_LANGUAGES } from '../../services/translationService';
+import ResponseTimeEstimate from '../components/ResponseTimeEstimate';
+
+const TICKET_CATEGORIES = [
+    'Network', 'Security', 'Access', 'Hardware', 'Software', 'Email', 'Database', 'General'
+];
+const TICKET_PRIORITIES = [
+    { value: 'low', label: 'Low', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+    { value: 'medium', label: 'Medium', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+    { value: 'high', label: 'High', color: 'bg-orange-50 text-orange-700 border-orange-200' },
+    { value: 'critical', label: 'Critical', color: 'bg-red-50 text-red-700 border-red-200' },
+];
 
 const CreateTicket = () => {
     const [issue, setIssue] = useState('');
@@ -36,6 +47,8 @@ const CreateTicket = () => {
     const fileInputRef = useRef(null);
     const navigate = useNavigate();
     const MAX_CHARS = 1000;
+    const [selectedCategory, setSelectedCategory] = useState('');
+    const [selectedPriority, setSelectedPriority] = useState('');
     const supportsSpeech = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
     const [selectedLanguage, setSelectedLanguage] = useState('en');
     const [isTranslating, setIsTranslating] = useState(false);
@@ -427,6 +440,57 @@ const CreateTicket = () => {
                                                 disabled={isLoading}
                                             />
                                         </div>
+                                    </div>
+
+                                    {/* Category & Priority Quick Select */}
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-bold text-gray-700">Category <span className="text-gray-400 font-medium">(optional)</span></label>
+                                            <div className="flex flex-wrap gap-2">
+                                                {TICKET_CATEGORIES.map(cat => (
+                                                    <button
+                                                        key={cat}
+                                                        type="button"
+                                                        onClick={() => setSelectedCategory(selectedCategory === cat ? '' : cat)}
+                                                        className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                                                            selectedCategory === cat
+                                                                ? 'bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-200'
+                                                                : 'bg-white text-gray-600 border-gray-200 hover:border-emerald-300 hover:text-emerald-700'
+                                                        }`}
+                                                    >
+                                                        {cat}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-bold text-gray-700">Priority <span className="text-gray-400 font-medium">(optional)</span></label>
+                                            <div className="flex flex-wrap gap-2">
+                                                {TICKET_PRIORITIES.map(p => (
+                                                    <button
+                                                        key={p.value}
+                                                        type="button"
+                                                        onClick={() => setSelectedPriority(selectedPriority === p.value ? '' : p.value)}
+                                                        className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                                                            selectedPriority === p.value
+                                                                ? 'ring-2 ring-emerald-400 ring-offset-1 ' + p.color
+                                                                : p.color + ' opacity-60 hover:opacity-100'
+                                                        }`}
+                                                    >
+                                                        {p.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Live Response Time Estimate */}
+                                        {selectedCategory && selectedPriority && (
+                                            <ResponseTimeEstimate
+                                                category={selectedCategory}
+                                                priority={selectedPriority}
+                                            />
+                                        )}
                                     </div>
 
                                     {/* Premium Voice Visualizer */}

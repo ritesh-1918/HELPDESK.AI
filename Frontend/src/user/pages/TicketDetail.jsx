@@ -13,6 +13,7 @@ import TicketTimeline from "../components/TicketTimeline";
 import TicketChat from "../../components/shared/TicketChat";
 import { formatTicketId } from "../../utils/format";
 import CSATModal from "../components/CSATModal";
+import ResponseTimeEstimate from "../components/ResponseTimeEstimate";
 
 const TicketDetail = () => {
     const { ticket_id } = useParams();
@@ -272,6 +273,15 @@ const TicketDetail = () => {
                             )}
                         </div>
                     </Card>
+
+                    {/* Response Time Estimate — only for open/in-progress tickets */}
+                    {ticket.category && ticket.priority && !['resolved', 'closed', 'auto-resolved'].includes(ticket.status?.toLowerCase()) && (
+                        <ResponseTimeEstimate
+                            category={ticket.category}
+                            priority={ticket.priority}
+                            subcategory={ticket.subcategory}
+                        />
+                    )}
 
                     {/* Card 4: Screenshot */}
                         <div className="p-6 bg-emerald-900 rounded-2xl border border-emerald-800 text-center shadow-xl">

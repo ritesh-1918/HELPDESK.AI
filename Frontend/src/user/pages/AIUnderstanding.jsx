@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import useTicketStore from "../../store/ticketStore";
 import { Card, CardContent } from "../../components/ui/card";
+import ResponseTimeEstimate from '../components/ResponseTimeEstimate';
 
 // ─── Shimmer Skeleton ────────────────────────────────────────────────
 const Shimmer = ({ className = "" }) => (
@@ -425,7 +426,14 @@ const AIUnderstanding = () => {
                     </div>
                 </Card>
 
-                {/* 6. User Correction Section */}
+                {/* 6. Response Time Estimate */}
+                <ResponseTimeEstimate
+                    category={category}
+                    priority={priority}
+                    subcategory={subcategory}
+                />
+
+                {/* 7. User Correction Section */}
                 <Card className="rounded-xl border border-gray-100 shadow-sm bg-white">
                     <CardContent className="p-8 space-y-4">
                         <div className="flex items-center justify-between">
