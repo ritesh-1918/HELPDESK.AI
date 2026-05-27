@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
     Menu, X, Check, Activity,
-    MapPin, AlertCircle, Folder, Zap, Bot, ArrowRight,
+    MapPin, AlertCircle, Folder, Zap, Bot, ArrowRight, ArrowUp,
     Clock, CheckCircle,
     Star, Twitter, Linkedin, Github, Globe, MessageSquare,
     Mail, Search, Bell, Play, ChevronRight,
@@ -28,7 +28,15 @@ function AnimatedStat({ target, suffix = '', prefix = '', label, isWord = false 
             { threshold: 0.5 }
         );
         observer.observe(el);
-        return () => observer.disconnect();
+        // Back to top
+    const [showBackToTop, setShowBackToTop] = useState(false);
+    useEffect(() => {
+        const handleScroll = () => setShowBackToTop(window.scrollY > 400);
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    return () => observer.disconnect();
     }, [triggered]);
 
     useEffect(() => {
@@ -926,6 +934,21 @@ export default function LandingPage() {
                     </div>
                 </div>
             </footer>
+            {/* Back to Top Button */}
+            <AnimatePresence>
+                {showBackToTop && (
+                    <motion.button
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                        className="fixed bottom-6 right-6 z-50 w-12 h-12 bg-emerald-900 hover:bg-emerald-800 text-white rounded-full shadow-xl shadow-emerald-900/30 flex items-center justify-center transition-colors"
+                        aria-label="Back to top"
+                    >
+                        <ArrowUp className="w-5 h-5" />
+                    </motion.button>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
