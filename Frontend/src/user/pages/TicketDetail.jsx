@@ -118,7 +118,7 @@ const TicketDetail = () => {
     }
 
     // Safely parse arrays and formats
-    const entities = ticket.entities || [];
+    const entities = ticket.metadata?.entities || ticket.entities || [];
     const solutionSteps = Array.isArray(ticket.solution_steps) ? ticket.solution_steps : [];
     const isAutoResolved = ticket.auto_resolve === true;
     const confidenceScore = ticket.metadata?.confidence ?? ticket.routing_confidence ?? 0.92;
