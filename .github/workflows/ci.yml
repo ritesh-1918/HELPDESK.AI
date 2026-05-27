@@ -66,6 +66,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Assert no real env files are tracked
+        run: |
+          python - <<'PY'
+          import pathlib
+          import subprocess
+
+          allowed = {'backend/.env.example', 'MobileApp/.env.example'}
+          tracked = subprocess.check_output(['git', 'ls-files'], text=True).splitlines()
+          offenders = []
+          for path in tracked:
+              name = pathlib.PurePosixPath(path).name
+              if path in allowed:
+                  continue
+              if name == '.env' or name.startswith('.env.') or name.endswith('.env') or '.env.' in name:
+                  offenders.append(path)
+
+          if offenders:
+              raise SystemExit('Real env files must not be tracked: ' + ', '.join(offenders))
+          print('OK — no real env files are tracked.')
+          PY
+
       - name: Setup Python 3.11
         uses: actions/setup-python@v5
         with:

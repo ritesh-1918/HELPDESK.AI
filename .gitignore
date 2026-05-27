@@ -7,6 +7,12 @@ env/
 # Ignore all env files anywhere in the repo
 **/.env
 **/.env.*
+**/*.env
+**/*.env.*
+!.env.example
+!**/.env.example
+!**/*.env.example
+!**/env.example
 
 
 # Models (Keep them if they are small, but here they are large. 
