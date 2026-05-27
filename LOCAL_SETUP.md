@@ -234,24 +234,3 @@ supabase db reset
 | `anon key` / `service_role key` are empty in `.env` | `supabase start` output not captured | Re-run `supabase start` and copy the printed credentials |
 
 ---
-
-## Submitting Your Contribution
-
-Once your changes are ready:
-
-```bash
-# Stage your work
-git add .
-
-# Commit with a descriptive conventional commit message
-git commit -m "docs: add local backend setup and schema verification guide"
-
-# Push to your fork
-git push origin feature/your-feature-name
-```
-
-Then open a Pull Request on GitHub.
-
----
-
-*Part of the HELPDESK.AI GSSoC 2026 contributor documentation initiative. References: PR #44 (centralized notifications + health validations), Issue #85 (local environment standardization).*
