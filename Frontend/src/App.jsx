@@ -45,6 +45,7 @@ import AIProcessing from "./user/pages/AIProcessing";
 import AIUnderstanding from "./user/pages/AIUnderstanding";
 import Notifications from "./user/pages/Notifications";
 import Help from "./user/pages/Help";
+import DocsPortal from "./docs/pages/DocsPortal";
 
 // NEW Admin Pages (Refactored)
 import AdminDashboard from "./admin/pages/AdminDashboard";
@@ -111,6 +112,7 @@ function TitleUpdater() {
     else if (path === '/my-tickets') title = 'My Tickets';
     else if (path === '/profile') title = 'User Profile';
     else if (path === '/notifications') title = 'Notifications';
+    else if (path === '/docs') title = 'Documentation';
     // Public / Lobby Routes
     else if (path === '/login') title = 'Login';
     else if (path === '/signup') title = 'Create Account';
@@ -177,6 +179,7 @@ function AppLayout() {
           <Route path="/ticket-result" element={<TicketResult />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/help" element={<Help />} />
+          <Route path="/docs" element={<DocsPortal />} />
           <Route path="/notifications" element={<Notifications />} />
         </Route>
 
