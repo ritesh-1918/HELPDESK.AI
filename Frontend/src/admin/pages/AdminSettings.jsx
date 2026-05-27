@@ -7,7 +7,9 @@ import {
     Inbox,
     Bell,
     Save,
-    ShieldCheck
+    ShieldCheck,
+    Mail,
+    Send,
 } from 'lucide-react';
 import useAdminStore from '../store/adminStore';
 import useAuthStore from '../../store/authStore';
@@ -32,6 +34,8 @@ const AdminSettings = () => {
     const [isSavingSettings, setIsSavingSettings] = useState(false);
     const [statusMessage, setStatusMessage] = useState('');
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    const [isSendingDigest, setIsSendingDigest] = useState(false);
+    const [digestStatus, setDigestStatus] = useState('');
 
     const companyId = useMemo(() => resolveCompanyId(profile, user), [profile, user]);
 
@@ -49,7 +53,7 @@ const AdminSettings = () => {
 
             const { data, error } = await supabase
                 .from('system_settings')
-                .select('ai_confidence_threshold, duplicate_sensitivity, enable_auto_resolve, auto_close_days, email_notifications, admin_alerts')
+                .select('ai_confidence_threshold, duplicate_sensitivity, enable_auto_resolve, auto_close_days, email_notifications, admin_alerts, digest_enabled, last_digest_sent')
                 .eq('company_id', companyId)
                 .maybeSingle();
 
@@ -117,6 +121,34 @@ const AdminSettings = () => {
 
         return () => window.clearTimeout(saveTimer);
     }, [hasUnsavedChanges, isLoadingSettings, isSavingSettings, saveCompanySettings, settings]);
+
+    const handleSendDigestNow = useCallback(async () => {
+        if (!companyId || !user?.email) {
+            setDigestStatus('Company ID and admin email are required.');
+            return;
+        }
+        setIsSendingDigest(true);
+        setDigestStatus('Sending digest...');
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/digest/send-now`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ company_id: companyId, admin_email: user.email }),
+            });
+            if (res.ok) {
+                setDigestStatus(`Digest sent to ${user.email}`);
+                updateSettings({ lastDigestSent: new Date().toISOString() });
+            } else {
+                const err = await res.json().catch(() => ({}));
+                setDigestStatus(`Failed: ${err.detail || res.statusText}`);
+            }
+        } catch (e) {
+            setDigestStatus(`Error: ${e.message}`);
+        } finally {
+            setIsSendingDigest(false);
+        }
+    }, [companyId, user, updateSettings]);
 
     return (
         <div className="max-w-4xl mx-auto py-6 space-y-10 pb-20 animate-in fade-in duration-700">
@@ -290,6 +322,58 @@ const AdminSettings = () => {
                     </div>
                     <CardContent className="p-8">
                         <WebhookSettings />
+                    </CardContent>
+                </Card>
+
+                {/* 6. Weekly AI Digest */}
+                <Card className="border-none shadow-2xl shadow-slate-200/40 rounded-[2rem] overflow-hidden bg-white">
+                    <div className="px-8 py-6 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+                        <h3 className="text-sm font-black uppercase italic tracking-tight flex items-center gap-3">
+                            <Mail size={18} className="text-indigo-400" /> Weekly AI Digest
+                        </h3>
+                    </div>
+                    <CardContent className="p-8 space-y-6">
+                        {/* Toggle */}
+                        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                            <div>
+                                <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest">Weekly Digest Email</h4>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                                    Receive an AI-generated performance summary every Monday at 8:00 AM UTC.
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => handleChange('digestEnabled', !settings.digestEnabled)}
+                                className={`w-14 h-8 rounded-full relative transition-all duration-300 shadow-inner shrink-0 ${settings.digestEnabled ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                            >
+                                <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all duration-300 shadow-md ${settings.digestEnabled ? 'right-1' : 'left-1'}`}></div>
+                            </button>
+                        </div>
+
+                        {/* Last sent + Send Now */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                                    Last digest sent:&nbsp;
+                                    <span className="text-slate-600">
+                                        {settings.lastDigestSent
+                                            ? new Date(settings.lastDigestSent).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+                                            : 'Never'}
+                                    </span>
+                                </p>
+                                {digestStatus && (
+                                    <p className="text-[10px] font-bold uppercase tracking-widest mt-1 text-indigo-600">{digestStatus}</p>
+                                )}
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleSendDigestNow}
+                                disabled={isSendingDigest || !companyId}
+                                className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-indigo-200 transition-all hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none shrink-0"
+                            >
+                                <Send size={14} />
+                                {isSendingDigest ? 'Sending...' : 'Send Now'}
+                            </button>
+                        </div>
                     </CardContent>
                 </Card>
 

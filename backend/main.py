@@ -494,6 +494,17 @@ try:
 except ImportError:
     ocr_service = None
 
+try:
+    from apscheduler.schedulers.asyncio import AsyncIOScheduler
+    _HAS_APSCHEDULER = True
+except ImportError:
+    AsyncIOScheduler = None
+    _HAS_APSCHEDULER = False
+
+from backend.digest_service import run_digest_for_company
+
+logger = logging.getLogger(__name__)
+
 LANGUAGE_NAMES = {
     "en": "English",
     "es": "Spanish",
@@ -634,9 +645,29 @@ async def lifespan(app: FastAPI):
     heartbeat_task = asyncio.create_task(_heartbeat_loop())
     print("[Startup] WebSocket heartbeat loop started (interval=30s).")
 
+    # Start APScheduler for weekly digest (Monday 08:00 UTC)
+    scheduler = None
+    if _HAS_APSCHEDULER:
+        scheduler = AsyncIOScheduler(timezone="UTC")
+        scheduler.add_job(
+            _run_weekly_digest_job,
+            trigger="cron",
+            day_of_week="mon",
+            hour=8,
+            minute=0,
+            id="weekly_digest",
+            replace_existing=True,
+        )
+        scheduler.start()
+        print("[Startup] Weekly digest scheduler started (Monday 08:00 UTC).")
+    else:
+        print("[Startup] APScheduler not installed — weekly digest cron disabled.")
+
     yield
 
     # Cancel background tasks on shutdown
+    if scheduler and scheduler.running:
+        scheduler.shutdown(wait=False)
     heartbeat_task.cancel()
     try:
         await heartbeat_task
@@ -1994,3 +2025,104 @@ async def sla_ticket_detail(ticket_id: str):
 async def metrics():
     """Prometheus scrape endpoint — exposes AI inference latency, request counts, and tokens."""
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
+# ---------------------------------------------------------------------------
+# Weekly Digest — scheduler job + manual trigger endpoint
+# ---------------------------------------------------------------------------
+
+async def _run_weekly_digest_job() -> None:
+    """
+    APScheduler job: fan out to every company that has digest_enabled=True.
+    Queries system_settings for eligible companies, then sends each an email
+    using the admin's email from their profile.
+    """
+    if not supabase:
+        logger.warning("[Digest] Skipping — no Supabase connection")
+        return
+
+    try:
+        rows = (
+            supabase.table("system_settings")
+            .select("company_id, digest_enabled")
+            .eq("digest_enabled", True)
+            .execute()
+            .data or []
+        )
+    except Exception as exc:
+        logger.error("[Digest] Failed to fetch enabled companies: %s", exc)
+        return
+
+    for row in rows:
+        company_id = row.get("company_id")
+        if not company_id:
+            continue
+        try:
+            # Fetch admin email from profiles (role = 'admin' or any first match)
+            profile_res = (
+                supabase.table("profiles")
+                .select("email")
+                .eq("company_id", company_id)
+                .limit(1)
+                .execute()
+            )
+            profiles = profile_res.data or []
+            if not profiles or not profiles[0].get("email"):
+                logger.warning("[Digest] No admin email for company %s", company_id)
+                continue
+
+            admin_email = profiles[0]["email"]
+            result = run_digest_for_company(supabase, company_id, admin_email, gemini_service)
+            if result.get("ok"):
+                logger.info("[Digest] Sent to %s (company=%s)", admin_email, company_id)
+                # Update last_digest_sent timestamp
+                try:
+                    supabase.table("system_settings").update(
+                        {"last_digest_sent": datetime.datetime.now(datetime.timezone.utc).isoformat()}
+                    ).eq("company_id", company_id).execute()
+                except Exception:
+                    pass
+            else:
+                logger.error("[Digest] Failed for company %s: %s", company_id, result.get("error"))
+        except Exception as exc:
+            logger.error("[Digest] Unexpected error for company %s: %s", company_id, exc)
+
+
+class DigestSendRequest(BaseModel):
+    company_id: str
+    admin_email: str
+
+
+@app.post("/api/digest/send-now")
+async def digest_send_now(body: DigestSendRequest, _current_user: dict = Depends(get_current_user)):
+    """
+    Manually trigger a weekly digest email for a specific company.
+    Useful for testing and on-demand delivery.
+    """
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not connected")
+
+    result = run_digest_for_company(
+        supabase,
+        body.company_id,
+        body.admin_email,
+        gemini_service,
+    )
+
+    if not result.get("ok"):
+        raise HTTPException(status_code=500, detail=result.get("error", "Digest send failed"))
+
+    # Record the send time in system_settings
+    try:
+        supabase.table("system_settings").update(
+            {"last_digest_sent": datetime.datetime.now(datetime.timezone.utc).isoformat()}
+        ).eq("company_id", body.company_id).execute()
+    except Exception:
+        pass
+
+    return {
+        "message": f"Digest sent to {body.admin_email}",
+        "email_id": result.get("id"),
+        "stats": result.get("stats"),
+        "summary": result.get("summary"),
+    }
