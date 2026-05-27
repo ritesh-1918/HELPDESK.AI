@@ -4,6 +4,8 @@ import {
     Search, Copy, Check, Terminal, ExternalLink, ArrowRight, ChevronRight, ArrowLeft
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { DOCS_CATEGORIES, DOCS_ARTICLES } from '../data/docsArticles';
 import { Card } from '../../components/ui/card';
 
@@ -218,34 +220,24 @@ const DocsPortal = () => {
                                     ))}
                                 </div>
 
-                                {/* Custom Markdown rendering (Simple split parsing for premium look) */}
-                                {activeArticle.content.split('\n').map((line, idx) => {
-                                    const trimmed = line.trim();
-                                    if (trimmed.startsWith('# ')) {
-                                        return <h2 key={idx} className="text-2xl font-black text-gray-900 tracking-tight mt-2 mb-6 border-b border-gray-50 pb-3">{trimmed.replace('# ', '')}</h2>;
-                                    }
-                                    if (trimmed.startsWith('### ')) {
-                                        return <h3 key={idx} className="text-base font-bold text-gray-800 tracking-tight mt-6 mb-3">{trimmed.replace('### ', '')}</h3>;
-                                    }
-                                    if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-                                        return (
-                                            <ul key={idx} className="list-disc pl-5 text-sm text-gray-600 space-y-1 my-1">
-                                                <li>{trimmed.replace(/^[-*]\s+/, '')}</li>
-                                            </ul>
-                                        );
-                                    }
-                                    if (trimmed.startsWith('1. ') || trimmed.startsWith('2. ') || trimmed.startsWith('3. ') || trimmed.startsWith('4. ')) {
-                                        return (
-                                            <ol key={idx} className="list-decimal pl-5 text-sm text-gray-600 space-y-1 my-1">
-                                                <li>{trimmed.replace(/^\d+\.\s+/, '')}</li>
-                                            </ol>
-                                        );
-                                    }
-                                    if (trimmed) {
-                                        return <p key={idx} className="text-sm text-gray-600 leading-relaxed my-3 font-medium">{trimmed}</p>;
-                                    }
-                                    return <div key={idx} className="h-2" />;
-                                })}
+                                {/* Custom Premium Markdown rendering */}
+                                <ReactMarkdown 
+                                    remarkPlugins={[remarkGfm]}
+                                    components={{
+                                        h1: ({node, ...props}) => <h2 className="text-2xl font-black text-gray-900 tracking-tight mt-2 mb-6 border-b border-gray-100 pb-3" {...props} />,
+                                        h2: ({node, ...props}) => <h3 className="text-lg font-bold text-gray-800 tracking-tight mt-6 mb-3" {...props} />,
+                                        h3: ({node, ...props}) => <h4 className="text-base font-bold text-gray-800 tracking-tight mt-4 mb-2" {...props} />,
+                                        p: ({node, ...props}) => <p className="text-sm text-gray-600 leading-relaxed my-3 font-medium" {...props} />,
+                                        ul: ({node, ...props}) => <ul className="list-disc pl-5 text-sm text-gray-600 space-y-1 my-3" {...props} />,
+                                        ol: ({node, ...props}) => <ol className="list-decimal pl-5 text-sm text-gray-600 space-y-1 my-3" {...props} />,
+                                        li: ({node, ...props}) => <li className="font-medium" {...props} />,
+                                        code: ({node, inline, ...props}) => inline 
+                                            ? <code className="bg-gray-100 text-emerald-700 px-1.5 py-0.5 rounded font-mono text-xs font-bold" {...props} />
+                                            : <pre className="bg-slate-950 p-4 rounded-xl font-mono text-xs text-slate-300 overflow-x-auto border border-slate-900 my-4 select-text" {...props} />
+                                    }}
+                                >
+                                    {activeArticle.content}
+                                </ReactMarkdown>
                             </div>
                         </Card>
 
