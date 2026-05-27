@@ -150,7 +150,7 @@ CREATE OR REPLACE TRIGGER on_auth_user_created
 
 ### Execution Plan:
 1. Open the [Supabase Dashboard](https://supabase.com).
-2. Navigate to your project `aejuenhqciagpntcqoir`.
+2. Navigate to your project (replace `YOUR_PROJECT_REF` with your Supabase project reference).
 3. Open the **SQL Editor** tab.
 4. Copy the complete SQL script located in the local migration file:
    [supabase/migrations/20260531_add_company_settings.sql](file:///c:/Projects/Software%20Projects/AI-Powered-Ticket-Creation-and-Categorization-from-User-Input/supabase/migrations/20260531_add_company_settings.sql)

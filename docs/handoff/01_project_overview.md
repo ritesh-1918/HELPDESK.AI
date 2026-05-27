@@ -14,7 +14,7 @@ Helpdesk.ai is built on a highly-decoupled, modern SaaS architecture consisting 
 | **Frontend (Web)** | React 19 + Vite + TailwindCSS | [helpdeskaiv1.vercel.app](https://helpdeskaiv1.vercel.app) | Enterprise B2B SaaS web portal (Vercel deployment) |
 | **Mobile App** | React Native (Expo SDK 54) | [EAS App Dashboard](https://expo.dev/accounts/ritesh1918/projects/helpdesk-ai) | Android and iOS applications managed via EAS |
 | **Backend (AI API)** | Python FastAPI | [ritesh19180-ai-helpdesk-api.hf.space](https://ritesh19180-ai-helpdesk-api.hf.space) | Machine learning pipeline deployed on Hugging Face Spaces |
-| **Database & Auth** | Supabase (PostgreSQL) | [aejuenhqciagpntcqoir.supabase.co](https://supabase.com) | Database engine, authentication, and RLS policies |
+| **Database & Auth** | Supabase (PostgreSQL) | `[YOUR_SUPABASE_PROJECT_REF].supabase.co` | Database engine, authentication, and RLS policies |
 | **EAS/Expo Account** | Expo CLI | Owner: `ritesh1918` | Credentials and remote EAS builds for APK/AAB |
 
 ---

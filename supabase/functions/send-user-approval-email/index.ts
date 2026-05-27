@@ -11,7 +11,7 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const FROM_EMAIL =
   Deno.env.get("APPROVAL_FROM_EMAIL") ||
   Deno.env.get("RESEND_FROM_EMAIL") ||
-  "HELPDESK.AI <bonthalamadhavi1@gmail.com>";
+  "HELPDESK.AI <noreply@helpdesk.ai>";
 const DASHBOARD_URL =
   Deno.env.get("FRONTEND_DASHBOARD_URL") ||
   Deno.env.get("FRONTEND_URL") ||

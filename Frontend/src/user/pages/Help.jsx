@@ -36,7 +36,7 @@ const Help = () => {
     const [debouncedSearch, setDebouncedSearch] = useState('');
 
     const generateMailto = () => {
-        const email = "bonthalamadhavi1@gmail.com";
+        const email = import.meta.env.VITE_SUPPORT_EMAIL || "support@helpdesk.ai";
         const subject = encodeURIComponent("Support Request: [Issue Summary]");
         const fullName = profile?.full_name || "User";
         

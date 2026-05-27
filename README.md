@@ -86,8 +86,8 @@ To support the project and get real-time open-source project updates, please mak
   <img src="https://img.shields.io/badge/🔗_CONNECT_ON_LINKEDIN-111827?style=for-the-badge&logo=linkedin&logoColor=white&labelColor=0077b5" height="40" alt="Connect on LinkedIn" />
 </a>
 &nbsp;&nbsp;
-<a href="mailto:bonthalamadhavi1@gmail.com">
-  <img src="https://img.shields.io/badge/✉️_EMAIL_ME-111827?style=for-the-badge&logo=gmail&logoColor=white&labelColor=ea4335" height="40" alt="Email Me" />
+<a href="mailto:support@helpdesk.ai">
+  <img src="https://img.shields.io/badge/✉️_EMAIL_US-111827?style=for-the-badge&logo=gmail&logoColor=white&labelColor=ea4335" height="40" alt="Email Us" />
 </a>
 
 </div>
