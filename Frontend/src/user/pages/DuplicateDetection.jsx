@@ -7,13 +7,7 @@ import {
 } from 'lucide-react';
 import useTicketStore from "../../store/ticketStore";
 import { API_CONFIG } from "../../config";
-
-// ─── Animated Step Pipeline ───────────────────────────────────────────────────
-const pipelineSteps = [
-    { icon: FileText, label: 'Your Issue', desc: 'Captured & analysed' },
-    { icon: Database, label: 'Case History', desc: 'Scanned 10 000+ cases' },
-    { icon: Zap, label: 'Match Found', desc: 'Similarity calculated' },
-];
+import { supabase } from "../../lib/supabaseClient";
 
 // ─── Shimmer skeleton ─────────────────────────────────────────────────────────
 const Shimmer = ({ className = '' }) => (
@@ -40,6 +34,33 @@ const DuplicateDetection = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [activeStep, setActiveStep] = useState(0);
     const [countdown, setCountdown] = useState(2);
+    const [totalCases, setTotalCases] = useState('10,000+');
+
+    // ─── Animated Step Pipeline (Dynamic) ───────────────────────────────────────────
+    const pipelineSteps = [
+        { icon: FileText, label: 'Your Issue', desc: 'Captured & analysed' },
+        { icon: Database, label: 'Case History', desc: `Scanned ${totalCases} cases` },
+        { icon: Zap, label: 'Match Found', desc: 'Similarity calculated' },
+    ];
+
+    // Fetch dynamic case count from Supabase database
+    useEffect(() => {
+        const fetchCaseCount = async () => {
+            try {
+                if (supabase) {
+                    const { count, error } = await supabase
+                        .from('tickets')
+                        .select('id', { count: 'exact', head: true });
+                    if (!error && count != null) {
+                        setTotalCases(count.toLocaleString());
+                    }
+                }
+            } catch (err) {
+                console.warn("[DuplicateDetection] Failed to fetch live case count fallback to default:", err);
+            }
+        };
+        fetchCaseCount();
+    }, []);
 
     // Loading delay + step animation
     useEffect(() => {
