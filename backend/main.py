@@ -59,6 +59,7 @@ from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
+from backend.services.webhook_service import send_ticket_alert, test_webhook
 
 
 # ---------------------------------------------------------------------------
@@ -533,6 +534,86 @@ async def log_correction(raw_request: Request):
 
 
 # ---------------------------------------------------------------------------
+# Webhook Settings & Endpoints (Slack / Microsoft Teams)
+# ---------------------------------------------------------------------------
+
+def _fetch_webhook_settings(company_id: str | None) -> dict:
+    """Fetch webhook URLs from system_settings for a given company."""
+    defaults = {"slack_webhook_url": "", "teams_webhook_url": ""}
+    if not supabase or not company_id:
+        return defaults
+    try:
+        res = supabase.table("system_settings").select(
+            "slack_webhook_url, teams_webhook_url"
+        ).eq("company_id", company_id).single().execute()
+        if res.data:
+            return {**defaults, **{k: v or "" for k, v in res.data.items()}}
+    except Exception:
+        pass
+    return defaults
+
+
+class WebhookSettingsRequest(BaseModel):
+    company_id: str
+    slack_webhook_url: str = ""
+    teams_webhook_url: str = ""
+
+
+@app.get("/webhooks/settings")
+async def get_webhook_settings(company_id: str):
+    """Retrieve configured webhook URLs for a company."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    settings = _fetch_webhook_settings(company_id)
+    return settings
+
+
+@app.post("/webhooks/settings")
+async def save_webhook_settings(request_body: WebhookSettingsRequest):
+    """Create or update webhook URLs for a company."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+
+    data = {
+        "slack_webhook_url": request_body.slack_webhook_url.strip(),
+        "teams_webhook_url": request_body.teams_webhook_url.strip(),
+    }
+
+    try:
+        # Upsert: update if exists, insert otherwise
+        existing = supabase.table("system_settings").select("company_id").eq(
+            "company_id", request_body.company_id
+        ).execute()
+
+        if existing.data:
+            supabase.table("system_settings").update(data).eq(
+                "company_id", request_body.company_id
+            ).execute()
+        else:
+            data["company_id"] = request_body.company_id
+            supabase.table("system_settings").insert(data).execute()
+
+        return {"status": "success", "message": "Webhook settings saved"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/webhooks/test")
+async def test_webhook_endpoint(request_body: WebhookSettingsRequest):
+    """Send a test notification to verify webhook configuration."""
+    results = {}
+    if request_body.slack_webhook_url:
+        results["slack"] = await test_webhook(request_body.slack_webhook_url)
+    if request_body.teams_webhook_url:
+        results["teams"] = await test_webhook(request_body.teams_webhook_url)
+
+    if not results:
+        return {"status": "error", "message": "No webhook URLs provided"}
+
+    return {"status": "success", "results": results}
+
+
+# ---------------------------------------------------------------------------
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
 @app.get("/tickets")
@@ -645,6 +726,33 @@ async def save_ticket(request_body: TicketSaveRequest):
         response = {"status": "success", "ticket_id": ticket_id, "duplicate_indexed": duplicate_indexed}
         if duplicate_index_warning:
             response["duplicate_index_warning"] = duplicate_index_warning
+
+        # --- Webhook Alert for Critical Tickets ---
+        if final_data.get("priority") in ("Critical", "High"):
+            try:
+                webhook_settings = _fetch_webhook_settings(final_data.get("company_id"))
+                slack_url = webhook_settings.get("slack_webhook_url")
+                teams_url = webhook_settings.get("teams_webhook_url")
+                if slack_url or teams_url:
+                    alert_data = {
+                        "ticket_id": str(ticket_id),
+                        "subject": final_data.get("subject", ""),
+                        "description": final_data.get("description", ""),
+                        "category": final_data.get("category", ""),
+                        "subcategory": final_data.get("subcategory", ""),
+                        "priority": final_data.get("priority", ""),
+                        "assigned_team": final_data.get("assigned_team", ""),
+                        "status": final_data.get("status", "Open"),
+                        "company": final_data.get("company", ""),
+                        "created_at": final_data.get("created_at", datetime.datetime.utcnow().isoformat() + "Z"),
+                    }
+                    # Fire-and-forget: schedule in background
+                    import asyncio
+                    asyncio.create_task(send_ticket_alert(slack_url, teams_url, alert_data))
+                    logger.info(f"Webhook alert queued for critical ticket {ticket_id}")
+            except Exception as webhook_err:
+                logger.warning(f"Webhook alert failed for ticket {ticket_id}: {webhook_err}")
+
         return response
 
     except Exception as e:

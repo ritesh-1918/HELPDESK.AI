@@ -5,7 +5,9 @@ import {
     Inbox,
     Bell,
     Save,
-    ShieldCheck
+    ShieldCheck,
+    Webhook,
+    Send
 } from 'lucide-react';
 import useAdminStore from '../store/adminStore';
 import { Card, CardContent } from "../../components/ui/card";
@@ -166,6 +168,64 @@ const AdminSettings = () => {
                             >
                                 <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all duration-300 shadow-md ${settings.adminAlerts ? 'right-1' : 'left-1'}`}></div>
                             </button>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* 5. Webhook Integration (Slack / Microsoft Teams) */}
+                <Card className="border-none shadow-2xl shadow-slate-200/40 rounded-[2rem] overflow-hidden bg-white">
+                    <div className="px-8 py-6 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+                        <h3 className="text-sm font-black uppercase italic tracking-tight flex items-center gap-3">
+                            <Webhook size={18} className="text-purple-400" /> Webhook Integration
+                        </h3>
+                    </div>
+                    <CardContent className="p-8 space-y-6">
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest max-w-lg">
+                            Send real-time alerts to Slack or Microsoft Teams when critical or high-priority tickets are created.
+                        </p>
+
+                        {/* Slack Webhook URL */}
+                        <div className="space-y-3 pt-4 border-t border-slate-100">
+                            <label className="text-xs font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                                <span className="inline-block w-3 h-3 rounded-full bg-purple-500"></span>
+                                Slack Webhook URL
+                            </label>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                                Paste your Slack Incoming Webhook URL (hooks.slack.com/services/...)
+                            </p>
+                            <input
+                                type="url"
+                                placeholder="https://hooks.slack.com/services/T00000/B00000/XXXX"
+                                value={settings.slackWebhookUrl || ''}
+                                onChange={(e) => handleChange('slackWebhookUrl', e.target.value)}
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono text-slate-700 outline-none focus:border-purple-500 transition-colors placeholder:text-slate-300"
+                            />
+                        </div>
+
+                        {/* Microsoft Teams Webhook URL */}
+                        <div className="space-y-3 pt-4 border-t border-slate-100">
+                            <label className="text-xs font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                                <span className="inline-block w-3 h-3 rounded-full bg-blue-500"></span>
+                                Microsoft Teams Webhook URL
+                            </label>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                                Paste your Teams Incoming Webhook URL (webhook.office.com/...)
+                            </p>
+                            <input
+                                type="url"
+                                placeholder="https://outlook.office.com/webhook/..."
+                                value={settings.teamsWebhookUrl || ''}
+                                onChange={(e) => handleChange('teamsWebhookUrl', e.target.value)}
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono text-slate-700 outline-none focus:border-blue-500 transition-colors placeholder:text-slate-300"
+                            />
+                        </div>
+
+                        {/* Info Box */}
+                        <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 mt-4">
+                            <p className="text-xs text-indigo-700 font-bold">
+                                <Send size={12} className="inline mr-1" />
+                                Alerts are sent automatically when Critical or High priority tickets are created.
+                            </p>
                         </div>
                     </CardContent>
                 </Card>
