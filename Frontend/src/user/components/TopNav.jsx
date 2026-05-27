@@ -58,18 +58,18 @@ const TopNav = () => {
                     <Link className="text-sm font-semibold text-gray-900 dark:text-gray-100 hover:text-emerald-600 transition-colors" to="/dashboard">Dashboard</Link>
                     <Link className="text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors" to="/my-tickets">My Tickets</Link>
                     <Link className="text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors" to="/help">Help</Link>
-                </nav>
+                </nav >
 
                 {/* Right: Profile */}
-                <div className="flex items-center gap-3">
+                < div className="flex items-center gap-3" >
                     {/* Dark Mode Toggle */}
-                    <button
+                    < button
                         onClick={toggleDark}
                         className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                         aria-label="Toggle dark mode"
                     >
                         {isDark ? <Sun size={20} className="text-yellow-400" /> : <Moon size={20} className="text-gray-600" />}
-                    </button>
+                    </button >
 
                     <NotificationPopover />
                     <div className="hidden md:block">
@@ -87,48 +87,57 @@ const TopNav = () => {
                     >
                         {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
                     </button>
-                </div>
-            </div>
+                </div >
+            </div >
 
             {/* Mobile Menu Overlay */}
-            {isMenuOpen && (
-                <div className="md:hidden bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-700 absolute w-full shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="px-6 py-8 space-y-6">
-                        <div className="flex items-center gap-4 border-b border-gray-50 dark:border-gray-700 pb-6">
-                            <Avatar className="size-12 border border-gray-100">
-                                <AvatarImage src={profile?.profile_picture} />
-                                <AvatarFallback className="bg-emerald-50 text-emerald-700 font-black">{initials}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                                <p className="font-bold text-gray-900 dark:text-white">{profile?.full_name}</p>
-                                <p className="text-xs text-gray-400 font-medium">{profile?.email}</p>
+            {
+                isMenuOpen && (
+                    <div className="md:hidden bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-700 absolute w-full shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="px-6 py-8 space-y-6">
+                            <div className="flex items-center gap-4 border-b border-gray-50 dark:border-gray-700 pb-6">
+                                <Avatar className="size-12 border border-gray-100">
+                                    <AvatarImage src={profile?.profile_picture} />
+                                    <AvatarFallback className="bg-emerald-50 text-emerald-700 font-black">{initials}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <p className="font-bold text-gray-900 dark:text-white">{profile?.full_name}</p>
+                                    <p className="text-xs text-gray-400 font-medium">{profile?.email}</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <Link to="/dashboard" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 text-lg font-bold text-gray-700 dark:text-gray-200 hover:text-emerald-700 transition-colors">
+                                    <Box size={20} className="text-gray-400" /> Dashboard
+                                </Link>
+                                <Link to="/my-tickets" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 text-lg font-bold text-gray-700 dark:text-gray-200 hover:text-emerald-700 transition-colors">
+                                    <MessageSquare size={20} className="text-gray-400" /> My Tickets
+                                </Link>
+                                <Link to="/profile" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 text-lg font-bold text-gray-700 dark:text-gray-200 hover:text-emerald-700 transition-colors">
+                                    <UserIcon size={20} className="text-gray-400" /> My Profile
+                                </Link>
+                                <Link
+                                    to="/docs"
+                                    onClick={() => setIsMenuOpen(false)}
+                                    className="flex items-center gap-3 text-lg font-bold text-gray-700 hover:text-emerald-700 transition-colors"
+                                >
+                                    <BookOpen size={20} className="text-gray-400" /> Documentation
+                                </Link>
+                            </div>
+
+                            <div className="pt-6 border-t border-gray-50 dark:border-gray-700">
+                                <button
+                                    onClick={handleLogout}
+                                    className="w-full py-4 bg-gray-50 dark:bg-gray-800 rounded-2xl flex items-center justify-center gap-2 text-red-600 font-bold active:scale-95 transition-all"
+                                >
+                                    <LogOut size={18} /> Sign Out
+                                </button>
                             </div>
                         </div>
-
-                        <div className="space-y-4">
-                            <Link to="/dashboard" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 text-lg font-bold text-gray-700 dark:text-gray-200 hover:text-emerald-700 transition-colors">
-                                <Box size={20} className="text-gray-400" /> Dashboard
-                            </Link>
-                            <Link to="/my-tickets" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 text-lg font-bold text-gray-700 dark:text-gray-200 hover:text-emerald-700 transition-colors">
-                                <MessageSquare size={20} className="text-gray-400" /> My Tickets
-                            </Link>
-                            <Link to="/profile" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 text-lg font-bold text-gray-700 dark:text-gray-200 hover:text-emerald-700 transition-colors">
-                                <UserIcon size={20} className="text-gray-400" /> My Profile
-                            </Link>
-                        </div>
-
-                        <div className="pt-6 border-t border-gray-50 dark:border-gray-700">
-                            <button
-                                onClick={handleLogout}
-                                className="w-full py-4 bg-gray-50 dark:bg-gray-800 rounded-2xl flex items-center justify-center gap-2 text-red-600 font-bold active:scale-95 transition-all"
-                            >
-                                <LogOut size={18} /> Sign Out
-                            </button>
-                        </div>
                     </div>
-                </div>
-            )}
-        </header>
+                )
+            }
+        </header >
     );
 };
 

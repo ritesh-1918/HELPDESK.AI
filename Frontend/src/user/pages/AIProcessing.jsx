@@ -279,7 +279,8 @@ const AIProcessing = () => {
                     originalIssue: original_text || text,
                     originalLanguage: original_language || 'en',
                     capturedFileBase64: image_base64,
-                    ocrText: image_text
+                    ocrText: image_text,
+                    image_url: uploadedImageUrl || finalTicket.image_url
                 };
 
                 setAITicket(aiTicketObject);
@@ -352,7 +353,8 @@ const AIProcessing = () => {
                         originalIssue: original_text || text,
                         originalLanguage: original_language || 'en',
                         capturedFileBase64: image_base64,
-                        ocrText: image_text
+                        ocrText: image_text,
+                        image_url: uploadedImageUrl
                     };
 
                     setAITicket(fallbackTicket);
