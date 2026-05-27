@@ -1,6 +1,6 @@
 export const MOCK_USERS = [
-    { id: 1, name: 'John Doe', username: 'test@test.com', password: 'password123', role: 'user' },
-    { id: 2, name: 'Jane Smith', username: 'admin@test.com', password: 'password123', role: 'admin' },
+    { id: 1, name: 'John Doe', username: 'test@test.com', password: 'CHANGE_ME', role: 'user' },
+    { id: 2, name: 'Jane Smith', username: 'admin@test.com', password: 'CHANGE_ME', role: 'admin' },
 ];
 
 export const MOCK_TICKETS = [
