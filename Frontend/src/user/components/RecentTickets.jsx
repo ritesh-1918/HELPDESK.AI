@@ -64,72 +64,64 @@ const RecentTickets = () => {
     };
 
     return (
-        <div style={{
-            background: '#fff', borderRadius: '20px', border: '1px solid #e7f5ee',
-            boxShadow: '0 2px 16px rgba(0,0,0,0.06)', overflow: 'hidden',
-        }}>
+        <div className="bg-white dark:bg-gray-800 rounded-[20px] border border-[#e7f5ee] dark:border-gray-700 shadow-[0_2px_16px_rgba(0,0,0,0.06)] overflow-hidden transition-colors duration-200">
             {/* Header */}
-            <div style={{
-                padding: '20px 28px', borderBottom: '1px solid #f0fdf4',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Clock size={18} style={{ color: '#22c55e' }} />
-                    <span style={{ fontFamily: 'Syne, sans-serif', fontSize: '17px', fontWeight: 700, color: '#0f1f12' }}>
+            <div className="px-7 py-5 border-b border-[#f0fdf4] dark:border-gray-700 flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                    <Clock size={18} className="text-emerald-500" />
+                    <span className="font-['Syne'] text-[17px] font-bold text-[#0f1f12] dark:text-white">
                         Recent Tickets
                     </span>
                 </div>
                 <button
                     onClick={() => navigate('/my-tickets')}
-                    style={{
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        color: '#16a34a', fontSize: '13px', fontWeight: 600,
-                    }}
+                    className="bg-transparent border-none cursor-pointer text-emerald-600 dark:text-emerald-400 text-[13px] font-semibold hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors"
                 >
                     View All →
                 </button>
             </div>
 
             {/* Content */}
-            <div style={{ padding: loading || error || tickets.length === 0 ? '28px' : '0' }}>
+            {/* Content */}
+            <div className={loading || error || tickets.length === 0 ? 'p-7' : 'p-0'}>
                 {loading ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div className="flex flex-col gap-4">
                         <style>{`@keyframes shimmer{100%{transform:translateX(100%)}}`}</style>
                         {[...Array(4)].map((_, i) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '12px 0' }}>
-                                <div style={{ height: '24px', width: '64px', background: '#f1f5f9', borderRadius: '6px', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
-                                    <div style={{ position: 'absolute', inset: 0, transform: 'translateX(-100%)', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent)', animation: 'shimmer 1.5s infinite' }} />
+                            <div key={i} className="flex items-center gap-4 py-3">
+                                <div className="h-6 w-16 bg-slate-100 dark:bg-gray-700 rounded-md relative overflow-hidden shrink-0">
+                                    <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 dark:via-gray-600/60 to-transparent animate-[shimmer_1.5s_infinite]" />
                                 </div>
-                                <div style={{ height: '20px', flex: 1, background: '#f1f5f9', borderRadius: '6px', position: 'relative', overflow: 'hidden' }}>
-                                    <div style={{ position: 'absolute', inset: 0, transform: 'translateX(-100%)', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent)', animation: 'shimmer 1.5s infinite' }} />
+                                <div className="h-5 flex-1 bg-slate-100 dark:bg-gray-700 rounded-md relative overflow-hidden">
+                                    <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 dark:via-gray-600/60 to-transparent animate-[shimmer_1.5s_infinite]" />
                                 </div>
-                                <div style={{ height: '24px', width: '80px', background: '#f1f5f9', borderRadius: '100px', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
-                                    <div style={{ position: 'absolute', inset: 0, transform: 'translateX(-100%)', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent)', animation: 'shimmer 1.5s infinite' }} />
+                                <div className="h-6 w-20 bg-slate-100 dark:bg-gray-700 rounded-full relative overflow-hidden shrink-0">
+                                    <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 dark:via-gray-600/60 to-transparent animate-[shimmer_1.5s_infinite]" />
                                 </div>
                             </div>
                         ))}
                     </div>
                 ) : error ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 0', textAlign: 'center', color: '#ef4444', background: 'rgba(254,242,242,0.5)', borderRadius: '16px', border: '1px dashed #fecaca' }}>
-                        <AlertCircle size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
-                        <p style={{ fontSize: '14px', fontWeight: 700 }}>Sync Failed</p>
-                        <p style={{ fontSize: '10px', marginTop: '4px', color: '#f87171' }}>{error}</p>
+                    <div className="flex flex-col items-center justify-center py-12 text-center text-red-500 bg-red-50 dark:bg-red-900/20 rounded-2xl border border-dashed border-red-200 dark:border-red-800/30">
+                        <AlertCircle size={32} className="mb-3 opacity-50" />
+                        <p className="text-sm font-bold">Sync Failed</p>
+                        <p className="text-[10px] mt-1 text-red-400">{error}</p>
                     </div>
                 ) : tickets.length === 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 0', textAlign: 'center', color: '#6b7280', background: 'rgba(249,250,251,0.5)', borderRadius: '16px', border: '1px dashed #e5e7eb' }}>
-                        <Inbox size={32} style={{ marginBottom: '12px', opacity: 0.2 }} />
-                        <p style={{ fontSize: '14px', fontWeight: 500 }}>No tickets yet.</p>
-                        <p style={{ fontSize: '12px', marginTop: '4px' }}>Report an issue and our AI will start helping immediately.</p>
+                    <div className="flex flex-col items-center justify-center py-12 text-center text-gray-500 dark:text-gray-400 bg-gray-50/50 dark:bg-gray-800/50 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
+                        <Inbox size={32} className="mb-3 opacity-20" />
+                        <p className="text-sm font-medium">No tickets yet.</p>
+                        <p className="text-xs mt-1">Report an issue and our AI will start helping immediately.</p>
                     </div>
                 ) : (
-                    <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr style={{ background: '#fafafa', borderBottom: '1px solid #f0fdf4' }}>
-                                    <th style={{ fontSize: '11px', letterSpacing: '0.1em', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', padding: '10px 28px' }}>ID</th>
-                                    <th style={{ fontSize: '11px', letterSpacing: '0.1em', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', padding: '10px 28px' }}>Subject</th>
-                                    <th style={{ fontSize: '11px', letterSpacing: '0.1em', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', padding: '10px 28px' }}>Status</th>
-                                    <th style={{ fontSize: '11px', letterSpacing: '0.1em', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', padding: '10px 28px' }}>Submitted</th>
+                                <tr className="bg-[#fafafa] dark:bg-gray-800/50 border-b border-[#f0fdf4] dark:border-gray-700">
+                                    <th className="text-[11px] tracking-widest text-gray-400 font-semibold uppercase px-7 py-2.5">ID</th>
+                                    <th className="text-[11px] tracking-widest text-gray-400 font-semibold uppercase px-7 py-2.5">Subject</th>
+                                    <th className="text-[11px] tracking-widest text-gray-400 font-semibold uppercase px-7 py-2.5">Status</th>
+                                    <th className="text-[11px] tracking-widest text-gray-400 font-semibold uppercase px-7 py-2.5">Submitted</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -137,30 +129,28 @@ const RecentTickets = () => {
                                     <tr
                                         key={ticket.id}
                                         onClick={() => navigate(`/ticket/${ticket.id}`)}
-                                        style={{ borderBottom: '1px solid #f9fafb', cursor: 'pointer', transition: 'background 0.2s' }}
-                                        onMouseEnter={(e) => e.currentTarget.style.background = '#f0fdf4'}
-                                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                        className="border-b border-gray-50 dark:border-gray-700/50 cursor-pointer transition-colors hover:bg-[#f0fdf4] dark:hover:bg-gray-700/30"
                                     >
-                                        <td style={{ padding: '16px 28px' }}>
-                                            <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: 600, color: '#16a34a' }}>
+                                        <td className="px-7 py-4">
+                                            <span className="font-mono text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
                                                 #{ticket.id}
                                             </span>
                                         </td>
-                                        <td style={{ padding: '16px 28px' }}>
-                                            <p style={{ fontSize: '14px', fontWeight: 500, color: '#111827', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '320px' }}>
+                                        <td className="px-7 py-4">
+                                            <p className="text-sm font-medium text-gray-900 dark:text-white m-0 overflow-hidden text-ellipsis whitespace-nowrap max-w-[320px]">
                                                 {ticket.summary || ticket.subject || ticket.description || "No description provided"}
                                             </p>
                                             {ticket?.metadata?.translation?.translated && (
-                                                <p style={{ fontSize: '11px', color: '#0369a1', margin: '4px 0 0' }}>
+                                                <p className="text-[11px] text-sky-700 dark:text-sky-400 m-0 mt-1">
                                                     Translated from {ticket.metadata.translation.source_language_name || ticket.metadata.translation.source_language || 'Unknown'}
                                                 </p>
                                             )}
                                         </td>
-                                        <td style={{ padding: '16px 28px' }}>
+                                        <td className="px-7 py-4">
                                             {getStatusBadge(ticket.status)}
                                         </td>
-                                        <td style={{ padding: '16px 28px', whiteSpace: 'nowrap' }}>
-                                            <span style={{ color: '#6b7280', fontSize: '12px' }}>
+                                        <td className="px-7 py-4 whitespace-nowrap">
+                                            <span className="text-gray-500 dark:text-gray-400 text-xs">
                                                 {formatTimelineDate(ticket.created_at)}
                                             </span>
                                         </td>

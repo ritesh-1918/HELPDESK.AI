@@ -41,38 +41,33 @@ const QuickActions = () => {
     };
 
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {actions.map((action, index) => (
                 <div
                     key={index}
                     onClick={() => handleActionClick(action)}
                     onMouseEnter={() => setHoveredIdx(index)}
                     onMouseLeave={() => setHoveredIdx(null)}
-                    style={{
-                        background: '#fff',
-                        borderRadius: '20px',
-                        border: `1px solid ${hoveredIdx === index ? '#86efac' : '#e7f5ee'}`,
-                        boxShadow: hoveredIdx === index ? '0 12px 32px rgba(0,0,0,0.1)' : '0 2px 12px rgba(0,0,0,0.05)',
-                        padding: '28px',
-                        cursor: 'pointer',
-                        transition: 'all 0.3s ease',
-                        transform: hoveredIdx === index ? 'translateY(-6px)' : 'translateY(0)',
-                    }}
+                    className={`bg-white dark:bg-gray-800 rounded-[20px] p-7 cursor-pointer transition-all duration-300 transform ${
+                        hoveredIdx === index 
+                            ? 'border-green-300 dark:border-green-500 shadow-[0_12px_32px_rgba(0,0,0,0.1)] dark:shadow-[0_12px_32px_rgba(0,0,0,0.3)] -translate-y-1.5' 
+                            : 'border-[#e7f5ee] dark:border-gray-700 shadow-[0_2px_12px_rgba(0,0,0,0.05)] translate-y-0'
+                    } border`}
                 >
                     <div style={{
                         width: '48px', height: '48px', borderRadius: '14px', padding: '12px',
                         background: action.iconBg, display: 'flex', alignItems: 'center',
                         justifyContent: 'center', marginBottom: '16px', color: action.iconColor,
-                    }}>
+                    }} className="dark:opacity-90">
                         <action.icon size={24} />
                     </div>
 
-                    <h3 style={{ fontSize: '17px', fontWeight: 600, color: '#111827', marginBottom: '8px' }}>{action.title}</h3>
-                    <p style={{ fontSize: '14px', color: '#6b7280', lineHeight: 1.6, marginBottom: '20px' }}>
+                    <h3 className="text-[17px] font-semibold text-gray-900 dark:text-white mb-2">{action.title}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mb-5">
                         {action.description}
                     </p>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#16a34a', fontWeight: 600, fontSize: '13px' }}>
+                    <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-semibold text-[13px]">
                         Start Request →
                     </div>
                 </div>

@@ -12,12 +12,9 @@ const Dashboard = () => {
 
     return (
         <div
-            className="min-h-screen pb-20 relative"
+            className="min-h-screen pb-20 relative bg-[#F8FAF9] dark:bg-gray-900 transition-colors duration-200"
             style={{
-                background: `
-                    radial-gradient(circle at top right, rgba(34,160,69,0.06), transparent 60%),
-                    #F8FAF9
-                `,
+                backgroundImage: `radial-gradient(circle at top right, rgba(34,160,69,0.06), transparent 60%)`,
                 backgroundAttachment: 'fixed'
             }}
         >
