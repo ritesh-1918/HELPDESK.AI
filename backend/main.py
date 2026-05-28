@@ -28,7 +28,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.encoders import jsonable_encoder
 import asyncio
 from pathlib import Path
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
 # Load environment variables from backend/.env
@@ -83,7 +83,7 @@ def get_system_settings(company_id: str) -> dict:
     return defaults
 class TicketRequest(BaseModel):
     text: str
-    image_base64: str = ""
+    image_base64: str = Field(default="", max_length=15_000_000)
     image_text: str = "" # Keep for backward compatibility
     user_id: str | None = None
     company: str | None = None
