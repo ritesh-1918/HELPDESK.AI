@@ -276,6 +276,7 @@ def mock_ai_services(request):
         "test_sla_service.py",
         "test_sla_predictor.py",
         "test_language_pipeline.py",
+        "test_auto_close_service.py",
     }:
         yield
         return
