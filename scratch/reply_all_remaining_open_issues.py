@@ -1,3 +1,4 @@
+import os
 import subprocess
 import json
 import time
@@ -6,9 +7,9 @@ import sys
 # Ensure UTF-8 output on Windows
 sys.stdout.reconfigure(encoding='utf-8')
 
-REPO = "ritesh-1918/HELPDESK.AI"
-DEPLOYED_URL = "https://helpdeskaiv1.vercel.app/"
-EMAIL = "bonthalamadhavi1@gmail.com"
+REPO = os.environ.get("GSSOC_REPO", "ritesh-1918/HELPDESK.AI")
+DEPLOYED_URL = os.environ.get("GSSOC_DEPLOYED_URL", "https://helpdeskaiv1.vercel.app/")
+EMAIL = os.environ.get("GSSOC_EMAIL", "admin@helpdesk.ai")
 
 BANNER = f"""
 ---
