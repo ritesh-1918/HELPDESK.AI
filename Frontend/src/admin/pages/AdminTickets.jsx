@@ -219,6 +219,7 @@ const AdminTickets = () => {
     const statuses = ['All', 'Open', 'In Progress', 'Resolved', 'Closed'];
     const teams = ['All', 'Software Team', 'Hardware Support', 'Network Ops', 'Security Unit', 'General Support'];
 
+    const filteredTickets = useMemo(() => {
         let result = tickets;
         if (searchQuery) {
             const q = searchQuery.toLowerCase();
