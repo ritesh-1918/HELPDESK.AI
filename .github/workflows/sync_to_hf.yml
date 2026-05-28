@@ -23,7 +23,8 @@ jobs:
           cp backend/requirements.txt .
       - name: Upload to Hugging Face
         env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_TOKEN: \${{ secrets.HF_TOKEN }}
+          HF_USERNAME: \${{ secrets.HF_USERNAME }}
         run: |
           python -c '
           import os
@@ -31,7 +32,7 @@ jobs:
           api = HfApi(token=os.environ["HF_TOKEN"])
           api.upload_folder(
               folder_path=".",
-              repo_id="ritesh19180/ai-helpdesk-api",
+              repo_id=f"{os.environ[\"HF_USERNAME\"]}/ai-helpdesk-api",
               repo_type="space",
               ignore_patterns=[".git/*", ".github/*"]
           )
