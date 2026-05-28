@@ -66,7 +66,7 @@ The project currently builds the frontend successfully, but the configured front
   - `subcategory: "Unknown"`
   - `confidence: 0.0`
 - Backend startup/test output reports missing local assets/config:
-  - `SUPABASE_URL or SUPABASE_SERVICE_KEY not set`
+  - `SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set`
   - `V2 Model config not found`
   - `V3 Service Model not found`
   - `GEMINI_API_KEY not found`
