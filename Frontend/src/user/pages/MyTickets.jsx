@@ -12,6 +12,7 @@ import { Select } from "../../components/ui/select";
 import { formatTicketId } from "../../utils/format";
 import TicketStatusBadge from "../components/TicketStatusBadge";
 import { formatTimelineDate, getTimeZoneAbbr } from "../../utils/dateUtils";
+import LanguageBadge from "../../components/shared/LanguageBadge";
 import {
     Tooltip,
     TooltipContent,
@@ -120,13 +121,6 @@ function MyTickets() {
         return 'text-gray-600';
     };
 
-    const getTranslationInfo = (ticket) => {
-        const t = ticket?.metadata?.translation;
-        if (!t?.translated) return null;
-        return {
-            sourceLanguageName: t.source_language_name || t.source_language || 'Unknown',
-        };
-    };
 
     return (
         <main className="flex-1 max-w-[1200px] w-full mx-auto px-6 py-10 flex flex-col gap-8">
@@ -325,11 +319,9 @@ function MyTickets() {
                                                  <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-emerald-700 transition-colors">
                                                      {ticket.summary || ticket.subject || ticket.description || "No subject"}
                                                  </p>
-                                                 {getTranslationInfo(ticket) && (
-                                                     <p className="text-[10px] text-slate-500 mt-1">
-                                                         Translated from {getTranslationInfo(ticket).sourceLanguageName}
-                                                     </p>
-                                                 )}
+                                                 <div className="mt-1">
+                                                     <LanguageBadge translation={ticket?.metadata?.translation} compact />
+                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className="text-sm font-medium text-gray-600 bg-gray-100 px-2.5 py-1 rounded-md">

@@ -21,7 +21,7 @@ const WebhookSettings = () => {
       if (!companyId) return;
       setFetching(true);
       try {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from("webhook_settings")
           .select("webhook_url, is_enabled")
           .eq("company_id", companyId)
@@ -31,7 +31,7 @@ const WebhookSettings = () => {
           setWebhookUrl(data.webhook_url || "");
           setIsEnabled(data.is_enabled || false);
         }
-      } catch (err) {
+      } catch {
         console.log("No webhook settings found — first time setup");
       } finally {
         setFetching(false);

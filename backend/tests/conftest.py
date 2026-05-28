@@ -274,6 +274,10 @@ def mock_ai_services(request):
         "test_auth_cookie.py",
         "test_mobile_supabase_env.py",
         "test_voice_service.py",
+        "test_digest_service.py",
+        "test_sla_service.py",
+        "test_sla_predictor.py",
+        "test_language_pipeline.py",
     }:
         yield
         return
