@@ -116,23 +116,27 @@ const AppContent = () => {
     initialize();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      if (session?.user) {
-        // Identify user in LogRocket on auth change
-        LogRocket.identify(session.user.id, {
-          email: session.user.email,
-          name: session.user.user_metadata?.full_name || 'User',
-        });
+      try {
+        setSession(session);
+        if (session?.user) {
+          // Identify user in LogRocket on auth change
+          LogRocket.identify(session.user.id, {
+            email: session.user.email,
+            name: session.user.user_metadata?.full_name || 'User',
+          });
 
-        // Fetch profile status for routing
-        const { data } = await supabase
-          .from('profiles')
-          .select('status')
-          .eq('id', session.user.id)
-          .single();
-        setUserStatus(data?.status || 'active');
-      } else {
-        setUserStatus(null);
+          // Fetch profile status for routing
+          const { data } = await supabase
+            .from('profiles')
+            .select('status')
+            .eq('id', session.user.id)
+            .single();
+          setUserStatus(data?.status || 'active');
+        } else {
+          setUserStatus(null);
+        }
+      } catch (error) {
+        console.error('Auth state change error:', error);
       }
     });
 
