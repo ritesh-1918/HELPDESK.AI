@@ -20,17 +20,15 @@ const useAuthStore = create(
                 const metadata = user.user_metadata || {};
                 const currentProfile = get().profile;
 
-                // 1. Resolve FROM METADATA or PERSISTED state
-                // Priority 1: If we have a persisted session for THIS user and it's active, keep it 
-                // to prevent temporary lobbies during refresh/tab switching.
-                if (currentProfile && currentProfile.id === user.id && currentProfile.status === 'active') {
-                    console.log("Active profile retained from state.");
-                    // Background fetch to ensure session is still valid/synced
-                    get()._syncProfile(user.id);
-                    return currentProfile;
+                // SECURITY FIX: Always fetch from database first.
+                // Never trust persisted role/status for authorization.
+                // The cached profile is only used for non-sensitive display data (name, avatar).
+                const dbProfile = await get()._syncProfile(user.id);
+                if (dbProfile) {
+                    return dbProfile;
                 }
 
-                // Priority 2: Use Auth Metadata (Instant fallback)
+                // Fallback: Use Auth Metadata only when DB is unreachable
                 const isMasterAdmin = user.email === 'masteradmin@helpdesk.ai';
 
                 const instantProfile = {
@@ -41,13 +39,6 @@ const useAuthStore = create(
                     status: isMasterAdmin ? 'active' : 'pending_email_verification',
                     company: metadata.company || ''
                 };
-
-                // 2. Sync with Database First before setting a fallback
-                // This prevents flashes of 'pending_email_verification' when returning from magic links
-                const dbProfile = await get()._syncProfile(user.id);
-                if (dbProfile) {
-                    return dbProfile;
-                }
 
                 console.log("Falling back to instant profile resolved from metadata:", instantProfile.role);
                 set({ profile: instantProfile });
@@ -85,8 +76,8 @@ const useAuthStore = create(
 
                     if (user) {
                         set({ user });
-                        // Don't 'await' here because we want 'loading: false' ASAP
-                        get().getProfile(user);
+                        // Await profile to ensure authorization data is from DB
+                        await get().getProfile(user);
                     } else {
                         set({ user: null, profile: null });
                     }
@@ -115,7 +106,7 @@ const useAuthStore = create(
                     set({ user });
 
                     console.log("Login successful, resolving profile...");
-                    // This will resolve instantly from metadata AND try to update from DB
+                    // This will resolve from DB first, metadata only as fallback
                     const profile = await get().getProfile(user);
 
                     // Block login entirely if email is unverified (for both users and admins)
@@ -281,7 +272,7 @@ const useAuthStore = create(
                     console.log("Auth state change:", event);
                     if (session?.user) {
                         set({ user: session.user });
-                        get().getProfile(session.user);
+                        await get().getProfile(session.user);
                     } else {
                         set({ user: null, profile: null });
                     }
@@ -292,8 +283,8 @@ const useAuthStore = create(
         {
             name: 'auth-storage',
             partialize: (state) => ({
-                // We keep profile persisted for quick UI transitions, 
-                // but session is handled by Supabase cookie/localStorage
+                // We keep profile persisted for quick UI transitions,
+                // but authorization always comes from DB via getProfile
                 profile: state.profile
             }),
         }
