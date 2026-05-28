@@ -1201,7 +1201,13 @@ async def auth_signup(body: SignupBody, response: Response):
     return {"user": user_payload, "message": "Signup complete"}
 
 @app.post("/auth/logout")
-async def auth_logout(response: Response):
+async def auth_logout(request: Request, response: Response):
+    token = extract_token(request)
+    if token and supabase:
+        try:
+            supabase.auth.admin.sign_out(token)
+        except Exception as exc:
+            print(f"[Logout] Server-side session invalidation failed (non-blocking): {exc}")
     _clear_session_cookies(response)
     return {"ok": True}
 
