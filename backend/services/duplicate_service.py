@@ -5,6 +5,7 @@ Uses sentence-transformers all-MiniLM-L6-v2 to detect similar tickets.
 
 import uuid
 import os
+import torch
 from sentence_transformers import SentenceTransformer, util
 
 SIMILARITY_THRESHOLD = 0.70
@@ -17,6 +18,7 @@ class DuplicateService:
         self._load_failed = False
         # In-memory store: list of (ticket_id, embedding, text)
         self._tickets: list[tuple[str, object, str]] = []
+        self._embeddings = None
         self.storage_file = os.path.join(os.path.dirname(__file__), "..", "data", "case_history_cache.json")
         os.makedirs(os.path.dirname(self.storage_file), exist_ok=True)
 
@@ -51,6 +53,10 @@ class DuplicateService:
                             text = item["text"]
                             embedding = self.model.encode(text, convert_to_tensor=True)
                             self._tickets.append((item["ticket_id"], embedding, text))
+                    if self._tickets:
+                        self._embeddings = torch.stack([t[1] for t in self._tickets])
+                    else:
+                        self._embeddings = None
                     print(f"[DuplicateService] Loaded {len(self._tickets)} tickets.")
                 except Exception as e:
                     print(f"[DuplicateService] Error loading storage: {e}")
@@ -95,6 +101,10 @@ class DuplicateService:
             return
         embedding = self.model.encode(text, convert_to_tensor=True)
         self._tickets.append((ticket_id, embedding, text))
+        if self._embeddings is None:
+            self._embeddings = embedding.unsqueeze(0)
+        else:
+            self._embeddings = torch.cat([self._embeddings, embedding.unsqueeze(0)], dim=0)
         self.save_to_disk(ticket_id, text)
 
     def check_duplicate(self, text: str, threshold: float = None) -> dict:
@@ -133,16 +143,15 @@ class DuplicateService:
                 "similarity": 0.0,
             }
 
+        if self._embeddings is None:
+            self._embeddings = torch.stack([t[1] for t in self._tickets])
+
         query_embedding = self.model.encode(text, convert_to_tensor=True)
 
-        best_score = 0.0
-        best_id = None
-
-        for ticket_id, stored_emb, _ in self._tickets:
-            score = util.cos_sim(query_embedding, stored_emb).item()
-            if score > best_score:
-                best_score = score
-                best_id = ticket_id
+        scores = util.cos_sim(query_embedding, self._embeddings).squeeze(0)
+        best_idx = torch.argmax(scores).item()
+        best_score = scores[best_idx].item()
+        best_id = self._tickets[best_idx][0]
 
         is_dup = best_score >= active_threshold
 
