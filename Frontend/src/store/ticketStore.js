@@ -27,14 +27,12 @@ const useTicketStore = create(
             })),
             addTicket: (ticket) => set((state) => {
                 return {
-                    tickets: [...state.tickets, ticket]
+                    tickets: [ticket, ...state.tickets]
                 };
             }),
             updateTicket: (ticketId, updates) => set((state) => {
-// eslint-disable-next-line no-unused-vars
-                const existingTicket = state.tickets.find(t => t.ticket_id === ticketId);
-                const updatedTickets = state.tickets.map(t => t.ticket_id === ticketId ? { ...t, ...updates } : t);
-                const shouldUpdateActive = state.activeTicket?.ticket_id === ticketId;
+                const updatedTickets = state.tickets.map(t => (t.ticket_id === ticketId || t.id === ticketId) ? { ...t, ...updates } : t);
+                const shouldUpdateActive = state.activeTicket?.ticket_id === ticketId || state.activeTicket?.id === ticketId;
 
 
 
