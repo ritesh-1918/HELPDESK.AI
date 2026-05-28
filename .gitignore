@@ -29,3 +29,6 @@ dist/
 docs/helpdesk*.pdf
 docs/logs/
 *.log
+
+# Supabase temp files
+supabase/.temp/
