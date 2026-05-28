@@ -1,6 +1,9 @@
+// WARNING: Mock data for development only. Do not use in production.
+// Passwords should never be committed to source code.
+
 export const MOCK_USERS = [
-    { id: 1, name: 'John Doe', username: 'test@test.com', password: 'password123', role: 'user' },
-    { id: 2, name: 'Jane Smith', username: 'admin@test.com', password: 'password123', role: 'admin' },
+    { id: 1, name: 'John Doe', username: 'test@test.com', role: 'user' },
+    { id: 2, name: 'Jane Smith', username: 'admin@test.com', role: 'admin' },
 ];
 
 export const MOCK_TICKETS = [
