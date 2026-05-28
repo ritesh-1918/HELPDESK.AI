@@ -30,6 +30,12 @@ import asyncio
 from pathlib import Path
 from pydantic import BaseModel
 from dotenv import load_dotenv
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+import google.generativeai as genai
+from backend.digest_router import router as digest_router
+from backend.digest_service import get_weekly_stats, generate_ai_summary, send_digest_email
+from supabase import create_client
 
 # Load environment variables from backend/.env
 env_path = Path(__file__).parent / '.env'
@@ -286,6 +292,33 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Register the digest router
+app.include_router(digest_router)
+
+
+# Scheduler — add this AFTER app is created, BEFORE if __name__ == "__main__"
+def run_weekly_digest():
+    """Runs every Monday 8AM UTC — sends digest to all opted-in admins."""
+    try:
+        supabase_client = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_SERVICE_KEY"))
+        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+        model = genai.GenerativeModel("gemini-pro")
+
+        # Get all companies with digest enabled
+        result = supabase_client.table("company_settings").select("*").eq("digest_enabled", True).execute()
+        for company in (result.data or []):
+            stats = get_weekly_stats(company["company_id"])
+            summary = generate_ai_summary(stats, model)
+            send_digest_email(company["admin_email"], company["company_name"], stats, summary)
+            print(f"Digest sent to {company['admin_email']}")
+    except Exception as e:
+        print(f"Weekly digest job failed: {e}")
+
+
+scheduler = BackgroundScheduler()
+scheduler.add_job(run_weekly_digest, CronTrigger(day_of_week="mon", hour=8, minute=0))
+scheduler.start()
 
 
 # ---------------------------------------------------------------------------
