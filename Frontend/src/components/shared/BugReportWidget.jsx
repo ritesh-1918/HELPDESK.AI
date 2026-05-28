@@ -219,12 +219,14 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
             // html2canvas options for partial capture
             const canvas = await html2canvas(document.body, {
                 useCORS: true,
+                allowTaint: false,
+                backgroundColor: '#ffffff',
                 logging: false,
                 x: left + window.scrollX,
                 y: top + window.scrollY,
                 width: width,
                 height: height,
-                scale: 2 // High quality
+                scale: window.devicePixelRatio || 2
             });
 
             const base64Image = canvas.toDataURL('image/jpeg', 0.8);
