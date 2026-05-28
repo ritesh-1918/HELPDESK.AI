@@ -513,6 +513,11 @@ async def log_correction(raw_request: Request):
     }
 
     try:
+        import tempfile
+        import os
+        
+        # Atomic write pattern: write to temp file, then rename
+        # This prevents race conditions from concurrent writes
         if CORRECTIONS_LOG_PATH.exists() and CORRECTIONS_LOG_PATH.stat().st_size > 2:
             with open(CORRECTIONS_LOG_PATH, "r", encoding="utf-8") as f:
                 logs = json.load(f)
@@ -521,8 +526,20 @@ async def log_correction(raw_request: Request):
 
         logs.append(entry)
 
-        with open(CORRECTIONS_LOG_PATH, "w", encoding="utf-8") as f:
-            json.dump(logs, f, indent=2)
+        # Write to temp file first, then atomically rename
+        CORRECTIONS_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(
+            mode='w', 
+            encoding='utf-8',
+            dir=CORRECTIONS_LOG_PATH.parent,
+            suffix='.json.tmp',
+            delete=False
+        ) as tmp:
+            json.dump(logs, tmp, indent=2)
+            tmp_path = tmp.name
+        
+        # Atomic rename (on same filesystem)
+        os.replace(tmp_path, CORRECTIONS_LOG_PATH)
 
         print(f"[CORRECTION SAVED] Ticket ID: {ticket_id} | Changed: {changed_fields}")
         return {"status": "saved", "changed_fields": changed_fields}
