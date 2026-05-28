@@ -70,6 +70,7 @@ const TicketTracking = () => {
                         ocr_text: aiTicket.ocr_text,
                         image_description: aiTicket.image_description
                     },
+                    source: aiTicket.source || 'text',
                     entities: aiTicket.entities,
                     solution_steps: resolutionSteps,
                     ocr_text: aiTicket.ocr_text || "",

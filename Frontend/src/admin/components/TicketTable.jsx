@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Clock, ExternalLink } from 'lucide-react';
+import { ShieldCheck, Clock, ExternalLink, Mic } from 'lucide-react';
 import { formatTimelineDate } from '../../utils/dateUtils';
 
 const categoryDotColors = {
@@ -76,6 +76,7 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                         const translationMeta = ticket?.metadata?.translation;
                         const isTranslated = Boolean(translationMeta?.translated);
                         const sourceLanguageName = translationMeta?.source_language_name || translationMeta?.source_language || 'Unknown';
+                        const isVoiceTicket = ticket?.metadata?.source === 'voice';
 
                         // Truncated subject
                         const subject = ticket.subject || ticket.summary || 'Untitled ticket';
@@ -129,9 +130,16 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                                             </div>
                                         )}
                                         <div style={{ display: 'flex', flexDirection: 'column', maxWidth: '220px' }}>
-                                            <span style={{ fontSize: '13px', fontWeight: 500, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                {truncSubject}
-                                            </span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <span style={{ fontSize: '13px', fontWeight: 500, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                    {truncSubject}
+                                                </span>
+                                                {isVoiceTicket && (
+                                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', background: '#ede9fe', color: '#7c3aed', border: '1px solid #ddd6fe', borderRadius: '6px', padding: '2px 6px', fontSize: '9px', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                                        <Mic size={9} /> Voice
+                                                    </span>
+                                                )}
+                                            </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                 <span style={{ fontSize: '11px', color: '#6b7280' }}>
                                                     {effectiveCategory || 'General'}

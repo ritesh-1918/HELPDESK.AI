@@ -20,7 +20,7 @@ from contextlib import asynccontextmanager
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
-from fastapi import FastAPI, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect, UploadFile, File
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -76,6 +76,9 @@ from backend.services.spam_service import SpamService
 from backend.services.sla_engine import SLAEngine, compute_sla_breach_at, get_sla_policy
 from backend.services.redis_cache import redis_cache
 from backend.auth_cookie import router as auth_cookie_router, get_current_user  # noqa: F401
+from backend.services.voice_service import voice_service, validate_audio_upload
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -362,6 +365,7 @@ class TicketSaveRequest(BaseModel):
     ocr_text: str = ""
     needs_review: bool = False
     routing_confidence: float = 0.0
+    source: str = "text"  # "voice" | "text"
 
 
 
@@ -1107,7 +1111,7 @@ async def save_ticket(request_body: TicketSaveRequest):
         existing_metadata = final_data.get("metadata") or {}
         extra_keys = (
             "entities", "solution_steps", "ocr_text", "needs_review", "routing_confidence",
-            "is_potential_duplicate", "parent_ticket_id"
+            "is_potential_duplicate", "parent_ticket_id", "source"
         )
         for extra_key in extra_keys:
             if extra_key in final_data and final_data[extra_key] not in (None, "", [], {}):
@@ -1994,3 +1998,54 @@ async def sla_ticket_detail(ticket_id: str):
 async def metrics():
     """Prometheus scrape endpoint — exposes AI inference latency, request counts, and tokens."""
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
+# ---------------------------------------------------------------------------
+# Voice-to-Ticket — Whisper transcription endpoint
+# ---------------------------------------------------------------------------
+
+@app.post("/api/voice/transcribe")
+async def voice_transcribe(audio: UploadFile = File(...)):
+    """
+    Transcribe an audio file using OpenAI Whisper (local, no API key).
+
+    Accepts: WAV, WebM, OGG, MP3, MP4, M4A (multipart/form-data field: audio)
+    Max duration enforced client-side (120 s); server validates non-empty upload.
+
+    Returns:
+        transcribed_text  — full transcription
+        detected_language — ISO-639-1 language code
+        confidence        — 0.0–1.0 estimate from Whisper avg log-prob
+    """
+    content_type = audio.content_type or ""
+    filename = audio.filename or "audio.webm"
+
+    raw_bytes = await audio.read()
+
+    err = validate_audio_upload(filename, content_type, len(raw_bytes))
+    if err:
+        raise HTTPException(status_code=422, detail=err)
+
+    import tempfile
+    suffix = "." + filename.rsplit(".", 1)[-1] if "." in filename else ".webm"
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+        tmp.write(raw_bytes)
+        tmp_path = tmp.name
+
+    try:
+        result = voice_service.transcribe(tmp_path)
+    finally:
+        try:
+            import os as _os
+            _os.unlink(tmp_path)
+        except OSError:
+            pass
+
+    if result.get("error"):
+        raise HTTPException(status_code=500, detail=result["error"])
+
+    return {
+        "transcribed_text": result["transcribed_text"],
+        "detected_language": result["detected_language"],
+        "confidence": result["confidence"],
+    }

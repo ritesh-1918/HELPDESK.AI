@@ -36,44 +36,46 @@ const CreateTicket = () => {
     const [extractedOCR, setExtractedOCR] = useState('');
     const [isOcrLoading, setIsOcrLoading] = useState(false);
     const [isListening, setIsListening] = useState(false);
-    const isListeningRef = useRef(false);
     const fileInputRef = useRef(null);
     const navigate = useNavigate();
     const location = useLocation();
     const MAX_CHARS = 1000;
-    const supportsSpeech = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
+    const MAX_RECORDING_SECONDS = 120;
+    // MediaRecorder is universally supported in Chrome, Firefox, and Edge
+    const supportsVoice = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
     const [selectedLanguage, setSelectedLanguage] = useState('en');
     const [isTranslating, setIsTranslating] = useState(false);
     const [isLangOpen, setIsLangOpen] = useState(false);
     const langRef = useRef(null);
 
     // ── Smart Template state (v2: two-step highlight → activate flow) ──
-    const [highlightedTemplateId, setHighlightedTemplateId] = useState(null);  // Card highlighted (preview)
-    const [activatedTemplateId, setActivatedTemplateId] = useState(null);      // Template committed (form shown)
-    const [formValues, setFormValues] = useState({});                          // Dynamic form field values
+    const [highlightedTemplateId, setHighlightedTemplateId] = useState(null);
+    const [activatedTemplateId, setActivatedTemplateId] = useState(null);
+    const [formValues, setFormValues] = useState({});
     const [templateUsed, setTemplateUsed] = useState(false);
     const [userModified, setUserModified] = useState(false);
 
     // Voice UI states
     const [showVoiceModal, setShowVoiceModal] = useState(false);
     const [voiceTranscript, setVoiceTranscript] = useState('');
-    const [interimVoice, setInterimVoice] = useState('');
+    const [isTranscribing, setIsTranscribing] = useState(false);
+    const [countdown, setCountdown] = useState(MAX_RECORDING_SECONDS);
+    const [ticketSource, setTicketSource] = useState('text'); // "voice" | "text"
 
     // Voice Refs & Visualizer
-    const recognitionRef = useRef(null);
+    const mediaRecorderRef = useRef(null);
+    const audioChunksRef = useRef([]);
     const audioContextRef = useRef(null);
     const analyserRef = useRef(null);
     const dataArrayRef = useRef(null);
     const animationFrameRef = useRef(null);
+    const countdownTimerRef = useRef(null);
     const [visualizerData, setVisualizerData] = useState(new Array(16).fill(15));
     const streamRef = useRef(null);
 
     useEffect(() => {
         return () => {
-            isListeningRef.current = false;
-            if (recognitionRef.current) recognitionRef.current.stop();
-            if (audioContextRef.current) audioContextRef.current.close();
-            if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+            _cleanupVoiceResources();
         };
     }, []);
 
@@ -121,144 +123,174 @@ const CreateTicket = () => {
         }
     };
 
-    const toggleMic = () => {
-        if (isListening) {
-            stopListening();
-            return;
+    const _cleanupVoiceResources = () => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+            mediaRecorderRef.current.stop();
         }
-        startListening();
-    };
-
-    const startListening = async () => {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        
-        if (!SpeechRecognition) {
-            setError("Speech recognition is not supported in this browser.");
-            return;
-        }
-
-        try {
-            // Start Visualizer for UI feedback
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            streamRef.current = stream;
-            
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            audioContextRef.current = new AudioContext();
-            const source = audioContextRef.current.createMediaStreamSource(stream);
-            const analyser = audioContextRef.current.createAnalyser();
-            analyser.fftSize = 64;
-            const bufferLength = analyser.frequencyBinCount;
-            const dataArray = new Uint8Array(bufferLength);
-            analyserRef.current = analyser;
-            dataArrayRef.current = dataArray;
-            source.connect(analyser);
-
-            const updateVisualizer = () => {
-                if (!analyserRef.current) return;
-                analyserRef.current.getByteFrequencyData(dataArrayRef.current);
-                const bars = [];
-                for (let i = 0; i < 16; i++) {
-                    const val = dataArrayRef.current[i] || 0;
-                    const height = Math.max(5, (val / 255) * 50);
-                    bars.push(height);
-                }
-                setVisualizerData(bars);
-                animationFrameRef.current = requestAnimationFrame(updateVisualizer);
-            };
-            updateVisualizer();
-
-            // Initialize Speech Recognition
-            const recognition = new SpeechRecognition();
-            recognition.continuous = true;
-            recognition.interimResults = true;
-            recognition.lang = 'en-US';
-
-            recognition.onresult = (event) => {
-                let finalStr = '';
-                let interimStr = '';
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        finalStr += event.results[i][0].transcript;
-                    } else {
-                        interimStr += event.results[i][0].transcript;
-                    }
-                }
-                if (finalStr) setVoiceTranscript(prev => prev + ' ' + finalStr);
-                setInterimVoice(interimStr);
-            };
-
-            recognition.onerror = (event) => {
-                console.error("Speech Recognition Error:", event.error);
-                if (event.error !== 'no-speech') {
-                    setError(`Microphone error: ${event.error}`);
-                    stopListening();
-                }
-            };
-
-            recognition.onend = () => {
-                if (isListeningRef.current) {
-                    try {
-                        recognitionRef.current?.start();
-                    } catch {
-                        // start() may throw if already running — safely ignore
-                    }
-                } else {
-                    if (animationFrameRef.current) {
-                        cancelAnimationFrame(animationFrameRef.current);
-                        animationFrameRef.current = null;
-                    }
-                }
-            };
-
-            recognitionRef.current = recognition;
-            recognition.start();
-
-            setIsListening(true);
-            isListeningRef.current = true;
-            setShowVoiceModal(true);
-            setVoiceTranscript('');
-            setInterimVoice('');
-            setError('');
-
-        } catch (err) {
-            console.error("Microphone access denied:", err);
-            setError("Could not access microphone. Please ensure permissions are granted.");
-        }
-    };
-
-    const stopListening = () => {
-        setIsListening(false);
-        isListeningRef.current = false;
-        if (recognitionRef.current) {
-            recognitionRef.current.stop();
-            recognitionRef.current = null;
-        }
+        mediaRecorderRef.current = null;
+        audioChunksRef.current = [];
         if (animationFrameRef.current) {
             cancelAnimationFrame(animationFrameRef.current);
             animationFrameRef.current = null;
         }
         if (audioContextRef.current) {
-            audioContextRef.current.close();
+            audioContextRef.current.close().catch(() => {});
             audioContextRef.current = null;
         }
         if (streamRef.current) {
-            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current.getTracks().forEach(t => t.stop());
+            streamRef.current = null;
+        }
+        if (countdownTimerRef.current) {
+            clearInterval(countdownTimerRef.current);
+            countdownTimerRef.current = null;
+        }
+    };
+
+    const toggleMic = () => {
+        if (isListening) {
+            _stopAndTranscribe();
+        } else {
+            _startRecording();
+        }
+    };
+
+    const _startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            streamRef.current = stream;
+
+            // Waveform visualizer
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioContextRef.current = new AudioContext();
+            const src = audioContextRef.current.createMediaStreamSource(stream);
+            const analyser = audioContextRef.current.createAnalyser();
+            analyser.fftSize = 64;
+            const buf = new Uint8Array(analyser.frequencyBinCount);
+            analyserRef.current = analyser;
+            dataArrayRef.current = buf;
+            src.connect(analyser);
+            const _tick = () => {
+                if (!analyserRef.current) return;
+                analyserRef.current.getByteFrequencyData(dataArrayRef.current);
+                const bars = Array.from({ length: 16 }, (_, i) =>
+                    Math.max(5, ((dataArrayRef.current[i] || 0) / 255) * 50)
+                );
+                setVisualizerData(bars);
+                animationFrameRef.current = requestAnimationFrame(_tick);
+            };
+            _tick();
+
+            // MediaRecorder — WebM in Chrome, OGG in Firefox, both handled by Whisper
+            audioChunksRef.current = [];
+            const recorder = new MediaRecorder(stream);
+            recorder.ondataavailable = (e) => {
+                if (e.data.size > 0) audioChunksRef.current.push(e.data);
+            };
+            mediaRecorderRef.current = recorder;
+            recorder.start(250); // chunk every 250ms
+
+            // 120-second countdown → auto-stop
+            setCountdown(MAX_RECORDING_SECONDS);
+            countdownTimerRef.current = setInterval(() => {
+                setCountdown(prev => {
+                    if (prev <= 1) {
+                        _stopAndTranscribe();
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+
+            setIsListening(true);
+            setShowVoiceModal(true);
+            setVoiceTranscript('');
+            setIsTranscribing(false);
+            setError('');
+        } catch (err) {
+            console.error("Microphone access denied:", err);
+            setError(
+                err.name === 'NotAllowedError'
+                    ? 'Microphone permission denied. Click the 🔒 icon in your browser address bar to enable it.'
+                    : `Could not access microphone: ${err.message}`
+            );
+        }
+    };
+
+    const _stopAndTranscribe = () => {
+        setIsListening(false);
+        if (countdownTimerRef.current) {
+            clearInterval(countdownTimerRef.current);
+            countdownTimerRef.current = null;
+        }
+        if (animationFrameRef.current) {
+            cancelAnimationFrame(animationFrameRef.current);
+            animationFrameRef.current = null;
+        }
+
+        const recorder = mediaRecorderRef.current;
+        if (!recorder || recorder.state === 'inactive') {
+            _cleanupVoiceResources();
+            return;
+        }
+
+        setIsTranscribing(true);
+
+        recorder.onstop = async () => {
+            const mimeType = recorder.mimeType || 'audio/webm';
+            const blob = new Blob(audioChunksRef.current, { type: mimeType });
+            const ext = mimeType.includes('ogg') ? 'ogg' : 'webm';
+
+            const form = new FormData();
+            form.append('audio', blob, `recording.${ext}`);
+
+            try {
+                const { API_CONFIG } = await import('../../config');
+                const res = await fetch(`${API_CONFIG.BACKEND_URL}/api/voice/transcribe`, {
+                    method: 'POST',
+                    body: form,
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.detail || `Transcription failed (${res.status})`);
+                }
+                const data = await res.json();
+                setVoiceTranscript(data.transcribed_text || '');
+            } catch (err) {
+                console.error('Transcription error:', err);
+                setError(`Transcription failed: ${err.message}`);
+                setShowVoiceModal(false);
+            } finally {
+                setIsTranscribing(false);
+                _cleanupVoiceResources();
+            }
+        };
+
+        recorder.stop();
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(t => t.stop());
             streamRef.current = null;
         }
     };
 
     const handleSaveVoice = () => {
-        stopListening();
-        setIssue(prev => {
-            const combined = prev + ' ' + voiceTranscript + ' ' + interimVoice;
-            return combined.trim().substring(0, MAX_CHARS);
-        });
+        if (voiceTranscript.trim()) {
+            setIssue(prev => {
+                const combined = (prev + ' ' + voiceTranscript).trim();
+                return combined.substring(0, MAX_CHARS);
+            });
+            setTicketSource('voice');
+        }
         setShowVoiceModal(false);
+        setVoiceTranscript('');
     };
 
     const handleCancelVoice = () => {
-        stopListening();
+        if (isListening) _cleanupVoiceResources();
+        setIsListening(false);
+        setIsTranscribing(false);
         setShowVoiceModal(false);
+        setVoiceTranscript('');
     };
 
     const handleFileChange = (e) => {
@@ -412,6 +444,8 @@ const CreateTicket = () => {
                     template_used: templateUsed,
                     user_modified: userModified,
                     ticket_title: ticketTitle.trim() || null,
+                    // Voice metadata
+                    source: ticketSource,
                 }
             });
 
@@ -578,8 +612,8 @@ const CreateTicket = () => {
                                         </div>
                                     )}
 
-                                    {/* Premium Voice Visualizer */}
-                                    {supportsSpeech && (
+                                    {/* Voice Input Panel */}
+                                    {supportsVoice && (
                                         <div className="relative overflow-hidden rounded-3xl border border-emerald-100 bg-gradient-to-br from-emerald-50/50 to-white p-6 shadow-sm">
                                             <div className="flex items-center justify-between mb-4">
                                                 <div className="flex items-center gap-3">
@@ -587,13 +621,18 @@ const CreateTicket = () => {
                                                         <Mic size={20} className={isListening ? "animate-pulse" : ""} />
                                                     </div>
                                                     <div>
-                                                        <h4 className="text-sm font-bold text-gray-900">Voice Assistant</h4>
-                                                        <p className="text-xs text-gray-500 font-medium">{isListening ? "Listening to your voice..." : "Tap to describe via voice"}</p>
+                                                        <h4 className="text-sm font-bold text-gray-900">Voice Input</h4>
+                                                        <p className="text-xs text-gray-500 font-medium">
+                                                            {isListening
+                                                                ? `Recording… ${countdown}s remaining`
+                                                                : "Tap to dictate your issue"}
+                                                        </p>
                                                     </div>
                                                 </div>
                                                 <Button
                                                     type="button"
                                                     onClick={toggleMic}
+                                                    disabled={isTranscribing}
                                                     className={`h-12 w-12 rounded-full flex items-center justify-center transition-all duration-500 border-none
                                                         ${isListening
                                                             ? 'bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-200 scale-110'
@@ -603,7 +642,7 @@ const CreateTicket = () => {
                                                 </Button>
                                             </div>
 
-                                            {/* Siri-style Wave Animation */}
+                                            {/* Waveform bars while recording */}
                                             <AnimatePresence>
                                                 {isListening && (
                                                     <motion.div
@@ -639,7 +678,7 @@ const CreateTicket = () => {
                                                     className="bg-white/60 backdrop-blur-sm rounded-xl p-3 border border-emerald-50/50"
                                                 >
                                                     <p className="text-sm text-emerald-800 font-medium italic">
-                                                        "Speak clearly, our AI is transcribing..."
+                                                        "Speak clearly — Whisper AI will transcribe your words."
                                                     </p>
                                                 </motion.div>
                                             )}
@@ -762,41 +801,63 @@ const CreateTicket = () => {
                             exit={{ scale: 0.95, opacity: 0, y: 20 }}
                             className="w-full max-w-lg bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-slate-100 flex flex-col"
                         >
+                            {/* Modal header */}
                             <div className="p-6 bg-emerald-50/50 border-b border-emerald-100 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="relative flex items-center justify-center w-10 h-10 rounded-full bg-emerald-100 text-emerald-600">
                                         {isListening && (
                                             <span className="absolute inset-0 rounded-full border-2 border-emerald-400 animate-ping"></span>
                                         )}
-                                        <Mic size={20} className={isListening ? "animate-pulse" : ""} />
+                                        {isTranscribing
+                                            ? <Loader2 size={20} className="animate-spin" />
+                                            : <Mic size={20} className={isListening ? "animate-pulse" : ""} />
+                                        }
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-gray-900 leading-tight">Live Dictation</h3>
-                                        <p className="text-xs text-emerald-600 font-medium">{isListening ? "Listening..." : "Paused"}</p>
+                                        <h3 className="font-bold text-gray-900 leading-tight">Voice Input</h3>
+                                        <p className="text-xs text-emerald-600 font-medium">
+                                            {isTranscribing
+                                                ? "Transcribing your voice with Whisper AI…"
+                                                : isListening
+                                                    ? `Recording — ${countdown}s left`
+                                                    : voiceTranscript
+                                                        ? "Transcription complete"
+                                                        : "Ready"}
+                                        </p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={handleCancelVoice}
-                                    className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded-full transition-colors"
+                                    disabled={isTranscribing}
+                                    className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded-full transition-colors disabled:opacity-40"
                                 >
                                     <X size={20} />
                                 </button>
                             </div>
 
-                            <div className="p-8 min-h-[200px] max-h-[300px] overflow-y-auto relative">
-                                <p className="text-gray-800 text-lg leading-relaxed font-medium">
-                                    {voiceTranscript}
-                                    <span className="text-gray-400"> {interimVoice}</span>
-                                    {isListening && <span className="inline-block w-2 h-5 ml-1 align-middle bg-emerald-400 animate-pulse"></span>}
-                                </p>
-                                {!voiceTranscript && !interimVoice && (
-                                    <div className="h-full flex items-center justify-center text-gray-400 text-sm font-medium italic">
-                                        Start speaking... we're listening.
+                            {/* Modal body */}
+                            <div className="p-8 min-h-[200px] max-h-[300px] overflow-y-auto relative flex items-center justify-center">
+                                {isTranscribing ? (
+                                    <div className="flex flex-col items-center gap-3 text-center">
+                                        <Loader2 size={36} className="animate-spin text-emerald-500" />
+                                        <p className="text-sm font-medium text-gray-500">Transcribing your voice…</p>
                                     </div>
+                                ) : isListening ? (
+                                    <p className="text-gray-400 text-sm font-medium italic text-center">
+                                        Speak clearly — click Stop or wait for the timer.
+                                    </p>
+                                ) : voiceTranscript ? (
+                                    <p className="text-gray-800 text-base leading-relaxed font-medium w-full">
+                                        {voiceTranscript}
+                                    </p>
+                                ) : (
+                                    <p className="text-gray-400 text-sm font-medium italic text-center">
+                                        Press Record to start. Max 120 seconds.
+                                    </p>
                                 )}
                             </div>
 
-                            {/* Siri-style Wave Animation */}
+                            {/* Waveform — only while recording */}
                             <AnimatePresence>
                                 {isListening && (
                                     <motion.div
@@ -812,11 +873,7 @@ const CreateTicket = () => {
                                                     height: visualizerData[i] || 15,
                                                     backgroundColor: (visualizerData[i] || 15) > 30 ? '#10b981' : '#34d399'
                                                 }}
-                                                transition={{
-                                                    type: 'spring',
-                                                    stiffness: 300,
-                                                    damping: 20
-                                                }}
+                                                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                                                 className="w-1.5 rounded-full bg-emerald-400"
                                             />
                                         ))}
@@ -824,23 +881,37 @@ const CreateTicket = () => {
                                 )}
                             </AnimatePresence>
 
+                            {/* Modal footer */}
                             <div className="p-6 bg-gray-50 flex gap-4 border-t border-gray-100">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={handleCancelVoice}
-                                    className="flex-1 font-bold text-gray-600 border-gray-200 hover:bg-white h-12 rounded-xl"
-                                >
-                                    Cancel
-                                </Button>
-                                <Button
-                                    type="button"
-                                    onClick={handleSaveVoice}
-                                    disabled={!voiceTranscript && !interimVoice}
-                                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-12 rounded-xl shadow-lg shadow-emerald-200"
-                                >
-                                    Insert Text
-                                </Button>
+                                {isListening ? (
+                                    <Button
+                                        type="button"
+                                        onClick={_stopAndTranscribe}
+                                        className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold h-12 rounded-xl shadow-lg shadow-red-100"
+                                    >
+                                        Stop Recording
+                                    </Button>
+                                ) : (
+                                    <>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={handleCancelVoice}
+                                            disabled={isTranscribing}
+                                            className="flex-1 font-bold text-gray-600 border-gray-200 hover:bg-white h-12 rounded-xl"
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            onClick={handleSaveVoice}
+                                            disabled={isTranscribing || !voiceTranscript}
+                                            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-12 rounded-xl shadow-lg shadow-emerald-200"
+                                        >
+                                            Use This Text
+                                        </Button>
+                                    </>
+                                )}
                             </div>
                         </motion.div>
                     </motion.div>
