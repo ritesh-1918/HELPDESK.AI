@@ -1,6 +1,8 @@
 # Changelog
 
 All notable changes to HELPDESK.AI are documented here.
+This changelog format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
+and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
@@ -24,7 +26,7 @@ All notable changes to HELPDESK.AI are documented here.
 
 ---
 
-## [1.0.0] - Initial Release
+## [1.0.0] - 2026-05-28
 
 ### Added
 - Full-stack AI helpdesk platform
