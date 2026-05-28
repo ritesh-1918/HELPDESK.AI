@@ -163,6 +163,16 @@ export const api = {
     }
   },
 
+  getSlaEstimate: async (ticketId) => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/tickets/${ticketId}/sla-estimate`);
+      return response.data;
+    } catch (error) {
+      console.error(`[SLA Estimate Error] Failed to fetch for ${ticketId}:`, error);
+      return null;
+    }
+  },
+
   logCorrection: async (correctionPayload) => {
     try {
       await axios.post(`${API_BASE_URL}/ai/log_correction`, correctionPayload);

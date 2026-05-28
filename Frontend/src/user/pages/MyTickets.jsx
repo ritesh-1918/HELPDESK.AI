@@ -345,6 +345,7 @@ function MyTickets() {
                                                     slaBreachAt={ticket.sla_breach_at}
                                                     slaStatus={ticket.sla_status}
                                                     status={ticket.status}
+                                                    ticketId={ticket.id}
                                                 />
                                             </td>
                                              <td className="px-6 py-4">

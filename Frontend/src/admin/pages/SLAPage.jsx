@@ -269,6 +269,7 @@ export default function SLAPage() {
                   createdAt={ticket.created_at}
                   status={ticket.status}
                   compact
+                  ticketId={ticket.id}
                 />
                 <a
                   href={`/admin/ticket/${ticket.ticket_id || ticket.id}`}

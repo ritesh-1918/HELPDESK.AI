@@ -251,6 +251,7 @@ const AdminTicketDetail = () => {
                                 slaStatus={ticket.sla_status}
                                 status={displayStatus}
                                 compact
+                                ticketId={ticket.id}
                             />
                         </div>
                     </div>

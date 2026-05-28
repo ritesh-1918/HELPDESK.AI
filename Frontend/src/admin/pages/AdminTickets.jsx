@@ -549,6 +549,7 @@ const AdminTickets = () => {
                                             slaBreachAt={ticket.sla_breach_at}
                                             slaStatus={ticket.sla_status}
                                             status={ticket.status}
+                                            ticketId={ticket.id}
                                         />
                                     </td>
 

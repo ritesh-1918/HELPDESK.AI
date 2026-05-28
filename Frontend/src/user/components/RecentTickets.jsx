@@ -150,6 +150,7 @@ const RecentTickets = () => {
                                                 slaStatus={ticket.sla_status}
                                                 status={ticket.status}
                                                 compact
+                                                ticketId={ticket.id}
                                             />
                                         </td>
                                         <td className="px-7 py-4 whitespace-nowrap">

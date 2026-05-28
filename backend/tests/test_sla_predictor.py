@@ -290,5 +290,37 @@ class TestGetSlaEstimateIntegration(unittest.TestCase):
         self.assertTrue(result["breach_risk"])
 
 
+class TestInMemoryTTLCache(unittest.TestCase):
+    def test_cache_get_set_clear(self):
+        from backend.sla_predictor import InMemoryTTLCache
+        cache = InMemoryTTLCache(ttl_seconds=1)
+        self.assertIsNone(cache.get("key"))
+
+        cache.set("key", "val")
+        self.assertEqual(cache.get("key"), "val")
+
+        cache.clear()
+        self.assertIsNone(cache.get("key"))
+
+    def test_cache_ttl_expiry(self):
+        import time
+        from backend.sla_predictor import InMemoryTTLCache
+        cache = InMemoryTTLCache(ttl_seconds=0.01)
+        cache.set("key", "val")
+        time.sleep(0.02)
+        self.assertIsNone(cache.get("key"))
+
+
+class TestGetSlaEstimateMetadata(unittest.TestCase):
+    def test_estimate_contains_metadata_and_factors(self):
+        result = get_sla_estimate({"priority": "critical"})
+        self.assertIn("factors", result)
+        self.assertIn("metadata", result)
+        self.assertEqual(result["factors"]["baseline_minutes"], 120)
+        self.assertEqual(result["metadata"]["confidence_score"], 0.3)
+        self.assertEqual(result["metadata"]["sample_count"], 0)
+        self.assertEqual(result["metadata"]["workload_count"], 0)
+
+
 if __name__ == "__main__":
     unittest.main()
