@@ -54,6 +54,16 @@ class GeminiService:
             # Decode base64 image (actually the new SDK handles base64 easily if we just pass bytes, 
             # but we can also use PIL if we need to process it)
             image_bytes = base64.b64decode(image_base64)
+
+            # Defense-in-depth: reject oversized images to prevent memory exhaustion
+            max_size_bytes = 10 * 1024 * 1024  # 10MB
+            if len(image_bytes) > max_size_bytes:
+                return {
+                    "image_description": "[Image Too Large] Image exceeds 10MB limit.",
+                    "ocr_text": "",
+                    "detected_problem": ""
+                }
+
             img = Image.open(io.BytesIO(image_bytes))
 
             prompt = (

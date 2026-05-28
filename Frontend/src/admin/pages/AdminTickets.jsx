@@ -43,13 +43,13 @@ const AdminTickets = () => {
     const [error, setError] = useState(null);
     const [isUpdating, setIsUpdating] = useState(null); // ID of ticket being updated
 
-    // Filter States
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
     const [categoryFilter, setCategoryFilter] = useState('All');
     const [priorityFilter, setPriorityFilter] = useState('All');
     const [teamFilter, setTeamFilter] = useState('All');
     const [languageFilter, setLanguageFilter] = useState('All');
+    const [slaAtRisk, setSlaAtRisk] = useState(false);
     const [agents, setAgents] = useState([]); // All staff/admins in the company
 
     const ticketMatchesFilters = useCallback((ticket) => {
@@ -237,8 +237,14 @@ const AdminTickets = () => {
                 return languageFilter === 'Translated' ? translated : !translated;
             });
         }
+        if (slaAtRisk) {
+            result = result.filter(t => {
+                const s = (t.sla_status || '').toUpperCase();
+                return s === 'BREACHED' || s === 'WARNING';
+            });
+        }
         return result;
-    }, [tickets, searchQuery, languageFilter]);
+    }, [tickets, searchQuery, languageFilter, slaAtRisk]);
 
     const getPriorityStyle = (priority) => {
         const p = String(priority || '').toLowerCase();
@@ -331,7 +337,8 @@ const AdminTickets = () => {
                         options={teams.map(t => ({ value: t, label: t === 'All' ? 'All Teams' : t }))}
                     />
                 </div>
-                {/* Language Filter */}
+
+                {/* Combined Filter Row */}
                 <div className="flex items-center gap-3">
                     <Select
                         value={languageFilter}
@@ -343,6 +350,23 @@ const AdminTickets = () => {
                             { value: 'Translated', label: 'Translated Only' },
                         ]}
                     />
+
+                    <button
+                        onClick={() => setSlaAtRisk(prev => !prev)}
+                        className={`flex items-center gap-2 px-4 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest border transition-all ${
+                            slaAtRisk
+                                ? 'bg-red-50 border-red-200 text-red-700 shadow-sm'
+                                : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-red-200 hover:text-red-600'
+                        }`}
+                    >
+                        <ShieldAlert size={14} />
+                        SLA At Risk
+                        {slaAtRisk && (
+                            <span className="ml-1 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[9px]">
+                                {filteredTickets.length}
+                            </span>
+                        )}
+                    </button>
                 </div>
             </div>
 
@@ -385,9 +409,13 @@ const AdminTickets = () => {
                         <tbody className="divide-y divide-slate-50">
                             {filteredTickets.map((ticket) => {
                                 const wasLiveChanged = String(lastChangedTicketId) === String(ticket.id);
+                                const slaState = (ticket.sla_status || '').toUpperCase();
+                                const slaRowClass =
+                                    slaState === 'BREACHED' ? 'bg-red-50/60 ring-1 ring-red-100' :
+                                    slaState === 'WARNING'  ? 'bg-amber-50/50 ring-1 ring-amber-100' : '';
 
                                 return (
-                                <tr key={ticket.id} className={`hover:bg-slate-50/50 transition-colors group ${wasLiveChanged ? 'bg-emerald-50/70 ring-1 ring-emerald-100' : ''} ${isUpdating === ticket.id ? 'opacity-50 pointer-events-none' : ''}`}>
+                                <tr key={ticket.id} className={`hover:bg-slate-50/50 transition-colors group ${wasLiveChanged ? 'bg-emerald-50/70 ring-1 ring-emerald-100' : slaRowClass} ${isUpdating === ticket.id ? 'opacity-50 pointer-events-none' : ''}`}>
                                     {/* Ticket ID */}
                                     <td className="px-6 py-6">
                                         <span className="font-mono text-xs font-black text-emerald-600">#{formatTicketId(ticket.id)}</span>
@@ -522,6 +550,7 @@ const AdminTickets = () => {
                                             slaBreachAt={ticket.sla_breach_at}
                                             slaStatus={ticket.sla_status}
                                             status={ticket.status}
+                                            ticketId={ticket.id}
                                         />
                                     </td>
 

@@ -161,7 +161,15 @@ async def auth_signup(body: SignupBody, response: Response):
 
 
 @router.post("/logout")
-async def auth_logout(response: Response):
+async def auth_logout(request: Request, response: Response):
+    # Invalidate the session server-side before clearing cookies
+    token = extract_token(request)
+    if token:
+        try:
+            client = _anon_supabase()
+            client.auth.sign_out(token)
+        except Exception:
+            pass  # Still clear cookies even if server-side invalidation fails
     _clear_session_cookies(response)
     return {"ok": True}
 

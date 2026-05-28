@@ -5,6 +5,7 @@ import useAuthStore from '../../store/authStore';
 import { supabase } from '../../lib/supabaseClient';
 import { formatTimelineDate } from '../../utils/dateUtils';
 import LanguageBadge from '../../components/shared/LanguageBadge';
+import SLABadge from '../../admin/components/SLABadge';
 
 const RecentTickets = () => {
     const navigate = useNavigate();
@@ -114,6 +115,7 @@ const RecentTickets = () => {
                                     <th className="text-[11px] tracking-widest text-gray-400 dark:text-gray-500 font-bold uppercase px-7 py-3">ID</th>
                                     <th className="text-[11px] tracking-widest text-gray-400 dark:text-gray-500 font-bold uppercase px-7 py-3">Subject</th>
                                     <th className="text-[11px] tracking-widest text-gray-400 dark:text-gray-500 font-bold uppercase px-7 py-3">Status</th>
+                                    <th className="text-[11px] tracking-widest text-gray-400 dark:text-gray-500 font-bold uppercase px-7 py-3">Est. SLA</th>
                                     <th className="text-[11px] tracking-widest text-gray-400 dark:text-gray-500 font-bold uppercase px-7 py-3">Submitted</th>
                                 </tr>
                             </thead>
@@ -139,6 +141,17 @@ const RecentTickets = () => {
                                         </td>
                                         <td className="px-7 py-4">
                                             {getStatusBadge(ticket.status)}
+                                        </td>
+                                        <td className="px-7 py-4">
+                                            <SLABadge
+                                                priority={ticket.priority}
+                                                createdAt={ticket.created_at}
+                                                slaBreachAt={ticket.sla_breach_at}
+                                                slaStatus={ticket.sla_status}
+                                                status={ticket.status}
+                                                compact
+                                                ticketId={ticket.id}
+                                            />
                                         </td>
                                         <td className="px-7 py-4 whitespace-nowrap">
                                             <span className="text-gray-500 dark:text-gray-500 text-[12px] font-medium">
