@@ -2,6 +2,12 @@
 -- This creates a private internal configuration store that is accessible to triggers
 -- but maintains a higher degree of security than hardcoding.
 
+-- NOTE: The actual service_role key MUST be provided via PostgreSQL custom GUC variable
+-- Set in postgresql.conf or via ALTER SYSTEM:
+--   custom.supabase_service_role_key = 'your-actual-jwt-here'
+-- Or set it per-session before running this migration:
+--   SET custom.supabase_service_role_key = 'your-actual-jwt-here';
+
 create schema if not exists internal_config;
 
 create table if not exists internal_config.secrets (
@@ -10,9 +16,9 @@ create table if not exists internal_config.secrets (
   updated_at timestamptz default now()
 );
 
--- Sync the Service Role Key
+-- Sync the Service Role Key from GUC variable instead of hardcoding
 insert into internal_config.secrets (name, value)
-values ('SUPABASE_SERVICE_ROLE_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFlanVlbmhxY2lhZ3BudGNxb2lyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjM4NDA3OCwiZXhwIjoyMDg3OTYwMDc4fQ.b3tZ_yad4WPQi4oSqGp1ksr_zw-ldByLqZWvT7HX5aQ')
+values ('SUPABASE_SERVICE_ROLE_KEY', current_setting('custom.supabase_service_role_key', true)::text)
 on conflict (name) do update set value = excluded.value, updated_at = now();
 
 -- Ensure only the database owner can see this
