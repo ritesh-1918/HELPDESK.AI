@@ -3,10 +3,11 @@
  */
 
 const getBackendUrl = () => {
-    const envUrl = import.meta.env.VITE_BACKEND_URL;
+    // Check both potential environment variable names for the backend URL
+    const envUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL;
     if (envUrl) return envUrl.trim().replace(/\/$/, '');
 
-    // Default fallback — override via VITE_BACKEND_URL env var
+    // Default to the live Hugging Face Space for stability
     return 'https://ritesh19180-ai-helpdesk-api.hf.space';
 };
 
