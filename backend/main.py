@@ -885,7 +885,7 @@ async def analyze_only(request_body: TicketRequest):
         image_description=gemini_analysis["image_description"],
         ocr_text=gemini_analysis["ocr_text"],
         image_url=request_body.image_url,
-        highlights=entities, # Use entities as highlights for now
+        highlights=[e.text for e in entities] if entities else [],
         timeline=timeline,
         env_metadata=env_metadata,
         sla_breach_at=sla_breach_dt.isoformat() + "Z"
@@ -1032,7 +1032,7 @@ async def analyze_stream(request_body: TicketRequest):
             "image_description": gemini_analysis["image_description"],
             "ocr_text": gemini_analysis["ocr_text"],
             "image_url": request_body.image_url,
-            "highlights": entities,
+            "highlights": [e.get("text", "") for e in entities] if entities else [],
             "timeline": timeline,
             "env_metadata": env_metadata,
             "sla_breach_at": sla_breach_dt.isoformat() + "Z"
