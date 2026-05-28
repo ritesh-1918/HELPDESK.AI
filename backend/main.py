@@ -335,6 +335,7 @@ class TicketRequest(BaseModel):
     image_text: str = "" # Keep for backward compatibility
     user_id: str | None = None
     company: str | None = None
+    company_id: str | None = None
     image_url: str | None = None
     confidence_threshold: float = 0.20
     duplicate_sensitivity: float = 0.85
@@ -1465,7 +1466,7 @@ async def analyze_only(request_body: TicketRequest):
     translation_ctx = await detect_and_translate_ticket_text(text)
     text = translation_ctx["text_for_analysis"]
     print(f"[AI] Starting Analysis (READ-ONLY) for: {text[:50]}...") 
-    settings = get_system_settings(request_body.company)
+    settings = get_system_settings(request_body.company_id or request_body.company)
     confidence_threshold = settings["ai_confidence_threshold"]
     duplicate_sensitivity = settings["duplicate_sensitivity"]
     enable_auto_resolve = settings["enable_auto_resolve"]
@@ -1582,6 +1583,10 @@ async def analyze_only(request_body: TicketRequest):
             print(f"[RAG SUCCESS] Found solution for: '{rag_match['title']}'")
     except Exception as e:
         print(f"[RAG ERROR] {e}")
+
+    # Enforce Admin Auto-Resolve Toggle
+    if not enable_auto_resolve:
+        classification["auto_resolve"] = False
 
     # --- Reasoning ---
     decision_factors = []
@@ -1723,6 +1728,11 @@ async def analyze_stream(request_body: TicketRequest):
                 classification["confidence"] = max(classification["confidence"], float(rag_match["similarity"]))
         except Exception as e:
             pass
+
+        # Enforce Admin Auto-Resolve Toggle for Stream
+        settings = get_system_settings(request_body.company_id or request_body.company)
+        if not settings.get("enable_auto_resolve", False):
+            classification["auto_resolve"] = False
 
         decision_factors = []
         if classification["confidence"] > request_body.confidence_threshold:
