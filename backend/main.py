@@ -2072,11 +2072,11 @@ async def sla_ticket_detail(ticket_id: str):
 
 
 from fastapi import UploadFile, File
-from backend.services.voice_service import transcribe_audio_async
 
 @app.post("/api/voice/transcribe")
 async def api_voice_transcribe(audio: UploadFile = File(...)):
     """Transcribes an audio file into text using OpenAI Whisper asynchronously."""
+    from backend.services.voice_service import transcribe_audio_async
     try:
         content = await audio.read()
         result = await transcribe_audio_async(content)
