@@ -3,7 +3,8 @@
  */
 
 const getBackendUrl = () => {
-    const envUrl = import.meta.env.VITE_BACKEND_URL;
+    // Check both VITE_API_URL and VITE_BACKEND_URL for backward compatibility
+    const envUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL;
     if (envUrl) return envUrl.trim().replace(/\/$/, '');
 
     // Dynamically deduce backend URL if running locally or on custom domain
