@@ -83,7 +83,7 @@ export default function useWebSocket(companyId) {
     // Periodic pings
     pingTimerRef.current = setInterval(() => {
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({ type: "pong" }));
+        wsRef.current.send(JSON.stringify({ type: "ping" }));
       }
     }, PING_INTERVAL_MS);
   }, []);

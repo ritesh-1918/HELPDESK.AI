@@ -83,7 +83,7 @@ from backend.auth_cookie import router as auth_cookie_router, get_current_user  
 # ---------------------------------------------------------------------------
 
 HEARTBEAT_INTERVAL = 30  # seconds between ping broadcasts
-HEARTBEAT_TIMEOUT = 10   # seconds to wait for a pong before disconnect
+HEARTBEAT_TIMEOUT = 10   # seconds to wait for a pong before disconnect (reserved — not yet enforced; should track last_pong per connection)
 
 
 class ConnectionManager:
