@@ -6,15 +6,16 @@ from backend.services.duplicate_service import DuplicateService, SIMILARITY_THRE
 class TestDuplicateService:
     @pytest.fixture
     def service(self):
-        with patch("backend.services.duplicate_service.SentenceTransformer"), \
+        with patch("backend.services.duplicate_service.SentenceTransformer") as mock_st, \
              patch("backend.services.duplicate_service.os.path.exists", return_value=False), \
-             patch("backend.services.duplicate_service.os.makedirs"):
+             patch("backend.services.duplicate_service.os.makedirs"), \
+             patch.object(DuplicateService, "save_to_disk") as mock_save:
             s = DuplicateService()
             s._loaded = True
             s._load_failed = False
             s.model = MagicMock()
             s.model.encode.return_value = [0.1, 0.2, 0.3]
-            return s
+            yield s
 
     def test_check_duplicate_returns_no_match_when_store_empty(self, service):
         result = service.check_duplicate("test ticket text")
