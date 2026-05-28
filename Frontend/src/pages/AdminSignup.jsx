@@ -157,6 +157,10 @@ function AdminSignup() {
             if (errMsg.toLowerCase().includes("failed to fetch")) {
                 errMsg = "Network Error: Failed to fetch. This usually happens if your browser's ad-blocker (like Brave Shields, uBlock Origin, etc.) is blocking Supabase requests. Please try disabling your ad-blocker for this site and refresh!";
             }
+            // Improve Supabase password policy error message
+            if (errMsg.includes("Password should contain at least one character of each")) {
+                errMsg = "Password must contain at least one lowercase letter (a-z), one uppercase letter (A-Z), and one number (0-9).";
+            }
             setError(errMsg);
         }
     };
