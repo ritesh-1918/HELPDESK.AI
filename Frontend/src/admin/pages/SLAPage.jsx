@@ -28,7 +28,9 @@ import {
 import SLADashboard from '../components/SLADashboard';
 import SLABadge from '../components/SLABadge';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'https://helpdesk-ai-backend-iq0w.onrender.com';
+import { API_CONFIG } from '@/config';
+
+const API_BASE = API_CONFIG.BACKEND_URL;
 
 // ── Data fetching helpers ────────────────────────────────────────────────────
 
@@ -269,6 +271,7 @@ export default function SLAPage() {
                   createdAt={ticket.created_at}
                   status={ticket.status}
                   compact
+                  ticketId={ticket.id}
                 />
                 <a
                   href={`/admin/ticket/${ticket.ticket_id || ticket.id}`}

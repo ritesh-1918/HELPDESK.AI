@@ -31,8 +31,10 @@ LANGUAGE_NAMES: dict[str, str] = {
     "en": "English",
 }
 
-# In-memory model cache: model_name -> (tokenizer, model)
-_MODEL_CACHE: dict[str, tuple] = {}
+from functools import lru_cache
+
+# In-memory LRU model cache to prevent Out-Of-Memory (OOM) kills on servers.
+# It limits the cache to max 3 translation models (e.g. ~900MB total).
 
 
 def detect_language(text: str) -> str:
@@ -57,10 +59,9 @@ def detect_language(text: str) -> str:
         return "en" if ascii_ratio > 0.80 else "unknown"
 
 
+@lru_cache(maxsize=3)
 def _load_model(model_name: str) -> tuple:
     """Lazy-load a Helsinki-NLP MarianMT model and cache it in memory."""
-    if model_name in _MODEL_CACHE:
-        return _MODEL_CACHE[model_name]
 
     try:
         from transformers import MarianMTModel, MarianTokenizer
@@ -73,7 +74,6 @@ def _load_model(model_name: str) -> tuple:
     logger.info("Loading translation model '%s' (first call – will cache)…", model_name)
     tokenizer = MarianTokenizer.from_pretrained(model_name)
     model = MarianMTModel.from_pretrained(model_name)
-    _MODEL_CACHE[model_name] = (tokenizer, model)
     logger.info("Model '%s' cached.", model_name)
     return tokenizer, model
 
