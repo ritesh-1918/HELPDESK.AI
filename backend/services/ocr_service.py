@@ -29,19 +29,23 @@ class OCRService:
         Returns:
             A single cleaned string of extracted text, or "" on failure.
         """
-        if not image_base64:
+        if not image_base64 or not image_base64.strip():
+            return ""
+
+        image_base64 = image_base64.strip()
+
+        if "," in image_base64:
+            image_base64 = image_base64.split(",", 1)[1]
+
+        missing_padding = len(image_base64) % 4
+        if missing_padding:
+            image_base64 += "=" * (4 - missing_padding)
+
+        if not all(c in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=" for c in image_base64):
+            print(f"[OCRService] Invalid base64 characters detected.")
             return ""
 
         try:
-            # Strip data URI prefix if present (e.g., "data:image/png;base64,...")
-            if "," in image_base64:
-                image_base64 = image_base64.split(",", 1)[1]
-            
-            # Add back missing padding
-            missing_padding = len(image_base64) % 4
-            if missing_padding:
-                image_base64 += "=" * (4 - missing_padding)
-
             image_bytes = base64.b64decode(image_base64)
             reader = _get_reader()
             results = reader.readtext(image_bytes, detail=0, paragraph=True)

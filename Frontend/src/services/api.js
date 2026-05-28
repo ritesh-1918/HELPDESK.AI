@@ -141,25 +141,18 @@ export const api = {
         }
       };
     } catch (error) {
-      console.error("AI Backend Error, falling back to mock:", error);
-      // Fallback to mock logic if backend fails
-      await delay(1000);
-      return {
-        data: {
-          ticket_id: "TCKT-MOCK-" + Math.floor(Math.random() * 10000),
-          category: "Hardware",
-          priority: "Medium",
-          assigned_team: "Hardware Support",
-          auto_resolve: false,
-          routing_confidence: 0.5,
-          duplicate_probability: 0.0,
-          summary: issueText.substring(0, 50) + "...",
-          entities: [],
-          is_potential_duplicate: false,
-          parent_ticket_id: null,
-          sla_breach_at: getSlaBreachAt("Medium")
-        }
-      };
+      console.error("AI Backend Error:", error);
+      throw error;
+    }
+  },
+
+  getSlaEstimate: async (ticketId) => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/tickets/${ticketId}/sla-estimate`);
+      return response.data;
+    } catch (error) {
+      console.error(`[SLA Estimate Error] Failed to fetch for ${ticketId}:`, error);
+      return null;
     }
   },
 

@@ -10,7 +10,7 @@ This handoff sheet outlines the Python FastAPI backend ecosystem deployed on Hug
 *   **Production Server:** Uvicorn / Gunicorn
 *   **Deployment platform:** Hugging Face Spaces (Docker-based space running containerized FastAPI)
 *   **Live Base URL:** `https://ritesh19180-ai-helpdesk-api.hf.space`
-*   **Configuration Files:** [backend/Dockerfile](file:///c:/Projects/Software%20Projects/AI-Powered-Ticket-Creation-and-Categorization-from-User-Input/backend/Dockerfile), [backend/requirements.txt](file:///c:/Projects/Software%20Projects/AI-Powered-Ticket-Creation-and-Categorization-from-User-Input/backend/requirements.txt)
+*   **Configuration Files:** [Dockerfile](../Dockerfile), [backend/requirements.txt](file:///c:/Projects/Software%20Projects/AI-Powered-Ticket-Creation-and-Categorization-from-User-Input/backend/requirements.txt)
 
 ---
 
