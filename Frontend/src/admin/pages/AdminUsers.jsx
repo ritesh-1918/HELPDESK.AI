@@ -646,7 +646,7 @@ const AdminUsers = () => {
                                     </p>
                                 </div>
                             </div>
-                            <button onClick={() => setShowProfileModal(false)} className="text-slate-400 hover:text-slate-600 bg-white shadow-sm p-3 rounded-xl border border-slate-200 transition-colors">
+                            <button onClick={() => setShowProfileModal(false)} aria-label="Close profile modal" className="text-slate-400 hover:text-slate-600 bg-white shadow-sm p-3 rounded-xl border border-slate-200 transition-colors">
                                 <X size={24} />
                             </button>
                         </div>
