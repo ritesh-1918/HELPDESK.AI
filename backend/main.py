@@ -338,6 +338,19 @@ class TicketRequest(BaseModel):
     confidence_threshold: float = 0.20
     duplicate_sensitivity: float = 0.85
 
+    def __init__(self, **data):
+        super().__init__(**data)
+        # Validate image size to prevent memory exhaustion DoS
+        if self.image_base64:
+            # base64 expands binary by ~33%, so 10MB binary ≈ 13.3MB base64
+            max_base64_len = 14_000_000  # ~10MB original image
+            if len(self.image_base64) > max_base64_len:
+                from fastapi import HTTPException
+                raise HTTPException(
+                    status_code=413,
+                    detail="Image too large. Maximum size is 10MB."
+                )
+
 class TicketSaveRequest(BaseModel):
     user_id: str
     subject: str
