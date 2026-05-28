@@ -677,12 +677,16 @@ async def create_ticket(ticket: TicketRecord):
 
 
 @app.patch("/tickets/{ticket_id}", response_model=TicketRecord)
-async def update_ticket(ticket_id: str, updates: dict):
+async def update_ticket(ticket_id: str, updates: dict, current_user: dict = Depends(get_current_user)):
     """Partially update a ticket's fields (e.g., status, viewed_at)."""
+    ALLOWED_FIELDS = {"status", "last_user_viewed_at", "updated_at"}
+    invalid_fields = set(updates.keys()) - ALLOWED_FIELDS
+    if invalid_fields:
+        raise HTTPException(status_code=400, detail=f"Invalid fields: {', '.join(sorted(invalid_fields))}. Allowed: {', '.join(sorted(ALLOWED_FIELDS))}")
+
     for i, ticket in enumerate(TICKETS_DB):
         if str(ticket.ticket_id) == str(ticket_id):
-            # Convert to dict, update, then back to model
-            ticket_dict = ticket.dict()
+            ticket_dict = ticket.model_dump()
             ticket_dict.update(updates)
             updated_ticket = TicketRecord(**ticket_dict)
             TICKETS_DB[i] = updated_ticket
