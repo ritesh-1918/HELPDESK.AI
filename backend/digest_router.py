@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Header
 from pydantic import BaseModel
 import os
+from typing import Optional
 from backend.digest_service import get_weekly_stats, generate_ai_summary, send_digest_email
 
 router = APIRouter(prefix="/api/digest", tags=["digest"])
@@ -13,8 +14,10 @@ class DigestRequest(BaseModel):
 
 
 @router.post("/send-now")
-async def send_digest_now(req: DigestRequest):
+async def send_digest_now(req: DigestRequest, authorization: Optional[str] = Header(None)):
     """Manually trigger a digest email — for testing or admin use."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Unauthorized")
     try:
         # Get Gemini model (reuse however your project imports it)
         import google.generativeai as genai
@@ -36,8 +39,10 @@ async def send_digest_now(req: DigestRequest):
 
 
 @router.get("/preview/{company_id}")
-async def preview_stats(company_id: str):
+async def preview_stats(company_id: str, authorization: Optional[str] = Header(None)):
     """Preview this week's stats without sending email."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Unauthorized")
     try:
         stats = get_weekly_stats(company_id)
         return {"success": True, "stats": stats}

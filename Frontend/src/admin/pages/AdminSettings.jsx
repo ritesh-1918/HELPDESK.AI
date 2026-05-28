@@ -175,7 +175,7 @@ const AdminSettings = () => {
 
                     {/* 5. Weekly Digest */}
                     <div>
-                        <DigestToggle companyId={profile?.company_id} />
+                        <DigestToggle companyId={profile?.company_id} companyName={profile?.company_name} />
                     </div>
             </div>
         </div>

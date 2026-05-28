@@ -321,6 +321,12 @@ scheduler.add_job(run_weekly_digest, CronTrigger(day_of_week="mon", hour=8, minu
 scheduler.start()
 
 
+@app.on_event("shutdown")
+def shutdown_scheduler():
+    if scheduler.running:
+        scheduler.shutdown()
+
+
 # ---------------------------------------------------------------------------
 # Root & Health check
 # ---------------------------------------------------------------------------

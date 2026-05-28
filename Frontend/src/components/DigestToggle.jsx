@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient"; // adjust path to match your project
 
-export default function DigestToggle({ companyId }) {
+export default function DigestToggle({ companyId, companyName }) {
   const [enabled, setEnabled] = useState(false);
   const [email, setEmail] = useState("");
   const [saving, setSaving] = useState(false);
@@ -27,7 +27,7 @@ export default function DigestToggle({ companyId }) {
   async function handleSave() {
     setSaving(true);
     setSuccess(false);
-    await supabase
+    const { error } = await supabase
       .from("company_settings")
       .upsert({
         company_id: companyId,
@@ -35,8 +35,12 @@ export default function DigestToggle({ companyId }) {
         digest_admin_email: email,
       });
     setSaving(false);
-    setSuccess(true);
-    setTimeout(() => setSuccess(false), 3000);
+    if (error) {
+      alert("❌ Failed to save: " + error.message);
+    } else {
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    }
   }
 
   async function handleSendNow() {
@@ -48,7 +52,7 @@ export default function DigestToggle({ companyId }) {
         body: JSON.stringify({
           company_id: companyId,
           admin_email: email,
-          company_name: "Your Company",
+          company_name: companyName || "Your Company",
         }),
       });
       const data = await res.json();
