@@ -8,6 +8,8 @@ import {
     ShieldCheck
 } from 'lucide-react';
 import useAdminStore from '../store/adminStore';
+import useAuthStore from '../../store/authStore';
+import DigestToggle from "../../components/DigestToggle";
 import { Card, CardContent } from "../../components/ui/card";
 import { Select } from "../../components/ui/select";
 
@@ -17,6 +19,7 @@ import { Select } from "../../components/ui/select";
  */
 const AdminSettings = () => {
     const { settings, updateSettings } = useAdminStore();
+    const { profile } = useAuthStore();
 
     // Handlers
     const handleChange = (key, value) => {
@@ -169,6 +172,11 @@ const AdminSettings = () => {
                         </div>
                     </CardContent>
                 </Card>
+
+                    {/* 5. Weekly Digest */}
+                    <div>
+                        <DigestToggle companyId={profile?.company_id} />
+                    </div>
             </div>
         </div>
     );
