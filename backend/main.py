@@ -2071,6 +2071,21 @@ async def sla_ticket_detail(ticket_id: str):
     }
 
 
+from fastapi import UploadFile, File
+from backend.services.voice_service import transcribe_audio_async
+
+@app.post("/api/voice/transcribe")
+async def api_voice_transcribe(audio: UploadFile = File(...)):
+    """Transcribes an audio file into text using OpenAI Whisper asynchronously."""
+    try:
+        content = await audio.read()
+        result = await transcribe_audio_async(content)
+        return result
+    except Exception as e:
+        logger.error(f"Voice transcription endpoint error: {e}")
+        raise HTTPException(status_code=500, detail=f"Voice transcription failed: {str(e)}")
+
+
 @app.get("/metrics")
 async def metrics():
     """Prometheus scrape endpoint — exposes AI inference latency, request counts, and tokens."""
