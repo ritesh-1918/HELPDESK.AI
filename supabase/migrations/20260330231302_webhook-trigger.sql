@@ -16,7 +16,7 @@ begin
     url:='https://aejuenhqciagpntcqoir.supabase.co/functions/v1/email-notifier',
     headers:=jsonb_build_object(
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer ' || coalesce(service_key, 'FALLBACK_PLEASE_CONFIGURE_VAULT')
+      'Authorization', 'Bearer ' || coalesce(service_key, NULL)
     ),
     body:=jsonb_build_object(
       'type', 'INSERT',
