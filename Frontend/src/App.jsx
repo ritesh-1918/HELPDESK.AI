@@ -8,6 +8,7 @@ import {
 import React, { useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
 import { NotFound } from "./components/ui/not-found-2";
+import ScrollToTopButton from "./components/ui/scroll-to-top";
 import useTicketStore from "./store/ticketStore";
 import Toaster from "./components/shared/Toaster";
 import BugReportWidget from "./components/shared/BugReportWidget";
@@ -232,6 +233,7 @@ function App() {
         <ScrollToTop />
         <Toaster />
         <BugReportWidget />
+        <ScrollToTopButton />
         <Routes>
           <Route path="/" element={<DocsPortal />} />
           <Route path="/docs" element={<Navigate to="/" replace />} />
@@ -250,6 +252,7 @@ function App() {
       <ScrollToTop />
       <Toaster />
       <BugReportWidget />
+      <ScrollToTopButton />
       <Routes>
         {/* Public */}
         <Route path="/" element={<LandingPage />} />
