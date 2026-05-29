@@ -106,11 +106,21 @@ function Login() {
     }
   };
 
+  const [googleLoading, setGoogleLoading] = useState(false);
+
   const handleGoogleLogin = async () => {
+    setError("");
+    setGoogleLoading(true);
     try {
       await loginWithGoogle();
     } catch (err) {
       console.error("Google login failed", err.message);
+      let errMsg = err.message || "Google sign-in failed. Please try again.";
+      if (errMsg.toLowerCase().includes("failed to fetch")) {
+        errMsg = "Network Error: Failed to fetch. Please disable your ad-blocker for this site and try again.";
+      }
+      setError(errMsg);
+      setGoogleLoading(false);
     }
   };
 
@@ -356,7 +366,7 @@ function Login() {
               {/* Google Button */}
               <button
                 type="button"
-                disabled={loading}
+                disabled={loading || googleLoading}
                 onClick={handleGoogleLogin}
                 className="w-full flex items-center justify-center gap-3 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
                 style={{
@@ -371,13 +381,13 @@ function Login() {
                   transition: 'all 0.2s',
                 }}
                 onMouseEnter={(e) => {
-                  if (!loading) {
+                  if (!loading && !googleLoading) {
                     e.currentTarget.style.background = isDark ? '#374151' : '#f9fafb';
                     e.currentTarget.style.borderColor = isDark ? '#4b5563' : '#d1d5db';
                   }
                 }}
                 onMouseLeave={(e) => {
-                  if (!loading) {
+                  if (!loading && !googleLoading) {
                     e.currentTarget.style.background = isDark ? '#1f2937' : '#ffffff';
                     e.currentTarget.style.borderColor = isDark ? '#374151' : '#e5e7eb';
                   }
@@ -389,7 +399,7 @@ function Login() {
                   <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
                 </svg>
-                <span>Continue with Google</span>
+                <span>{googleLoading ? "Redirecting to Google..." : "Continue with Google"}</span>
               </button>
 
               {/* Divider */}
