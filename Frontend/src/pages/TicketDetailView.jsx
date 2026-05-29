@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import useTicketStore from '../store/ticketStore';
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import SLACountdownTimer from "../components/shared/SLACountdownTimer";
 
 function TicketDetailView() {
     const { ticket_id } = useParams();
@@ -353,6 +354,7 @@ function TicketDetailView() {
                         <div className="p-4 bg-white rounded-2xl border border-gray-100 text-center shadow-sm">
                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Created At</p>
                             <p className="text-sm font-bold text-gray-700">{new Date(ticket.created_at).toLocaleString()}</p>
+                <SLACountdownTimer createdAt={ticket.created_at} priority={ticket.priority || "medium"} />
                         </div>
                     </div>
                 </div>
