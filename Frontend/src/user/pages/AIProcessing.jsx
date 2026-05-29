@@ -123,6 +123,9 @@ const AIProcessing = () => {
                     ticket_title: ticket_title || null,
                 };
 
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 6000);
+
                 const response = await fetch(
                     `${API_CONFIG.BACKEND_URL}/ai/analyze_stream`,
                     {
@@ -130,9 +133,11 @@ const AIProcessing = () => {
                         headers: {
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify(payload)
+                        body: JSON.stringify(payload),
+                        signal: controller.signal
                     }
                 );
+                clearTimeout(timeoutId);
 
                 if (!response.ok) {
                     throw new Error("Backend streaming failed");
