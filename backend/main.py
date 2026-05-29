@@ -1026,6 +1026,61 @@ async def get_tickets(
     res = query.execute()
     return res.data
 
+def trigger_webhook_for_new_ticket(company_id: str, ticket: dict) -> None:
+    """Trigger Slack or Microsoft Teams webhook for new Critical/High tickets (Issue #175)."""
+    if not supabase or not company_id:
+        return
+    
+    priority = str(ticket.get("priority") or "medium").lower().strip()
+    if priority not in ("critical", "high"):
+        return
+
+    try:
+        # Fetch webhook settings for the company
+        res = supabase.table("webhook_settings").select("webhook_url, is_enabled").eq("company_id", company_id).maybeSingle().execute()
+        if res.data and res.data.get("is_enabled"):
+            webhook_url = res.data.get("webhook_url")
+            if not webhook_url:
+                return
+            
+            # Format the alert payload
+            ticket_id = str(ticket.get("id") or "???")
+            ticket_ref = f"#T-{ticket_id[-4:]}" if len(ticket_id) >= 4 else f"#T-{ticket_id}"
+            subject = ticket.get("subject") or "Untitled ticket"
+            category = ticket.get("category") or "General"
+            assigned_team = ticket.get("assigned_team") or "Unassigned"
+            
+            payload = {
+                "text": f"🚨 *New {priority.upper()} Ticket Alert*: {ticket_ref} - {subject}\nPriority: {priority.upper()}\nLink: https://helpdeskaiv1.vercel.app/tickets/{ticket_id}",
+                "attachments": [
+                    {
+                        "color": "#FF0000" if priority == "critical" else "#FFA500",
+                        "title": f"New Ticket: {ticket_ref}",
+                        "title_link": f"https://helpdeskaiv1.vercel.app/tickets/{ticket_id}",
+                        "fields": [
+                            {"title": "Subject", "value": subject, "short": True},
+                            {"title": "Priority", "value": priority.upper(), "short": True},
+                            {"title": "Category", "value": category, "short": True},
+                            {"title": "Assigned Team", "value": assigned_team, "short": True}
+                        ]
+                    }
+                ]
+            }
+            
+            import urllib.request
+            import json
+            req = urllib.request.Request(
+                webhook_url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                print(f"[Webhook] Sent alert to {webhook_url} for ticket {ticket_id} (HTTP {resp.status})")
+    except Exception as e:
+        print(f"[Webhook] Failed to trigger webhook for ticket: {e}")
+
+
 @app.post("/tickets/save")
 async def save_ticket(request_body: TicketSaveRequest):
     """
@@ -1230,6 +1285,15 @@ async def save_ticket(request_body: TicketSaveRequest):
         # Broadcast the new/updated ticket to all WebSocket clients for this company
         company_id = final_data.get("company_id")
         if company_id:
+            # Trigger webhook notifications if any configured (Issue #175)
+            asyncio.create_task(asyncio.to_thread(trigger_webhook_for_new_ticket, company_id, {
+                "id": ticket_id,
+                "priority": insert_data.get("priority"),
+                "subject": insert_data.get("subject"),
+                "category": insert_data.get("category"),
+                "assigned_team": insert_data.get("assigned_team")
+            }))
+
             asyncio.create_task(
                 connection_manager.broadcast(
                     company_id,
