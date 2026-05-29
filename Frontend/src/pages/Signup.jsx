@@ -177,7 +177,7 @@ function Signup() {
   if (successMsg) {
     return (
       <div
-        className="min-h-screen flex items-center justify-center relative overflow-hidden p-6"
+        className="min-h-screen flex items-center justify-center relative overflow-hidden p-4 sm:p-6"
         style={{ fontFamily: "'Inter', sans-serif", background: 'linear-gradient(160deg, #f0fdf4 0%, #dcfce7 60%, #bbf7d0 100%)' }}
       >
         <div
@@ -212,13 +212,13 @@ function Signup() {
   const labelStyle = { fontSize: '12px', fontWeight: 600, color: '#374151', letterSpacing: '0.05em', textTransform: 'uppercase' };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden p-6 py-12" style={{ fontFamily: "'Inter', sans-serif", background: 'linear-gradient(160deg, #f0fdf4 0%, #dcfce7 60%, #bbf7d0 100%)' }}>
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden p-4 sm:p-6 py-8 sm:py-12" style={{ fontFamily: "'Inter', sans-serif", background: 'linear-gradient(160deg, #f0fdf4 0%, #dcfce7 60%, #bbf7d0 100%)' }}>
       <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(34,160,69,0.12) 0%, transparent 70%)' }} />
 
       {/* Back Button */}
       <Link
         to="/"
-        className="absolute top-8 left-8 flex items-center gap-2 transition-all group"
+        className="absolute top-4 left-4 sm:top-8 sm:left-8 flex items-center gap-2 transition-all group"
         style={{ color: '#374151', fontWeight: 500, fontSize: '14px' }}
         onMouseEnter={(e) => e.currentTarget.style.color = '#16a34a'}
         onMouseLeave={(e) => e.currentTarget.style.color = '#374151'}
@@ -226,7 +226,7 @@ function Signup() {
         <div className="p-2 rounded-full transition-all" style={{ background: '#ffffff', border: '1px solid #e5e7eb' }}>
           <ArrowLeft className="w-4 h-4" />
         </div>
-        <span>Back to Home</span>
+        <span className="hidden sm:inline">Back to Home</span>
       </Link>
 
       <div className="w-full max-w-md relative z-10">
@@ -239,7 +239,7 @@ function Signup() {
           </Link>
         </div>
 
-        <div className="bg-white rounded-3xl p-6 sm:p-8" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.08)', border: '1px solid #f0fdf4' }}>
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.08)', border: '1px solid #f0fdf4' }}>
           <div className="text-center" style={{ marginBottom: '32px' }}>
             <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: '28px', fontWeight: 800, color: '#0f1f12', letterSpacing: '-0.02em', marginBottom: '8px' }}>Create Account</h2>
             <p style={{ color: '#6b7280', fontSize: '14px' }}>Start automating your IT support today</p>
@@ -252,7 +252,7 @@ function Signup() {
             </div>
           )}
 
-          <form onSubmit={handleSignup} className="space-y-5">
+          <form onSubmit={handleSignup} className="space-y-4 sm:space-y-5">
             {/* Company Dropdown */}
             <div className="relative" ref={dropdownRef}>
               <label className="block mb-2" style={labelStyle}>Company</label>

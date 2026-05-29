@@ -192,12 +192,12 @@ function Login() {
 
       {/* ── Right Panel ── */}
       <div
-        className="flex w-full lg:w-1/2 items-center justify-center p-6 relative"
+        className="flex w-full lg:w-1/2 items-center justify-center p-4 sm:p-6 relative"
         style={{ background: document.documentElement.classList.contains('dark') ? '#111827' : '#ffffff', borderLeft: '1px solid #f0fdf4' }}
       >
         <Link
           to="/"
-          className="absolute top-8 left-8 flex items-center gap-2 transition-all group"
+          className="absolute top-4 left-4 sm:top-8 sm:left-8 flex items-center gap-2 transition-all group"
           style={{ color: '#374151', fontWeight: 500, fontSize: '14px' }}
           onMouseEnter={(e) => e.currentTarget.style.color = '#16a34a'}
           onMouseLeave={(e) => e.currentTarget.style.color = '#374151'}
@@ -205,11 +205,18 @@ function Login() {
           <div className="p-2 rounded-full transition-all" style={{ background: '#f9fafb', border: '1px solid #e5e7eb' }}>
             <ArrowLeft className="w-4 h-4" />
           </div>
-          <span>Back to Home</span>
+          <span className="hidden sm:inline">Back to Home</span>
         </Link>
 
-        <div className="w-full max-w-md mt-8 lg:mt-0" style={{ padding: '32px' }}>
-          <div className="text-center" style={{ marginBottom: '40px' }}>
+        <div className="w-full max-w-md mt-12 sm:mt-8 lg:mt-0 px-2 sm:px-6 lg:px-8">
+          <div className="text-center" style={{ marginBottom: '24px' }}>
+            {/* HelpDesk.ai branding for mobile */}
+            <div className="flex justify-center mb-6 lg:hidden">
+              <Link to="/" className="flex items-center gap-2 px-3 py-1.5 rounded-full" style={{ background: 'rgba(34,160,69,0.08)', border: '1px solid #d1fae5' }}>
+                <BrainCircuit className="w-4 h-4" style={{ color: '#16a34a' }} />
+                <span style={{ fontWeight: 800, fontSize: '16px', color: '#0f1f12' }}>HelpDesk.ai</span>
+              </Link>
+            </div>
             <h2
               style={{
                 fontFamily: "'Syne', sans-serif",
@@ -250,7 +257,7 @@ function Login() {
               </button>
             </div>
           ) : (
-            <form onSubmit={currentSubmitHandler} className="space-y-5">
+            <form onSubmit={currentSubmitHandler} className="space-y-4 sm:space-y-5">
               <div>
                 <label
                   className="block mb-2"
@@ -420,7 +427,7 @@ function Login() {
                 {isMagicLink ? "Sign in with Password" : "Sign in with Magic Link"}
               </button>
 
-              <p className="text-center" style={{ fontSize: '14px', color: '#6b7280', marginTop: '32px' }}>
+              <p className="text-center" style={{ fontSize: '14px', color: '#6b7280', marginTop: '20px' }}>
                 Don't have an account?{" "}
                 <Link to="/signup" className="hover:underline transition-all" style={{ color: '#16a34a', fontWeight: 600 }}>
                   Create Account
