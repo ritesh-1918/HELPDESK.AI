@@ -1,5 +1,6 @@
 import { Card, CardContent } from "../../components/ui/card";
 import WebhookSettings from "../../components/shared/WebhookSettings";
+import { API_CONFIG } from "@/config";
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     Settings,
@@ -348,7 +349,7 @@ const AdminSettings = () => {
                                                 setIsSendingTest(true);
                                                 setTestEmailStatus("");
                                                 try {
-                                                    const backendUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL || "http://localhost:7860";
+                                                    const backendUrl = API_CONFIG.BACKEND_URL;
                                                     const response = await fetch(`${backendUrl}/api/digest/send-now`, {
                                                         method: "POST",
                                                         headers: { "Content-Type": "application/json" },
