@@ -173,14 +173,14 @@ const useAuthStore = create(
 
             login: async (email, password) => {
                 set({ loading: true });
-                // Normalize email to prevent + being misinterpreted as space
+                // Backend mirror uses URL-encoded form, so encode + as %2B for that transport only
                 const safeEmail = normalizeEmail(email);
                 console.log("Attempting login for:", email);
                 try {
                     await mirrorBackendAuth('/auth/login', { email: safeEmail, password });
 
                     const { data, error } = await supabase.auth.signInWithPassword({
-                        email: safeEmail,
+                        email: email, // Supabase JS client uses JSON — pass raw email
                         password,
                     });
 
@@ -231,11 +231,12 @@ const useAuthStore = create(
 
             signInWithMagicLink: async (email) => {
                 set({ loading: true });
+                // safeEmail only needed for backend mirror; Supabase JSON client gets raw email
                 const safeEmail = normalizeEmail(email);
                 console.log("Attempting magic link / OTP login for:", email);
                 try {
                     const { error } = await supabase.auth.signInWithOtp({
-                        email: safeEmail,
+                        email: email, // raw email for Supabase JSON transport
                         options: {
                             shouldCreateUser: false, // Only existing users
                         }
@@ -274,11 +275,12 @@ const useAuthStore = create(
 
             verifyOtpAndLogin: async (email, token, type = 'magiclink') => {
                 set({ loading: true });
+                // safeEmail only needed for backend mirror; Supabase JSON client gets raw email
                 const safeEmail = normalizeEmail(email);
                 console.log("Attempting OTP verification for:", email);
                 try {
                     const { data, error } = await supabase.auth.verifyOtp({
-                        email: safeEmail,
+                        email: email, // raw email for Supabase JSON transport
                         token,
                         type,
                     });
@@ -307,6 +309,7 @@ const useAuthStore = create(
 
             signup: async (email, password, fullName, role = 'user', company = '', extraMetadata = {}, emailRedirectTo = undefined) => {
                 set({ loading: true });
+                // Backend mirror uses URL-encoded form; Supabase JS client uses JSON (raw email)
                 const safeEmail = normalizeEmail(email);
                 console.log("Starting signup for:", email);
 
@@ -322,7 +325,7 @@ const useAuthStore = create(
                     // 1. Auth Signup with Metadata
                     console.log("Step 1: Auth.signUp...");
                     const { data, error } = await supabase.auth.signUp({
-                        email: safeEmail,
+                        email: email, // raw email for Supabase JSON transport
                         password,
                         options: {
                             data: {
