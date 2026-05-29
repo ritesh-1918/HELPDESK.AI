@@ -53,8 +53,8 @@ function AnimatedStat({ target, suffix = '', prefix = '', label, isWord = false 
     }, [triggered, target, isWord]);
 
     return (
-        <div ref={ref} className="p-4">
-            <div className="text-4xl font-extrabold mb-1 text-white tabular-nums">
+        <div ref={ref} className="p-3 sm:p-4">
+            <div className="text-2xl sm:text-3xl md:text-4xl font-extrabold mb-1 text-white tabular-nums">
                 {prefix}{display}{suffix}
             </div>
             <div className="text-sm text-white font-medium tracking-wide opacity-75">{label}</div>
@@ -587,9 +587,9 @@ export default function LandingPage() {
             </section>
 
             {/* ==================== STATS BAR ==================== */}
-            <section className="bg-emerald-900 py-12 text-white">
+            <section className="bg-emerald-900 py-8 sm:py-12 text-white">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center divide-y-2 sm:divide-y-0 sm:divide-x divide-white/10">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8 text-center divide-y-2 sm:divide-y-0 sm:divide-x divide-white/10">
                         <AnimatedStat prefix="+" target="80" suffix="%" label="Faster Ticket Triage" />
                         <AnimatedStat target="99" suffix="%" label="Classification Accuracy" />
                         <AnimatedStat target="Zero" label="Manual Routing Needed" isWord={true} />
@@ -599,18 +599,18 @@ export default function LandingPage() {
             </section>
 
             {/* ==================== FEATURES GRID ==================== */}
-            <section className="py-24 bg-white" id="features">
+            <section className="py-16 sm:py-20 md:py-24 bg-white" id="features">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-16">
                         <span className="text-xs font-bold tracking-widest text-emerald-700 uppercase mb-3 block">Core Intelligence</span>
-                        <h2 className="text-3xl md:text-5xl font-extrabold text-gray-900 tracking-tight">Work Smarter, Not Harder</h2>
+                        <h2 className="text-2xl sm:text-3xl md:text-5xl font-extrabold text-gray-900 tracking-tight">Work Smarter, Not Harder</h2>
                         <p className="text-gray-500 mt-4 text-lg max-w-xl mx-auto">Three AI capabilities that eliminate manual helpdesk work.</p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
                         {/* Card 1: Auto-Categorization */}
                         <div className="group rounded-3xl bg-gray-50 border border-gray-100 overflow-hidden hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 hover:-translate-y-1">
-                            <div className="h-52 bg-gradient-to-br from-blue-50 to-gray-50 p-6 flex items-center justify-center relative overflow-hidden">
+                            <div className="h-40 sm:h-44 md:h-52 bg-gradient-to-br from-blue-50 to-gray-50 p-4 sm:p-6 flex items-center justify-center relative overflow-hidden">
                                 <div className="relative z-10 flex flex-col gap-3 items-center">
                                     <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200 text-xs font-bold text-gray-400 flex items-center gap-2 transform -translate-x-4 opacity-60">
                                         <div className="w-2 h-2 rounded-full bg-gray-300" /> Ticket #1024
@@ -629,7 +629,7 @@ export default function LandingPage() {
                                     </div>
                                 </div>
                             </div>
-                            <div className="p-8">
+                            <div className="p-5 sm:p-6 md:p-8">
                                 <h3 className="text-xl font-bold text-gray-900 mb-3">Auto-Categorization</h3>
                                 <p className="text-gray-500 leading-relaxed mb-6">
                                     Instantly detects if an issue is Network, Hardware, Software, or Access-related — no manual tagging.
@@ -645,7 +645,7 @@ export default function LandingPage() {
 
                         {/* Card 2: Priority Detection */}
                         <div className="group rounded-3xl bg-gray-50 border border-gray-100 overflow-hidden hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 hover:-translate-y-1">
-                            <div className="h-52 bg-gradient-to-br from-red-50 to-orange-50 p-6 flex items-center justify-center relative overflow-hidden">
+                            <div className="h-40 sm:h-44 md:h-52 bg-gradient-to-br from-red-50 to-orange-50 p-4 sm:p-6 flex items-center justify-center relative overflow-hidden">
                                 <div className="relative z-10 w-full max-w-[200px] space-y-2.5">
                                     <div className="bg-white p-2.5 rounded-lg border border-gray-200 shadow-sm flex items-center justify-between opacity-50 scale-95">
                                         <div className="flex items-center gap-2">
@@ -670,7 +670,7 @@ export default function LandingPage() {
                                     </div>
                                 </div>
                             </div>
-                            <div className="p-8">
+                            <div className="p-5 sm:p-6 md:p-8">
                                 <h3 className="text-xl font-bold text-gray-900 mb-3">Priority Detection</h3>
                                 <p className="text-gray-500 leading-relaxed mb-6">
                                     Understands urgency signals in text and automatically flags issues from Low to Critical.
@@ -686,7 +686,7 @@ export default function LandingPage() {
 
                         {/* Card 3: Smart Resolution */}
                         <div className="group rounded-3xl bg-gray-50 border border-gray-100 overflow-hidden hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 hover:-translate-y-1">
-                            <div className="h-52 bg-gradient-to-br from-emerald-50 to-teal-50 p-6 flex items-center justify-center relative overflow-hidden">
+                            <div className="h-40 sm:h-44 md:h-52 bg-gradient-to-br from-emerald-50 to-teal-50 p-4 sm:p-6 flex items-center justify-center relative overflow-hidden">
                                 <div className="relative z-10 w-full max-w-[200px] flex flex-col gap-3">
                                     <div className="self-end bg-emerald-600 text-white p-2.5 rounded-2xl rounded-tr-none shadow-sm text-[10px] max-w-[80%]">
                                         Reset password for user@company.com?
@@ -705,7 +705,7 @@ export default function LandingPage() {
                                     </div>
                                 </div>
                             </div>
-                            <div className="p-8">
+                            <div className="p-5 sm:p-6 md:p-8">
                                 <h3 className="text-xl font-bold text-gray-900 mb-3">Smart Resolution</h3>
                                 <p className="text-gray-500 leading-relaxed mb-6">
                                     Checks historical data to auto-fix simple issues, or routes complex ones to the right human team.
@@ -723,7 +723,7 @@ export default function LandingPage() {
             </section>
 
             {/* ==================== HOW IT WORKS ==================== */}
-            <section className="bg-emerald-950 py-16 md:py-32 text-white relative overflow-hidden" id="how-it-works">
+            <section className="bg-emerald-950 py-14 sm:py-20 md:py-32 text-white relative overflow-hidden" id="how-it-works">
                 {/* Background Decorations */}
                 <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none" />
                 <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-500/5 blur-[120px] rounded-full translate-y-1/2 -translate-x-1/2 pointer-events-none" />
@@ -773,8 +773,8 @@ export default function LandingPage() {
                         </div>
 
                         {/* Right: Visual Display */}
-                        <div className="w-full md:w-1/2 h-[350px] md:h-[500px] relative">
-                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-[32px] md:rounded-[40px] border border-white/5 backdrop-blur-3xl overflow-hidden p-6 md:p-12 flex items-center justify-center">
+                        <div className="w-full md:w-1/2 h-[300px] sm:h-[350px] md:h-[500px] relative">
+                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-2xl sm:rounded-[32px] md:rounded-[40px] border border-white/5 backdrop-blur-3xl overflow-hidden p-4 sm:p-6 md:p-12 flex items-center justify-center">
                                 <AnimatePresence mode="sync">
                                     <motion.div
                                         key={activeStep}
@@ -804,10 +804,10 @@ export default function LandingPage() {
             </section>
 
             {/* ==================== PRICING ==================== */}
-            <section className="py-24 bg-gray-50" id="pricing">
+            <section className="py-16 sm:py-20 md:py-24 bg-gray-50" id="pricing">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-12">
-                        <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">Simple, Transparent Pricing</h2>
+                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">Simple, Transparent Pricing</h2>
                         <p className="text-gray-500 mb-8">All plans in Indian Rupees (₹) · GST applicable</p>
 
                         {/* Billing Toggle */}
@@ -827,11 +827,11 @@ export default function LandingPage() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto">
                         {pricingPlans.map(({ name, price, priceLabel, period, desc, cta, ctaStyle, features, popular }) => (
                             <div
                                 key={name}
-                                className={`p-8 rounded-2xl bg-white transition-all relative ${popular ? 'border-2 border-emerald-900 shadow-2xl shadow-emerald-900/10 scale-[1.02]' : 'border border-gray-200 hover:border-gray-300'}`}
+                                className={`p-5 sm:p-6 md:p-8 rounded-2xl bg-white transition-all relative ${popular ? 'border-2 border-emerald-900 shadow-2xl shadow-emerald-900/10 md:scale-[1.02]' : 'border border-gray-200 hover:border-gray-300'}`}
                             >
                                 {popular && (
                                     <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-emerald-900 text-white px-4 py-1.5 rounded-full text-xs font-bold tracking-wide whitespace-nowrap shadow-lg">
@@ -840,7 +840,7 @@ export default function LandingPage() {
                                 )}
                                 <h3 className="text-lg font-bold text-gray-900 mb-2">{name}</h3>
                                 <div className="text-4xl font-extrabold text-gray-900 mb-2">
-                                    {priceLabel ? priceLabel : <>₹{price.toLocaleString('en-IN')}<span className="text-base font-normal text-gray-500">{period}</span></>}
+                                    {priceLabel ? priceLabel : <><span className="text-3xl sm:text-4xl">₹{price.toLocaleString('en-IN')}</span><span className="text-base font-normal text-gray-500">{period}</span></>}
                                 </div>
                                 <p className="text-sm text-gray-500 mb-6">{desc}</p>
                                 <button
@@ -874,16 +874,18 @@ export default function LandingPage() {
             </section>
 
             {/* ==================== TEAM SECTION ==================== */}
-            <TeamSection />
+            <div className="px-4 sm:px-6 lg:px-8">
+                <TeamSection />
+            </div>
 
             {/* ==================== FOOTER ==================== */}
             <footer className="bg-emerald-950 text-white">
                 {/* CTA Block */}
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16 text-center border-b border-white/10">
-                    <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-6 max-w-3xl mx-auto leading-tight">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 sm:pt-20 md:pt-24 pb-12 md:pb-16 text-center border-b border-white/10">
+                    <h2 className="text-2xl sm:text-3xl md:text-5xl font-extrabold tracking-tight mb-4 sm:mb-6 max-w-3xl mx-auto leading-tight">
                         The Smartest IT Helpdesk for Indian Businesses
                     </h2>
-                    <p className="text-white/70 text-lg mb-10 max-w-xl mx-auto">
+                    <p className="text-white/70 text-base sm:text-lg mb-6 sm:mb-10 max-w-xl mx-auto">
                         Start automating ticket triage today. No credit card required.
                     </p>
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -911,7 +913,7 @@ export default function LandingPage() {
                 </div>
 
                 {/* Footer Links */}
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12 md:py-16">
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-10">
                         {/* Brand Column */}
                         <div className="col-span-2 md:col-span-1">
@@ -998,10 +1000,10 @@ export default function LandingPage() {
 
                     {/* Bottom bar */}
                     <div className="flex flex-col md:flex-row items-center justify-between gap-4 mt-16 pt-8 border-t border-white/10">
-                        <p className="text-xs text-white/40">
+                        <p className="text-xs text-white/40 text-center md:text-left">
                             © 2026 HelpDesk.ai. All rights reserved. · Registered in India
                         </p>
-                        <div className="flex items-center gap-4">
+                        <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
                             <button onClick={() => navigate('/terms')} className="text-xs text-white/40 hover:text-white transition-colors">Terms</button>
                             <button onClick={() => navigate('/privacy')} className="text-xs text-white/40 hover:text-white transition-colors">Privacy</button>
                             <button onClick={() => navigate('/security')} className="text-xs text-white/40 hover:text-white transition-colors">Security</button>
