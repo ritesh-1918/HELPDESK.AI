@@ -6,6 +6,18 @@ import useTicketStore from './ticketStore';
 
 const BACKEND_URL = API_CONFIG.BACKEND_URL;
 
+/**
+ * Normalize email for Supabase — encode `+` to %2B to prevent
+ * misinterpretation as space during URL/form-encoding at any layer.
+ * Emails with + (sub-addressing, e.g. user+test@example.com) are
+ * valid per RFC 5321 and must be passed literally.
+ */
+const normalizeEmail = (email) => {
+  if (typeof email !== 'string') return email;
+  // Only encode the + sign — everything else stays as-is for JSON transport
+  return email.replace(/\+/g, '%2B');
+};
+
 const verifyServerCookieSession = async () => {
    try {
         const controller = new AbortController();
@@ -161,12 +173,14 @@ const useAuthStore = create(
 
             login: async (email, password) => {
                 set({ loading: true });
+                // Normalize email to prevent + being misinterpreted as space
+                const safeEmail = normalizeEmail(email);
                 console.log("Attempting login for:", email);
                 try {
-                    await mirrorBackendAuth('/auth/login', { email, password });
+                    await mirrorBackendAuth('/auth/login', { email: safeEmail, password });
 
                     const { data, error } = await supabase.auth.signInWithPassword({
-                        email,
+                        email: safeEmail,
                         password,
                     });
 
@@ -217,10 +231,11 @@ const useAuthStore = create(
 
             signInWithMagicLink: async (email) => {
                 set({ loading: true });
+                const safeEmail = normalizeEmail(email);
                 console.log("Attempting magic link / OTP login for:", email);
                 try {
                     const { error } = await supabase.auth.signInWithOtp({
-                        email,
+                        email: safeEmail,
                         options: {
                             shouldCreateUser: false, // Only existing users
                         }
@@ -259,10 +274,11 @@ const useAuthStore = create(
 
             verifyOtpAndLogin: async (email, token, type = 'magiclink') => {
                 set({ loading: true });
+                const safeEmail = normalizeEmail(email);
                 console.log("Attempting OTP verification for:", email);
                 try {
                     const { data, error } = await supabase.auth.verifyOtp({
-                        email,
+                        email: safeEmail,
                         token,
                         type,
                     });
@@ -291,11 +307,12 @@ const useAuthStore = create(
 
             signup: async (email, password, fullName, role = 'user', company = '', extraMetadata = {}, emailRedirectTo = undefined) => {
                 set({ loading: true });
+                const safeEmail = normalizeEmail(email);
                 console.log("Starting signup for:", email);
 
                 try {
                     await mirrorBackendAuth('/auth/signup', {
-                        email,
+                        email: safeEmail,
                         password,
                         full_name: fullName,
                         role,
@@ -305,7 +322,7 @@ const useAuthStore = create(
                     // 1. Auth Signup with Metadata
                     console.log("Step 1: Auth.signUp...");
                     const { data, error } = await supabase.auth.signUp({
-                        email,
+                        email: safeEmail,
                         password,
                         options: {
                             data: {
@@ -425,4 +442,3 @@ const useAuthStore = create(
 );
 
 export default useAuthStore;
-
