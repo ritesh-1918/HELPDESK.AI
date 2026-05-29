@@ -246,11 +246,10 @@ export default function VoiceRecorderV2({
       recorder.start(250); // collect every 250 ms
       setState('recording');
       startTimer(() => stopRecording());
-    } catch (err) {
+    } catch (_err) {
       setErrorMsg('Microphone access denied. Please allow microphone permission.');
       setState('error');
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [processAudio, startTimer]);
 
   // ── Stop recording ───────────────────────────────────────────────────────
@@ -282,7 +281,6 @@ export default function VoiceRecorderV2({
   const isDone        = state === 'done';
   const isError       = state === 'error';
   const isIdle        = state === 'idle';
-  const busy          = isRecording || isProcessing;
 
   return (
     <>
