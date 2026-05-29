@@ -7,9 +7,9 @@ import useAuthStore from '../../store/authStore';
  * Restricts access to routes to only users with the 'admin' role.
  */
 const AdminProtectedRoute = () => {
-    const { user, profile, loading } = useAuthStore();
+    const { user, profile, loading, isCheckingSession } = useAuthStore();
 
-    if (loading) {
+    if (loading || isCheckingSession) {
         return (
             <div className="flex h-screen w-screen items-center justify-center bg-white">
                 <div className="h-12 w-12 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent"></div>
@@ -23,7 +23,7 @@ const AdminProtectedRoute = () => {
     }
 
     // If we have a user but no profile yet, wait for the database fetch
-    if (!profile) {
+    if (!profile || profile.role === undefined) {
         return (
             <div className="flex h-screen w-screen items-center justify-center bg-[#050508]">
                 <div className="h-12 w-12 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>

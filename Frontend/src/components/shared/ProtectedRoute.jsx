@@ -8,9 +8,18 @@ import useAuthStore from '../../store/authStore';
  * Redirects to the login page if not authenticated.
  */
 const ProtectedRoute = () => {
-    const { user, profile, isCheckingSession } = useAuthStore();
+    const { user, profile, loading, isCheckingSession } = useAuthStore();
 
-    if (isCheckingSession) {
+    if (loading || isCheckingSession) {
+        return (
+            <div className="flex h-screen w-screen items-center justify-center bg-white">
+                <div className="h-12 w-12 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent"></div>
+            </div>
+        );
+    }
+
+    // If we have a user but no profile yet, wait for the database fetch
+    if (user && (!profile || profile.role === undefined)) {
         return (
             <div className="flex h-screen w-screen items-center justify-center bg-white">
                 <div className="h-12 w-12 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent"></div>
