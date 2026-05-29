@@ -129,7 +129,7 @@ export default function DigestToggle({ companyId }) {
       setDigestEnabled(data?.digest_enabled ?? false);
       setAdminEmail(data?.digest_admin_email ?? '');
       setLastSentAt(data?.digest_last_sent ?? null);
-    } catch (e) {
+    } catch (_e) {
       setError('Failed to load digest settings. Please refresh.');
     } finally {
       setLoading(false);
@@ -161,7 +161,7 @@ export default function DigestToggle({ companyId }) {
       if (upsertErr) throw upsertErr;
       setSuccessMsg('Digest settings saved successfully!');
       setTimeout(() => setSuccessMsg(null), 3500);
-    } catch (e) {
+    } catch (_e) {
       setError('Failed to save settings. Please try again.');
     } finally {
       setSaving(false);
