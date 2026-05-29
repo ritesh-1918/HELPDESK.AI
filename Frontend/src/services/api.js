@@ -137,7 +137,11 @@ export const api = {
           ocr_text: result.ocr_text,
           is_potential_duplicate: result.is_potential_duplicate || false,
           parent_ticket_id: result.parent_ticket_id || result.duplicate_ticket?.duplicate_ticket_id || null,
-          sla_breach_at: result.sla_breach_at || getSlaBreachAt(result.priority)
+          sla_breach_at: result.sla_breach_at || getSlaBreachAt(result.priority),
+          source_language: result.source_language,
+          source_language_name: result.source_language_name,
+          was_translated: result.was_translated,
+          original_text: result.original_text
         }
       };
     } catch (error) {

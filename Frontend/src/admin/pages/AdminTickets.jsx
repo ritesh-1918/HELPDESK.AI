@@ -233,7 +233,7 @@ const AdminTickets = () => {
         }
         if (languageFilter !== 'All') {
             result = result.filter(t => {
-                const translated = t?.metadata?.translation?.translated;
+                const translated = t.detected_language && t.detected_language.toLowerCase() !== 'en';
                 return languageFilter === 'Translated' ? translated : !translated;
             });
         }
@@ -456,7 +456,7 @@ const AdminTickets = () => {
                                                 {ticket.category} 
                                                 <span className="text-[9px] font-medium text-slate-300">• {formatTimelineDate(ticket.created_at)}</span>
                                             </span>
-                                            <LanguageBadge translation={ticket?.metadata?.translation} compact />
+                                            <LanguageBadge detectedLanguage={ticket?.detected_language} compact />
                                         </div>
                                     </td>
 

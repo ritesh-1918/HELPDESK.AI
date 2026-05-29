@@ -199,11 +199,9 @@ const AdminTicketDetail = () => {
     const displayPriority = ticket.priority || 'Medium';
     const displaySummary = ticket.summary || ticket.subject || 'No Summary';
     const displayText = ticket.description || ticket.text || displaySummary;
-    const translationMeta = ticket.metadata?.translation;
-    const originalTextMeta = ticket.metadata?.original_text;
-    const isTranslated = Boolean(translationMeta?.translated && originalTextMeta?.description);
-    const sourceLanguageName = translationMeta?.source_language_name || translationMeta?.source_language || 'Unknown';
-    const renderedText = showOriginalText && isTranslated ? originalTextMeta.description : displayText;
+    const isTranslated = Boolean(ticket.detected_language && ticket.detected_language.toLowerCase() !== 'en' && ticket.original_body);
+    const sourceLanguageName = ticket.detected_language ? ticket.detected_language.toUpperCase() : 'Unknown';
+    const renderedText = showOriginalText && isTranslated ? ticket.original_body : displayText;
 
     return (
         <div style={{ background: '#f8faf9', minHeight: '100vh', paddingBottom: '80px' }} className="-m-6 p-6 md:-m-10 md:p-10 space-y-6 animate-in fade-in duration-700">

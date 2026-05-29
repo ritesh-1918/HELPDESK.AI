@@ -136,7 +136,7 @@ const RecentTickets = () => {
                                                 {ticket.summary || ticket.subject || ticket.description || "No description provided"}
                                             </p>
                                             <div className="mt-1">
-                                                <LanguageBadge translation={ticket?.metadata?.translation} compact />
+                                                <LanguageBadge detectedLanguage={ticket?.detected_language} compact />
                                             </div>
                                         </td>
                                         <td className="px-7 py-4">

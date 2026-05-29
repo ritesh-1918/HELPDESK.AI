@@ -123,10 +123,8 @@ const TicketDetail = () => {
     const solutionSteps = Array.isArray(ticket.solution_steps) ? ticket.solution_steps : [];
     const isAutoResolved = ticket.auto_resolve === true;
     const confidenceScore = ticket.metadata?.confidence ?? ticket.routing_confidence ?? 0.92;
-    const translationMeta = ticket.metadata?.translation;
-    const originalTextMeta = ticket.metadata?.original_text;
-    const isTranslated = Boolean(translationMeta?.translated && originalTextMeta?.description);
-    const sourceLanguageName = translationMeta?.source_language_name || translationMeta?.source_language || 'Unknown';
+    const isTranslated = Boolean(ticket.detected_language && ticket.detected_language.toLowerCase() !== 'en' && ticket.original_body);
+    const sourceLanguageName = ticket.detected_language ? ticket.detected_language.toUpperCase() : 'Unknown';
 
 
     const handleReopen = async () => {
@@ -205,7 +203,7 @@ const TicketDetail = () => {
                             </div>
                             {showOriginalText && (
                                 <p className="mt-3 text-sm text-slate-700 bg-white border border-sky-100 rounded-lg px-3 py-2">
-                                    {originalTextMeta?.description}
+                                    {ticket.original_body}
                                 </p>
                             )}
                         </Card>

@@ -1,20 +1,10 @@
 import React from 'react';
 import { Globe } from 'lucide-react';
 
-/**
- * Compact badge shown on ticket cards when the ticket was originally
- * submitted in a non-English language and auto-translated.
- *
- * Props:
- *   translation  – ticket.metadata?.translation  (object)
- *   compact      – boolean, renders icon-only variant when true (default false)
- */
-const LanguageBadge = ({ translation, compact = false }) => {
-    if (!translation?.translated) return null;
+const LanguageBadge = ({ detectedLanguage, compact = false }) => {
+    if (!detectedLanguage || detectedLanguage.toLowerCase() === 'en') return null;
 
-    const langName = translation.source_language_name
-        || translation.source_language?.toUpperCase()
-        || 'Unknown';
+    const langName = detectedLanguage.toUpperCase();
 
     if (compact) {
         return (

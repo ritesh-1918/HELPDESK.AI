@@ -364,6 +364,8 @@ class TicketSaveRequest(BaseModel):
     auto_resolve: bool
     is_duplicate: bool
     confidence: float
+    detected_language: str | None = None
+    original_body: str | None = None
     image_url: str | None = None
     company: str | None = None
     company_id: str | None = None
@@ -1203,8 +1205,16 @@ async def save_ticket(request_body: TicketSaveRequest):
         
         # Add initial system diagnostic message
         msg = "Our Neural Engine has successfully triaged your issue and routed it to the designated team."
-        if final_data["auto_resolve"]:
+        if final_data.get("auto_resolve"):
             msg = "AI Auto-Resolution active: A verified solution has been identified. Please review the attached resolution steps."
+
+        detected_language = final_data.get("detected_language")
+        if detected_language and detected_language.lower() not in ("en", "eng", "unknown"):
+            try:
+                from backend.language_pipeline import translate_from_english
+                msg = translate_from_english(msg, detected_language)
+            except Exception as e:
+                print(f"[WARNING] Failed to back-translate message: {e}")
 
         supabase.table("ticket_messages").insert({
             "ticket_id": ticket_id,
