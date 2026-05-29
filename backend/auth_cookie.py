@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import urllib.parse
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -112,10 +113,19 @@ class SignupBody(BaseModel):
 
 @router.post("/login")
 async def auth_login(body: LoginBody, response: Response):
+    # Decode any URL-encoded characters (e.g. %2B → +) in the email.
+    # This prevents the `+` character in email sub-addressing (user+tag@...)
+    # from being corrupted by intermediate form/URL encoding layers.
+    raw_email = str(body.email)
+    try:
+        safe_email = urllib.parse.unquote(raw_email)
+    except Exception:
+        safe_email = raw_email
+
     try:
         client = _anon_supabase()
         result = client.auth.sign_in_with_password(
-            {"email": str(body.email), "password": body.password}
+            {"email": safe_email, "password": body.password}
         )
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
@@ -132,6 +142,13 @@ async def auth_login(body: LoginBody, response: Response):
 
 @router.post("/signup")
 async def auth_signup(body: SignupBody, response: Response):
+    # Decode URL-encoded characters in email (defense in depth)
+    raw_email = str(body.email)
+    try:
+        safe_email = urllib.parse.unquote(raw_email)
+    except Exception:
+        safe_email = raw_email
+
     metadata: dict[str, str] = {}
     if body.full_name:
         metadata["full_name"] = body.full_name
@@ -144,7 +161,7 @@ async def auth_signup(body: SignupBody, response: Response):
         client = _anon_supabase()
         result = client.auth.sign_up(
             {
-                "email": str(body.email),
+                "email": safe_email,
                 "password": body.password,
                 "options": {"data": metadata} if metadata else {},
             }
@@ -152,26 +169,14 @@ async def auth_signup(body: SignupBody, response: Response):
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
-    session = getattr(result, "session", None)
-    user = getattr(result, "user", None)
-    if session:
-        _set_session_cookies(response, session)
-    user_payload = user.model_dump() if user and hasattr(user, "model_dump") else None
-    return {"user": user_payload, "message": "Signup complete"}
+    response.status_code = status.HTTP_201_CREATED
+    return {"message": "Signup initiated, check your email for verification."}
 
 
 @router.post("/logout")
-async def auth_logout(request: Request, response: Response):
-    # Invalidate the session server-side before clearing cookies
-    token = extract_token(request)
-    if token:
-        try:
-            client = _anon_supabase()
-            client.auth.sign_out(token)
-        except Exception:
-            pass  # Still clear cookies even if server-side invalidation fails
+async def auth_logout(response: Response):
     _clear_session_cookies(response)
-    return {"ok": True}
+    return {"message": "Logged out"}
 
 
 @router.get("/me")
