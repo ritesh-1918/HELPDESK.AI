@@ -97,12 +97,15 @@ class ConnectionManager:
     def __init__(self) -> None:
         self._connections: dict[str, set[WebSocket]] = {}
         self._lock = asyncio.Lock()
+        self._last_pong: dict[WebSocket, float] = {}
 
     async def connect(self, company_id: str, ws: WebSocket) -> None:
         """Accept a new WebSocket and register it under ``company_id``."""
+        import time
         await ws.accept()
         async with self._lock:
             self._connections.setdefault(company_id, set()).add(ws)
+            self._last_pong[ws] = time.time()
 
     async def disconnect(self, company_id: str, ws: WebSocket) -> None:
         """Remove a WebSocket from the pool."""
@@ -113,6 +116,12 @@ class ConnectionManager:
                 # Clean up empty company groups
                 if not connections:
                     del self._connections[company_id]
+            self._last_pong.pop(ws, None)
+
+    def record_pong(self, ws: WebSocket) -> None:
+        """Record the timestamp of the last received pong frame from a client."""
+        import time
+        self._last_pong[ws] = time.time()
 
     async def broadcast(self, company_id: str, message: dict) -> int:
         """Send a JSON message to every client in a company group.
@@ -153,8 +162,11 @@ class ConnectionManager:
     async def ping_all(self) -> None:
         """Send a ``{"type": "ping"}`` heartbeat to every connection.
 
-        Connections that fail to receive the ping are removed.
+        Connections that fail to receive the ping or fail to respond within the timeout are removed.
         """
+        import time
+        current_time = time.time()
+        
         async with self._lock:
             # Snapshot all connections under lock so iteration is safe
             snapshot = {
@@ -163,6 +175,16 @@ class ConnectionManager:
 
         for cid, ws_set in snapshot.items():
             for ws in list(ws_set):
+                last_active = self._last_pong.get(ws, current_time)
+                if current_time - last_active > (HEARTBEAT_INTERVAL + HEARTBEAT_TIMEOUT):
+                    print(f"[WS] Client timed out (inactive for {current_time - last_active:.1f}s) — company_id={cid}")
+                    await self.disconnect(cid, ws)
+                    try:
+                        await ws.close(code=1000, reason="Ping timeout")
+                    except Exception:
+                        pass
+                    continue
+
                 try:
                     await ws.send_json({"type": "ping"})
                 except Exception:
@@ -1280,6 +1302,7 @@ async def websocket_endpoint(ws: WebSocket, company_id: str):
 
             # Handle pong response
             if data.get("type") == "pong":
+                connection_manager.record_pong(ws)
                 continue
 
     except WebSocketDisconnect:

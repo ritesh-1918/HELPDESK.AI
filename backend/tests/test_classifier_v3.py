@@ -6,6 +6,10 @@ sys.modules['torch'] = MagicMock()
 sys.modules['torch.nn'] = MagicMock()
 sys.modules['transformers'] = MagicMock()
 
+# Remove the stub installed by conftest.py to force importing the real module with our mocks
+if 'backend.services.classifier_v3' in sys.modules:
+    del sys.modules['backend.services.classifier_v3']
+
 from backend.services.classifier_v3 import ClassifierServiceV3
 
 
