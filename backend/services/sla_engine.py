@@ -282,38 +282,11 @@ class SLAEngine:
             except Exception as e:
                 logger.error(f"[SLA] Failed to update ticket {ticket.get('id')}: {e}")
 
-        # Log escalations to escalation_logs table
-        for item in escalated:
-            self._log_escalation(item["ticket"], item["sla_result"])
-
         logger.info(
             f"[SLA] Checked {len(tickets)} tickets "
             f"— {len(escalated)} escalated."
         )
         return escalated
-
-    # ------------------------------------------------------------------
-    # Escalation logging
-    # ------------------------------------------------------------------
-
-    def _log_escalation(self, ticket: dict, result: dict):
-        """Insert an escalation event into the escalation_logs table."""
-        if not self.supabase:
-            return
-        try:
-            self.supabase.table("escalation_logs").insert({
-                "ticket_id": ticket["id"],
-                "ticket_subject": ticket.get("subject") or ticket.get("summary", ""),
-                "priority": ticket.get("priority", "medium"),
-                "sla_status": result["sla_status"],
-                "escalation_level": result["escalation_level"],
-                "remaining_seconds": result["remaining_seconds"],
-                "assigned_team": ticket.get("assigned_team", ""),
-                "triggered_at": datetime.datetime.utcnow().isoformat() + "Z",
-                "notification_channels": [],  # populated by notifier
-            }).execute()
-        except Exception as e:
-            logger.error(f"[SLA] Failed to log escalation: {e}")
 
     # ------------------------------------------------------------------
     # Multi-channel notification dispatch
