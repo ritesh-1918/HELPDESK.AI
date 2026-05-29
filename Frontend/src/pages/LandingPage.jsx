@@ -723,7 +723,7 @@ export default function LandingPage() {
             </section>
 
             {/* ==================== HOW IT WORKS ==================== */}
-            <section className="bg-emerald-950 py-16 md:py-32 text-white relative overflow-hidden" id="how-it-works">
+            <section className="bg-emerald-950 py-14 sm:py-20 md:py-32 text-white relative overflow-hidden" id="how-it-works">
                 {/* Background Decorations */}
                 <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none" />
                 <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-500/5 blur-[120px] rounded-full translate-y-1/2 -translate-x-1/2 pointer-events-none" />
@@ -773,8 +773,8 @@ export default function LandingPage() {
                         </div>
 
                         {/* Right: Visual Display */}
-                        <div className="w-full md:w-1/2 h-[350px] md:h-[500px] relative">
-                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-[32px] md:rounded-[40px] border border-white/5 backdrop-blur-3xl overflow-hidden p-6 md:p-12 flex items-center justify-center">
+                        <div className="w-full md:w-1/2 h-[300px] sm:h-[350px] md:h-[500px] relative">
+                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-2xl sm:rounded-[32px] md:rounded-[40px] border border-white/5 backdrop-blur-3xl overflow-hidden p-4 sm:p-6 md:p-12 flex items-center justify-center">
                                 <AnimatePresence mode="sync">
                                     <motion.div
                                         key={activeStep}
@@ -804,10 +804,10 @@ export default function LandingPage() {
             </section>
 
             {/* ==================== PRICING ==================== */}
-            <section className="py-24 bg-gray-50" id="pricing">
+            <section className="py-16 sm:py-20 md:py-24 bg-gray-50" id="pricing">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-12">
-                        <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">Simple, Transparent Pricing</h2>
+                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">Simple, Transparent Pricing</h2>
                         <p className="text-gray-500 mb-8">All plans in Indian Rupees (₹) · GST applicable</p>
 
                         {/* Billing Toggle */}
@@ -827,11 +827,11 @@ export default function LandingPage() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto">
                         {pricingPlans.map(({ name, price, priceLabel, period, desc, cta, ctaStyle, features, popular }) => (
                             <div
                                 key={name}
-                                className={`p-8 rounded-2xl bg-white transition-all relative ${popular ? 'border-2 border-emerald-900 shadow-2xl shadow-emerald-900/10 scale-[1.02]' : 'border border-gray-200 hover:border-gray-300'}`}
+                                className={`p-5 sm:p-6 md:p-8 rounded-2xl bg-white transition-all relative ${popular ? 'border-2 border-emerald-900 shadow-2xl shadow-emerald-900/10 md:scale-[1.02]' : 'border border-gray-200 hover:border-gray-300'}`}
                             >
                                 {popular && (
                                     <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-emerald-900 text-white px-4 py-1.5 rounded-full text-xs font-bold tracking-wide whitespace-nowrap shadow-lg">
@@ -840,7 +840,7 @@ export default function LandingPage() {
                                 )}
                                 <h3 className="text-lg font-bold text-gray-900 mb-2">{name}</h3>
                                 <div className="text-4xl font-extrabold text-gray-900 mb-2">
-                                    {priceLabel ? priceLabel : <>₹{price.toLocaleString('en-IN')}<span className="text-base font-normal text-gray-500">{period}</span></>}
+                                    {priceLabel ? priceLabel : <><span className="text-3xl sm:text-4xl">₹{price.toLocaleString('en-IN')}</span><span className="text-base font-normal text-gray-500">{period}</span></>}
                                 </div>
                                 <p className="text-sm text-gray-500 mb-6">{desc}</p>
                                 <button
@@ -874,16 +874,18 @@ export default function LandingPage() {
             </section>
 
             {/* ==================== TEAM SECTION ==================== */}
-            <TeamSection />
+            <div className="px-4 sm:px-6 lg:px-8">
+                <TeamSection />
+            </div>
 
             {/* ==================== FOOTER ==================== */}
             <footer className="bg-emerald-950 text-white">
                 {/* CTA Block */}
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16 text-center border-b border-white/10">
-                    <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-6 max-w-3xl mx-auto leading-tight">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 sm:pt-20 md:pt-24 pb-12 md:pb-16 text-center border-b border-white/10">
+                    <h2 className="text-2xl sm:text-3xl md:text-5xl font-extrabold tracking-tight mb-4 sm:mb-6 max-w-3xl mx-auto leading-tight">
                         The Smartest IT Helpdesk for Indian Businesses
                     </h2>
-                    <p className="text-white/70 text-lg mb-10 max-w-xl mx-auto">
+                    <p className="text-white/70 text-base sm:text-lg mb-6 sm:mb-10 max-w-xl mx-auto">
                         Start automating ticket triage today. No credit card required.
                     </p>
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -911,7 +913,7 @@ export default function LandingPage() {
                 </div>
 
                 {/* Footer Links */}
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12 md:py-16">
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-10">
                         {/* Brand Column */}
                         <div className="col-span-2 md:col-span-1">
@@ -998,10 +1000,10 @@ export default function LandingPage() {
 
                     {/* Bottom bar */}
                     <div className="flex flex-col md:flex-row items-center justify-between gap-4 mt-16 pt-8 border-t border-white/10">
-                        <p className="text-xs text-white/40">
+                        <p className="text-xs text-white/40 text-center md:text-left">
                             © 2026 HelpDesk.ai. All rights reserved. · Registered in India
                         </p>
-                        <div className="flex items-center gap-4">
+                        <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
                             <button onClick={() => navigate('/terms')} className="text-xs text-white/40 hover:text-white transition-colors">Terms</button>
                             <button onClick={() => navigate('/privacy')} className="text-xs text-white/40 hover:text-white transition-colors">Privacy</button>
                             <button onClick={() => navigate('/security')} className="text-xs text-white/40 hover:text-white transition-colors">Security</button>
