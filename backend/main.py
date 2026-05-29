@@ -1455,7 +1455,8 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     return await analyze_only(enriched)
 
 @app.post("/ai/analyze")
-async def analyze_only(request_body: TicketRequest):
+@limiter.limit("10/minute")
+async def analyze_only(request_body: TicketRequest, request: Request):
     """
     PERFORMANCE UPGRADE: AI Analysis phase only. 
     Does NOT persist to DB. This allows the user to review the analysis 
