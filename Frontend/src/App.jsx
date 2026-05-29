@@ -72,6 +72,7 @@ const AboutUs = lazy(() => import("./pages/AboutUs"));
 const NotFoundPage = lazy(() => import("./components/ui/not-found-2").then((module) => ({ default: module.NotFound })));
 const Toaster = lazy(() => import("./components/shared/Toaster"));
 const BugReportWidget = lazy(() => import("./components/shared/BugReportWidget"));
+const ScrollToTopButton = lazy(() => import("./components/ScrollToTopButton"));
 
 function RouteFallback() {
   return (
@@ -221,6 +222,7 @@ function App() {
       <Suspense fallback={<RouteFallback />}>
         <Toaster />
         <BugReportWidget />
+        <ScrollToTopButton />
         <Routes>
           {/* Public */}
           <Route path="/" element={<LandingPage />} />
