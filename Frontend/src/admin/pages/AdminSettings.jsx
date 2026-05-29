@@ -279,6 +279,30 @@ const AdminSettings = () => {
                     </CardContent>
                 </Card>
             </div>
+            {/* SLA Rules Configuration */}
+<Card className="border-none shadow-2xl shadow-slate-200/40 rounded-[2rem] overflow-hidden bg-white">
+  <CardContent className="px-8 py-6">
+    <h3 className="text-sm font-black text-slate-900 uppercase italic tracking-tight flex items-center gap-3">
+      SLA Configuration
+    </h3>
+    <div className="space-y-4 mt-4">
+      {["critical","high","medium","low"].map((priority) => (
+        <div key={priority} className="flex items-center justify-between border-t border-slate-100 pt-4">
+          <div>
+            <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest capitalize">{priority}</h4>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Resolution deadline in hours</p>
+          </div>
+          <input
+            type="number"
+            min="1"
+            defaultValue={priority === "critical" ? 4 : priority === "high" ? 8 : priority === "medium" ? 24 : 72}
+            className="w-20 text-center border border-slate-200 rounded-xl px-3 py-2 text-sm font-black text-slate-700"
+          />
+        </div>
+      ))}
+    </div>
+  </CardContent>
+</Card>
         </div>
     );
 };
