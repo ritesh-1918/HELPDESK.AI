@@ -728,6 +728,14 @@ app.add_middleware(
 
 app.include_router(auth_cookie_router)
 
+# Translation service routes
+from backend.routes.translation import router as translation_router
+app.include_router(translation_router)
+
+# Response time estimator routes
+from backend.routes.estimator import router as estimator_router
+app.include_router(estimator_router)
+
 
 # ---------------------------------------------------------------------------
 # Root & Health check
