@@ -231,14 +231,20 @@ class DuplicateService:
 
         query_embedding = self.model.encode(text, convert_to_tensor=True)
 
-        best_score = 0.0
-        best_id = None
+        import torch
 
-        for ticket_id, stored_emb, _ in self._tickets:
-            score = util.cos_sim(query_embedding, stored_emb).item()
-            if score > best_score:
-                best_score = score
-                best_id = ticket_id
+        # Stack stored embeddings into a single tensor for vectorized operations
+        embeddings = [stored_emb for _, stored_emb, _ in self._tickets]
+        stacked_embeddings = torch.stack(embeddings)
+
+        # Compute cosine similarity between query and all stored embeddings in one operation
+        similarity_matrix = util.cos_sim(query_embedding, stacked_embeddings)
+
+        # Find the index and score of the most similar ticket
+        best_score_tensor, best_index_tensor = torch.max(similarity_matrix, dim=1)
+        best_score = best_score_tensor.item()
+        best_index = best_index_tensor.item()
+        best_id = self._tickets[best_index][0]
 
         is_dup = best_score >= active_threshold
 
@@ -247,3 +253,4 @@ class DuplicateService:
             "duplicate_ticket_id": best_id if is_dup else None,
             "similarity": round(best_score, 4),
         }
+

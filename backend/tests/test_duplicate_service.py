@@ -76,6 +76,37 @@ class TestCheckDuplicate:
         assert result["is_duplicate"] is False
         assert result["similarity"] == 0.0
 
+    def test_check_duplicate_vectorized_matches_best(self):
+        """Should correctly find duplicate when tickets exist in store."""
+        mock_torch = MagicMock()
+        sys.modules['torch'] = mock_torch
+
+        self.service._loaded = True
+        self.service._load_failed = False
+        
+        self.service.model = MagicMock()
+        self.service.model.encode.return_value = MagicMock()
+        
+        self.service._tickets = [
+            ("T-1", MagicMock(), "orthogonal"),
+            ("T-2", MagicMock(), "identical"),
+            ("T-3", MagicMock(), "close")
+        ]
+        
+        mock_score_tensor = MagicMock()
+        mock_score_tensor.item.return_value = 0.95
+        
+        mock_index_tensor = MagicMock()
+        mock_index_tensor.item.return_value = 1
+        
+        mock_torch.max.return_value = (mock_score_tensor, mock_index_tensor)
+        
+        result = self.service.check_duplicate("identical text")
+        
+        assert result["is_duplicate"] is True
+        assert result["duplicate_ticket_id"] == "T-2"
+        assert result["similarity"] == 0.95
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

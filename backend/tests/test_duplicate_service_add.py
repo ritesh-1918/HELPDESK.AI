@@ -5,7 +5,10 @@ from unittest.mock import patch, MagicMock
 
 sys.modules['sentence_transformers'] = MagicMock()
 
-from backend.services.duplicate_service import DuplicateService
+# Ensure we import the real service, bypassing the conftest stub
+sys.path.insert(0, os.path.join(os.getcwd(), 'backend'))
+from services.duplicate_service import DuplicateService
+
 
 
 class TestDuplicateServiceAddTicket:
