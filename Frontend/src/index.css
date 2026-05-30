@@ -43,7 +43,11 @@
   }
 
   body {
-    @apply bg-[#f6f8f7] text-slate-900;
+    @apply bg-[#f6f8f7] text-slate-900 dark:bg-gray-900 dark:text-slate-100;
+  }
+
+  * {
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
   }
 
   .dark {
@@ -90,6 +94,17 @@
     background: #cbd5e1;
   }
 }
+
+.dark .bg-white { background-color: #1f2937 !important; }
+.dark .bg-gray-50 { background-color: #111827 !important; }
+.dark .border-slate-200 { border-color: #374151 !important; }
+.dark .text-slate-900 { color: #f3f4f6 !important; }
+.dark .text-slate-600 { color: #d1d5db !important; }
+.dark .text-slate-500 { color: #9ca3af !important; }
+.dark .hover\:bg-slate-50:hover { background-color: #374151 !important; }
+.dark .shadow-xl { box-shadow: 0 4px 24px rgba(0,0,0,0.6) !important; }
+.dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; }
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #6b7280; }
 
 html{
   overflow-y: scroll;
