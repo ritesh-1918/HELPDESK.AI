@@ -1,12 +1,14 @@
 export const DEFAULT_ADMIN_SETTINGS = {
-    aiConfidenceThreshold: 0.8,
-    duplicateSensitivity: 0.85,
-    enableAutoResolve: false,
-    autoCloseDays: 7,
-    emailNotifications: false,
-    adminAlerts: false,
-    digestEnabled: false,
-    digestAdminEmail: "",
+  aiConfidenceThreshold: 0.8,
+  duplicateSensitivity: 0.85,
+  enableAutoResolve: false,
+  autoCloseDays: 7,
+  emailNotifications: false,
+  adminAlerts: false,
+  digestEnabled: false,
+  digestAdminEmail: "",
+  enablePiiRedaction: false,
+  enableDbEncryption: false,
 };
 
 export const resolveCompanyId = (profile, user) => {
@@ -29,9 +31,11 @@ export const settingsFromSystemSettingsRow = (row, fallback = DEFAULT_ADMIN_SETT
         autoCloseDays: row.auto_close_days ?? fallback.autoCloseDays,
         emailNotifications: row.email_notifications ?? fallback.emailNotifications,
         adminAlerts: row.admin_alerts ?? fallback.adminAlerts,
-        digestEnabled: row.digest_enabled ?? fallback.digestEnabled,
-        digestAdminEmail: row.digest_admin_email ?? fallback.digestAdminEmail,
-    };
+  digestEnabled: row.digest_enabled ?? fallback.digestEnabled,
+  digestAdminEmail: row.digest_admin_email ?? fallback.digestAdminEmail,
+  enablePiiRedaction: row.enable_pii_redaction ?? fallback.enablePiiRedaction,
+  enableDbEncryption: row.enable_db_encryption ?? fallback.enableDbEncryption,
+};
 };
 
 export const settingsToSystemSettingsRow = (settings, companyId) => ({
@@ -42,6 +46,8 @@ export const settingsToSystemSettingsRow = (settings, companyId) => ({
     auto_close_days: Number(settings.autoCloseDays),
     email_notifications: Boolean(settings.emailNotifications),
     admin_alerts: Boolean(settings.adminAlerts),
-    digest_enabled: Boolean(settings.digestEnabled),
-    digest_admin_email: settings.digestAdminEmail || null,
+  digest_enabled: Boolean(settings.digestEnabled),
+  digest_admin_email: settings.digestAdminEmail || null,
+  enable_pii_redaction: Boolean(settings.enablePiiRedaction),
+  enable_db_encryption: Boolean(settings.enableDbEncryption),
 });
