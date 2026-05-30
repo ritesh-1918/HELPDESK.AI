@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Bell, Menu, User, ChevronDown, Settings, LogOut, UserCircle, X, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Search, Bell, Menu, User, ChevronDown, Settings, LogOut, UserCircle, X, PanelLeftClose, PanelLeftOpen, Moon, Sun } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import NotificationPopover from '../../user/components/NotificationPopover';
 import useAuthStore from '../../store/authStore';
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
+import { useTheme } from '../../hooks/useTheme';
 
 /**
  * AdminHeader Component
@@ -18,6 +19,7 @@ const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar })
     const searchRef = useRef(null);
     const navigate = useNavigate();
     const { logout, profile: adminProfile } = useAuthStore();
+    const { isDark, toggle: toggleDark } = useTheme();
     const initials = adminProfile?.full_name ? adminProfile.full_name.split(' ').map(n => n[0]).join('').toUpperCase() : 'AD';
 
     const handleSearchKeyDown = (e) => {
@@ -103,6 +105,16 @@ const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar })
                 <div className="relative border-r border-slate-200 pr-4 lg:pr-6 hidden sm:block">
                     <NotificationPopover isAdmin={true} />
                 </div>
+
+                {/* Dark Mode Toggle */}
+                <button
+                    onClick={toggleDark}
+                    className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                    title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+                    aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+                >
+                    {isDark ? <Sun size={18} /> : <Moon size={18} />}
+                </button>
 
                 {/* Identity Access & Dropdown */}
                 <div className="relative" ref={dropdownRef}>
