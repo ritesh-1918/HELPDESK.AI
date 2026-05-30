@@ -1,3 +1,4 @@
+import torch
 """
 Duplicate Detection Service
 Uses sentence-transformers all-MiniLM-L6-v2 to detect similar tickets.
@@ -135,14 +136,19 @@ class DuplicateService:
 
         query_embedding = self.model.encode(text, convert_to_tensor=True)
 
-        best_score = 0.0
-        best_id = None
-
-        for ticket_id, stored_emb, _ in self._tickets:
-            score = util.cos_sim(query_embedding, stored_emb).item()
-            if score > best_score:
-                best_score = score
-                best_id = ticket_id
+        # Vectorized similarity computation for better performance
+        if len(self._tickets) == 1:
+            # Single ticket – compute directly
+            score = util.cos_sim(query_embedding, self._tickets[0][1]).item()
+            best_score = score
+            best_id = self._tickets[0][0] if score >= active_threshold else None
+        else:
+            # Vectorized batch computation
+            embeddings = torch.stack([e[1] for e in self._tickets])
+            scores = util.cos_sim(query_embedding, embeddings)[0]
+            best_idx = torch.argmax(scores).item()
+            best_score = scores[best_idx].item()
+            best_id = self._tickets[best_idx][0] if best_score >= active_threshold else None
 
         is_dup = best_score >= active_threshold
 
