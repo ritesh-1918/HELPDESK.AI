@@ -1209,3 +1209,62 @@ async def auth_logout(response: Response):
 async def auth_me(user: dict = Depends(get_current_user)):
     return {"user": user}
 
+from backend.routes.tickets import validate_ticket_patch_fields, TICKET_ALLOWED_FIELDS, IMMUTABLE_FIELDS
+
+
+@app.patch("/tickets/{ticket_id}")
+async def patch_ticket(
+    ticket_id: str,
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+):
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    profile = _get_authenticated_profile(current_user)
+    company_scope = _ticket_company_scope(profile)
+    role = str(profile.get("role") or "").lower()
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+
+    validated = validate_ticket_patch_fields(body, role)
+
+    ticket_res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
+    if not ticket_res.data:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    ticket = ticket_res.data
+    if company_scope and ticket.get("company_id") != company_scope:
+        raise HTTPException(status_code=403, detail="User not authorized for this tenant")
+
+    old_values = {k: ticket.get(k) for k in validated if k in ticket}
+
+    supabase.table("tickets").update(validated).eq("id", ticket_id).execute()
+
+    try:
+        supabase.table("audit_logs").insert({
+            "ticket_id": ticket_id,
+            "company_id": ticket.get("company_id"),
+            "performed_by": profile.get("id"),
+            "action": "ticket_update",
+            "old_value": old_values,
+            "new_value": validated,
+            "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        }).execute()
+    except Exception as e:
+        logging.getLogger(__name__).warning(f"Audit log failed for ticket {ticket_id}: {e}")
+
+    asyncio.create_task(
+        connection_manager.broadcast(
+            ticket.get("company_id"),
+            {"type": "ticket_update", "event": "updated", "ticket_id": ticket_id, "changes": validated},
+        )
+    )
+
+    supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
+    updated = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
+    return updated.data
+
