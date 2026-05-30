@@ -28,7 +28,7 @@ const parseDateSafely = (dateStr) => {
         const spaceMatch = trimmed.match(DATETIME_SPACE_REGEX);
         if (spaceMatch) {
             const [, y, m, d, h, min, s, ms] = spaceMatch;
-            const msVal = ms ? parseInt(ms.padEnd(3, '0')) : 0;
+            const msVal = ms ? parseInt(ms.slice(0, 3).padEnd(3, '0')) : 0;
             return new Date(Date.UTC(
                 parseInt(y), parseInt(m) - 1, parseInt(d),
                 parseInt(h), parseInt(min), parseInt(s),
