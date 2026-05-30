@@ -535,6 +535,23 @@ async def log_correction(raw_request: Request):
 # ---------------------------------------------------------------------------
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
+
+# Admin Settings Update
+class UpdateAutoResolveRequest(BaseModel):
+    enable_auto_resolve: bool
+
+@app.put("/admin/settings/auto-resolve")
+async def update_auto_resolve(request: UpdateAutoResolveRequest):
+    """Update auto-resolve setting in database."""
+    try:
+        supabase.table("system_settings").upsert({
+            "company_id": request.headers.get("x-company-id", "default"),
+            "enable_auto_resolve": request.enable_auto_resolve
+        }).execute()
+        return {"status": "ok", "enable_auto_resolve": request.enable_auto_resolve}
+    except Exception as e:
+        print(f"[ERROR] Failed to update system_settings: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update settings")
 @app.get("/tickets")
 async def get_tickets(company_id: str | None = None):
     """Fetch persistent tickets from Supabase."""
