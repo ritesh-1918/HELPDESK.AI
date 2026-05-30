@@ -1,3 +1,20 @@
+
+const validatePassword = (password) => {
+  if (!password || password.length < 8) {
+    return "Password must be at least 8 characters.";
+  }
+  if (!/[A-Z]/.test(password)) {
+    return "Password must contain at least one uppercase letter.";
+  }
+  if (!/[a-z]/.test(password)) {
+    return "Password must contain at least one lowercase letter.";
+  }
+  if (!/[0-9]/.test(password)) {
+    return "Password must contain at least one number.";
+  }
+  return null;
+};
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '../lib/supabaseClient';
@@ -190,6 +207,11 @@ const useAuthStore = create(
             signup: async (email, password, fullName, role = 'user', company = '', extraMetadata = {}, emailRedirectTo = undefined) => {
                 set({ loading: true });
                 console.log("Starting signup for:", email);
+
+        const passwordError = validatePassword(password);
+        if (passwordError) {
+          throw new Error(passwordError);
+        }
 
                 try {
                     // 1. Auth Signup with Metadata
