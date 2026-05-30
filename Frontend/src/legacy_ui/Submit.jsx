@@ -86,6 +86,9 @@ function Submit() {
       const fullIssue = `Title: ${title}\nCategory: ${category}\n\nDescription:\n${issue}`;
       const response = await api.predictTicket(fullIssue, imageBase64);
       const ticketData = response.data;
+      if (ticketData._usedFallback) {
+        setError("AI Backend temporarily unavailable — using local prediction. Results may be less accurate.");
+      }
 
       setAITicket({
         ...ticketData,
@@ -158,7 +161,7 @@ function Submit() {
                       <label className="text-[var(--stitch-text-main,#111814)] text-sm font-bold">Attachments</label>
                       <div className="flex items-center gap-3 p-3 rounded-lg border border-[var(--stitch-border-light,#e2e8e5)] bg-[var(--stitch-background-light,#f6f8f7)]">
                         <div className="size-10 rounded bg-slate-200 flex items-center justify-center text-slate-500 overflow-hidden">
-                          {imagePreview ? <img src={imagePreview} className="w-full h-full object-cover" /> : <ImageIcon />}
+                          {imagePreview ? <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" /> : <ImageIcon />}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-[var(--stitch-text-main,#111814)] truncate">{file.name}</p>
