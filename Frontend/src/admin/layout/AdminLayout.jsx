@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Outlet } from 'react-router-dom';
 import AdminSidebar from '../components/AdminSidebar';
 import AdminHeader from '../components/AdminHeader';
 import NotificationToast from '../../user/components/NotificationToast';
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
+import ShortcutsHelpModal from '../../components/shared/ShortcutsHelpModal';
 
 /**
  * AdminLayout Component
@@ -12,6 +14,14 @@ import NotificationToast from '../../user/components/NotificationToast';
 const AdminLayout = () => {
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+
+    const toggleHelp = useCallback((force) => {
+        setIsShortcutsOpen(prev => force !== undefined ? force : !prev);
+    }, []);
+
+    // Register keyboard shortcuts
+    useKeyboardShortcuts({ onToggleHelp: toggleHelp });
 
     return (
         <div className="flex h-screen bg-[#f8faf9] overflow-hidden font-sans">
@@ -43,6 +53,12 @@ const AdminLayout = () => {
 
             {/* Real-time System Notifications */}
             <NotificationToast />
+
+            {/* Keyboard Shortcuts Help Modal */}
+            <ShortcutsHelpModal
+                isOpen={isShortcutsOpen}
+                onClose={() => setIsShortcutsOpen(false)}
+            />
 
             {/* Mobile Nav Overlay (Emergency protocols) */}
             {isMobileNavOpen && (
