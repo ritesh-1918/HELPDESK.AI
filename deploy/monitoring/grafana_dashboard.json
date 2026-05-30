@@ -1,0 +1,120 @@
+{
+  "dashboard": {
+    "title": "HELPDESK.AI - FastAPI Backend",
+    "description": "Prometheus metrics for the HELPDESK.AI FastAPI inference engine",
+    "timezone": "browser",
+    "panels": [
+      {
+        "title": "Request Rate (1m)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(fastapi_requests_total[1m])",
+            "legendFormat": "requests/s"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+      },
+      {
+        "title": "Request Latency (p50 / p95 / p99)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(fastapi_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "p50"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(fastapi_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "p95"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(fastapi_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "p99"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+      },
+      {
+        "title": "HTTP Status Code Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(fastapi_responses_total{status=~\"2.*\"}[1m])",
+            "legendFormat": "2xx"
+          },
+          {
+            "expr": "rate(fastapi_responses_total{status=~\"4.*\"}[1m])",
+            "legendFormat": "4xx"
+          },
+          {
+            "expr": "rate(fastapi_responses_total{status=~\"5.*\"}[1m])",
+            "legendFormat": "5xx"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }
+      },
+      {
+        "title": "AI Inference Latency",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(fastapi_ai_inference_duration_seconds_sum[5m]) / rate(fastapi_ai_inference_duration_seconds_count[5m])",
+            "legendFormat": "avg inference (s)"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }
+      },
+      {
+        "title": "Active WebSocket Connections",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "fastapi_ws_connections_active"
+          }
+        ],
+        "gridPos": { "h": 6, "w": 6, "x": 0, "y": 16 }
+      },
+      {
+        "title": "Classifier Confidence Distribution",
+        "type": "heatmap",
+        "targets": [
+          {
+            "expr": "fastapi_classifier_confidence_bucket"
+          }
+        ],
+        "gridPos": { "h": 6, "w": 18, "x": 6, "y": 16 }
+      },
+      {
+        "title": "Spam Detection Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(fastapi_spam_detections_total[1m])",
+            "legendFormat": "spam flagged"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 22 }
+      },
+      {
+        "title": "Duplicate Detection Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(fastapi_duplicate_detections_total[1m])",
+            "legendFormat": "duplicates found"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 22 }
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "instance",
+          "type": "query",
+          "query": "label_values(fastapi_requests_total, instance)"
+        }
+      ]
+    }
+  }
+}
