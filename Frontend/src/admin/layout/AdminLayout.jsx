@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Outlet, useNavigate } from 'react-router-dom';
 import AdminSidebar from '../components/AdminSidebar';
 import AdminHeader from '../components/AdminHeader';
 import NotificationToast from '../../user/components/NotificationToast';
+import useKeyboardShortcuts from '../../hooks/useKeyboardShortcuts';
+import KeyboardShortcutsHelp from '../../components/shared/KeyboardShortcutsHelp';
 
 /**
  * AdminLayout Component
@@ -12,6 +14,19 @@ import NotificationToast from '../../user/components/NotificationToast';
 const AdminLayout = () => {
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const navigate = useNavigate();
+    const { showHelp, setShowHelp, shortcuts } = useKeyboardShortcuts();
+
+    useEffect(() => {
+        window.__keyboardNavigate = (path) => {
+            if (path.startsWith('/admin')) {
+                navigate(path);
+            } else {
+                navigate(path);
+            }
+        };
+        return () => { delete window.__keyboardNavigate; };
+    }, [navigate]);
 
     return (
         <div className="flex h-screen bg-[#f8faf9] overflow-hidden font-sans">
@@ -57,6 +72,14 @@ const AdminLayout = () => {
                         <AdminSidebar isMobile={true} onClose={() => setIsMobileNavOpen(false)} />
                     </div>
                 </div>
+            )}
+
+            {/* Keyboard Shortcuts Help Overlay */}
+            {showHelp && (
+                <KeyboardShortcutsHelp
+                    shortcuts={shortcuts}
+                    onClose={() => setShowHelp(false)}
+                />
             )}
         </div>
     );
