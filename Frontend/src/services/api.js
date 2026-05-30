@@ -100,7 +100,6 @@ export const api = {
       };
     } catch (error) {
       console.error("AI Backend Error, falling back to mock:", error);
-      // Fallback to mock logic if backend fails
       await delay(1000);
       return {
         data: {
@@ -112,7 +111,8 @@ export const api = {
           routing_confidence: 0.5,
           duplicate_probability: 0.0,
           summary: issueText.substring(0, 50) + "...",
-          entities: []
+          entities: [],
+          _usedFallback: true
         }
       };
     }
