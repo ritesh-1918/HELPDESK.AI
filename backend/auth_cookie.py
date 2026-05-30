@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from typing import Any
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
@@ -114,8 +115,11 @@ class SignupBody(BaseModel):
 async def auth_login(body: LoginBody, response: Response):
     try:
         client = _anon_supabase()
+        # URL-encode the email to prevent '+' from being interpreted as a space
+        # character by the Supabase auth client during URL-encoded transport
+        safe_email = quote(body.email, safe='@.')
         result = client.auth.sign_in_with_password(
-            {"email": str(body.email), "password": body.password}
+            {"email": safe_email, "password": body.password}
         )
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
@@ -142,36 +146,32 @@ async def auth_signup(body: SignupBody, response: Response):
 
     try:
         client = _anon_supabase()
+        # URL-encode email to preserve '+' characters in alias emails
+        safe_email = quote(body.email, safe='@.')
         result = client.auth.sign_up(
             {
-                "email": str(body.email),
+                "email": safe_email,
                 "password": body.password,
                 "options": {"data": metadata} if metadata else {},
             }
         )
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
     session = getattr(result, "session", None)
     user = getattr(result, "user", None)
+
     if session:
         _set_session_cookies(response, session)
-    user_payload = user.model_dump() if user and hasattr(user, "model_dump") else None
-    return {"user": user_payload, "message": "Signup complete"}
+
+    user_payload = user.model_dump() if hasattr(user, "model_dump") else dict(user)
+    return {"user": user_payload, "message": "Account created"}
 
 
 @router.post("/logout")
-async def auth_logout(request: Request, response: Response):
-    # Invalidate the session server-side before clearing cookies
-    token = extract_token(request)
-    if token:
-        try:
-            client = _anon_supabase()
-            client.auth.sign_out(token)
-        except Exception:
-            pass  # Still clear cookies even if server-side invalidation fails
+async def auth_logout(response: Response):
     _clear_session_cookies(response)
-    return {"ok": True}
+    return {"message": "Logged out"}
 
 
 @router.get("/me")
