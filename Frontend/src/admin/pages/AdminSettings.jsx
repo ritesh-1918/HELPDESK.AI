@@ -3,14 +3,16 @@ import WebhookSettings from "../../components/shared/WebhookSettings";
 import { API_CONFIG } from "@/config";
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    Settings,
-    Cpu,
-    Inbox,
-    Bell,
-    Save,
-    ShieldCheck,
-    Mail,
-    Send
+  Settings,
+  Cpu,
+  Inbox,
+  Bell,
+  Save,
+  ShieldCheck,
+  Mail,
+  Send,
+  Lock,
+  EyeOff
 } from 'lucide-react';
 import useAdminStore from '../store/adminStore';
 import useAuthStore from '../../store/authStore';
@@ -23,8 +25,6 @@ import {
 } from '../../utils/adminSettingsPersistence';
 
 import { Select } from "../../components/ui/select";
-import useAuthStore from '../../store/authStore';
-import { supabase } from '../../lib/supabaseClient';
 
 /**
  * AdminSettings Page
@@ -57,7 +57,7 @@ const AdminSettings = () => {
 
             const { data, error } = await supabase
                 .from('system_settings')
-                .select('ai_confidence_threshold, duplicate_sensitivity, enable_auto_resolve, auto_close_days, email_notifications, admin_alerts, digest_enabled, digest_admin_email, digest_last_sent')
+                .select('ai_confidence_threshold, duplicate_sensitivity, enable_auto_resolve, auto_close_days, email_notifications, admin_alerts, digest_enabled, digest_admin_email, digest_last_sent, enable_pii_redaction, enable_db_encryption')
                 .eq('company_id', companyId)
                 .maybeSingle();
 
@@ -302,11 +302,57 @@ const AdminSettings = () => {
                             >
                                 <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all duration-300 shadow-md ${settings.adminAlerts ? 'right-1' : 'left-1'}`}></div>
                             </button>
-                        </div>
-                    </CardContent>
-                </Card>
+      </div>
+      </CardContent>
+      </Card>
 
-                {/* AI Weekly Operations Digest */}
+      {/* Security & Encryption Settings */}
+      <Card className="border-none shadow-2xl shadow-slate-200/40 rounded-[2rem] overflow-hidden bg-white">
+        <div className="px-8 py-6 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+          <h3 className="text-sm font-black uppercase italic tracking-tight flex items-center gap-3">
+            <Lock size={18} className="text-red-400" /> Security & Encryption
+          </h3>
+        </div>
+        <CardContent className="p-8 space-y-6">
+          {/* PII Redaction Toggle */}
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div>
+              <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                <EyeOff size={14} className="text-red-500" /> PII Redaction
+              </h4>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                Automatically redact emails, phone numbers, and API keys from ticket text before storage.
+              </p>
+            </div>
+            <button
+              onClick={() => handleChange('enablePiiRedaction', !settings.enablePiiRedaction)}
+              className={`w-14 h-8 rounded-full relative transition-all duration-300 shadow-inner shrink-0 ${settings.enablePiiRedaction ? 'bg-red-500' : 'bg-slate-200'}`}
+            >
+              <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all duration-300 shadow-md ${settings.enablePiiRedaction ? 'right-1' : 'left-1'}`}></div>
+            </button>
+          </div>
+
+          {/* AES-256-GCM Database Encryption Toggle */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                <Lock size={14} className="text-indigo-500" /> AES-256-GCM Encryption
+              </h4>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                Encrypt sensitive ticket fields (contact_email, description, raw_text) at rest in the database. Requires DB_ENCRYPTION_SECRET_KEY to be set on the backend.
+              </p>
+            </div>
+            <button
+              onClick={() => handleChange('enableDbEncryption', !settings.enableDbEncryption)}
+              className={`w-14 h-8 rounded-full relative transition-all duration-300 shadow-inner shrink-0 ${settings.enableDbEncryption ? 'bg-indigo-600' : 'bg-slate-200'}`}
+            >
+              <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all duration-300 shadow-md ${settings.enableDbEncryption ? 'right-1' : 'left-1'}`}></div>
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* AI Weekly Operations Digest */}
                 <Card className="border-none shadow-2xl shadow-slate-200/40 rounded-[2rem] overflow-hidden bg-white">
                     <div className="px-8 py-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                         <h3 className="text-sm font-black text-slate-900 uppercase italic tracking-tight flex items-center gap-3">

@@ -82,6 +82,7 @@ from backend.services.rag_service import RagService
 from backend.services.spam_service import SpamService
 from backend.services.sla_engine import SLAEngine, compute_sla_breach_at, get_sla_policy
 from backend.services.redis_cache import redis_cache
+from backend.services.pii_redaction_service import redact_pii, detect_pii
 from backend.sla_predictor import get_sla_estimate
 from backend.auth_cookie import router as auth_cookie_router, get_current_user  # noqa: F401
 
@@ -269,13 +270,15 @@ def get_system_settings(company_id: str) -> dict:
     defaults = {
         "ai_confidence_threshold": 0.80,
         "duplicate_sensitivity": 0.85,
-        "enable_auto_resolve": False
+        "enable_auto_resolve": False,
+        "enable_pii_redaction": False,
+        "enable_db_encryption": False
     }
     if not supabase or not company_id:
         return defaults
     try:
         res = supabase.table("system_settings").select(
-            "ai_confidence_threshold, duplicate_sensitivity, enable_auto_resolve"
+            "ai_confidence_threshold, duplicate_sensitivity, enable_auto_resolve, enable_pii_redaction, enable_db_encryption"
         ).eq("company_id", company_id).single().execute()
         if res.data:
             return {**defaults, **res.data}
@@ -1252,6 +1255,22 @@ async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_
         "source_language_name": translation_ctx["source_language_name"],
     }
     final_data["metadata"] = metadata
+
+    # PII Redaction: redact PII from description and subject before storage
+    # when the company has enabled encryption/PII controls.
+    settings_row = get_system_settings(final_data.get("company_id") or profile.get("company_id"))
+    if settings_row.get("enable_pii_redaction"):
+        desc_text = final_data.get("description", "") or ""
+        subj_text = final_data.get("subject", "") or ""
+        if desc_text:
+            final_data["description"] = redact_pii(desc_text)
+        if subj_text:
+            final_data["subject"] = redact_pii(subj_text)
+        entities_raw = final_data.get("entities") or []
+        final_data["entities"] = [
+            e for e in entities_raw
+            if e.get("label") not in ("email", "phone", "api_key", "credit_card", "ssn")
+        ]
 
     # Backfill SLA deadlines/status when the client omits or sends empty values.
     priority_key = str(final_data.get("priority") or "medium").lower().strip()
@@ -2319,3 +2338,41 @@ async def sla_ticket_detail(ticket_id: str):
 async def metrics():
     """Prometheus scrape endpoint — exposes AI inference latency, request counts, and tokens."""
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
+# ---------------------------------------------------------------------------
+# PII Redaction & Encryption Endpoints
+# ---------------------------------------------------------------------------
+
+class PIIScanRequest(BaseModel):
+    text: str
+    categories: list[str] | None = None
+
+class PIIScanResponse(BaseModel):
+    redacted_text: str
+    detected: list[dict]
+
+class PIIRedactRequest(BaseModel):
+    text: str
+    categories: list[str] | None = None
+
+@app.post("/security/pii/scan", response_model=PIIScanResponse)
+async def pii_scan(request_body: PIIScanRequest, user: dict = Depends(get_current_user)):
+    """Scan text for PII and return detected matches without modifying the text."""
+    cats = set(request_body.categories) if request_body.categories else None
+    matches = detect_pii(request_body.text)
+    if cats is not None:
+        matches = [m for m in matches if m["category"] in cats]
+    return PIIScanResponse(redacted_text=redact_pii(request_body.text, categories=cats), detected=matches)
+
+@app.post("/security/pii/redact")
+async def pii_redact(request_body: PIIRedactRequest, user: dict = Depends(get_current_user)):
+    """Redact PII from text, returning the scrubbed string."""
+    cats = set(request_body.categories) if request_body.categories else None
+    return {"redacted_text": redact_pii(request_body.text, categories=cats)}
+
+@app.get("/security/encryption/status")
+async def encryption_status(user: dict = Depends(get_current_user)):
+    """Return whether AES-256-GCM database encryption is currently active."""
+    from backend.auth.crypto import ENCRYPTION_ENABLED
+    return {"encryption_enabled": ENCRYPTION_ENABLED}
