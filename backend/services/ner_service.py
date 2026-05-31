@@ -17,7 +17,7 @@ import re
 
 # Regex patterns for high-fidelity extraction
 REGEX_PATTERNS = {
-    "IP_ADDRESS": r"\b(?:\d{1,3}\.){3}\d{1,3}\b|IP\s?Address",
+    "IP_ADDRESS": r"\b(?:(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)\b|IP\s?Address",
     "HOSTNAME": r"\b(?:srv|db|app|web|dev|prod)-[\w\d-]+\b|Hostname",
     "NETWORK_ERROR": r"Network issues|Timeout|Connection failed|Cannot load|Latency|Spikes",
     "LOGIN_ISSUE": r"logging in|login error|authentication failed|MFA",
