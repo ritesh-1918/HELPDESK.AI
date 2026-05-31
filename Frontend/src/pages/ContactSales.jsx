@@ -9,17 +9,25 @@ export default function ContactSales() {
     const navigate = useNavigate();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
-    const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        company: '',
-        phone: '',
-        company_size: '50-200',
-        message: ''
+    const [formData, setFormData] = useState(() => {
+        const saved = sessionStorage.getItem('contact_sales_form');
+        if (saved) {
+            try { return JSON.parse(saved); } catch { /* ignore */ }
+        }
+        return {
+            name: '',
+            email: '',
+            company: '',
+            phone: '',
+            company_size: '50-200',
+            message: ''
+        };
     });
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const next = { ...formData, [e.target.name]: e.target.value };
+        setFormData(next);
+        sessionStorage.setItem('contact_sales_form', JSON.stringify(next));
     };
 
     const handleSubmit = async (e) => {
@@ -41,7 +49,8 @@ export default function ContactSales() {
                 ]);
 
             if (error) throw error;
-            
+
+            sessionStorage.removeItem('contact_sales_form');
             setIsSuccess(true);
         } catch (error) {
             console.error('Error submitting form:', error);
