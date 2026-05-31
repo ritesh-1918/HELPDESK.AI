@@ -1,17 +1,39 @@
-import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import React, { useState, useCallback } from 'react';
+import { Outlet, useNavigate } from 'react-router-dom';
 import AdminSidebar from '../components/AdminSidebar';
 import AdminHeader from '../components/AdminHeader';
 import NotificationToast from '../../user/components/NotificationToast';
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
+import KeyboardLegend from '../../components/KeyboardLegend';
 
 /**
  * AdminLayout Component
  * Master framework for the administrative zone.
  * Enforces a fixed-sidebar architecture with a centered, high-density content terminal.
+ *
+ * Includes keyboard shortcuts for rapid navigation (press ? to see all shortcuts).
  */
 const AdminLayout = () => {
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const navigate = useNavigate();
+
+    // Keyboard shortcut: create new ticket navigates to tickets page
+    const handleNewTicket = useCallback(() => {
+        navigate('/admin/tickets');
+    }, [navigate]);
+
+    // Keyboard shortcut: refresh reloads the current page
+    const handleRefresh = useCallback(() => {
+        window.location.reload();
+    }, []);
+
+    // Register keyboard shortcuts
+    const { showLegend, closeLegend } = useKeyboardShortcuts({
+        enabled: true,
+        onNewTicket: handleNewTicket,
+        onRefresh: handleRefresh,
+    });
 
     return (
         <div className="flex h-screen bg-[#f8faf9] overflow-hidden font-sans">
@@ -43,6 +65,9 @@ const AdminLayout = () => {
 
             {/* Real-time System Notifications */}
             <NotificationToast />
+
+            {/* Keyboard Shortcuts Legend Modal */}
+            <KeyboardLegend isOpen={showLegend} onClose={closeLegend} />
 
             {/* Mobile Nav Overlay (Emergency protocols) */}
             {isMobileNavOpen && (
