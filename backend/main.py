@@ -39,7 +39,7 @@ load_dotenv(dotenv_path=env_path)
 try:
     from supabase import create_client, Client
     url = os.environ.get("SUPABASE_URL")
-    key = os.environ.get("SUPABASE_SERVICE_KEY")
+    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_SERVICE_KEY")
     if not url or not key:
         print("[ERROR] SUPABASE_URL or SUPABASE_SERVICE_KEY not set in backend/.env")
         supabase = None
@@ -536,7 +536,7 @@ async def log_correction(raw_request: Request):
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None):
+async def get_tickets(company_id: str | None = None, user: dict = Depends(get_current_user)):
     """Fetch persistent tickets from Supabase."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
@@ -549,7 +549,7 @@ async def get_tickets(company_id: str | None = None):
     return res.data
 
 @app.post("/tickets/save")
-async def save_ticket(request_body: TicketSaveRequest):
+async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_current_user)):
     """
     OFFICIAL PERSISTENCE: Saves the analyzed ticket to Supabase.
     This is called AFTER the user confirms the analysis results.
@@ -731,7 +731,7 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     return await analyze_only(request_body)
 
 @app.post("/ai/analyze")
-async def analyze_only(request_body: TicketRequest):
+async def analyze_only(request_body: TicketRequest, user: dict = Depends(get_current_user)):
     """
     PERFORMANCE UPGRADE: AI Analysis phase only. 
     Does NOT persist to DB. This allows the user to review the analysis 
@@ -892,7 +892,7 @@ async def analyze_only(request_body: TicketRequest):
     )
 
 @app.post("/ai/analyze_stream")
-async def analyze_stream(request_body: TicketRequest):
+async def analyze_stream(request_body: TicketRequest, user: dict = Depends(get_current_user)):
     """
     REAL-TIME SSE ENDPOINT: Streams the AI progress to the frontend dynamically.
     """
@@ -1128,7 +1128,7 @@ async def get_current_user(request: Request) -> dict:
     except Exception as exc:
         raise HTTPException(
             status_code=401,
-            detail=f"Invalid session: {exc}",
+            detail="Invalid or expired session",
         ) from exc
     user = getattr(result, "user", None) or (result.get("user") if isinstance(result, dict) else None)
     if not user:
