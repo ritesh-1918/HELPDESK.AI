@@ -59,12 +59,13 @@ from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
+from backend.services.redis_cache import redis_cache
 
 
 # ---------------------------------------------------------------------------
 # Request / Response models
 # ---------------------------------------------------------------------------
-def get_system_settings(company_id: str) -> dict:
+async def get_system_settings(company_id: str) -> dict:
     defaults = {
         "ai_confidence_threshold": 0.80,
         "duplicate_sensitivity": 0.85,
@@ -72,11 +73,15 @@ def get_system_settings(company_id: str) -> dict:
     }
     if not supabase or not company_id:
         return defaults
+    cached = await redis_cache.get("settings", company_id)
+    if cached:
+        return {**defaults, **cached}
     try:
         res = supabase.table("system_settings").select(
             "ai_confidence_threshold, duplicate_sensitivity, enable_auto_resolve"
         ).eq("company_id", company_id).single().execute()
         if res.data:
+            await redis_cache.set("settings", res.data, company_id, ttl=120)
             return {**defaults, **res.data}
     except Exception as e:
         print(f"[WARNING] Could not fetch system_settings for company_id={company_id}: {e}")
@@ -536,16 +541,22 @@ async def log_correction(raw_request: Request):
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None):
+async def get_tickets(company_id: str | None = None, user: dict = Depends(get_current_user)):
     """Fetch persistent tickets from Supabase."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
+    
+    cache_key_parts = ("all",) if not company_id else (company_id,)
+    cached = await redis_cache.get("tickets", *cache_key_parts)
+    if cached is not None:
+        return cached
     
     query = supabase.table("tickets").select("*").order("created_at", desc=True)
     if company_id:
         query = query.eq("company_id", company_id)
         
     res = query.execute()
+    await redis_cache.set("tickets", res.data, *cache_key_parts, ttl=60)
     return res.data
 
 @app.post("/tickets/save")
@@ -611,6 +622,9 @@ async def save_ticket(request_body: TicketSaveRequest):
             raise Exception("Failed to insert ticket into database.")
             
         ticket_id = res.data[0]["id"]
+
+        await redis_cache.invalidate_prefix("tickets")
+        await redis_cache.invalidate_prefix("settings")
 
         duplicate_indexed = True
         duplicate_index_warning = None
@@ -702,30 +716,7 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     """
     text = request_body.text
 
-    settings = get_system_settings(request_body.company)
-    confidence_threshold = settings["ai_confidence_threshold"]
-    duplicate_sensitivity = settings["duplicate_sensitivity"]
-    enable_auto_resolve = settings["enable_auto_resolve"]
-    
-    # Grab client metadata
-    client_ip = request.client.host if request.client else "unknown"
-    user_agent = request.headers.get("user-agent", "unknown")
-    origin_host = request.headers.get("origin", "unknown")
-    
-    env_metadata = {
-        "ip": client_ip,
-        "user_agent": user_agent,
-        "origin": origin_host
-    }
-
-    # --- Layer 1: Local OCR (CPU, no API required) ---
-    local_ocr_text = ""
-    if request_body.image_base64 and ocr_service:
-        print("[AI] Extracting text via local OCR...")
-        local_ocr_text = ocr_service.extract_text(request_body.image_base64)
-        if local_ocr_text:
-            text = f"{text} {local_ocr_text}".strip()
-            print(f"[AI] OCR added {len(local_ocr_text)} chars to context.")
+    text = request_body.text
 
     # Initalize Timeline
     return await analyze_only(request_body)
@@ -739,7 +730,7 @@ async def analyze_only(request_body: TicketRequest):
     """
     text = request_body.text
     print(f"[AI] Starting Analysis (READ-ONLY) for: {text[:50]}...") 
-    settings = get_system_settings(request_body.company)
+    settings = await get_system_settings(request_body.company)
     confidence_threshold = settings["ai_confidence_threshold"]
     duplicate_sensitivity = settings["duplicate_sensitivity"]
     enable_auto_resolve = settings["enable_auto_resolve"]
@@ -908,7 +899,7 @@ async def analyze_stream(request_body: TicketRequest):
             "api_endpoint": "/ai/analyze_stream"
         }
         timeline = {"received": get_now_ist()} 
-        settings = get_system_settings(request_body.company)
+        settings = await get_system_settings(request_body.company)
         confidence_threshold = settings["ai_confidence_threshold"]
         duplicate_sensitivity = settings["duplicate_sensitivity"]
         enable_auto_resolve = settings["enable_auto_resolve"]
