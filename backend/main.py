@@ -91,6 +91,13 @@ class TicketRequest(BaseModel):
     confidence_threshold: float = 0.20
     duplicate_sensitivity: float = 0.85
 
+class SearchTicketsRequest(BaseModel):
+    query: str
+    limit: int = 20
+    similarity_threshold: float = 0.2
+    company_id: str | None = None
+
+
 class TicketSaveRequest(BaseModel):
     user_id: str
     subject: str
@@ -535,6 +542,26 @@ async def log_correction(raw_request: Request):
 # ---------------------------------------------------------------------------
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
+@app.post("/tickets/search")
+async def search_tickets(body: SearchTicketsRequest):
+    """Full-text search over tickets using pg_trgm similarity."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+    if not body.query.strip():
+        return []
+    try:
+        rpc_params = {
+            "search_query": body.query,
+            "result_limit": body.limit,
+            "similarity_threshold": body.similarity_threshold,
+        }
+        if body.company_id:
+            rpc_params["_company_id"] = body.company_id
+        res = supabase.rpc("search_tickets", rpc_params).execute()
+        return res.data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Search failed: {e}")
+
 @app.get("/tickets")
 async def get_tickets(company_id: str | None = None):
     """Fetch persistent tickets from Supabase."""
