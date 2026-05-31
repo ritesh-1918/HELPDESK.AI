@@ -652,7 +652,7 @@ async def save_ticket(request_body: TicketSaveRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/tickets/{ticket_id}")
-async def get_ticket_by_id(ticket_id: str):
+async def get_ticket_by_id(ticket_id: str, user: dict = Depends(get_current_user)):
     """Fetch single persistent ticket."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
@@ -664,7 +664,7 @@ async def get_ticket_by_id(ticket_id: str):
 
 
 @app.post("/tickets", response_model=TicketRecord)
-async def create_ticket(ticket: TicketRecord):
+async def create_ticket(ticket: TicketRecord, user: dict = Depends(get_current_user)):
     """Save a new ticket into the system."""
     # Check for duplicates before adding
     existing = next((t for t in TICKETS_DB if t.ticket_id == ticket.ticket_id), None)
@@ -677,7 +677,7 @@ async def create_ticket(ticket: TicketRecord):
 
 
 @app.patch("/tickets/{ticket_id}", response_model=TicketRecord)
-async def update_ticket(ticket_id: str, updates: dict):
+async def update_ticket(ticket_id: str, updates: dict, user: dict = Depends(get_current_user)):
     """Partially update a ticket's fields (e.g., status, viewed_at)."""
     for i, ticket in enumerate(TICKETS_DB):
         if str(ticket.ticket_id) == str(ticket_id):
