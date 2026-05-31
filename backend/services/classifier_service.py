@@ -6,6 +6,7 @@ Priority and other fields are derived from the category mapping.
 
 import os
 import json
+import time
 try:
     import torch
     import torch.nn.functional as F
@@ -31,6 +32,17 @@ try:
     _METRICS_ENABLED = True
 except Exception:
     _METRICS_ENABLED = False
+
+# Optional prediction-count / latency counters (not in all deployments)
+try:
+    from backend.services.metrics_service import MODEL_PREDICTIONS_TOTAL, MODEL_PREDICTION_LATENCY
+except Exception:
+    class _NoopMetric:
+        def labels(self, **kw): return self
+        def inc(self, *a, **kw): pass
+        def observe(self, *a, **kw): pass
+    MODEL_PREDICTIONS_TOTAL = _NoopMetric()
+    MODEL_PREDICTION_LATENCY = _NoopMetric()
 
 # Priority mapping based on sub-category severity
 PRIORITY_MAP = {
@@ -122,6 +134,7 @@ class ClassifierService:
         Predict category, subcategory, priority, auto_resolve, assigned_team, and confidence.
         """
         start_time = time.time()
+        _t0 = time.perf_counter()
         try:
             self.load()
 
@@ -135,22 +148,16 @@ class ClassifierService:
             input_ids = encoding["input_ids"].to(DEVICE)
             attention_mask = encoding["attention_mask"].to(DEVICE)
 
-        import time
-        _t0 = time.perf_counter()
-        try:
             with torch.no_grad():
                 outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
                 logits = outputs.logits
                 probs = F.softmax(logits, dim=1)
                 confidence, pred_idx = torch.max(probs, dim=1)
-        except Exception:
+
             if _METRICS_ENABLED:
-                CLASSIFIER_REQUESTS.labels(model="distilbert", status="error").inc()
-            raise
-        if _METRICS_ENABLED:
-            CLASSIFIER_LATENCY.labels(model="distilbert").observe(time.perf_counter() - _t0)
-            CLASSIFIER_REQUESTS.labels(model="distilbert", status="ok").inc()
-            CLASSIFIER_TOKENS.labels(model="distilbert").inc(int(attention_mask.sum().item()))
+                CLASSIFIER_LATENCY.labels(model="distilbert").observe(time.perf_counter() - _t0)
+                CLASSIFIER_REQUESTS.labels(model="distilbert", status="ok").inc()
+                CLASSIFIER_TOKENS.labels(model="distilbert").inc(int(attention_mask.sum().item()))
 
             pred_idx = pred_idx.item()
             confidence = round(confidence.item(), 4)
@@ -198,6 +205,8 @@ class ClassifierService:
                 "confidence": confidence,
             }
         except Exception as e:
+            if _METRICS_ENABLED:
+                CLASSIFIER_REQUESTS.labels(model="distilbert", status="error").inc()
             MODEL_PREDICTIONS_TOTAL.labels(status="failure").inc()
             raise e
         finally:
