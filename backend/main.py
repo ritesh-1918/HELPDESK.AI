@@ -475,10 +475,11 @@ async def analyze_bug(request: BugReportAnalysisRequest):
 CORRECTIONS_LOG_PATH = Path(__file__).parent / "data" / "corrections_log.json"
 
 @app.post("/ai/log_correction")
-async def log_correction(raw_request: Request):
+@limiter.limit("30/minute")
+async def log_correction(request: Request, user: dict = Depends(get_current_user)):
     """Log an admin correction when the AI prediction differs from the human decision."""
     try:
-        body = await raw_request.json()
+        body = await request.json()
     except Exception as e:
         print(f"[CORRECTION ERROR] Could not parse request body: {e}")
         return {"status": "error", "message": "Invalid JSON body"}
