@@ -536,12 +536,14 @@ async def log_correction(raw_request: Request):
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None):
-    """Fetch persistent tickets from Supabase."""
+async def get_tickets(company_id: str | None = None, limit: int = 50, offset: int = 0):
+    """Fetch persistent tickets from Supabase with pagination."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
     
-    query = supabase.table("tickets").select("*").order("created_at", desc=True)
+    capped_limit = min(max(limit, 1), 500)
+    
+    query = supabase.table("tickets").select("*").order("created_at", desc=True).range(offset, offset + capped_limit - 1)
     if company_id:
         query = query.eq("company_id", company_id)
         
