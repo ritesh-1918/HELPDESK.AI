@@ -97,7 +97,7 @@ class DuplicateService:
         self._tickets.append((ticket_id, embedding, text))
         self.save_to_disk(ticket_id, text)
 
-    def check_duplicate(self, text: str, threshold: float = None) -> dict:
+    def check_duplicate(self, text: str, threshold: float | None = None) -> dict:
         """
         Check if a ticket is a duplicate of any stored ticket.
 
