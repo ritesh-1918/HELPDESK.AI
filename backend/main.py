@@ -13,6 +13,9 @@ import traceback
 import warnings
 import logging
 import hashlib
+import tempfile
+import fcntl
+import shutil
 from contextlib import asynccontextmanager
 
 # Suppress harmless PyTorch CPU pin_memory warning
@@ -59,6 +62,7 @@ from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
+from backend.services.pii_redaction import redact_pii
 
 
 # ---------------------------------------------------------------------------
@@ -473,6 +477,32 @@ async def analyze_bug(request: BugReportAnalysisRequest):
 # Admin Correction Logging endpoint
 # ---------------------------------------------------------------------------
 CORRECTIONS_LOG_PATH = Path(__file__).parent / "data" / "corrections_log.json"
+CORRECTIONS_LOCK_PATH = CORRECTIONS_LOG_PATH.with_suffix(".lock")
+
+
+def _atomic_json_append(path: Path, entry: dict):
+    os.makedirs(path.parent, exist_ok=True)
+    with open(path, "a+") as lf:
+        fcntl.flock(lf.fileno(), fcntl.LOCK_EX)
+        try:
+            if path.exists() and path.stat().st_size > 2:
+                with open(path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+            else:
+                data = []
+            data.append(entry)
+            fd, tmp = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as tf:
+                    json.dump(data, tf, indent=2)
+                shutil.move(tmp, str(path))
+            except Exception:
+                if os.path.exists(tmp):
+                    os.unlink(tmp)
+                raise
+        finally:
+            fcntl.flock(lf.fileno(), fcntl.LOCK_UN)
+
 
 @app.post("/ai/log_correction")
 async def log_correction(raw_request: Request):
@@ -483,8 +513,6 @@ async def log_correction(raw_request: Request):
         print(f"[CORRECTION ERROR] Could not parse request body: {e}")
         return {"status": "error", "message": "Invalid JSON body"}
 
-    print(f"[CORRECTION RECEIVED] Payload keys: {list(body.keys())}")
-
     ticket_id = str(body.get("ticket_id", "unknown"))
     original_text = str(body.get("original_text", ""))
     ocr_text = str(body.get("ocr_text", ""))
@@ -492,7 +520,6 @@ async def log_correction(raw_request: Request):
     original_prediction = body.get("original_prediction") or {}
     corrected_prediction = body.get("corrected_prediction") or {}
 
-    # Only log if something actually changed
     changed_fields = [
         field for field in ["category", "subcategory", "priority", "assigned_team"]
         if original_prediction.get(field) != corrected_prediction.get(field)
@@ -501,10 +528,13 @@ async def log_correction(raw_request: Request):
     if not changed_fields:
         return {"status": "no_change", "message": "Prediction matches correction, nothing logged."}
 
+    redacted_text = redact_pii(original_text)
+    redacted_ocr = redact_pii(ocr_text)
+
     entry = {
         "ticket_id": ticket_id,
-        "original_text": original_text,
-        "ocr_text": ocr_text,
+        "original_text": redacted_text,
+        "ocr_text": redacted_ocr,
         "original_prediction": original_prediction,
         "corrected_prediction": corrected_prediction,
         "changed_fields": changed_fields,
@@ -513,20 +543,9 @@ async def log_correction(raw_request: Request):
     }
 
     try:
-        if CORRECTIONS_LOG_PATH.exists() and CORRECTIONS_LOG_PATH.stat().st_size > 2:
-            with open(CORRECTIONS_LOG_PATH, "r", encoding="utf-8") as f:
-                logs = json.load(f)
-        else:
-            logs = []
-
-        logs.append(entry)
-
-        with open(CORRECTIONS_LOG_PATH, "w", encoding="utf-8") as f:
-            json.dump(logs, f, indent=2)
-
+        _atomic_json_append(CORRECTIONS_LOG_PATH, entry)
         print(f"[CORRECTION SAVED] Ticket ID: {ticket_id} | Changed: {changed_fields}")
         return {"status": "saved", "changed_fields": changed_fields}
-
     except Exception as e:
         print(f"[CORRECTION ERROR] Could not save: {e}")
         return {"status": "error", "message": str(e)}
