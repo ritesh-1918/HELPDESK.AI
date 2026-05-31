@@ -6,14 +6,14 @@
 export const formatTimelineDate = (dateStr) => {
     if (!dateStr) return null;
     
-    // Ensure the date string is interpreted as UTC if it's an ISO string from DB
-    let date;
-    if (typeof dateStr === 'string' && !dateStr.includes('Z') && !dateStr.includes('+')) {
-        // If it's a raw string without TZ, assume it was intended as UTC from our backend
-        date = new Date(dateStr + 'Z');
-    } else {
-        date = new Date(dateStr);
+    let normalized = dateStr;
+    if (typeof normalized === 'string') {
+        normalized = normalized.replace(' ', 'T');
+        if (!normalized.includes('Z') && !normalized.includes('+')) {
+            normalized += 'Z';
+        }
     }
+    let date = new Date(normalized);
 
     if (isNaN(date.getTime())) return 'Invalid Date';
 
