@@ -304,6 +304,7 @@ def mock_ai_services(request):
         "test_webhook_service.py",
         "test_metrics_service.py",
         "test_audit_service.py",
+        "test_supabase_utilities.py",
     }:
         yield
         return
