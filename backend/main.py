@@ -475,7 +475,7 @@ async def analyze_bug(request: BugReportAnalysisRequest):
 CORRECTIONS_LOG_PATH = Path(__file__).parent / "data" / "corrections_log.json"
 
 @app.post("/ai/log_correction")
-async def log_correction(raw_request: Request):
+async def log_correction(raw_request: Request, user: dict = Depends(get_current_user)):
     """Log an admin correction when the AI prediction differs from the human decision."""
     try:
         body = await raw_request.json()
@@ -536,7 +536,7 @@ async def log_correction(raw_request: Request):
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None):
+async def get_tickets(user: dict = Depends(get_current_user), company_id: str | None = None):
     """Fetch persistent tickets from Supabase."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
@@ -549,7 +549,7 @@ async def get_tickets(company_id: str | None = None):
     return res.data
 
 @app.post("/tickets/save")
-async def save_ticket(request_body: TicketSaveRequest):
+async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_current_user)):
     """
     OFFICIAL PERSISTENCE: Saves the analyzed ticket to Supabase.
     This is called AFTER the user confirms the analysis results.
@@ -652,7 +652,7 @@ async def save_ticket(request_body: TicketSaveRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/tickets/{ticket_id}")
-async def get_ticket_by_id(ticket_id: str):
+async def get_ticket_by_id(ticket_id: str, user: dict = Depends(get_current_user)):
     """Fetch single persistent ticket."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
@@ -696,7 +696,7 @@ async def update_ticket(ticket_id: str, updates: dict):
 # ---------------------------------------------------------------------------
 @app.post("/ai/analyze_ticket", response_model=TicketResponse)
 @limiter.limit("10/minute")
-async def analyze_ticket(request_body: TicketRequest, request: Request):
+async def analyze_ticket(request_body: TicketRequest, request: Request, user: dict = Depends(get_current_user)):
     """
     Main endpoint for analyzing a new ticket using the cascade of local AI models.
     """
@@ -728,10 +728,10 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
             print(f"[AI] OCR added {len(local_ocr_text)} chars to context.")
 
     # Initalize Timeline
-    return await analyze_only(request_body)
+    return await analyze_only(request_body, user)
 
 @app.post("/ai/analyze")
-async def analyze_only(request_body: TicketRequest):
+async def analyze_only(request_body: TicketRequest, user: dict = Depends(get_current_user)):
     """
     PERFORMANCE UPGRADE: AI Analysis phase only. 
     Does NOT persist to DB. This allows the user to review the analysis 
@@ -1125,11 +1125,11 @@ async def get_current_user(request: Request) -> dict:
         raise HTTPException(status_code=503, detail="Database connection offline")
     try:
         result = supabase.auth.get_user(token)
-    except Exception as exc:
+    except Exception:
         raise HTTPException(
             status_code=401,
-            detail=f"Invalid session: {exc}",
-        ) from exc
+            detail="Invalid session",
+        )
     user = getattr(result, "user", None) or (result.get("user") if isinstance(result, dict) else None)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid session")
@@ -1158,13 +1158,13 @@ async def auth_login(body: LoginBody, response: Response):
         result = supabase.auth.sign_in_with_password(
             {"email": body.email, "password": body.password}
         )
-    except Exception as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
 
     session = getattr(result, "session", None)
     user = getattr(result, "user", None)
     if not session or not user:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(status_code=401, detail="Invalid email or password")
 
     _set_session_cookies(response, session)
     user_payload = user.model_dump() if hasattr(user, "model_dump") else dict(user)
@@ -1190,8 +1190,8 @@ async def auth_signup(body: SignupBody, response: Response):
                 "options": {"data": metadata} if metadata else {},
             }
         )
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception:
+        raise HTTPException(status_code=400, detail="Signup failed. Please check your inputs and try again.")
 
     session = getattr(result, "session", None)
     user = getattr(result, "user", None)
