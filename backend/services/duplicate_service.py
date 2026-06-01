@@ -1,4 +1,7 @@
 import torch
+import numpy as np
+import threading
+import tempfile
 """
 Duplicate Detection Service
 Uses sentence-transformers all-MiniLM-L6-v2 to detect similar tickets.
@@ -116,7 +119,10 @@ class DuplicateService:
         with self._lock:
             data = []
             try:
-                os.makedirs(os.path.dirname(self.storage_file), exist_ok=True)
+                dir_name = os.path.dirname(self.storage_file)
+                if dir_name:
+                    os.makedirs(dir_name, exist_ok=True)
+                
                 if os.path.exists(self.storage_file):
                     with open(self.storage_file, "r") as f:
                         try:
@@ -129,9 +135,8 @@ class DuplicateService:
                 data.append({"ticket_id": ticket_id, "text": text})
 
                 # Atomic write: write to temp file, then rename
-                dir_name = os.path.dirname(self.storage_file)
                 with tempfile.NamedTemporaryFile(
-                    mode="w", dir=dir_name, suffix=".tmp", delete=False
+                    mode="w", dir=dir_name if dir_name else None, suffix=".tmp", delete=False
                 ) as tmp:
                     json.dump(data, tmp, indent=2)
                     tmp.flush()
@@ -307,10 +312,8 @@ class DuplicateService:
 
         query_embedding = self._encode(text)
 
-        import torch
-
         # Stack stored embeddings into a single tensor for vectorized operations
-        embeddings = [stored_emb for _, stored_emb, _ in self._tickets]
+        embeddings = [stored_emb for _, stored_emb, _ in tickets_snapshot]
         stacked_embeddings = torch.stack(embeddings)
 
         # Compute cosine similarity between query and all stored embeddings in one operation
@@ -320,7 +323,7 @@ class DuplicateService:
         best_score_tensor, best_index_tensor = torch.max(similarity_matrix, dim=1)
         best_score = best_score_tensor.item()
         best_index = best_index_tensor.item()
-        best_id = self._tickets[best_index][0]
+        best_id = tickets_snapshot[best_index][0]
 
         is_dup = best_score >= active_threshold
 

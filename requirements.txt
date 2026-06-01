@@ -1,228 +1,25 @@
-# filename: duplicate_service.py
-"""
-Vectorized duplicate ticket detection engine.
-
-Uses NumPy matrix operations for cosine similarity and supports ONNX runtime.
-All computations are fully vectorized for maximum production performance.
-"""
-
-from __future__ import annotations
-
-import logging
-import os
-import shutil
-import time
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
-
-import numpy as np
-import onnxruntime as ort
-from sentence_transformers import SentenceTransformer
-from transformers import AutoTokenizer
-
-# Configure module logger
-logger = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# Custom exceptions
-# ---------------------------------------------------------------------------
-
-class DuplicateServiceError(Exception):
-    """Base exception for DuplicateService errors."""
-
-
-class ModelLoadError(DuplicateServiceError):
-    """Raised when model cannot be loaded."""
-
-
-class EmbeddingError(DuplicateServiceError):
-    """Raised when embedding generation fails."""
-
-
-class SimilarityComputationError(DuplicateServiceError):
-    """Raised when similarity computation fails."""
-
-
-class InvalidInputError(DuplicateServiceError):
-    """Raised on invalid input parameters."""
-
-
-class ExportError(DuplicateServiceError):
-    """Raised when ONNX model export fails."""
-
-
-# ---------------------------------------------------------------------------
-# ONNX export utility
-# ---------------------------------------------------------------------------
-
-def export_to_onnx(
-    model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
-    output_path: str = "model.onnx",
-    opset: int = 14,
-    device: str = "cpu",
-) -> Path:
-    """
-    Export a SentenceTransformer model to ONNX format.
-
-    Uses HuggingFace ``optimum`` library for reliable export.
-
-    Args:
-        model_name: HuggingFace model name or local path.
-        output_path: Destination path for the ONNX file.
-        opset: ONNX opset version (must be >= 11 for transformers).
-        device: Device for model loading ("cpu" or "cuda").
-
-    Returns:
-        Absolute path to the exported ONNX model file.
-
-    Raises:
-        ExportError: If export fails due to model loading or conversion errors.
-        InvalidInputError: If parameters are invalid.
-    """
-    # --- Input validation ---
-    if not isinstance(opset, int) or opset < 11:
-        raise InvalidInputError(f"opset must be an integer >= 11, got {opset}")
-    if device not in ("cpu", "cuda"):
-        raise InvalidInputError(f"device must be 'cpu' or 'cuda', got {device}")
-    if not model_name:
-        raise InvalidInputError("model_name must be a non-empty string")
-
-    logger.info("Starting ONNX export for model '%s' to '%s'", model_name, output_path)
-
-    output_path = Path(output_path)
-    if output_path.is_dir():
-        output_path = output_path / "model.onnx"
-
-    try:
-        # Lazy import to avoid heavy dependencies on module load
-        from optimum.onnxruntime import ORTModelForFeatureExtraction
-        from transformers import AutoConfig, AutoTokenizer
-
-        # Load model and tokenizer
-        model = ORTModelForFeatureExtraction.from_pretrained(
-            model_name, export=True, provider=device, opset=opset
-        )
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
-
-        # Save to a temporary directory, then locate the actual .onnx file
-        export_dir = output_path.parent / f"_export_temp_{int(time.time())}"
-        model.save_pretrained(export_dir)
-        tokenizer.save_pretrained(export_dir)
-
-        # Find the ONNX file inside the export directory
-        onnx_files = list(export_dir.rglob("*.onnx"))
-        if not onnx_files:
-            raise ExportError(f"No .onnx file found in {export_dir}")
-        src_path = onnx_files[0]
-
-        # Move to desired location
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        src_path.rename(output_path)
-
-        # Clean up temporary directory
-        shutil.rmtree(export_dir, ignore_errors=True)
-
-        abs_path = output_path.resolve()
-        logger.info("ONNX model exported successfully to %s", abs_path)
-        return abs_path
-
-    except Exception as exc:
-        raise ExportError(
-            f"Failed to export model '{model_name}' to ONNX: {exc}"
-        ) from exc
-
-
-# ---------------------------------------------------------------------------
-# Duplicate Detection Service
-# ---------------------------------------------------------------------------
-
-class DuplicateService:
-    """
-    Production-grade duplicate detection service.
-
-    Features:
-        - ONNX-optimized inference (falls back to PyTorch if ONNX unavailable)
-        - Fully vectorized cosine similarity with NumPy (no loops)
-        - Comprehensive error handling and logging
-        - Input validation and type safety
-        - Batch encoding with automatic batching
-        - Built-in benchmark for performance comparison
-    """
-
-    def __init__(
-        self,
-        model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
-        onnx_path: Optional[str] = None,
-        use_onnx: bool = False,
-        device: str = "cpu",
-        batch_size: int = 32,
-        max_input_length: int = 512,
-    ) -> None:
-        """
-        Initialize the service.
-
-        Args:
-            model_name: HuggingFace model name or local path.
-            onnx_path: Path to exported ONNX model (required if ``use_onnx=True``).
-            use_onnx: If True, attempt to load ONNX model.
-            device: Device for PyTorch inference ("cpu" or "cuda").
-            batch_size: Batch size for embedding generation (must be positive).
-            max_input_length: Maximum token length for input texts.
-
-        Raises:
-            ModelLoadError: If model loading fails.
-            InvalidInputError: If parameters are invalid.
-        """
-        # --- Input validation ---
-        if not isinstance(batch_size, int) or batch_size < 1:
-            raise InvalidInputError(
-                f"batch_size must be a positive integer, got {batch_size}"
-            )
-        if device not in ("cpu", "cuda"):
-            raise InvalidInputError(f"device must be 'cpu' or 'cuda', got {device}")
-        if not isinstance(max_input_length, int) or max_input_length < 1:
-            raise InvalidInputError(
-                f"max_input_length must be a positive integer, got {max_input_length}"
-            )
-        if use_onnx and onnx_path is None:
-            raise InvalidInputError("onnx_path must be provided when use_onnx=True")
-        if use_onnx and not os.path.isfile(str(onnx_path)):
-            raise ModelLoadError(f"ONNX model file not found: {onnx_path}")
-
-        self.model_name = model_name
-        self.batch_size = batch_size
-        self.device = device
-        self.max_input_length = max_input_length
-        self.use_onnx = use_onnx
-
-        # --- ONNX runtime session ---
-        self.onnx_session: Optional[ort.InferenceSession] = None
-        self.onnx_input_names: List[str] = []
-        self.tokenizer: Optional[AutoTokenizer] = None
-
-        if use_onnx:
-            try:
-                self.onnx_session = ort.InferenceSession(
-                    str(onnx_path), providers=["CPUExecutionProvider"]
-                )
-                self.onnx_input_names = [
-                    inp.name for inp in self.onnx_session.get_inputs()
-                ]
-                logger.info("Loaded ONNX model from %s", onnx_path)
-            except Exception as exc:
-                logger.warning(
-                    "Failed to load ONNX model '%s', falling back to PyTorch: %s",
-                    onnx_path,
-                    exc,
-                )
-                self.use_onnx = False
-
-            # Load tokenizer (needed for ONNX inference)
-            try:
-                self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-                logger.info("Loaded tokenizer for ONNX mode from '%s'", model_name)
-            except Exception as exc:
-                logger.warning(
-                    "Failed to load tokenizer for ONNX mode: %s", exc
-                )
+fastapi==0.111.1
+uvicorn==0.30.1
+pydantic==2.12.5
+pydantic-settings==2.3.4
+python-dotenv==1.0.1
+supabase==2.5.1
+slowapi==0.1.9
+prometheus-client==0.20.0
+prometheus-fastapi-instrumentator==6.1.0
+torch==2.3.1
+transformers==4.41.2
+sentence-transformers==3.0.1
+numpy==1.26.4
+onnxruntime==1.18.0
+apscheduler==3.10.4
+httpx==0.27.0
+python-multipart==0.0.9
+google-generativeai==0.8.6
+pillow==10.3.0
+pytesseract==0.3.10
+scikit-learn==1.5.0
+pandas==2.2.2
+pytest==8.2.2
+pytest-asyncio==0.23.7
+pytest-mock==3.14.0
