@@ -55,7 +55,7 @@ jobs:
               run: |
                   python -c "
                   import os, sys
-                  sys.path.append(os.getcwd())
+                  sys.path.insert(0, os.path.join(os.getcwd(), '..'))
                   from backend.services.classifier_service import ClassifierService
                   try:
                       # We expect this to fail in CI if no physical model is pushed,
