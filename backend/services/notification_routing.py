@@ -154,10 +154,13 @@ class NotificationRoutingMiddleware:
         """
         settings = self.get_system_settings(company_id)
 
-        if not settings["admin_alerts"]:
+        if settings.get("admin_alerts") is False:
             self.log_notification_skipped(
                 company_id, NotificationType.ADMIN_ALERT, "admin_alerts_disabled"
             )
+            return False
+
+        if settings.get("admin_alerts") is None:
             return False
 
         self.log_notification_sent(company_id, NotificationType.ADMIN_ALERT)

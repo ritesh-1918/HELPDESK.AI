@@ -4,7 +4,13 @@ __pycache__/
 *$py.class
 venv/
 env/
-.env
+# Ignore all env files anywhere in the repo
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.sample
+!**/.env.template
+
 
 # Models (Keep them if they are small, but here they are large. 
 # We should probably only keep the ones we actually use if possible, 
@@ -29,3 +35,16 @@ dist/
 docs/helpdesk*.pdf
 docs/logs/
 *.log
+
+# Scratch and local cache
+scratch/
+.npm-cache/
+
+# GSSoC Score Tracking and Temporary Scripts
+*.tmp
+../MOBILE_SETUP_TEMP.md
+../CI_YML_TEMP.yml
+../ENV_EXAMPLE_TEMP.example
+
+# Supabase local temp files (project ref, etc.)
+supabase/.temp/

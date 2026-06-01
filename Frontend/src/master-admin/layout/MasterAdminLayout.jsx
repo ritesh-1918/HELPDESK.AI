@@ -150,7 +150,7 @@ function MasterAdminLayout() {
                 </header>
 
                 {/* Page Content */}
-                <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                <div id="master-admin-content" className="flex-1 overflow-y-auto p-8 custom-scrollbar">
                     <Outlet />
                 </div>
             </main>

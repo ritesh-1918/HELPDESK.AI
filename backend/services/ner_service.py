@@ -5,19 +5,27 @@ Labels follow pattern: B-B-ENTITY_TYPE, I-B-ENTITY_TYPE, O
 
 import os
 import json
-import torch
-import torch.nn.functional as F
-from transformers import DistilBertTokenizerFast, DistilBertForTokenClassification
+try:
+    import torch
+    import torch.nn.functional as F
+    from transformers import DistilBertTokenizerFast, DistilBertForTokenClassification
+    _HAS_TORCH = True
+except Exception:  # pragma: no cover - optional runtime dependency
+    torch = None
+    F = None
+    DistilBertTokenizerFast = None
+    DistilBertForTokenClassification = None
+    _HAS_TORCH = False
 
 SAVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "models", "ner")
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = torch.device("cuda" if torch and torch.cuda.is_available() else "cpu") if _HAS_TORCH else None
 MAX_LEN = 128
 
 import re
 
 # Regex patterns for high-fidelity extraction
 REGEX_PATTERNS = {
-    "IP_ADDRESS": r"\b(?:\d{1,3}\.){3}\d{1,3}\b|IP\s?Address",
+    "IP_ADDRESS": r"\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b|IP\s?Address",
     "HOSTNAME": r"\b(?:srv|db|app|web|dev|prod)-[\w\d-]+\b|Hostname",
     "NETWORK_ERROR": r"Network issues|Timeout|Connection failed|Cannot load|Latency|Spikes",
     "LOGIN_ISSUE": r"logging in|login error|authentication failed|MFA",
@@ -39,6 +47,10 @@ class NERService:
     def load(self):
         """Load model, tokenizer, and label map from disk."""
         if self._loaded:
+            return
+
+        if not _HAS_TORCH:
+            print("[INFO] NER runtime not available; NER model will remain unloaded until dependencies are installed.")
             return
 
         abs_dir = os.path.abspath(SAVE_DIR)

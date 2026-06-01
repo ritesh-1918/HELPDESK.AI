@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Activity, CheckCircle2, ShieldCheck, User,
@@ -8,8 +8,9 @@ import useTicketStore from "../../store/ticketStore";
 import useAuthStore from "../../store/authStore";
 import { Card, CardContent } from "../../components/ui/card";
 import TicketTimeline from "../components/TicketTimeline";
-import axios from 'axios';
+import apiClient from '../../services/apiClient';
 import { API_CONFIG } from '../../config';
+import { supabase } from '../../lib/supabaseClient';
 
 const TicketTracking = () => {
     const navigate = useNavigate();
@@ -20,13 +21,19 @@ const TicketTracking = () => {
     const [error, setError] = useState(null);
     const [createdTicket, setCreatedTicket] = useState(null);
     const hasCreated = useRef(false);
+    const resolutionSteps = useMemo(() => location.state?.resolutionSteps || [], [location.state?.resolutionSteps]);
+
+    const getSlaBreachAt = (priority = 'Medium') => {
+        const hoursMap = { Critical: 2, High: 8, Medium: 24, Low: 72 };
+        const slaHours = hoursMap[priority] || 24;
+        return new Date(Date.now() + slaHours * 60 * 60 * 1000).toISOString();
+    };
+
     useEffect(() => {
         if (!aiTicket) {
             navigate('/create-ticket');
             return;
         }
-
-        const resolutionSteps = location.state?.resolutionSteps || [];
 
         const finalizeTracking = async () => {
             if (hasCreated.current) return;
@@ -42,6 +49,8 @@ const TicketTracking = () => {
                     user_id: user?.id,
                     subject: aiTicket.summary,
                     description: aiTicket.originalIssue || aiTicket.summary,
+                    detected_language: aiTicket.source_language || 'en',
+                    original_body: aiTicket.original_text || null,
                     category: aiTicket.category,
                     subcategory: aiTicket.subcategory,
                     priority: aiTicket.priority,
@@ -49,11 +58,14 @@ const TicketTracking = () => {
                     status: status,
                     auto_resolve: isAutoResolved,
                     is_duplicate: aiTicket.duplicate_ticket?.is_duplicate || false,
+                    is_potential_duplicate: aiTicket.is_potential_duplicate || aiTicket.duplicate_ticket?.is_potential_duplicate || false,
+                    parent_ticket_id: aiTicket.parent_ticket_id || aiTicket.duplicate_ticket?.parent_ticket_id || aiTicket.duplicate_ticket?.duplicate_ticket_id || null,
                     confidence: aiTicket.confidence,
                     image_url: aiTicket.image_url || null,
-                    company: profile?.company || "System",
+                    company: profile?.company || null,
                     company_id: profile?.company_id || null,
-                    sla_breach_at: aiTicket.sla_breach_at,
+                    sla_breach_at: aiTicket.sla_breach_at || getSlaBreachAt(aiTicket.priority),
+                    source: aiTicket.source || 'text',
                     metadata: {
                         confidence: aiTicket.confidence,
                         entities: aiTicket.entities,
@@ -68,7 +80,12 @@ const TicketTracking = () => {
                     routing_confidence: aiTicket.confidence
                 };
 
-                const res = await axios.post(`${API_CONFIG.BACKEND_URL}/tickets/save`, savePayload);
+                const { data: { session } } = await supabase.auth.getSession();
+                const token = session?.access_token;
+
+                const res = await axios.post(`${API_CONFIG.BACKEND_URL}/tickets/save`, savePayload, {
+                    headers: token ? { Authorization: `Bearer ${token}` } : {}
+                });
 
                 if (res.data?.ticket_id) {
                     const newTicket = { ...aiTicket, id: res.data.ticket_id, ticket_id: res.data.ticket_id, status };
@@ -91,7 +108,7 @@ const TicketTracking = () => {
         };
 
         finalizeTracking();
-    }, [aiTicket, addTicket, navigate, user, profile?.company, location.state]);
+    }, [aiTicket, addTicket, navigate, user, profile?.company, profile?.company_id, resolutionSteps]);
 
     if (!aiTicket) return null;
 

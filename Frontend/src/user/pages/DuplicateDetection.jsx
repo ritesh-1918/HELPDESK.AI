@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     FileText, Database, Zap,
     CheckCircle2, AlertTriangle, ArrowRight,
-    Lightbulb, SearchX, TicketCheck, Search
+    Lightbulb, SearchX, TicketCheck, Search, Bell, Link2
 } from 'lucide-react';
 import useTicketStore from "../../store/ticketStore";
 import { API_CONFIG } from "../../config";
@@ -75,6 +75,7 @@ const DuplicateDetection = () => {
     }, [isLoading, aiTicket, navigate]);
 
     const isDuplicate = aiTicket?.duplicate_ticket?.is_duplicate === true;
+    const duplicateParentTicketId = aiTicket?.parent_ticket_id || aiTicket?.duplicate_ticket?.parent_ticket_id || aiTicket?.duplicate_ticket?.duplicate_ticket_id;
 
     // Auto-redirect when no duplicate
     useEffect(() => {
@@ -208,8 +209,45 @@ const DuplicateDetection = () => {
                 {/* ── Match / No-match result card ─────────────────────── */}
                 {isDuplicate ? (
                     <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/40 overflow-hidden">
+                        <div className="px-8 pt-8">
+                            <div className="relative overflow-hidden rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-orange-50 p-6 shadow-[0_20px_60px_-24px_rgba(217,119,6,0.45)]">
+                                <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-amber-300/20 blur-3xl" />
+                                <div className="relative flex items-start gap-4">
+                                    <div className="rounded-2xl bg-amber-100 p-3 shadow-sm">
+                                        <Bell className="h-6 w-6 text-amber-700" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-amber-700">Potential Duplicate</p>
+                                        <h2 className="mt-1 text-xl font-black text-slate-900 tracking-tight">
+                                            A similar issue was recently reported by your teammate.
+                                        </h2>
+                                        <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-slate-600">
+                                            Would you like to subscribe to updates on the existing ticket instead of creating a duplicate? You can open the parent ticket now or continue anyway if this is a new incident.
+                                        </p>
+                                        <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                                            {duplicateParentTicketId ? (
+                                                <button
+                                                    onClick={() => navigate(`/ticket/${duplicateParentTicketId}`)}
+                                                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black uppercase tracking-widest text-white transition-transform hover:scale-[1.01]"
+                                                >
+                                                    <Link2 className="h-4 w-4" />
+                                                    Open Existing Ticket
+                                                </button>
+                                            ) : null}
+                                            <button
+                                                onClick={handleCreateTicket}
+                                                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-amber-200 bg-white px-5 py-3 text-sm font-black uppercase tracking-widest text-amber-900 transition-transform hover:scale-[1.01]"
+                                            >
+                                                Create Anyway
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Card header */}
-                        <div className="px-8 py-6 bg-amber-50 border-b border-amber-100 flex items-start gap-4">
+                        <div className="px-8 py-6 bg-amber-50 border-b border-amber-100 flex items-start gap-4 mt-8">
                             <div className="p-2.5 bg-amber-100 rounded-xl shrink-0">
                                 <AlertTriangle className="w-5 h-5 text-amber-600" />
                             </div>

@@ -19,6 +19,7 @@ const AutoResolveChat = () => {
     const { aiTicket } = useTicketStore();
     const navigate = useNavigate();
     const [messages, setMessages] = useState([]);
+    const [steps, setSteps] = useState([]);
     const [isThinking, setIsThinking] = useState(false);
     const [isFinal, setIsFinal] = useState(false);
     const [inputText, setInputText] = useState('');
@@ -77,7 +78,7 @@ const AutoResolveChat = () => {
                 }
 
                 if (newSteps.length >= 2) {
-                    // Steps parsed successfully; welcome message sent below
+                    setSteps(newSteps);
                 } else {
                     const sentences = response
                         .replace(/\*\*/g, '')
@@ -87,7 +88,12 @@ const AutoResolveChat = () => {
                         .slice(0, 4);
 
                     if (sentences.length >= 2) {
-                        // Plan parsed but not rendered; welcome message sent below
+                        const sentenceSteps = sentences.map((s, i) => ({
+                            id: i + 1,
+                            task: s,
+                            completed: false
+                        }));
+                        setSteps(sentenceSteps);
                     } else {
                         throw new Error("Could not parse steps from AI response.");
                     }
@@ -121,7 +127,15 @@ const AutoResolveChat = () => {
 
     useEffect(() => {
         if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+            // Use setTimeout to ensure DOM has updated before scrolling
+            setTimeout(() => {
+                if (scrollRef.current) {
+                    scrollRef.current.scrollTo({
+                        top: scrollRef.current.scrollHeight,
+                        behavior: 'smooth'
+                    });
+                }
+            }, 50);
         }
     }, [messages, isThinking]);
 
@@ -142,7 +156,7 @@ const AutoResolveChat = () => {
         setIsThinking(true);
 
         try {
-            const aiResponse = await askAI(text || "Sent an image for analysis", aiTicket, messages, imageOverride);
+            const aiResponse = await askAI(text || "Sent an image for analysis", aiTicket, [...messages, newUserMsg], imageOverride);
             const botNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
             setMessages(prev => [...prev, { role: 'bot', text: aiResponse, timestamp: botNow }]);
@@ -197,10 +211,16 @@ const AutoResolveChat = () => {
         else recognition.start();
     };
 
+    const toggleStep = (stepId) => {
+        setSteps(prev => prev.map(step =>
+            step.id === stepId ? { ...step, completed: !step.completed } : step
+        ));
+    };
+
     if (!aiTicket) return null;
 
     return (
-        <div className="relative min-h-screen pt-24 pb-12 px-6 overflow-hidden">
+        <div className="relative min-[100dvh] pt-24 pb-12 px-6 flex flex-col">
             {/* ─── Premium Palette Background ─── */}
             <div className="fixed inset-0 -z-10 bg-[#f8faf9]">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-100/40 rounded-full blur-[120px] animate-pulse"></div>
@@ -210,7 +230,7 @@ const AutoResolveChat = () => {
 
             <div className="max-w-4xl mx-auto relative">
                 {/* ─── Glassmorphic Chat Container ─── */}
-                <Card className="rounded-[2.5rem] border border-white/20 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)] bg-white/70 backdrop-blur-3xl flex flex-col h-[820px] overflow-hidden transition-all duration-500 hover:shadow-[0_48px_80px_-20px_rgba(0,0,0,0.12)]">
+                <Card className="rounded-[2.5rem] border border-white/20 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)] bg-white/70 backdrop-blur-3xl flex flex-col h-[calc(100dvh-8rem)] md:h-[820px] w-full overflow-hidden transition-all duration-500 hover:shadow-[0_48px_80px_-20px_rgba(0,0,0,0.12)]">
 
                     {/* Header */}
                     <div className="px-10 py-7 border-b border-white/40 bg-white/40 flex items-center justify-between backdrop-blur-md">
@@ -248,6 +268,48 @@ const AutoResolveChat = () => {
                             </button>
                         </div>
                     </div>
+
+                    {/* Troubleshooting Steps */}
+                    {steps.length > 0 && (
+                        <div className="px-10 py-6 border-b border-white/40 bg-emerald-50/30">
+                            <div className="flex items-center gap-2 mb-3">
+                                <ListChecks size={16} className="text-emerald-600" />
+                                <h3 className="text-[10px] font-black text-emerald-700 uppercase tracking-[0.2em]">
+                                    Troubleshooting Plan
+                                </h3>
+                            </div>
+                            <div className="space-y-2">
+                                {steps.map((step) => (
+                                    <button
+                                        key={step.id}
+                                        onClick={() => toggleStep(step.id)}
+                                        className={`w-full text-left flex items-center gap-3 p-3 rounded-xl border transition-all duration-300 ${
+                                            step.completed
+                                                ? 'bg-emerald-100 border-emerald-200 opacity-60'
+                                                : 'bg-white border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/50'
+                                        }`}
+                                    >
+                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 ${
+                                            step.completed
+                                                ? 'bg-emerald-500 text-white'
+                                                : 'bg-slate-100 text-slate-400'
+                                        }`}>
+                                            {step.completed ? (
+                                                <CheckCircle2 size={14} />
+                                            ) : (
+                                                <span className="text-[10px] font-black">{step.id}</span>
+                                            )}
+                                        </div>
+                                        <span className={`text-[13px] font-bold leading-snug transition-all duration-300 ${
+                                            step.completed ? 'text-slate-400 line-through' : 'text-slate-700'
+                                        }`}>
+                                            {step.task}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Chat Messages */}
                     <div

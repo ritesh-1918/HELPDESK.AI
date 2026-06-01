@@ -6,13 +6,31 @@ Priority and other fields are derived from the category mapping.
 
 import os
 import json
-import torch
-import torch.nn.functional as F
-from transformers import DistilBertTokenizerFast, DistilBertForSequenceClassification
+try:
+    import torch
+    import torch.nn.functional as F
+    from transformers import DistilBertTokenizerFast, DistilBertForSequenceClassification
+    _HAS_TORCH = True
+except Exception:  # pragma: no cover - optional CI/runtime dependency
+    torch = None
+    F = None
+    DistilBertTokenizerFast = None
+    DistilBertForSequenceClassification = None
+    _HAS_TORCH = False
 
 SAVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "models", "classifier")
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = torch.device("cuda" if torch and torch.cuda.is_available() else "cpu") if _HAS_TORCH else None
 MAX_LEN = 128
+
+try:
+    from backend.services.metrics_service import (
+        CLASSIFIER_LATENCY,
+        CLASSIFIER_REQUESTS,
+        CLASSIFIER_TOKENS,
+    )
+    _METRICS_ENABLED = True
+except Exception:
+    _METRICS_ENABLED = False
 
 # Priority mapping based on sub-category severity
 PRIORITY_MAP = {
@@ -57,12 +75,29 @@ class ClassifierService:
         if self._loaded:
             return
 
-        abs_dir = os.path.abspath(SAVE_DIR)
+        if not _HAS_TORCH:
+            # Degraded environment: ML runtime not available. Delay failure until predict is called.
+            print("[INFO] ML runtime not available; classifier will remain unloaded until dependencies are installed.")
+            return
 
-        if not os.path.exists(os.path.join(abs_dir, "model.safetensors")):
+        abs_dir = os.path.abspath(SAVE_DIR)
+        safetensors_path = os.path.join(abs_dir, "model.safetensors")
+
+        if not os.path.exists(safetensors_path):
             raise FileNotFoundError(
                 f"Classifier model not found at {abs_dir}. "
                 "Please ensure model files are present."
+            )
+
+        with open(safetensors_path, "rb") as f:
+            header = f.read(512)
+        if (
+            b"version https://git-lfs.github.com/spec" in header
+            or b"oid sha256:" in header
+        ):
+            raise FileNotFoundError(
+                f"Classifier model at {abs_dir} is a Git LFS placeholder, not the actual model. "
+                "Please pull the LFS assets."
             )
 
         # Load label mappings
@@ -86,65 +121,85 @@ class ClassifierService:
         """
         Predict category, subcategory, priority, auto_resolve, assigned_team, and confidence.
         """
-        self.load()
+        start_time = time.time()
+        try:
+            self.load()
 
-        encoding = self.tokenizer(
-            text,
-            truncation=True,
-            padding="max_length",
-            max_length=MAX_LEN,
-            return_tensors="pt",
-        )
-        input_ids = encoding["input_ids"].to(DEVICE)
-        attention_mask = encoding["attention_mask"].to(DEVICE)
+            encoding = self.tokenizer(
+                text,
+                truncation=True,
+                padding="max_length",
+                max_length=MAX_LEN,
+                return_tensors="pt",
+            )
+            input_ids = encoding["input_ids"].to(DEVICE)
+            attention_mask = encoding["attention_mask"].to(DEVICE)
 
-        with torch.no_grad():
-            outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
-            logits = outputs.logits
-            probs = F.softmax(logits, dim=1)
-            confidence, pred_idx = torch.max(probs, dim=1)
+        import time
+        _t0 = time.perf_counter()
+        try:
+            with torch.no_grad():
+                outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
+                logits = outputs.logits
+                probs = F.softmax(logits, dim=1)
+                confidence, pred_idx = torch.max(probs, dim=1)
+        except Exception:
+            if _METRICS_ENABLED:
+                CLASSIFIER_REQUESTS.labels(model="distilbert", status="error").inc()
+            raise
+        if _METRICS_ENABLED:
+            CLASSIFIER_LATENCY.labels(model="distilbert").observe(time.perf_counter() - _t0)
+            CLASSIFIER_REQUESTS.labels(model="distilbert", status="ok").inc()
+            CLASSIFIER_TOKENS.labels(model="distilbert").inc(int(attention_mask.sum().item()))
 
-        pred_idx = pred_idx.item()
-        confidence = round(confidence.item(), 4)
+            pred_idx = pred_idx.item()
+            confidence = round(confidence.item(), 4)
 
-        # Decode the combined label "Category | SubCategory"
-        combined_label = self.id2label.get(str(pred_idx), "Unknown | Unknown")
-        parts = combined_label.split(" | ", 1)
-        category = parts[0].strip() if len(parts) > 0 else "Unknown"
-        subcategory = parts[1].strip() if len(parts) > 1 else "Unknown"
+            # Decode the combined label "Category | SubCategory"
+            combined_label = self.id2label.get(str(pred_idx), "Unknown | Unknown")
+            parts = combined_label.split(" | ", 1)
+            category = parts[0].strip() if len(parts) > 0 else "Unknown"
+            subcategory = parts[1].strip() if len(parts) > 1 else "Unknown"
 
-        # Derive priority
-        priority = PRIORITY_MAP.get(subcategory, "Medium")
+            # Derive priority
+            priority = PRIORITY_MAP.get(subcategory, "Medium")
 
-        # Derive assigned team
-        assigned_team = TEAM_MAP.get(category, "General Support")
+            # Derive assigned team
+            assigned_team = TEAM_MAP.get(category, "General Support")
 
-        # Derive auto_resolve
-        auto_resolve = subcategory in AUTO_RESOLVE_SUBS
+            # Derive auto_resolve
+            auto_resolve = subcategory in AUTO_RESOLVE_SUBS
 
-        # --- Regex Override Layer (Boost for Technical Keywords) ---
-        tech_keywords = {
-            "Network": ["IP address", "hostname", "connection", "network", "bandwidth", "DNS", "firewall", "VPN", "Connectivity", "Latency", "Routing", "Spikes"],
-            "Software": ["crash", "load", "website", "application", "error", "bug", "failing", "software", "SQL", "Cluster", "Database", "Production", "Latency"],
-            "Access": ["login", "password", "access", "authentication", "account", "permission", "MFA", "OAuth"]
-        }
-        
-        lower_text = text.lower()
-        for cat, keywords in tech_keywords.items():
-            if any(k.lower() in lower_text for k in keywords):
-                # If current prediction is generic, or we have a high-value technical keyword
-                if category == "General" or confidence < 0.9:
-                    category = cat
-                    assigned_team = TEAM_MAP.get(cat, "General Support")
-                    # Boost confidence significantly for verified technical signals
-                    confidence = max(confidence, 0.92) 
-                    break
+            # --- Regex Override Layer (Boost for Technical Keywords) ---
+            tech_keywords = {
+                "Network": ["IP address", "hostname", "connection", "network", "bandwidth", "DNS", "firewall", "VPN", "Connectivity", "Latency", "Routing", "Spikes"],
+                "Software": ["crash", "load", "website", "application", "error", "bug", "failing", "software", "SQL", "Cluster", "Database", "Production", "Latency"],
+                "Access": ["login", "password", "access", "authentication", "account", "permission", "MFA", "OAuth"]
+            }
+            
+            lower_text = text.lower()
+            for cat, keywords in tech_keywords.items():
+                if any(k.lower() in lower_text for k in keywords):
+                    # If current prediction is generic, or we have a high-value technical keyword
+                    if category == "General" or confidence < 0.9:
+                        category = cat
+                        assigned_team = TEAM_MAP.get(cat, "General Support")
+                        # Boost confidence significantly for verified technical signals
+                        confidence = max(confidence, 0.92) 
+                        break
 
-        return {
-            "category": category,
-            "subcategory": subcategory,
-            "priority": priority,
-            "auto_resolve": auto_resolve,
-            "assigned_team": assigned_team,
-            "confidence": confidence,
-        }
+            MODEL_PREDICTIONS_TOTAL.labels(status="success").inc()
+            return {
+                "category": category,
+                "subcategory": subcategory,
+                "priority": priority,
+                "auto_resolve": auto_resolve,
+                "assigned_team": assigned_team,
+                "confidence": confidence,
+            }
+        except Exception as e:
+            MODEL_PREDICTIONS_TOTAL.labels(status="failure").inc()
+            raise e
+        finally:
+            duration = time.time() - start_time
+            MODEL_PREDICTION_LATENCY.observe(duration)

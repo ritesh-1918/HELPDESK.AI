@@ -73,7 +73,7 @@ const DocsPortal = () => {
                         "Routed based on neural network rule matching"
                     ]
                 }, null, 2));
-            } catch (e) {
+            } catch {
                 setSandboxOutput(JSON.stringify({
                     status: "error",
                     message: "Invalid JSON format in Request Payload."

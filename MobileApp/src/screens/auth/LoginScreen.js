@@ -5,6 +5,7 @@ import {
   ScrollView, StatusBar, Animated,
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
+import { backendLogin, backendLogout } from '../../lib/authBackend';
 import { COLORS, SHADOWS } from '../../styles/theme';
 import { Lock, Mail, Eye, EyeOff, Zap, ArrowRight, ShieldCheck } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -52,6 +53,7 @@ const LoginScreen = () => {
     }
     setLoading(true);
     try {
+      await backendLogin(email, password);
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
 
@@ -92,7 +94,10 @@ const LoginScreen = () => {
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { shouldCreateUser: false },
+        options: {
+          shouldCreateUser: false,
+          emailRedirectTo: 'helpdeskai://login',
+        },
       });
       if (error) throw error;
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -230,17 +235,16 @@ const LoginScreen = () => {
           </Animated.View>
 
           {/* Footer */}
-          <Animated.View style={[styles.footer, { opacity: fadeAnim, paddingBottom: insets.bottom + 40 }]}>
-            <Text style={styles.footerText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
-              <Text style={styles.footerLink}>Create Account</Text>
-            </TouchableOpacity>
-            
-            <View style={{ width: '100%', alignItems: 'center', marginTop: 24 }}>
-              <TouchableOpacity onPress={() => navigation.navigate('AdminSignup')}>
-                <Text style={styles.adminLink}>Access Admin Terminal</Text>
+          <Animated.View style={[styles.footer, { opacity: fadeAnim, paddingBottom: insets.bottom + 40, gap: 12, flexDirection: 'column', alignItems: 'center' }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={styles.footerText}>Don't have an account? </Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
+                <Text style={styles.footerLink}>Create Account</Text>
               </TouchableOpacity>
             </View>
+            <TouchableOpacity onPress={() => navigation.navigate('AdminSignup')}>
+              <Text style={styles.adminLink}>Register as Admin Agent / Company</Text>
+            </TouchableOpacity>
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>

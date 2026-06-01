@@ -12,13 +12,14 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    "scheme": "helpdeskai",
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "package": "com.ritesh.helpdeskai",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/logo_v1.png",
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0b1120"
       },
       "edgeToEdgeEnabled": true
@@ -27,7 +28,6 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "@logrocket/react-native",
       [
         "expo-build-properties",
         {
@@ -41,7 +41,9 @@
       "policy": "sdkVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/a5830464-58a7-4737-9cc9-e5ecad2e4acf"
+      "url": "https://u.expo.dev/a5830464-58a7-4737-9cc9-e5ecad2e4acf",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
     },
     "extra": {
       "eas": {

@@ -1,8 +1,8 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { safePersist } from '../../store/middleware/safePersist';
 
 const useAdminStore = create(
-    persist(
+    safePersist(
         (set) => ({
             users: [], // System users for management
             settings: {

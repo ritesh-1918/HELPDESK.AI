@@ -63,7 +63,7 @@ const Dashboard = () => {
       }
     };
     fetchTickets();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, []);
 
   // Detect newly inserted or updated tickets for highlight animation
@@ -84,7 +84,7 @@ const Dashboard = () => {
     });
 
     prevTicketsRef.current = tickets;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [tickets]);
 
   // Summary Counts

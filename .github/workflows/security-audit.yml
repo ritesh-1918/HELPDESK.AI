@@ -1,0 +1,39 @@
+name: Tenant Isolation Security Audit
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  security-audit:
+    name: Run Tenant Isolation Security Tests
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        cache: 'pip'
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        # Install backend dependencies (skip torch/transformers if possible for speed, but they might be imported)
+        # To avoid heavy PyTorch download in CI, we enable degraded mode or load mocks.
+        # But since the tests import backend.main which imports services that load models,
+        # we set ALLOW_DEGRADED_STARTUP=1 so it starts successfully without downloading large weights.
+        pip install -r backend/requirements.txt
+        pip install pytest httpx pytest-cov
+
+    - name: Run Tenant Isolation Security Tests
+      env:
+        ALLOW_DEGRADED_STARTUP: "1"
+        REQUIRE_SUPABASE: "false"
+      run: |
+        python -m pytest backend/tests/test_tenant_isolation.py -v

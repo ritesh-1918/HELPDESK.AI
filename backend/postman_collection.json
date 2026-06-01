@@ -1,0 +1,323 @@
+{
+  "info": {
+    "_postman_id": "9d3e2a4b-helpdeskai-2026",
+    "name": "HELPDESK.AI Backend",
+    "description": "Postman collection covering every System, AI Analysis, Tickets, and Admin endpoint exposed by the FastAPI backend at `backend/main.py`. Variables let you switch between local dev and the deployed Vercel/HF Spaces target without editing requests.\n\n- **Local dev:** set `baseUrl` to `http://localhost:8000`\n- **Production:** set `baseUrl` to your deployed backend URL\n\nUse the bundled environment file (`HELPDESK.AI Local` / `HELPDESK.AI Production`) for quick switching.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000",
+      "type": "string",
+      "description": "Root URL of the FastAPI backend."
+    },
+    {
+      "key": "ticketId",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "type": "string",
+      "description": "Sample ticket UUID used by /tickets/{ticket_id} and PATCH /tickets/{ticket_id}."
+    },
+    {
+      "key": "companyId",
+      "value": "",
+      "type": "string",
+      "description": "Optional tenant filter for GET /tickets."
+    },
+    {
+      "key": "userId",
+      "value": "00000000-0000-0000-0000-000000000001",
+      "type": "string",
+      "description": "Supabase auth user id used by POST /tickets/save."
+    }
+  ],
+  "item": [
+    {
+      "name": "System",
+      "description": "Health, readiness, and landing page.",
+      "item": [
+        {
+          "name": "Root landing page",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": ["{{baseUrl}}"],
+              "path": [""]
+            },
+            "description": "Renders the styled HTML landing page with links to /docs and /health."
+          }
+        },
+        {
+          "name": "Health (liveness)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Returns `{status, classifier_loaded, ner_loaded}`. Always 200 when the process is up."
+          }
+        },
+        {
+          "name": "Ready (readiness)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ready",
+              "host": ["{{baseUrl}}"],
+              "path": ["ready"]
+            },
+            "description": "Returns 200 only when classifier, NER, duplicate index, RAG, and (optionally) Supabase are healthy. Otherwise 503 with a per-check map."
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI Analysis",
+      "description": "Core NLP endpoints.",
+      "item": [
+        {
+          "name": "Analyze ticket (full pipeline, rate-limited)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"My laptop won't connect to the office VPN since this morning\",\n  \"image_base64\": \"\",\n  \"image_text\": \"\",\n  \"user_id\": \"{{userId}}\",\n  \"company\": \"Acme Corp\",\n  \"confidence_threshold\": 0.20,\n  \"duplicate_sensitivity\": 0.85\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/analyze_ticket",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "analyze_ticket"]
+            },
+            "description": "Runs the full cascade (OCR → classifier V3 → NER → duplicate check → RAG → Gemini summary). Throttled to 10 req/min per IP."
+          }
+        },
+        {
+          "name": "Analyze (read-only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Outlook keeps asking for credentials in a loop\",\n  \"image_base64\": \"\",\n  \"image_text\": \"\",\n  \"confidence_threshold\": 0.20,\n  \"duplicate_sensitivity\": 0.85\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/analyze",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "analyze"]
+            },
+            "description": "Identical pipeline as /ai/analyze_ticket but never persists. Use for preview/UX flows before the user confirms ticket creation."
+          }
+        },
+        {
+          "name": "Analyze stream (SSE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "text/event-stream" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Printer on floor 3 prints blank pages\",\n  \"image_base64\": \"\",\n  \"image_text\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/analyze_stream",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "analyze_stream"]
+            },
+            "description": "Server-sent events. Emits one `data:` chunk per pipeline stage and a final `step:done` event carrying the full TicketResponse payload."
+          }
+        },
+        {
+          "name": "Analyze V2 (shadow classifier)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Need access to the shared finance drive\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/analyze-v2",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "analyze-v2"]
+            },
+            "description": "Runs only the V2 classifier and returns its prediction. Used for offline comparison with the V3 pipeline."
+          }
+        },
+        {
+          "name": "Troubleshoot (Gemini wizard step)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"My VPN keeps disconnecting every 5 minutes\",\n  \"category\": \"Network\",\n  \"history\": []\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/troubleshoot",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "troubleshoot"]
+            },
+            "description": "Returns the next troubleshooting step, suggested options, and an `is_final` flag. Append the user's answer to `history` and call again."
+          }
+        },
+        {
+          "name": "Analyze bug report",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bug_title\": \"Submit button does nothing on Safari\",\n  \"description\": \"Clicking Submit on the ticket form on Safari 17 has no effect. Works on Chrome.\",\n  \"steps_to_reproduce\": \"1. Open /new-ticket on Safari 17\\n2. Fill out form\\n3. Click Submit\",\n  \"console_errors\": [\"Uncaught TypeError: undefined is not an object (evaluating 'e.preventDefault')\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/analyze_bug",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "analyze_bug"]
+            },
+            "description": "Returns a Gemini-generated `probable_cause` for the supplied bug report."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tickets",
+      "description": "Persistent (Supabase) and in-memory ticket lifecycle.",
+      "item": [
+        {
+          "name": "List tickets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tickets?company_id={{companyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets"],
+              "query": [
+                {
+                  "key": "company_id",
+                  "value": "{{companyId}}",
+                  "description": "Optional tenant filter. Leave empty for all tickets."
+                }
+              ]
+            },
+            "description": "List Supabase-persisted tickets, newest first."
+          }
+        },
+        {
+          "name": "Get ticket by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tickets/{{ticketId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "{{ticketId}}"]
+            },
+            "description": "Fetch a single Supabase ticket by id."
+          }
+        },
+        {
+          "name": "Save analyzed ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"subject\": \"VPN disconnects every 5 minutes\",\n  \"description\": \"Detailed description of the issue with steps to reproduce.\",\n  \"category\": \"Network\",\n  \"subcategory\": \"VPN\",\n  \"priority\": \"High\",\n  \"assigned_team\": \"Network Support\",\n  \"status\": \"open\",\n  \"auto_resolve\": false,\n  \"is_duplicate\": false,\n  \"confidence\": 0.92,\n  \"image_url\": null,\n  \"company\": \"Acme Corp\",\n  \"company_id\": null,\n  \"sla_breach_at\": \"2026-06-01T12:00:00Z\",\n  \"metadata\": {},\n  \"entities\": [],\n  \"solution_steps\": [],\n  \"ocr_text\": \"\",\n  \"needs_review\": false,\n  \"routing_confidence\": 0.92\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tickets/save",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "save"]
+            },
+            "description": "Persist a user-confirmed analysis. Enforces tenant linkage via the Supabase `profiles` table — 403 if `company_id` does not match the caller's profile."
+          }
+        },
+        {
+          "name": "Create ticket (in-memory)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_id\": \"local-001\",\n  \"owner_id\": \"{{userId}}\",\n  \"summary\": \"Mouse not detected after reboot\",\n  \"category\": \"Hardware\",\n  \"subcategory\": \"Peripheral\",\n  \"priority\": \"Low\",\n  \"status\": \"open\",\n  \"assigned_team\": \"Desktop Support\",\n  \"created_at\": \"2026-05-30T10:00:00Z\",\n  \"messages\": [],\n  \"metadata\": {},\n  \"timeline\": {\"created\": \"2026-05-30T10:00:00Z\"}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tickets",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets"]
+            },
+            "description": "Insert into the legacy in-memory store (used by tests and local dev)."
+          }
+        },
+        {
+          "name": "Patch ticket fields",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"in_progress\",\n  \"last_user_viewed_at\": \"2026-05-30T10:15:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tickets/{{ticketId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "{{ticketId}}"]
+            },
+            "description": "Partial update of an in-memory ticket. 404 when the id is unknown."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "description": "Internal feedback loops.",
+      "item": [
+        {
+          "name": "Log admin correction",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_id\": \"{{ticketId}}\",\n  \"original_text\": \"My laptop won't connect to the VPN\",\n  \"ocr_text\": \"\",\n  \"confidence\": 0.42,\n  \"original_prediction\": {\n    \"category\": \"Software\",\n    \"subcategory\": \"Other\",\n    \"priority\": \"Medium\",\n    \"assigned_team\": \"General Support\"\n  },\n  \"corrected_prediction\": {\n    \"category\": \"Network\",\n    \"subcategory\": \"VPN\",\n    \"priority\": \"High\",\n    \"assigned_team\": \"Network Support\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/log_correction",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "log_correction"]
+            },
+            "description": "Persist an admin override. Only diffs are logged; payloads where the corrected prediction equals the original are reported as `no_change`."
+          }
+        }
+      ]
+    }
+  ]
+}

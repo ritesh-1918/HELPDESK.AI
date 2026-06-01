@@ -3,6 +3,8 @@ import { Outlet } from 'react-router-dom';
 import AdminSidebar from '../components/AdminSidebar';
 import AdminHeader from '../components/AdminHeader';
 import NotificationToast from '../../user/components/NotificationToast';
+import useKeyboardShortcuts from '../../hooks/useKeyboardShortcuts';
+import ShortcutsHelpModal from '../../admin/components/ShortcutsHelpModal';
 
 /**
  * AdminLayout Component
@@ -12,6 +14,10 @@ import NotificationToast from '../../user/components/NotificationToast';
 const AdminLayout = () => {
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const { showHelp, setShowHelp } = useKeyboardShortcuts({ isAdmin: true });
+
+    // Rapid keyboard navigation (G+D, G+T, …) and Ctrl+F search focus.
+    useKeyboardShortcuts();
 
     return (
         <div className="flex h-screen bg-[#f8faf9] overflow-hidden font-sans">
@@ -33,7 +39,7 @@ const AdminLayout = () => {
                 />
 
                 {/* Operational Workspace */}
-                <main className="flex-1 overflow-x-hidden overflow-y-auto custom-scrollbar relative">
+                <main id="admin-main-content" className="flex-1 overflow-x-hidden overflow-y-auto custom-scrollbar relative">
                     {/* Centered Payload Container */}
                     <div className="max-w-[1280px] w-full mx-auto px-6 md:px-10 py-8 md:py-12 animate-in fade-in slide-in-from-bottom-6 duration-1000">
                         <Outlet />
@@ -43,6 +49,9 @@ const AdminLayout = () => {
 
             {/* Real-time System Notifications */}
             <NotificationToast />
+
+            {/* Keyboard Shortcuts Help Modal */}
+            <ShortcutsHelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} isAdmin={true} />
 
             {/* Mobile Nav Overlay (Emergency protocols) */}
             {isMobileNavOpen && (

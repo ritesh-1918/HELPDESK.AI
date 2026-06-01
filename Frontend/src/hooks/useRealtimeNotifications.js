@@ -32,11 +32,11 @@ const useTicketsRealtime = () => {
                     }
 
                     if (eventType === 'UPDATE') {
-                        updateTicket(newRecord.ticket_id, newRecord);
+                        updateTicket(newRecord.id, newRecord);
                     }
 
                     if (eventType === 'DELETE') {
-                        removeTicket(oldRecord.ticket_id);
+                        removeTicket(oldRecord.id);
                     }
                 }
             )

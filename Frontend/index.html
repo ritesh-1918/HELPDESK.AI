@@ -2,12 +2,15 @@
 <html lang="en">
 
 <head>
+  <!-- Enforce Content Security Policy (CSP) to mitigate XSS and Clickjacking -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https: wss: http://localhost:7860 ws://localhost:7860 http://127.0.0.1:7860 ws://127.0.0.1:7860;" />
  
   <!-- Google Fonts: Syne + Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>HELPDESK.AI - Professional AI Ticketing</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
@@ -26,6 +29,12 @@
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="/favicon.png" />
+
+  <!-- Security Headers (Content Security Policy) -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' http://localhost:8000 https://ritesh19180-ai-helpdesk-api.hf.space https://helpdeskaiv1.vercel.app https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; form-action 'self'; base-uri 'self'" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta http-equiv="X-Frame-Options" content="DENY" />
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
 </head>
 
 <body>

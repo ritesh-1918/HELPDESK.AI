@@ -20,3 +20,18 @@ Previously, tickets created through the normal save flow were stored in Supabase
 ### Validation
 - Ran a backend error check on the modified file.
 - No errors were reported for `backend/main.py`.
+
+## 2026-05-30 — Security & Performance Improvements
+
+### Added
+- OWASP Security Headers (CSP, HSTS, X-Frame-Options)
+- Google OAuth authentication support
+- AES-256-GCM encryption for PII data
+- Prometheus metrics endpoint
+
+### Fixed
+- Backend startup crash (missing Response import)
+- Safari date parsing issue (ISO-8601 normalization)
+- Admin auto-resolve toggle persistence
+- Password validation error messages
+- Vectorized duplicate detection for performance

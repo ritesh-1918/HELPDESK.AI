@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, ScrollView,
-  ActivityIndicator, RefreshControl, StatusBar, Image,
+  ActivityIndicator, RefreshControl, StatusBar, Image, Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -9,17 +9,72 @@ import { supabase } from '../../lib/supabase';
 import { COLORS, SHADOWS } from '../../styles/theme';
 import {
   Plus, Ticket, Clock, CheckCircle2, Activity, ChevronRight,
-  Zap, TrendingUp, BarChart3,
+  Zap, TrendingUp, BarChart3, Download, X,
 } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
+import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Updates from 'expo-updates';
+import { useNotification } from '../../components/NotificationProvider';
 
 const DashboardScreen = () => {
   const navigation = useNavigation();
+  const { success, warning, info } = useNotification();
   const [profile, setProfile] = useState(null);
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
   const [unreadCount, setUnreadCount] = useState(0);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [applyingUpdate, setApplyingUpdate] = useState(false);
+  const updateBannerAnim = useRef(new Animated.Value(0)).current;
+
+  // ─── First-time permission prompts ───────────────────────────────────────
+  useEffect(() => {
+    (async () => {
+      const done = await AsyncStorage.getItem('@permissions_prompted');
+      if (done) return;
+      try {
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+        await ImagePicker.requestCameraPermissionsAsync();
+      } catch (e) {
+        console.warn('[Permissions] Could not request:', e);
+      }
+      await AsyncStorage.setItem('@permissions_prompted', 'true');
+    })();
+  }, []);
+
+  // ─── OTA Update Check ─────────────────────────────────────────────────
+  useEffect(() => {
+    (async () => {
+      try {
+        const update = await Updates.checkForUpdateAsync();
+        if (update.isAvailable) {
+          await Updates.fetchUpdateAsync();
+          setUpdateAvailable(true);
+          Animated.spring(updateBannerAnim, { toValue: 1, damping: 16, stiffness: 200, useNativeDriver: true }).start();
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        }
+      } catch (e) {
+        // OTA not available in dev mode or Expo Go — silently ignore
+      }
+    })();
+  }, []);
+
+  const applyUpdate = async () => {
+    setApplyingUpdate(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      await Updates.reloadAsync();
+    } catch (e) {
+      setApplyingUpdate(false);
+      setUpdateAvailable(false);
+    }
+  };
+
+  const dismissUpdate = () => {
+    Animated.timing(updateBannerAnim, { toValue: 0, duration: 260, useNativeDriver: true }).start(() => setUpdateAvailable(false));
+  };
 
   const fetchData = useCallback(async () => {
     try {
@@ -47,7 +102,7 @@ const DashboardScreen = () => {
         .from('notifications')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id)
-        .eq('read', false);
+        .eq('is_unread', true);
       setUnreadCount(count || 0);
 
     } catch (e) {
@@ -58,17 +113,17 @@ const DashboardScreen = () => {
     }
   }, []);
 
-  useEffect(() => { 
-    fetchData(); 
+  useEffect(() => {
+    fetchData().catch((e) => console.error('Dashboard fetch error:', e));
 
     // Subscribe to ticket changes
     const ticketsChannel = supabase
       .channel('dashboard_tickets')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'tickets' 
-      }, () => fetchData())
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'tickets'
+      }, () => fetchData().catch((e) => console.error('Dashboard fetch error:', e)))
       .subscribe();
 
     // Subscribe to notifications changes
@@ -78,7 +133,23 @@ const DashboardScreen = () => {
         event: '*', 
         schema: 'public', 
         table: 'notifications' 
-      }, () => fetchData())
+      }, (payload) => {
+        fetchData();
+        if (payload.eventType === 'INSERT' && payload.new) {
+          const notif = payload.new;
+          supabase.auth.getUser().then(({ data: { user } }) => {
+            if (user && notif.user_id === user.id) {
+              if (notif.type === 'ai_update') {
+                success(notif.title, notif.message);
+              } else if (notif.type === 'alert') {
+                warning(notif.title, notif.message);
+              } else {
+                info(notif.title, notif.message);
+              }
+            }
+          });
+        }
+      })
       .subscribe();
 
     return () => {
@@ -87,7 +158,10 @@ const DashboardScreen = () => {
     };
   }, [fetchData]);
 
-  const onRefresh = () => { setRefreshing(true); fetchData(); };
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchData().catch((e) => console.error('Dashboard fetch error:', e));
+  };
 
   const totalTickets = tickets.length;
   const activeTickets = tickets.filter(t => t.status !== 'resolved').length;
@@ -140,6 +214,39 @@ const DashboardScreen = () => {
             resizeMode="contain"
           />
         </View>
+
+        {/* OTA Update Banner */}
+        {updateAvailable && (
+          <Animated.View style={[
+            styles.updateBanner,
+            {
+              opacity: updateBannerAnim,
+              transform: [{
+                translateY: updateBannerAnim.interpolate({ inputRange: [0, 1], outputRange: [-60, 0] })
+              }]
+            }
+          ]}>
+            <View style={styles.updateBannerLeft}>
+              <View style={styles.updateIconWrap}>
+                <Download size={16} color="#fff" strokeWidth={2.5} />
+              </View>
+              <View>
+                <Text style={styles.updateTitle}>Update Ready 🚀</Text>
+                <Text style={styles.updateSubtitle}>A new version of HelpDesk.ai is available</Text>
+              </View>
+            </View>
+            <View style={styles.updateActions}>
+              <TouchableOpacity style={styles.updateBtn} onPress={applyUpdate} disabled={applyingUpdate}>
+                {applyingUpdate
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Text style={styles.updateBtnText}>Reload</Text>}
+              </TouchableOpacity>
+              <TouchableOpacity onPress={dismissUpdate} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <X size={16} color="rgba(255,255,255,0.6)" />
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        )}
 
         {/* Quick Actions */}
         <View style={styles.quickActions}>
@@ -359,6 +466,43 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', paddingTop: 40, paddingBottom: 20, gap: 10, marginHorizontal: 20 },
   emptyTitle: { fontSize: 17, fontWeight: '800', color: COLORS.text },
   emptyMsg: { fontSize: 13, color: COLORS.textLight, textAlign: 'center' },
+  // OTA Update Banner (Green Theme Harmony)
+  updateBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.secondary, // Premium Dark Green-Black (#0f1f12)
+    borderWidth: 1,
+    borderColor: 'rgba(22, 163, 74, 0.35)', // Translucent Green
+    borderRadius: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    shadowColor: COLORS.primary, // Green Glow
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
+    gap: 10,
+  },
+  updateBannerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  updateIconWrap: {
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: COLORS.primary, // Green Accent
+    justifyContent: 'center', alignItems: 'center',
+  },
+  updateTitle: { fontSize: 13, fontWeight: '800', color: COLORS.primaryLight }, // Light Green (#dcfce7)
+  updateSubtitle: { fontSize: 11, color: 'rgba(220, 252, 231, 0.65)', fontWeight: '500' },
+  updateActions: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0 },
+  updateBtn: {
+    backgroundColor: COLORS.primary, // Green Button
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 10,
+    minWidth: 62,
+    alignItems: 'center',
+  },
+  updateBtnText: { color: '#fff', fontSize: 13, fontWeight: '800' },
 });
 
 export default DashboardScreen;

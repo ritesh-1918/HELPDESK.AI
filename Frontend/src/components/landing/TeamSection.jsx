@@ -194,10 +194,10 @@ const TEAM_GROUPS = [
 export default function TeamSection() {
     return (
         <section className="py-24 bg-gray-50/50 border-t border-gray-100">
-            <div className="max-w-[1100px] mx-auto px-6">
+            <div className="max-w-[1100px] mx-auto">
                 {/* Section Header */}
-                <div className="text-center mb-16">
-                    <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-4">
+                <div className="text-center mb-10 sm:mb-12 md:mb-16">
+                    <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-3 sm:mb-4">
                         Meet the Team Behind helpdesk.ai
                     </h2>
                     <p className="text-slate-500 font-medium text-lg max-w-2xl mx-auto">
@@ -218,7 +218,7 @@ export default function TeamSection() {
                                 </h3>
 
                                 {/* Responsive Grid Layout */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 sm:gap-x-8 gap-y-8 sm:gap-y-12">
                                     {groupMembers.map((member, index) => (
                                         <div
                                             key={index}

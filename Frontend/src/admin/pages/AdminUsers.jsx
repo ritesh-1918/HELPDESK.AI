@@ -379,6 +379,7 @@ const AdminUsers = () => {
                         onClick={fetchUsers}
                         className="p-4 bg-slate-100 text-slate-600 rounded-2xl hover:bg-slate-200 transition-all flex items-center justify-center"
                         title="Refresh Data"
+                        aria-label="Refresh Data"
                     >
                         <Zap size={20} className={loading ? "animate-pulse" : ""} />
                     </button>
@@ -512,6 +513,7 @@ const AdminUsers = () => {
                                                         onClick={() => openProfile(user)}
                                                         className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-400 rounded-xl hover:text-indigo-600 hover:border-indigo-100 hover:bg-indigo-50 transition-all shadow-sm"
                                                         title="View Profile"
+                                                        aria-label="View Profile"
                                                     >
                                                         <Eye size={18} />
                                                     </button>
@@ -520,6 +522,7 @@ const AdminUsers = () => {
                                                         disabled={isProcessing === user.id || user.id === currentUser?.id}
                                                         className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-400 rounded-xl hover:text-red-600 hover:border-red-100 hover:bg-red-50 transition-all shadow-sm disabled:opacity-30"
                                                         title="Permanent Delete"
+                                                        aria-label="Permanent Delete"
                                                     >
                                                         {isProcessing === user.id ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
                                                     </button>
@@ -599,6 +602,7 @@ const AdminUsers = () => {
                                                         disabled={isProcessing === request.id}
                                                         className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-400 rounded-xl hover:text-red-600 hover:border-red-100 hover:bg-red-50 transition-all shadow-sm disabled:opacity-30"
                                                         title="Reject Request"
+                                                        aria-label="Reject Request"
                                                     >
                                                         {isProcessing === request.id ? <Loader2 size={18} className="animate-spin" /> : <X size={18} />}
                                                     </button>
@@ -646,7 +650,7 @@ const AdminUsers = () => {
                                     </p>
                                 </div>
                             </div>
-                            <button onClick={() => setShowProfileModal(false)} className="text-slate-400 hover:text-slate-600 bg-white shadow-sm p-3 rounded-xl border border-slate-200 transition-colors">
+                            <button onClick={() => setShowProfileModal(false)} aria-label="Close profile" className="text-slate-400 hover:text-slate-600 bg-white shadow-sm p-3 rounded-xl border border-slate-200 transition-colors">
                                 <X size={24} />
                             </button>
                         </div>

@@ -3,7 +3,7 @@
  */
 
 const getBackendUrl = () => {
-    const envUrl = import.meta.env.VITE_BACKEND_URL;
+    const envUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL;
     if (envUrl) return envUrl.trim().replace(/\/$/, '');
 
     // Dynamically deduce backend URL if running locally or on custom domain
@@ -17,5 +17,6 @@ const getBackendUrl = () => {
 export const API_CONFIG = {
     BACKEND_URL: getBackendUrl(),
     FRONTEND_URL: window.location.origin,
-    IS_PROD: import.meta.env.PROD
+    IS_PROD: import.meta.env.PROD,
+    USE_MOCK: import.meta.env.VITE_USE_MOCK !== 'false'  // default true
 };

@@ -49,10 +49,12 @@
   }
 
   body {
-    @apply bg-[#f6f8f7] text-slate-900;
+    @apply bg-[#f6f8f7] text-slate-900 dark:bg-gray-900 dark:text-white;
   }
 
   .dark {
+    background-color: #111827;
+    color: #f9fafb;
     --background: 224 71.4% 4.1%;
     --foreground: 210 20% 98%;
     --card: 224 71.4% 4.1%;
@@ -79,6 +81,20 @@
     --chart-5: 340 75% 55%;
   }
 
+  /* Global dark-mode utility overrides for existing Tailwind utility usage */
+  .dark body {
+    background-color: #0B1120;
+    color: #F9FAFB;
+  }
+
+  .dark .bg-white { background-color: #111827 !important; }
+  .dark .bg-white\/90 { background-color: rgba(17,24,39,0.9) !important; }
+  .dark .text-slate-900, .dark .text-gray-900 { color: #F9FAFB !important; }
+  .dark .text-gray-700, .dark .text-gray-600, .dark .text-gray-500 { color: #9CA3AF !important; }
+  .dark .border-gray-100, .dark .border-gray-50 { border-color: #374151 !important; }
+  .dark .hover\:bg-gray-50:hover { background-color: rgba(255,255,255,0.02) !important; }
+
+
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
   }
@@ -97,7 +113,7 @@
   }
 }
 
-html{
+html {
   overflow-y: scroll;
   overflow-x: hidden;
   scrollbar-width: none; /* Firefox */
@@ -123,4 +139,48 @@ canvas,
 svg {
   max-width: 100%;
   height: auto;
+}
+
+/* Dark Mode Global Overrides */
+.dark .bg-white {
+  background-color: #111827 !important;
+}
+.dark .bg-gray-50 {
+  background-color: #1f2937 !important;
+}
+.dark .bg-gray-100 {
+  background-color: #374151 !important;
+}
+.dark .text-gray-900 {
+  color: #f9fafb !important;
+}
+.dark .text-gray-800 {
+  color: #f3f4f6 !important;
+}
+.dark .text-gray-700 {
+  color: #e5e7eb !important;
+}
+.dark .text-gray-600 {
+  color: #d1d5db !important;
+}
+.dark .text-gray-500 {
+  color: #9ca3af !important;
+}
+.dark .border-gray-100 {
+  border-color: #374151 !important;
+}
+.dark .border-gray-200 {
+  border-color: #4b5563 !important;
+}
+.dark .shadow-sm {
+  box-shadow: 0 1px 2px rgba(0,0,0,0.5) !important;
+}
+.dark nav {
+  background-color: #1f2937 !important;
+}
+.dark nav a {
+  color: #e5e7eb !important;
+}
+.dark nav span {
+  color: #f9fafb !important;
 }

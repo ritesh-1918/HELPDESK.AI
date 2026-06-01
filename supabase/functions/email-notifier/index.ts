@@ -7,7 +7,7 @@ const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
 // User Defined Secrets
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
-const FROM_EMAIL = "HELPDESK.AI <bonthalamadhavi1@gmail.com>";
+const FROM_EMAIL = Deno.env.get("FROM_EMAIL") || "HELPDESK.AI <noreply@helpdesk.ai>";
 
 serve(async (req: Request) => {
   try {
@@ -29,6 +29,11 @@ serve(async (req: Request) => {
         recipientEmail = userData.user.email;
       }
     }
+
+    let themeColor = "#10b981";
+    let badgeBg = "#ecfdf5";
+    let badgeBorder = "#d1fae5";
+    let badgeText = "#065f46";
 
     // 2. Define Email Types & Templates
     if (type === "INSERT") {
@@ -65,9 +70,26 @@ serve(async (req: Request) => {
         ctaText: "Sign In Now",
         ctaUrl: link
       };
-    }
+    } else if (type === "SLA_BREACH") {
+      const ticketId = record.id?.toString().slice(0, 8).toUpperCase();
+      const metadata = payload.metadata || {};
+      subject = `[SLA BREACH ALERT] Ticket #${ticketId} Escalated`;
+      
+      themeColor = "#ef4444"; // Red for SLA breaches
+      badgeBg = "#fef2f2";
+      badgeBorder = "#fee2e2";
+      badgeText = "#991b1b";
 
-    const themeColor = "#10b981";
+      templateData = {
+        title: "SLA Breach & Re-Route",
+        badge: "⚠️ Escalation Triggered",
+        mainText: `Support Ticket #${ticketId} (Priority: ${record.priority || 'High'}) has breached its SLA response/resolution deadline. The ticket has been auto-escalated from '${metadata.original_team || 'previous team'}' to '${metadata.escalated_team || record.assigned_team}' (Escalation Level ${record.escalation_level || 1}) for immediate action.`,
+        refLabel: "Escalated Assigned Team",
+        refValue: metadata.escalated_team || record.assigned_team || "Tier 2 Support",
+        ctaText: "Review Incident",
+        ctaUrl: `https://helpdeskaiv1.vercel.app/admin/ticket/${record.id}`
+      };
+    }
 
     const html = `
 <!DOCTYPE html>
@@ -83,13 +105,13 @@ serve(async (req: Request) => {
         <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width:600px;background-color:ffffff;border-radius:24px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.05);">
           <tr>
             <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 40px; text-align: center;">
-              <h1 style="color:#ffffff; margin:0; font-size:28px; font-weight:900;">HELPDESK<span style="color:#10b981;">.AI</span></h1>
+              <h1 style="color:#ffffff; margin:0; font-size:28px; font-weight:900;">HELPDESK<span style="color:${themeColor};">.AI</span></h1>
             </td>
           </tr>
           <tr>
             <td style="padding: 24px 40px; border-bottom: 1px solid #f1f5f9; background-color: #f8fafc; text-align: center;">
-              <div style="display:inline-block; padding: 6px 12px; background-color: #ecfdf5; border-radius: 999px; border: 1px solid #d1fae5;">
-                <p style="margin:0; color:#065f46; font-size:12px; font-weight:800; text-transform:uppercase;">${templateData.badge}</p>
+              <div style="display:inline-block; padding: 6px 12px; background-color: ${badgeBg}; border-radius: 999px; border: 1px solid ${badgeBorder};">
+                <p style="margin:0; color:${badgeText}; font-size:12px; font-weight:800; text-transform:uppercase;">${templateData.badge}</p>
               </div>
             </td>
           </tr>
@@ -104,7 +126,7 @@ serve(async (req: Request) => {
               </div>
 
               <div align="center">
-                <a href="${templateData.ctaUrl}" style="display:inline-block; background-color:#10b981; color:#ffffff; padding: 18px 40px; border-radius: 16px; text-decoration:none; font-size:14px; font-weight:900;">
+                <a href="${templateData.ctaUrl}" style="display:inline-block; background-color:${themeColor}; color:#ffffff; padding: 18px 40px; border-radius: 16px; text-decoration:none; font-size:14px; font-weight:900;">
                   ${templateData.ctaText} →
                 </a>
               </div>

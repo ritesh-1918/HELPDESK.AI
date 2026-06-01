@@ -45,6 +45,13 @@ const CreateTicketScreen = () => {
       notifyError('Empty Request', 'Please describe your issue first.');
       return;
     }
+    if (description.trim().length < 15) {
+      notifyError(
+        'More Detail Needed',
+        'Please describe your issue in at least 15 characters so our AI can accurately route your request.'
+      );
+      return;
+    }
     
     setLoading(true);
     try {
@@ -93,7 +100,9 @@ const CreateTicketScreen = () => {
           <View style={styles.inputCard}>
             <View style={styles.inputHeader}>
               <Text style={styles.inputLabel}>Issue Details</Text>
-              <Text style={styles.charCount}>{description.length}/1000</Text>
+              <Text style={[styles.charCount, description.length < 15 && description.length > 0 && { color: '#ef4444' }]}>
+                {description.length < 15 && description.length > 0 ? `${15 - description.length} more needed` : `${description.length}/1000`}
+              </Text>
             </View>
             
             <TextInput

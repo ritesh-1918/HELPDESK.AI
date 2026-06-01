@@ -22,6 +22,7 @@ const TicketDetail = () => {
     const [isReopening, setIsReopening] = useState(false);
     const [showCsat, setShowCsat] = useState(false);
     const [csatHasBeenDismissed, setCsatHasBeenDismissed] = useState(false);
+    const [showOriginalText, setShowOriginalText] = useState(false);
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -122,6 +123,8 @@ const TicketDetail = () => {
     const solutionSteps = Array.isArray(ticket.solution_steps) ? ticket.solution_steps : [];
     const isAutoResolved = ticket.auto_resolve === true;
     const confidenceScore = ticket.metadata?.confidence ?? ticket.routing_confidence ?? 0.92;
+    const isTranslated = Boolean(ticket.detected_language && ticket.detected_language.toLowerCase() !== 'en' && ticket.original_body);
+    const sourceLanguageName = ticket.detected_language ? ticket.detected_language.toUpperCase() : 'Unknown';
 
 
     const handleReopen = async () => {
@@ -184,6 +187,27 @@ const TicketDetail = () => {
 
                 {/* LEFT SIDE (Main Content) */}
                 <div className="lg:col-span-2 flex flex-col gap-6">
+                    {isTranslated && (
+                        <Card className="p-4 rounded-2xl border border-sky-100 bg-sky-50/70 shadow-sm">
+                            <div className="flex items-center justify-between gap-3">
+                                <p className="text-sm font-semibold text-sky-900">
+                                    Translated from {sourceLanguageName}
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowOriginalText(prev => !prev)}
+                                    className="text-xs font-bold text-sky-700 hover:text-sky-900"
+                                >
+                                    {showOriginalText ? "View English" : "View Original"}
+                                </button>
+                            </div>
+                            {showOriginalText && (
+                                <p className="mt-3 text-sm text-slate-700 bg-white border border-sky-100 rounded-lg px-3 py-2">
+                                    {ticket.original_body}
+                                </p>
+                            )}
+                        </Card>
+                    )}
 
                     {/* Card 1: Ticket Timeline */}
                     <Card className="p-6 sm:p-8 rounded-2xl border border-gray-100 shadow-sm bg-white">

@@ -33,6 +33,7 @@ const NotificationPopover = ({ isAdmin = false }) => {
                 <Button
                     variant="ghost"
                     size="icon"
+                    aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
                     className="relative text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
                 >
                     <Bell className="w-5 h-5" />
@@ -96,6 +97,7 @@ const NotificationPopover = ({ isAdmin = false }) => {
                 <div className="p-3 bg-gray-50 border-t border-gray-100">
                     <button
                         onClick={() => markNotificationsRead()}
+                        aria-label="Mark all notifications as read"
                         className="w-full py-2 text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-emerald-600 transition-colors bg-white rounded-lg border border-gray-100"
                     >
                         Mark all as read

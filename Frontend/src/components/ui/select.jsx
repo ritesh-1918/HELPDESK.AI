@@ -3,7 +3,7 @@ import { ChevronDown, Check } from 'lucide-react';
  
 import { motion, AnimatePresence } from 'framer-motion';
 
-export const Select = ({ value, onChange, options, placeholder = "Select an option", className = "", buttonClassName = "", disabled = false, ...props }) => {
+export const Select = ({ value, onChange, options, placeholder = "Select an option", className = "", buttonClassName = "", disabled = false, 'aria-label': ariaLabel, ...props }) => {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef(null);
 
@@ -25,6 +25,9 @@ export const Select = ({ value, onChange, options, placeholder = "Select an opti
                 type="button"
                 onClick={() => !disabled && setIsOpen(!isOpen)}
                 disabled={disabled}
+                aria-label={selectedOption ? selectedOption.label : placeholder}
+                aria-haspopup="listbox"
+                aria-expanded={isOpen}
                 className={buttonClassName || `w-full flex items-center justify-between pl-4 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 ${disabled ? 'opacity-50 cursor-not-allowed bg-slate-50' : 'hover:bg-slate-50 cursor-pointer text-slate-700'}`}
             >
                 <span className={`truncate ${selectedOption ? "text-slate-900" : "text-slate-400"}`}>
@@ -42,11 +45,12 @@ export const Select = ({ value, onChange, options, placeholder = "Select an opti
                         transition={{ duration: 0.15, ease: "easeOut" }}
                         className="absolute z-[100] w-full mt-2 bg-white border border-slate-100 rounded-xl shadow-xl overflow-hidden py-1 min-w-[140px]"
                     >
-                        <div className="max-h-60 overflow-y-auto">
+                        <div className="max-h-60 overflow-y-auto" role="listbox" aria-label={ariaLabel || "Options"}>
                             {options.map((option) => (
                                 <button
                                     key={option.value}
                                     type="button"
+                                    aria-label={option.label}
                                     onClick={() => {
                                         // Fake native event structure for easy drop-in replacement
                                         if (onChange) onChange({ target: { value: option.value, name: props.name } });

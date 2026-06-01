@@ -1,12 +1,13 @@
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity } from 'lucide-react';
+import { Activity, AlertTriangle, Clock, ShieldCheck, Wifi, WifiOff } from 'lucide-react';
 
 import useAuthStore from "../../store/authStore";
+import useTicketStore from "../../store/ticketStore";
+import useWebSocket from "../../hooks/useWebSocket";
 import { supabase } from "../../lib/supabaseClient";
 import StatCard from "../components/StatCard";
 import TicketTable from "../components/TicketTable";
-import { formatTimelineDate } from "../../utils/dateUtils";
 
 // Inline SVG icon components
 const TicketIcon = () => (
@@ -67,12 +68,67 @@ const aiIconMap = [
     { icon: <DuplicateIcon />, bg: '#FFF7ED', color: '#f97316' },
 ];
 
+function isTerminalTicket(ticket) {
+    const status = String(ticket?.status || '').toLowerCase();
+    return status.includes('resolv') || status.includes('closed');
+}
+
+function getSlaDeadline(ticket) {
+    const source = ticket?.sla_breach_at || ticket?.slaBreachAt;
+    const value = source ? new Date(source).getTime() : NaN;
+    return Number.isFinite(value) ? value : null;
+}
+
+function getSlaState(ticket, nowMs) {
+    if (isTerminalTicket(ticket)) return 'met';
+    if (String(ticket?.sla_status || '').toUpperCase() === 'BREACHED') return 'breached';
+    const deadline = getSlaDeadline(ticket);
+    if (!deadline) return 'active';
+    const remaining = deadline - nowMs;
+    if (remaining <= 0) return 'breached';
+    if (remaining <= 60 * 60 * 1000) return 'warning';
+    return 'active';
+}
+
+function formatSlaCountdown(deadlineMs, nowMs) {
+    if (!deadlineMs) return 'No deadline';
+    const remaining = deadlineMs - nowMs;
+    if (remaining <= 0) return 'Breached';
+    const totalMinutes = Math.ceil(remaining / 60000);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+}
+
 const AdminDashboard = () => {
     const navigate = useNavigate();
     const { profile } = useAuthStore();
-    const [tickets, setTickets] = React.useState([]);
     const [isLoading, setIsLoading] = React.useState(true);
+    const [nowMs, setNowMs] = React.useState(() => Date.now());
 
+    // WebSocket connection for real-time ticket updates
+    const { isConnected: wsConnected, lastMessage } = useWebSocket(profile?.company);
+
+    // Read tickets from the Zustand store (populated below and updated by WS)
+    const tickets = useTicketStore((s) => s.tickets);
+    const handleWsMessage = useTicketStore((s) => s.handleWsMessage);
+    const setWsConnected = useTicketStore((s) => s.setWsConnected);
+    const upsertTicket = useTicketStore((s) => s.upsertTicket);
+
+    // Sync WebSocket connection status to store
+    React.useEffect(() => {
+        setWsConnected(wsConnected);
+    }, [wsConnected, setWsConnected]);
+
+    // Route incoming WebSocket messages into the ticket store
+    React.useEffect(() => {
+        if (lastMessage) {
+            handleWsMessage(lastMessage);
+        }
+    }, [lastMessage, handleWsMessage]);
+
+    // Initial fetch — populate store from Supabase on mount
     React.useEffect(() => {
         if (profile) {
             const fetchStats = async () => {
@@ -92,19 +148,27 @@ const AdminDashboard = () => {
                         console.warn("Retrying dashboard fetch without relation...", error);
                         const { data: basicData, error: basicError } = await supabase.from('tickets').select('*').eq('company', profile?.company).order('created_at', { ascending: false });
                         if (basicError) throw basicError;
-                        setTickets(basicData || []);
+                        // Bulk-load into store (avoid duplicates)
+                        for (const t of basicData || []) {
+                            upsertTicket(t);
+                        }
                     } else {
-                        setTickets(data || []);
+                        for (const t of data || []) {
+                            upsertTicket(t);
+                        }
                     }
                 } catch (err) { console.error("Dashboard fetch error:", err); }
                 finally { setIsLoading(false); }
             };
 
             fetchStats();
-            const interval = setInterval(fetchStats, 30000);
-            return () => clearInterval(interval);
         }
-    }, [profile]);
+    }, [profile, upsertTicket]);
+
+    React.useEffect(() => {
+        const timer = setInterval(() => setNowMs(Date.now()), 60 * 1000);
+        return () => clearInterval(timer);
+    }, []);
 
     const metrics = useMemo(() => {
         const total = tickets.length;
@@ -126,6 +190,26 @@ const AdminDashboard = () => {
         ];
     }, [tickets]);
 
+    const slaBoard = useMemo(() => {
+        const actionable = tickets.filter(t => !isTerminalTicket(t));
+        const breached = actionable.filter(t => getSlaState(t, nowMs) === 'breached');
+        const warning = actionable.filter(t => getSlaState(t, nowMs) === 'warning');
+        const active = actionable.filter(t => getSlaState(t, nowMs) === 'active');
+        const critical = actionable.filter(t => String(t.priority || '').toLowerCase() === 'critical');
+        const nextTicket = actionable
+            .map(ticket => ({ ticket, deadline: getSlaDeadline(ticket) }))
+            .filter(item => item.deadline)
+            .sort((a, b) => a.deadline - b.deadline)[0];
+
+        return {
+            breached,
+            warning,
+            active,
+            critical,
+            nextTicket,
+        };
+    }, [tickets, nowMs]);
+
     return (
         <div style={{ background: '#f8faf9', minHeight: '100vh', paddingBottom: '40px' }} className="space-y-10 -m-6 p-6 md:-m-10 md:p-10">
             {/* Header */}
@@ -135,30 +219,70 @@ const AdminDashboard = () => {
                         Dashboard
                     </h1>
                     <p style={{ color: '#6b7280', fontSize: '13px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 500 }}>
-                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }}></span>
-                        Real-time updates active
+                        {wsConnected ? (
+                            <Wifi size={14} color="#22c55e" />
+                        ) : (
+                            <WifiOff size={14} color="#f97316" />
+                        )}
+                        {wsConnected ? 'WebSocket connected' : 'Reconnecting...'}
                     </p>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 16px', background: '#F0FDF4', border: '1.5px solid #BBF7D0', borderRadius: '100px' }}>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block', animation: 'pulse-dot 2s infinite' }}></span>
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#15803d', letterSpacing: '0.08em', textTransform: 'uppercase' }}>System Active</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 16px', background: wsConnected ? '#F0FDF4' : '#FFF7ED', border: wsConnected ? '1.5px solid #BBF7D0' : '1.5px solid #FED7AA', borderRadius: '100px' }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: wsConnected ? '#22c55e' : '#f97316', display: 'inline-block', animation: 'pulse-dot 2s infinite' }}></span>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: wsConnected ? '#15803d' : '#c2410c', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{wsConnected ? 'Live' : 'Reconnecting'}</span>
                 </div>
             </div>
 
             {/* KPIs */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <button onClick={() => navigate('/admin/tickets')} className="text-left group focus:outline-none">
+                <button onClick={() => navigate('/admin/tickets')} aria-label="View all tickets" className="text-left group focus:outline-none">
                     <StatCard label="Total Tickets" value={metrics.total} color="indigo" subtitle="Lifetime generated" customIcon={<TicketIcon />} />
                 </button>
-                <button onClick={() => navigate('/admin/tickets')} className="text-left group focus:outline-none">
+                <button onClick={() => navigate('/admin/tickets')} aria-label="View active tickets" className="text-left group focus:outline-none">
                     <StatCard label="Active Tickets" value={metrics.active} color="amber" subtitle="Need attention" customIcon={<ActivityIcon />} />
                 </button>
-                <button onClick={() => navigate('/admin/tickets?filter=auto')} className="text-left group focus:outline-none">
+                <button onClick={() => navigate('/admin/tickets?filter=auto')} aria-label="View AI auto-resolved tickets" className="text-left group focus:outline-none">
                     <StatCard label="AI Auto-Resolved" value={metrics.autoResolved} color="emerald" subtitle="Resolved by AI" customIcon={<CpuIcon />} />
                 </button>
-                <button onClick={() => navigate('/admin/tickets?filter=human')} className="text-left group focus:outline-none">
+                <button onClick={() => navigate('/admin/tickets?filter=human')} aria-label="View escalated tickets" className="text-left group focus:outline-none">
                     <StatCard label="Escalated Tickets" value={metrics.humanEscalated} color="red" subtitle="Requires support agent" customIcon={<UsersIcon />} />
                 </button>
+            </div>
+
+            <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #fee2e2', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', padding: '24px' }}>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '16px', fontWeight: 800, color: '#0f1f12', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                            <Clock size={18} color="#dc2626" /> SLA Compliance
+                        </h2>
+                        <p style={{ fontSize: '11px', color: '#9ca3af', marginTop: '6px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                            {slaBoard.nextTicket ? `Next deadline ${formatSlaCountdown(slaBoard.nextTicket.deadline, nowMs)}` : 'No active deadlines'}
+                        </p>
+                    </div>
+                    <button
+                        onClick={() => navigate('/admin/tickets')}
+                        className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:border-red-200 hover:text-red-600 transition-colors"
+                    >
+                        Open Queue
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    {[
+                        { label: 'Breached', value: slaBoard.breached.length, icon: <AlertTriangle size={18} />, bg: '#fef2f2', color: '#dc2626', border: '#fecaca' },
+                        { label: 'Warning', value: slaBoard.warning.length, icon: <Clock size={18} />, bg: '#fffbeb', color: '#d97706', border: '#fde68a' },
+                        { label: 'Critical Open', value: slaBoard.critical.length, icon: <Activity size={18} />, bg: '#fff7ed', color: '#ea580c', border: '#fed7aa' },
+                        { label: 'Healthy', value: slaBoard.active.length, icon: <ShieldCheck size={18} />, bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0' },
+                    ].map(item => (
+                        <div key={item.label} style={{ background: item.bg, border: `1px solid ${item.border}`, borderRadius: '16px', padding: '18px' }}>
+                            <div className="flex items-center justify-between">
+                                <span style={{ color: item.color }}>{item.icon}</span>
+                                <span style={{ color: item.color, fontSize: '28px', fontWeight: 900, lineHeight: 1 }}>{item.value}</span>
+                            </div>
+                            <p style={{ margin: '12px 0 0', fontSize: '10px', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: item.color }}>{item.label}</p>
+                        </div>
+                    ))}
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
@@ -182,9 +306,9 @@ const AdminDashboard = () => {
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
                             AI Status
                         </h2>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '100px', padding: '3px 10px' }}>
-                            <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#22c55e', display: 'inline-block', animation: 'pulse-dot 2s infinite' }}></span>
-                            <span style={{ fontSize: '10px', fontWeight: 700, color: '#15803d' }}>LIVE SYNC</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: wsConnected ? '#F0FDF4' : '#FFF7ED', border: wsConnected ? '1px solid #BBF7D0' : '1px solid #FED7AA', borderRadius: '100px', padding: '3px 10px' }}>
+                            <span style={{ width: 5, height: 5, borderRadius: '50%', background: wsConnected ? '#22c55e' : '#f97316', display: 'inline-block', animation: 'pulse-dot 2s infinite' }}></span>
+                            <span style={{ fontSize: '10px', fontWeight: 700, color: wsConnected ? '#15803d' : '#c2410c' }}>{wsConnected ? 'WS CONNECTED' : 'RECONNECTING'}</span>
                         </div>
                     </div>
                     <div style={{ background: '#fff', borderRadius: '20px', border: '1px solid #f0fdf4', padding: '24px' }}>
@@ -209,9 +333,9 @@ const AdminDashboard = () => {
                             <div className="pt-4 mt-4 border-t border-gray-100 flex flex-col items-center gap-2">
                                 <p style={{ fontSize: '10px', color: '#9ca3af', letterSpacing: '0.14em', fontWeight: 600, textTransform: 'uppercase' }}>All systems operating normally</p>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 10px', background: '#f8faf9', borderRadius: '100px', border: '1px solid #e5e7eb' }}>
-                                    <Activity size={10} color="#9ca3af" />
-                                    <span style={{ fontSize: '9px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                                        Last Synced: {formatTimelineDate(new Date())}
+                                    {wsConnected ? <Activity size={10} color="#22c55e" /> : <Activity size={10} color="#f97316" />}
+                                    <span style={{ fontSize: '9px', fontWeight: 600, color: wsConnected ? '#16a34a' : '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                                        {wsConnected ? 'Live via WebSocket' : 'Reconnecting via WebSocket...'}
                                     </span>
                                 </div>
                             </div>

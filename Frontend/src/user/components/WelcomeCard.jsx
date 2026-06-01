@@ -8,71 +8,39 @@ const WelcomeCard = ({ userName = "Ritesh" }) => {
     return (
         <div
             id="tour-welcome"
-            style={{
-                background: '#ffffff',
-                borderLeft: '2px solid #22a045',
-                borderRadius: '20px',
-                boxShadow: '0 2px 24px rgba(0,0,0,0.06)',
-                padding: '40px 48px',
-                position: 'relative',
-                overflow: 'hidden',
-            }}
+            className="relative overflow-hidden bg-white dark:bg-slate-900 border-l-2 border-green-600 rounded-[20px] shadow-sm dark:shadow-slate-950/50 p-10 md:p-12"
         >
             {/* Badge */}
-            <div style={{ marginBottom: '16px' }}>
-                <span style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '6px',
-                    background: '#EDFAF3', color: '#16a34a', border: '1px solid #bbf7d0',
-                    borderRadius: '100px', fontSize: '11px', fontWeight: 600,
-                    letterSpacing: '0.08em', padding: '5px 14px',
-                }}>
-                    <Sparkles size={12} style={{ fill: '#16a34a' }} />
+            <div className="mb-4">
+                <span className="inline-flex items-center gap-1.5 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800/30 rounded-full px-3.5 py-1 text-[11px] font-semibold tracking-wider uppercase">
+                    <Sparkles size={12} className="fill-green-600 dark:fill-green-400" />
                     AI-Enhanced Support
                 </span>
             </div>
 
             {/* Heading */}
-            <h2 style={{
-                fontFamily: 'Syne, sans-serif', fontSize: '34px', fontWeight: 800,
-                color: '#0f1f12', letterSpacing: '-0.025em', margin: '0 0 8px 0',
-            }}>
+            <h2 className="font-syne text-[34px] font-extrabold text-slate-900 dark:text-white leading-tight tracking-tight mb-2">
                 Welcome back, {userName}
             </h2>
 
             {/* Description */}
-            <p style={{ color: '#6b7280', fontSize: '15px', maxWidth: '520px', margin: '0 0 28px 0', lineHeight: 1.6 }}>
+            <p className="text-gray-500 dark:text-gray-400 text-[15px] max-w-[520px] mb-7 leading-relaxed">
                 Our AI assistant is ready to help you. Most issues are analyzed and resolved in under 5 minutes.
             </p>
 
             {/* Buttons */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+            <div className="flex flex-wrap gap-3">
                 <button
                     id="tour-create-ticket"
                     onClick={() => navigate('/create-ticket')}
-                    style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '8px',
-                        background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: '#fff',
-                        borderRadius: '12px', padding: '12px 24px', fontWeight: 600,
-                        fontSize: '14px', border: 'none', cursor: 'pointer',
-                        boxShadow: '0 4px 16px rgba(34,160,69,0.3)', transition: 'transform 0.2s',
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                    onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                    className="inline-flex items-center gap-2 bg-gradient-to-br from-green-600 to-green-500 text-white rounded-xl px-6 py-3 font-semibold text-sm shadow-lg shadow-green-600/20 hover:scale-[1.02] transition-transform active:scale-95"
                 >
                     <PlusCircle size={18} />
                     Report New Issue
                 </button>
                 <button
                     onClick={() => navigate('/my-tickets')}
-                    style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '8px',
-                        background: '#fff', color: '#15803d',
-                        border: '1.5px solid #d1fae5', borderRadius: '12px',
-                        padding: '12px 24px', fontWeight: 600, fontSize: '14px',
-                        cursor: 'pointer', transition: 'background 0.2s',
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = '#f0fdf4'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}
+                    className="inline-flex items-center gap-2 bg-white dark:bg-slate-800 text-green-700 dark:text-green-400 border-1.5 border-green-100 dark:border-green-900/50 rounded-xl px-6 py-3 font-semibold text-sm hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
                 >
                     <ListTodo size={18} />
                     View My Tickets
@@ -83,4 +51,3 @@ const WelcomeCard = ({ userName = "Ritesh" }) => {
 };
 
 export default WelcomeCard;
-

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import useAuthStore from "../store/authStore";
 import { Select } from "../components/ui/select";
+import { getPasswordValidation, getPasswordValidationMessage } from "../utils/passwordValidation";
 
 /**
  * AdminSignup — Premium Multi-step Company Registration
@@ -44,6 +45,14 @@ function AdminSignup() {
 
     const navigate = useNavigate();
     const { signup, loading, user, profile } = useAuthStore();
+    const passwordRules = {
+        minLength: 8,
+        requireUppercase: true,
+        requireNumber: true,
+        requireSpecial: true,
+    };
+    const passwordChecks = getPasswordValidation(formData.password, passwordRules);
+    const passwordWarning = getPasswordValidationMessage(passwordChecks, passwordRules);
 
     // Redirect if already logged in and verified
     useEffect(() => {
@@ -58,6 +67,7 @@ function AdminSignup() {
         if (!/[a-z]/.test(pw)) return 'Password must contain at least one lowercase letter (a-z).';
         if (!/[A-Z]/.test(pw)) return 'Password must contain at least one uppercase letter (A-Z).';
         if (!/[0-9]/.test(pw)) return 'Password must contain at least one number (0-9).';
+        if (!/[^A-Za-z0-9]/.test(pw)) return 'Password must contain at least one special character.';
         return null; // valid
     };
 
@@ -87,9 +97,8 @@ function AdminSignup() {
                 setError("Please fill in all required personal information.");
                 return;
             }
-            const pwError = validatePassword(formData.password);
-            if (pwError) {
-                setError(pwError);
+            if (passwordWarning) {
+                setError(passwordWarning);
                 return;
             }
             if (formData.password !== formData.confirmPassword) {
@@ -120,8 +129,14 @@ function AdminSignup() {
             return;
         }
 
+        const pwError = validatePassword(formData.password);
+        if (pwError) {
+            setError(pwError);
+            setStep(1);
+            return;
+        }
+
         try {
-            // Trigger Supabase Signup
             await signup(
                 formData.email,
                 formData.password,
@@ -139,24 +154,24 @@ function AdminSignup() {
                 window.location.origin + '/login'
             );
 
-            // After signup, the store's 'profile' should be updated.
-            // If email confirmation is OFF in Supabase, status will usually be 'pending_approval' immediately.
             const updatedProfile = useAuthStore.getState().profile;
 
             if (updatedProfile?.status === 'pending_approval') {
-                // Email was auto-verified, go straight to lobby
                 navigate('/admin-lobby');
             } else {
-                // Email verification is required, show the success screen
                 setIsSubmitted(true);
                 window.scrollTo(0, 0);
             }
         } catch (err) {
             console.error("Admin signup failed:", err);
             let errMsg = err.message || "Signup failed. Please try again.";
-            if (errMsg.toLowerCase().includes("failed to fetch")) {
+            
+            if (errMsg.includes("Password should contain at least") || errMsg.includes("Password must contain at least")) {
+                errMsg = "Password must contain at least one lowercase letter, one uppercase letter, and one number.";
+            } else if (errMsg.toLowerCase().includes("failed to fetch")) {
                 errMsg = "Network Error: Failed to fetch. This usually happens if your browser's ad-blocker (like Brave Shields, uBlock Origin, etc.) is blocking Supabase requests. Please try disabling your ad-blocker for this site and refresh!";
             }
+            
             setError(errMsg);
         }
     };
@@ -177,27 +192,26 @@ function AdminSignup() {
 
     if (isSubmitted) {
         return (
-            <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden" style={{ fontFamily: "'Inter', sans-serif", background: 'linear-gradient(160deg, #f0fdf4 0%, #dcfce7 60%, #bbf7d0 100%)' }}>
-                <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(34,160,69,0.12) 0%, transparent 70%)' }} />
+            <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden bg-gradient-to-br from-[#f0fdf4] via-[#dcfce7] to-[#bbf7d0] dark:from-[#102219] dark:via-[#142f22] dark:to-[#173a2a] text-slate-900 dark:text-slate-100 transition-colors duration-200" style={{ fontFamily: "'Inter', sans-serif" }}>
+                <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full pointer-events-none opacity-100 dark:opacity-20" style={{ background: 'radial-gradient(circle, rgba(34,160,69,0.12) 0%, transparent 70%)' }} />
 
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="bg-white rounded-3xl p-10 max-w-lg w-full text-center relative z-10"
-                    style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.08)', border: '1px solid #f0fdf4' }}
+                    className="bg-white dark:bg-[#1a2e24] rounded-3xl p-10 max-w-lg w-full text-center relative z-10 shadow-xl dark:shadow-slate-950/50 border border-[#f0fdf4] dark:border-[#2a4034]"
                 >
-                    <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6" style={{ background: '#f0fdf4', border: '1px solid #d1fae5' }}>
-                        <Mail className="w-10 h-10" style={{ color: '#16a34a' }} />
+                    <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 bg-emerald-50 dark:bg-[#102219] border border-emerald-100 dark:border-emerald-950/20">
+                        <Mail className="w-10 h-10 text-emerald-600 dark:text-emerald-400" />
                     </div>
-                    <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: '28px', fontWeight: 800, color: '#0f1f12', letterSpacing: '-0.02em', marginBottom: '16px' }}>Check Your Email</h2>
-                    <p style={{ color: '#374151', fontSize: '15px', lineHeight: 1.7, marginBottom: '32px' }}>
-                        Registration request received! We've sent a verification link to <span style={{ fontWeight: 700, color: '#16a34a' }}>{formData.email}</span>.
+                    <h2 className="font-syne text-3xl font-black text-[#0f1f12] dark:text-emerald-400 tracking-tight mb-4">Check Your Email</h2>
+                    <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mb-8">
+                        Registration request received! We've sent a verification link to <span className="font-bold text-emerald-600 dark:text-emerald-400">{formData.email}</span>.
                     </p>
-                    <div className="rounded-2xl p-6 text-left mb-8" style={{ background: '#f0fdf4', border: '1px solid #d1fae5' }}>
-                        <h4 className="font-bold mb-2 flex items-center gap-2" style={{ color: '#0f1f12' }}>
-                            <Info className="w-4 h-4" style={{ color: '#16a34a' }} /> Next Steps:
+                    <div className="rounded-2xl p-6 text-left mb-8 bg-emerald-50 dark:bg-[#102219] border border-emerald-100 dark:border-[#2a4034]">
+                        <h4 className="font-bold mb-2 flex items-center gap-2 text-[#0f1f12] dark:text-emerald-400">
+                            <Info className="w-4 h-4" /> Next Steps:
                         </h4>
-                        <ul className="space-y-3" style={{ fontSize: '14px', color: '#374151' }}>
+                        <ul className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
                             <li className="flex gap-2"><span className="font-bold">1.</span> Verify your email by clicking the link in our message.</li>
                             <li className="flex gap-2"><span className="font-bold">2.</span> Your request will be reviewed by our Master Admin.</li>
                             <li className="flex gap-2"><span className="font-bold">3.</span> You'll receive a final confirmation once approved.</li>
@@ -205,8 +219,7 @@ function AdminSignup() {
                     </div>
                     <button
                         onClick={() => navigate('/login')}
-                        className="w-full rounded-xl py-4 font-bold transition-all flex items-center justify-center"
-                        style={{ background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: '#fff', border: 'none', cursor: 'pointer', boxShadow: '0 4px 20px rgba(34,160,69,0.3)', fontSize: '15px', fontWeight: 600 }}
+                        className="w-full rounded-xl py-4 font-bold transition-all flex items-center justify-center text-white bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 shadow-lg shadow-emerald-600/20"
                         onMouseEnter={(e) => { e.currentTarget.style.transform='translateY(-1px)'; }}
                         onMouseLeave={(e) => { e.currentTarget.style.transform='translateY(0)'; }}
                     >
@@ -218,67 +231,64 @@ function AdminSignup() {
     }
 
     return (
-        <div className="min-h-screen flex overflow-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
+        <div className="min-h-screen flex overflow-hidden text-slate-900 dark:text-slate-100 bg-white dark:bg-[#102219] font-sans transition-colors duration-200" style={{ fontFamily: "'Inter', sans-serif" }}>
 
             {/* Left Side: Branding/Hero */}
-            <div className="hidden lg:flex w-5/12 items-center justify-center p-16 relative overflow-hidden" style={{ background: 'linear-gradient(160deg, #f0fdf4 0%, #dcfce7 60%, #bbf7d0 100%)' }}>
-                <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(34,160,69,0.12) 0%, transparent 70%)' }} />
+            <div className="hidden lg:flex w-5/12 items-center justify-center p-16 relative overflow-hidden bg-gradient-to-br from-[#f0fdf4] via-[#dcfce7] to-[#bbf7d0] dark:from-[#0a1811] dark:via-[#102219] dark:to-[#152a1e] border-r border-emerald-100 dark:border-emerald-950/20">
+                <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full pointer-events-none opacity-100 dark:opacity-20" style={{ background: 'radial-gradient(circle, rgba(34,160,69,0.12) 0%, transparent 70%)' }} />
 
                 {/* Back to Home */}
                 <Link to="/"
-                    className="absolute top-8 left-8 flex items-center gap-2 z-10 transition-all"
-                    style={{ color: '#374151', fontWeight: 500, fontSize: '14px' }}
-                    onMouseEnter={(e) => e.currentTarget.style.color = '#16a34a'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = '#374151'}
+                    className="absolute top-8 left-8 flex items-center gap-2 z-10 transition-all text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 group"
                 >
-                    <div className="p-2 rounded-full" style={{ background: '#ffffff', border: '1px solid #e5e7eb' }}>
+                    <div className="p-2 rounded-full bg-white dark:bg-[#1a2e24] border border-slate-200 dark:border-[#2a4034] group-hover:border-emerald-500 transition-colors">
                         <ChevronLeft className="w-4 h-4" />
                     </div>
-                    <span>Back to Home</span>
+                    <span className="text-sm font-semibold">Back to Home</span>
                 </Link>
 
                 <div className="relative z-10 max-w-md">
-                    <div className="p-3 rounded-2xl w-fit mb-8 cursor-pointer" style={{ background: 'rgba(34,160,69,0.08)', border: '1px solid #d1fae5' }} onClick={() => navigate('/')}>
-                        <BrainCircuit className="w-10 h-10" style={{ color: '#16a34a' }} />
+                    <div className="p-3 rounded-2xl w-fit mb-8 bg-[#16a34a]/10 border border-emerald-200 dark:border-emerald-800 cursor-pointer" onClick={() => navigate('/')}>
+                        <BrainCircuit className="w-10 h-10 text-emerald-600 dark:text-emerald-400" />
                     </div>
-                    <p style={{ color: '#16a34a', fontWeight: 700, fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '16px' }}>Enterprise Edition</p>
-                    <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: '42px', fontWeight: 800, color: '#0f1f12', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '32px' }}>
-                        Scale your <span style={{ color: '#16a34a' }}>IT Support</span> globally.
+                    <p className="text-emerald-600 dark:text-emerald-400 font-bold text-xs uppercase tracking-widest mb-4">Enterprise Edition</p>
+                    <h1 className="font-syne text-4xl font-black text-[#0f1f12] dark:text-emerald-400 tracking-tight leading-tight mb-8">
+                        Scale your <span className="text-emerald-600 dark:text-emerald-300">IT Support</span> globally.
                     </h1>
 
                     <div className="space-y-8">
                         {[{
-                            icon: <ShieldCheck className="w-6 h-6" style={{ color: '#16a34a' }} />,
+                            icon: <ShieldCheck className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />,
                             title: 'Company-wide Isolation',
                             desc: 'Secure data siloing for departments and multiple office locations.'
                         }, {
-                            icon: <Building2 className="w-6 h-6" style={{ color: '#16a34a' }} />,
+                            icon: <Building2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />,
                             title: 'Custom Dashboards',
                             desc: 'Tailored analytics and ticket routing for your industry specific needs.'
                         }, {
-                            icon: <User className="w-6 h-6" style={{ color: '#16a34a' }} />,
+                            icon: <User className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />,
                             title: 'Admin Approval System',
                             desc: 'Multi-tenant architecture with human-verified vetting process.'
                         }].map((item, i) => (
-                            <div key={i} className="flex gap-4 items-start">
-                                <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(34,160,69,0.08)', border: '1px solid #d1fae5' }}>
+                            <div key={i} className="flex gap-4 items-start animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-[#16a34a]/10 border border-emerald-200 dark:border-emerald-800">
                                     {item.icon}
                                 </div>
                                 <div>
-                                    <h4 style={{ fontWeight: 700, fontSize: '16px', color: '#0f1f12', marginBottom: '4px' }}>{item.title}</h4>
-                                    <p style={{ color: '#6b7280', fontSize: '14px', lineHeight: 1.6 }}>{item.desc}</p>
+                                    <h4 className="font-bold text-base text-[#0f1f12] dark:text-slate-100 mb-1">{item.title}</h4>
+                                    <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">{item.desc}</p>
                                 </div>
                             </div>
                         ))}
                     </div>
 
                     {/* System Status Badge */}
-                    <div className="mt-10" style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: '14px', padding: '14px 18px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+                    <div className="mt-10 bg-white dark:bg-[#1a2e24] border border-emerald-100 dark:border-[#2a4034] rounded-2xl p-4 shadow-sm text-slate-800 dark:text-slate-200">
                         <div className="flex items-center gap-3">
-                            <span className="inline-block w-2.5 h-2.5 rounded-full animate-pulse" style={{ background: '#22c55e' }} />
+                            <span className="inline-block w-2.5 h-2.5 rounded-full animate-pulse bg-emerald-500" />
                             <div>
-                                <p style={{ fontSize: '11px', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}>System Status</p>
-                                <p style={{ fontSize: '13px', color: '#111827', fontWeight: 500 }}>All systems operational. 99.9% uptime.</p>
+                                <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-0.5">System Status</p>
+                                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">All systems operational. 99.9% uptime.</p>
                             </div>
                         </div>
                     </div>
@@ -286,14 +296,24 @@ function AdminSignup() {
             </div>
 
             {/* Right Side: Step Form */}
-            <div className="flex-1 overflow-y-auto px-4 py-8 lg:p-12 relative flex justify-center items-start lg:items-center" style={{ background: '#ffffff', borderLeft: '1px solid #f0fdf4' }}>
+            <div className="flex-1 overflow-y-auto px-4 py-8 lg:p-12 relative flex flex-col items-center justify-start lg:justify-center bg-white dark:bg-[#102219] border-l border-emerald-50 dark:border-[#2a4034] transition-colors duration-200">
 
-                <div className="w-full max-w-2xl bg-white rounded-[2rem] p-6 md:p-12 my-auto relative z-10" style={{ boxShadow: '0 4px 40px rgba(0,0,0,0.06)', border: '1px solid #f0fdf4' }}>
+                {/* Expose Mobile Back to Home Navigation */}
+                <Link to="/"
+                    className="lg:hidden flex items-center gap-2 mb-8 text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all group w-fit self-start"
+                >
+                    <div className="p-2 rounded-full bg-slate-50 dark:bg-[#1a2e24] border border-slate-200 dark:border-[#2a4034]">
+                        <ChevronLeft className="w-4 h-4" />
+                    </div>
+                    <span className="text-sm font-semibold">Back to Home</span>
+                </Link>
+
+                <div className="w-full max-w-2xl bg-white dark:bg-[#1a2e24] border border-emerald-50 dark:border-[#2a4034] rounded-[2rem] p-6 md:p-12 shadow-xl dark:shadow-slate-950/40 relative z-10">
 
                     {/* Progress Indicator */}
                     <div className="flex items-center justify-between mb-12 max-w-md mx-auto relative">
                         {/* Connector Line */}
-                        <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-100 -translate-y-1/2 z-0"></div>
+                        <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-100 dark:bg-emerald-950/50 -translate-y-1/2 z-0"></div>
                         <div
                             className="absolute top-1/2 left-0 h-0.5 bg-emerald-600 -translate-y-1/2 z-0 transition-all duration-500"
                             style={{ width: `${(step - 1) * 50}%` }}
@@ -302,16 +322,17 @@ function AdminSignup() {
                         {[1, 2, 3].map((s) => (
                             <div key={s} className="relative z-10 flex flex-col items-center gap-2">
                                 <div style={{
-                                    width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    width: '40px', height: '40px', borderRadius: '50%',
                                     fontWeight: 700, fontSize: '14px', transition: 'all 0.3s',
-                                    background: step >= s ? 'linear-gradient(135deg,#16a34a,#22c55e)' : '#f9fafb',
+                                    background: step >= s ? 'linear-gradient(135deg,#16a34a,#22c55e)' : (localStorage.getItem('theme') === 'dark' ? '#102219' : '#f9fafb'),
                                     color: step >= s ? '#fff' : '#9ca3af',
-                                    border: step >= s ? 'none' : '2px solid #e5e7eb',
-                                    boxShadow: step >= s ? '0 4px 12px rgba(34,160,69,0.25)' : 'none'
+                                    border: step >= s ? 'none' : '2px solid ' + (localStorage.getItem('theme') === 'dark' ? '#2a4034' : '#e5e7eb'),
+                                    boxShadow: step >= s ? '0 4px 12px rgba(34,160,69,0.25)' : 'none',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
                                 }}>
                                     {step > s ? <CheckCircle2 className="w-5 h-5" /> : s}
                                 </div>
-                                <span style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.08em', color: step >= s ? '#16a34a' : '#9ca3af' }}>
+                                <span className={`text-[10px] uppercase font-bold tracking-wider ${step >= s ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-600'}`}>
                                     {s === 1 ? "Personal" : s === 2 ? "Company" : "Agreement"}
                                 </span>
                             </div>
@@ -322,17 +343,16 @@ function AdminSignup() {
                         <motion.div
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="mb-8 flex items-start gap-3"
-                            style={{ background: '#fef2f2', border: '1px solid #fee2e2', borderRadius: '12px', padding: '14px 16px' }}
+                            className="mb-8 flex items-start gap-3 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/50 rounded-2xl p-4"
                         >
-                            <div className="rounded-full p-1 mt-0.5" style={{ background: '#fee2e2' }}>
-                                <ShieldCheck className="w-3 h-3 text-red-600 rotate-180" />
+                            <div className="rounded-full p-1 mt-0.5 bg-red-100 dark:bg-red-900/50">
+                                <ShieldCheck className="w-3 h-3 text-red-600 dark:text-red-400 rotate-180" />
                             </div>
-                            <p className="text-sm font-medium" style={{ color: '#b91c1c' }}>{error}</p>
+                            <p className="text-sm font-medium text-red-700 dark:text-red-400">{error}</p>
                         </motion.div>
                     )}
 
-                    <form onSubmit={handleSubmit}>
+                    <form onSubmit={(e) => { e.preventDefault(); if (step === 3) handleSubmit(e); else nextStep(); }}>
                         <AnimatePresence mode="wait">
                             {/* STEP 1: PERSONAL INFO */}
                             {step === 1 && (
@@ -344,14 +364,14 @@ function AdminSignup() {
                                     className="space-y-6"
                                 >
                                     <div className="mb-8">
-                                        <h2 className="text-2xl font-bold text-gray-900">Personal Information</h2>
-                                        <p className="text-gray-500 text-sm">Tell us who you are and create your admin account.</p>
+                                        <h2 className="text-2xl font-bold text-slate-900 dark:text-emerald-400 font-syne">Personal Information</h2>
+                                        <p className="text-slate-500 dark:text-slate-400 text-sm">Tell us who you are and create your admin account.</p>
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div className="space-y-2">
-                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
-                                                <User className="w-3 h-3" /> Full Name
+                                            <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                                <User className="w-3 h-3 text-slate-400 dark:text-slate-500" /> Full Name
                                             </label>
                                             <input
                                                 type="text"
@@ -360,12 +380,12 @@ function AdminSignup() {
                                                 placeholder="Alex Mercer"
                                                 value={formData.fullName}
                                                 onChange={handleChange}
-                                                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white outline-none transition-all"
+                                                className="w-full bg-slate-50 dark:bg-[#102219] border border-slate-200 dark:border-[#2a4034] rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white dark:focus:bg-[#102219] text-slate-900 dark:text-slate-100 outline-none transition-all focus:ring-4 focus:ring-emerald-500/5"
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
-                                                <Mail className="w-3 h-3" /> Work Email
+                                            <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                                <Mail className="w-3 h-3 text-slate-400 dark:text-slate-500" /> Work Email
                                             </label>
                                             <input
                                                 type="email"
@@ -374,12 +394,12 @@ function AdminSignup() {
                                                 placeholder="alex.mercer@acmecorp.com"
                                                 value={formData.email}
                                                 onChange={handleChange}
-                                                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white outline-none transition-all"
+                                                className="w-full bg-slate-50 dark:bg-[#102219] border border-slate-200 dark:border-[#2a4034] rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white dark:focus:bg-[#102219] text-slate-900 dark:text-slate-100 outline-none transition-all focus:ring-4 focus:ring-emerald-500/5"
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
-                                                <Phone className="w-3 h-3" /> Phone Number
+                                            <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                                <Phone className="w-3 h-3 text-slate-400 dark:text-slate-500" /> Phone Number
                                             </label>
                                             <input
                                                 type="tel"
@@ -387,12 +407,12 @@ function AdminSignup() {
                                                 placeholder="+1 (415) 555-0198"
                                                 value={formData.phone}
                                                 onChange={handleChange}
-                                                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white outline-none transition-all"
+                                                className="w-full bg-slate-50 dark:bg-[#102219] border border-slate-200 dark:border-[#2a4034] rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white dark:focus:bg-[#102219] text-slate-900 dark:text-slate-100 outline-none transition-all focus:ring-4 focus:ring-emerald-500/5"
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
-                                                <Briefcase className="w-3 h-3" /> Job Title
+                                            <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                                <Briefcase className="w-3 h-3 text-slate-400 dark:text-slate-500" /> Job Title
                                             </label>
                                             <input
                                                 type="text"
@@ -400,15 +420,15 @@ function AdminSignup() {
                                                 placeholder="Director of Operations"
                                                 value={formData.jobTitle}
                                                 onChange={handleChange}
-                                                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white outline-none transition-all"
+                                                className="w-full bg-slate-50 dark:bg-[#102219] border border-slate-200 dark:border-[#2a4034] rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white dark:focus:bg-[#102219] text-slate-900 dark:text-slate-100 outline-none transition-all focus:ring-4 focus:ring-emerald-500/5"
                                             />
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-100">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100 dark:border-[#2a4034]">
                                         <div className="space-y-2 text-left">
-                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
-                                                <Lock className="w-3 h-3" /> Create Password
+                                            <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                                <Lock className="w-3 h-3 text-slate-400 dark:text-slate-500" /> Create Password
                                             </label>
                                             <div className="relative">
                                                 <input
@@ -418,52 +438,42 @@ function AdminSignup() {
                                                     placeholder="••••••••••"
                                                     value={formData.password}
                                                     onChange={handleChange}
-                                                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white outline-none transition-all pr-11"
+                                                    className="w-full bg-slate-50 dark:bg-[#102219] border border-slate-200 dark:border-[#2a4034] rounded-xl px-4 py-3 text-sm pr-11 focus:border-emerald-600 focus:bg-white dark:focus:bg-[#102219] text-slate-900 dark:text-slate-100 outline-none transition-all focus:ring-4 focus:ring-emerald-500/5"
                                                 />
                                                 <button
                                                     type="button"
                                                     onClick={() => setShowPassword(!showPassword)}
-                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                                                 >
                                                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                                 </button>
                                             </div>
-                                            {/* Password Requirements */}
-                                            <div className="mt-2 space-y-1">
-                                                {formData.password && (
+                                            {/* Strength Meter */}
+                                            {formData.password && (
+                                                <div className="mt-2 space-y-2">
                                                     <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-gray-400">
                                                         <span>Strength: {getStrengthText()}</span>
                                                         <span>{passwordStrength}%</span>
                                                     </div>
-                                                )}
-                                                {formData.password && (
-                                                    <div className="h-1 w-full bg-gray-100 rounded-full overflow-hidden">
+                                                    <div className="h-1 w-full bg-gray-100 dark:bg-emerald-950/40 rounded-full overflow-hidden">
                                                         <motion.div
                                                             className={`h-full ${getStrengthColor()}`}
                                                             initial={{ width: 0 }}
                                                             animate={{ width: `${passwordStrength}%` }}
                                                         />
                                                     </div>
-                                                )}
-                                                <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-2">
-                                                    {[
-                                                        { label: '8+ characters', ok: formData.password.length >= 8 },
-                                                        { label: 'Uppercase (A-Z)', ok: /[A-Z]/.test(formData.password) },
-                                                        { label: 'Lowercase (a-z)', ok: /[a-z]/.test(formData.password) },
-                                                        { label: 'Number (0-9)', ok: /[0-9]/.test(formData.password) },
-                                                    ].map(({ label, ok }) => (
-                                                        <span key={label} className={`text-[10px] font-semibold flex items-center gap-1 transition-colors ${
-                                                            formData.password ? (ok ? 'text-emerald-600' : 'text-red-400') : 'text-gray-300'
-                                                        }`}>
-                                                            <span>{ok ? '✓' : '○'}</span> {label}
-                                                        </span>
-                                                    ))}
+                                                    <div
+                                                        aria-live="polite"
+                                                        className={`text-[11px] font-semibold ${passwordWarning ? "text-red-600" : "text-emerald-700"}`}
+                                                    >
+                                                        {passwordWarning || "Password requirements met."}
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            )}
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
-                                                <Lock className="w-3 h-3" /> Confirm Password
+                                            <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                                <Lock className="w-3 h-3 text-slate-400 dark:text-slate-500" /> Confirm Password
                                             </label>
                                             <div className="relative">
                                                 <input
@@ -473,12 +483,12 @@ function AdminSignup() {
                                                     placeholder="••••••••••"
                                                     value={formData.confirmPassword}
                                                     onChange={handleChange}
-                                                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white outline-none transition-all pr-11"
+                                                    className="w-full bg-slate-50 dark:bg-[#102219] border border-slate-200 dark:border-[#2a4034] rounded-xl px-4 py-3 text-sm pr-11 focus:border-emerald-600 focus:bg-white dark:focus:bg-[#102219] text-slate-900 dark:text-slate-100 outline-none transition-all pr-11 focus:ring-4 focus:ring-emerald-500/5"
                                                 />
                                                 <button
                                                     type="button"
                                                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                                                 >
                                                     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                                 </button>
@@ -489,10 +499,7 @@ function AdminSignup() {
                                     <button
                                          type="button"
                                          onClick={nextStep}
-                                         className="w-full rounded-xl py-4 font-bold transition-all mt-8 flex items-center justify-center gap-2"
-                                         style={{ background: 'linear-gradient(135deg,#16a34a,#22c55e)', color: '#fff', border: 'none', cursor: 'pointer', boxShadow: '0 4px 20px rgba(34,160,69,0.3)', fontSize: '15px', fontWeight: 600 }}
-                                         onMouseEnter={(e) => e.currentTarget.style.transform='translateY(-1px)'}
-                                         onMouseLeave={(e) => e.currentTarget.style.transform='translateY(0)'}
+                                         className="w-full rounded-xl py-4 font-bold transition-all mt-8 flex items-center justify-center gap-2 text-white bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 shadow-lg shadow-emerald-600/20"
                                      >
                                          Continue to Company Details <ChevronRight className="w-5 h-5" />
                                      </button>
@@ -509,13 +516,13 @@ function AdminSignup() {
                                     className="space-y-6"
                                 >
                                     <div className="mb-8">
-                                        <h2 className="text-2xl font-bold text-gray-900">Company Details</h2>
-                                        <p className="text-gray-500 text-sm">Tell us about the organization you're registering.</p>
+                                        <h2 className="text-2xl font-bold text-slate-900 dark:text-emerald-400 font-syne">Company Details</h2>
+                                        <p className="text-slate-500 dark:text-slate-400 text-sm">Tell us about the organization you're registering.</p>
                                     </div>
 
                                     <div className="space-y-2">
-                                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
-                                            <Building2 className="w-3 h-3" /> Company Name
+                                        <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                            <Building2 className="w-3 h-3 text-slate-400 dark:text-slate-500" /> Company Name
                                         </label>
                                         <input
                                             type="text"
@@ -524,14 +531,14 @@ function AdminSignup() {
                                             placeholder="Acme Global Inc."
                                             value={formData.companyName}
                                             onChange={handleChange}
-                                            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:ring-2 focus:ring-emerald-50 outline-none transition-all"
+                                            className="w-full bg-slate-50 dark:bg-[#102219] border border-slate-200 dark:border-[#2a4034] rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white dark:focus:bg-[#102219] text-slate-900 dark:text-slate-100 outline-none transition-all focus:ring-4 focus:ring-emerald-500/5"
                                         />
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div className="space-y-2">
-                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
-                                                <User className="w-3 h-3" /> Company Size
+                                            <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                                <User className="w-3 h-3 text-slate-400 dark:text-slate-500" /> Company Size
                                             </label>
                                             <Select
                                                 name="companySize"
@@ -548,8 +555,8 @@ function AdminSignup() {
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
-                                                <Briefcase className="w-3 h-3" /> Industry
+                                            <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                                <Briefcase className="w-3 h-3 text-slate-400 dark:text-slate-500" /> Industry
                                             </label>
                                             <Select
                                                 name="industry"
@@ -571,8 +578,8 @@ function AdminSignup() {
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div className="space-y-2">
-                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
-                                                <Globe className="w-3 h-3" /> Company Website
+                                            <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                                <Globe className="w-3 h-3 text-slate-400 dark:text-slate-500" /> Company Website
                                             </label>
                                             <input
                                                 type="url"
@@ -580,12 +587,12 @@ function AdminSignup() {
                                                 placeholder="https://acme.com"
                                                 value={formData.website}
                                                 onChange={handleChange}
-                                                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:ring-2 focus:ring-emerald-50 outline-none transition-all"
+                                                className="w-full bg-slate-50 dark:bg-[#102219] border border-slate-200 dark:border-[#2a4034] rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white dark:focus:bg-[#102219] text-slate-900 dark:text-slate-100 outline-none transition-all focus:ring-4 focus:ring-emerald-500/5"
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
-                                                <Globe className="w-3 h-3" /> Country
+                                            <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                                <Globe className="w-3 h-3 text-slate-400 dark:text-slate-500" /> Country
                                             </label>
                                             <input
                                                 type="text"
@@ -594,25 +601,19 @@ function AdminSignup() {
                                                 placeholder="United States"
                                                 value={formData.country}
                                                 onChange={handleChange}
-                                                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:ring-2 focus:ring-emerald-50 outline-none transition-all"
+                                                className="w-full bg-slate-50 dark:bg-[#102219] border border-slate-200 dark:border-[#2a4034] rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white dark:focus:bg-[#102219] text-slate-900 dark:text-slate-100 outline-none transition-all focus:ring-4 focus:ring-emerald-500/5"
                                             />
                                         </div>
                                     </div>
 
-                                         <div className="flex gap-4 pt-8">
+                                     <div className="flex gap-4 pt-8">
                                          <button type="button" onClick={prevStep}
-                                             className="flex-1 rounded-xl py-4 font-bold transition-all flex items-center justify-center gap-2"
-                                             style={{ background: '#f9fafb', color: '#374151', border: '1.5px solid #e5e7eb', cursor: 'pointer' }}
-                                             onMouseEnter={(e) => e.currentTarget.style.background='#f3f4f6'}
-                                             onMouseLeave={(e) => e.currentTarget.style.background='#f9fafb'}
+                                             className="flex-1 rounded-xl py-4 font-bold transition-all flex items-center justify-center gap-2 bg-[#f9fafb] dark:bg-[#102219] text-[#374151] dark:text-slate-300 border border-[#e5e7eb] dark:border-[#2a4034]"
                                          >
                                              <ChevronLeft className="w-5 h-5" /> Back
                                          </button>
                                          <button type="button" onClick={nextStep}
-                                             className="flex-[2] rounded-xl py-4 font-bold transition-all flex items-center justify-center gap-2"
-                                             style={{ background: 'linear-gradient(135deg,#16a34a,#22c55e)', color: '#fff', border: 'none', cursor: 'pointer', boxShadow: '0 4px 20px rgba(34,160,69,0.3)', fontWeight: 600 }}
-                                             onMouseEnter={(e) => e.currentTarget.style.transform='translateY(-1px)'}
-                                             onMouseLeave={(e) => e.currentTarget.style.transform='translateY(0)'}
+                                             className="flex-[2] rounded-xl py-4 font-bold transition-all flex items-center justify-center gap-2 text-white bg-gradient-to-r from-emerald-600 to-emerald-500 shadow-lg"
                                          >
                                              Review &amp; Confirm <ChevronRight className="w-5 h-5" />
                                          </button>
@@ -630,11 +631,11 @@ function AdminSignup() {
                                     className="space-y-6"
                                 >
                                     <div className="mb-8">
-                                        <h2 className="text-2xl font-bold text-gray-900">Final Confirmation</h2>
-                                        <p className="text-gray-500 text-sm">Review our policies and submit your application.</p>
+                                        <h2 className="text-2xl font-bold text-slate-900 dark:text-emerald-400 font-syne">Final Confirmation</h2>
+                                        <p className="text-slate-500 dark:text-slate-400 text-sm">Review our policies and submit your application.</p>
                                     </div>
 
-                                    <div className="bg-gray-50 border border-gray-100 rounded-2xl p-6 space-y-4">
+                                    <div className="bg-gray-50 dark:bg-[#102219] border border-gray-100 dark:border-[#2a4034] rounded-2xl p-6 space-y-4">
                                         <label className="flex items-start gap-4 cursor-pointer group">
                                             <input
                                                 type="checkbox"
@@ -643,11 +644,11 @@ function AdminSignup() {
                                                 onChange={handleChange}
                                                 className="mt-1 w-5 h-5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 transition-all"
                                             />
-                                            <span className="text-sm text-gray-600 leading-relaxed group-hover:text-gray-900 transition-colors">
-                                                I agree to the <Link to="/terms" className="text-emerald-700 font-bold hover:underline">Terms of Service</Link> and <Link to="/privacy" className="text-emerald-700 font-bold hover:underline">Privacy Policy</Link>. I understand that my data will be stored securely.
+                                            <span className="text-sm text-gray-600 dark:text-slate-300 leading-relaxed group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+                                                I agree to the <Link to="/terms" className="text-emerald-700 dark:text-emerald-400 font-bold hover:underline">Terms of Service</Link> and <Link to="/privacy" className="text-emerald-700 dark:text-emerald-400 font-bold hover:underline">Privacy Policy</Link>. I understand that my data will be stored securely.
                                             </span>
                                         </label>
-                                        <label className="flex items-start gap-4 cursor-pointer group pt-4 border-t border-gray-200/50">
+                                        <label className="flex items-start gap-4 cursor-pointer group pt-4 border-t border-gray-200/50 dark:border-emerald-950/20">
                                             <input
                                                 type="checkbox"
                                                 name="isAuthorized"
@@ -655,8 +656,8 @@ function AdminSignup() {
                                                 onChange={handleChange}
                                                 className="mt-1 w-5 h-5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 transition-all"
                                             />
-                                            <span className="text-sm text-gray-600 leading-relaxed group-hover:text-gray-900 transition-colors">
-                                                I confirm that I am authorized to register <span className="font-bold text-gray-900 underline">{formData.companyName || "my company"}</span> on the HelpDesk.ai platform as a primary administrator.
+                                            <span className="text-sm text-gray-600 dark:text-slate-300 leading-relaxed group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+                                                I confirm that I am authorized to register <span className="font-bold text-gray-900 dark:text-slate-100 underline">{formData.companyName || "my company"}</span> on the HelpDesk.ai platform as a primary administrator.
                                             </span>
                                         </label>
                                     </div>
@@ -666,14 +667,14 @@ function AdminSignup() {
                                             type="button"
                                             onClick={prevStep}
                                             disabled={loading}
-                                            className="flex-1 bg-gray-100 text-gray-700 rounded-xl py-4 font-bold hover:bg-gray-200 transition-all flex items-center justify-center gap-2"
+                                            className="flex-1 bg-gray-100 dark:bg-[#102219] text-gray-700 dark:text-slate-300 rounded-xl py-4 font-bold hover:bg-gray-200 dark:hover:bg-slate-800 transition-all flex items-center justify-center gap-2 border border-transparent dark:border-[#2a4034]"
                                         >
                                             <ChevronLeft className="w-5 h-5" /> Back
                                         </button>
                                         <button
                                             type="submit"
                                             disabled={loading}
-                                            className="flex-[2] bg-emerald-900 text-white rounded-xl py-4 font-bold hover:bg-emerald-800 transition-all shadow-xl shadow-emerald-900/20 flex items-center justify-center gap-2"
+                                            className="flex-[2] bg-emerald-900 dark:bg-emerald-800 text-white rounded-xl py-4 font-bold hover:bg-emerald-800 dark:hover:bg-emerald-750 transition-all shadow-xl shadow-emerald-900/20 flex items-center justify-center gap-2"
                                         >
                                             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ShieldCheck className="w-5 h-5" />}
                                             {loading ? "Processing..." : "Submit Registration"}
@@ -684,12 +685,12 @@ function AdminSignup() {
                         </AnimatePresence>
                     </form>
 
-                    <p className="text-center mt-12" style={{ fontSize: '12px', color: '#9ca3af' }}>
+                    <p className="text-center mt-12 text-slate-400 dark:text-slate-500 text-xs">
                         Secure enterprise registration portal. Your data is protected by 256-bit encryption.
                     </p>
-                    <p className="text-center mt-4" style={{ fontSize: '12px', color: '#6b7280' }}>
+                    <p className="text-center mt-4 text-slate-500 dark:text-slate-400 text-xs">
                         Are you an employee?{' '}
-                        <Link to="/signup" style={{ color: '#16a34a', fontWeight: 700 }} className="hover:underline">
+                        <Link to="/signup" className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline">
                             Join your team here →
                         </Link>
                     </p>

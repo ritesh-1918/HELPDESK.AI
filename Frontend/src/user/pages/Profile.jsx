@@ -32,6 +32,8 @@ import useAuthStore from "../../store/authStore";
 import useToastStore from "../../store/toastStore";
 import { supabase } from "../../lib/supabaseClient";
 import BugReportWidget from "../../components/shared/BugReportWidget";
+import UserScorecard from "../components/UserScorecard";
+
 const Profile = () => {
     const navigate = useNavigate();
     const { profile, user, logout, loading: authLoading, updateProfile } = useAuthStore();
@@ -452,6 +454,16 @@ const Profile = () => {
                                     </div>
                                 </CardContent>
                             </Card>
+                        </motion.div>
+
+                        {/* AI Performance Scorecard */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.25 }}
+                            className="md:col-span-3"
+                        >
+                            <UserScorecard />
                         </motion.div>
 
                         {/* Settings Section */}

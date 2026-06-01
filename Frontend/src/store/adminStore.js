@@ -1,25 +1,22 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createPersistedStore } from './persistenceMiddleware';
 
 const useAdminStore = create(
-    persist(
+    createPersistedStore('admin',
         (set) => ({
             adminProfile: {
-                name: "Ritesh Singh",
-                email: "admin@emerald-prime.io",
+                name: "Admin",
+                email: "admin@helpdesk.ai",
                 profile_picture: null,
                 role: "Root Administrator",
-                id: "ADM-9921-X",
-                lastLogin: "2026-03-01 22:15:04",
-                region: "Unified Global Ops"
+                id: "ADM-0001",
+                lastLogin: "",
+                region: ""
             },
             updateProfile: (updates) => set((state) => ({
                 adminProfile: { ...state.adminProfile, ...updates }
             })),
-        }),
-        {
-            name: 'admin-storage',
-        }
+        })
     )
 );
 

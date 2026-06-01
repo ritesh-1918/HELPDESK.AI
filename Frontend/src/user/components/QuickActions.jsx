@@ -7,6 +7,7 @@ const actions = [
         title: "Network Issues",
         description: "Connectivity problems, VPN access, and slow internet.",
         category: "Network",
+        templateId: "vpn-connectivity",
         icon: Network,
         iconBg: '#EDFAF3',
         iconColor: '#16a34a',
@@ -15,6 +16,7 @@ const actions = [
         title: "Software Problems",
         description: "Application crashes, license issues, and installations.",
         category: "Software",
+        templateId: "software-installation",
         icon: Laptop,
         iconBg: '#EEF2FF',
         iconColor: '#4f46e5',
@@ -23,6 +25,7 @@ const actions = [
         title: "Access Requests",
         description: "Permission changes, new account setup, and MFA.",
         category: "Access",
+        templateId: "password-reset",
         icon: ShieldCheck,
         iconBg: '#F5F0FF',
         iconColor: '#7c3aed',
@@ -33,8 +36,8 @@ const QuickActions = () => {
     const navigate = useNavigate();
     const [hoveredIdx, setHoveredIdx] = useState(null);
 
-    const handleActionClick = (category) => {
-        navigate('/create-ticket', { state: { prefilledCategory: category } });
+    const handleActionClick = (action) => {
+        navigate('/create-ticket', { state: { templateId: action.templateId, prefilledCategory: action.category } });
     };
 
     return (
@@ -42,7 +45,7 @@ const QuickActions = () => {
             {actions.map((action, index) => (
                 <div
                     key={index}
-                    onClick={() => handleActionClick(action.category)}
+                    onClick={() => handleActionClick(action)}
                     onMouseEnter={() => setHoveredIdx(index)}
                     onMouseLeave={() => setHoveredIdx(null)}
                     style={{

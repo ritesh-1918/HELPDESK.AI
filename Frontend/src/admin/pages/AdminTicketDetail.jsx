@@ -4,7 +4,7 @@ import {
     CheckCircle2, Clock, AlertCircle, User,
     Activity, ShieldCheck, Briefcase, Globe, BarChart3,
     ImageIcon, CornerUpLeft, CheckSquare, XCircle,
-    Cpu, Eye, MessageSquare, MoveRight, Loader2, Star, Eraser
+    Cpu, Eye, MessageSquare, MoveRight, Loader2, Star, Eraser, ShieldAlert
 } from 'lucide-react';
 import { supabase } from "../../lib/supabaseClient";
 import useAuthStore from "../../store/authStore";
@@ -16,6 +16,9 @@ import { formatTicketId } from "../../utils/format";
 import SLABadge from "../components/SLABadge";
 import { formatFullTimestamp } from "../../utils/dateUtils";
 import TicketTimeline from "../../user/components/TicketTimeline";
+import TicketAuditTimeline from "../components/TicketAuditTimeline";
+import TicketTagManager from '../../components/TicketTagManager';
+import TagChip from '../../components/TagChip';
 
 const AdminTicketDetail = () => {
     const { ticket_id } = useParams();
@@ -34,6 +37,7 @@ const AdminTicketDetail = () => {
     const [imageUrl, setImageUrl] = useState(null);
     const [isUpdating, setIsUpdating] = useState(null);
     const [isLive, setIsLive] = useState(false);
+    const [showOriginalText, setShowOriginalText] = useState(false);
 
     const [correctionForm, setCorrectionForm] = useState({
         category: '',
@@ -195,8 +199,11 @@ const AdminTicketDetail = () => {
     const entities = ticket.metadata?.entities || ticket.entities || [];
     const displayStatus = ticket.status || 'Pending';
     const displayPriority = ticket.priority || 'Medium';
-    const displaySummary = ticket.summary || ticket.subject || 'No Summary';
-    const displayText = ticket.description || ticket.text || displaySummary;
+    const displaySummary = safeDisplayText(ticket.summary || ticket.subject, 'No Summary');
+    const displayText = safeDisplayText(ticket.description || ticket.text, displaySummary);
+    const isTranslated = Boolean(ticket.detected_language && ticket.detected_language.toLowerCase() !== 'en' && ticket.original_body);
+    const sourceLanguageName = ticket.detected_language ? ticket.detected_language.toUpperCase() : 'Unknown';
+    const renderedText = safeDisplayText(showOriginalText && isTranslated ? ticket.original_body : displayText, displaySummary);
 
     return (
         <div style={{ background: '#f8faf9', minHeight: '100vh', paddingBottom: '80px' }} className="-m-6 p-6 md:-m-10 md:p-10 space-y-6 animate-in fade-in duration-700">
@@ -237,7 +244,15 @@ const AdminTicketDetail = () => {
                             <span style={{ fontSize: '10px', fontWeight: 700, color: '#475569', background: '#f1f5f9', padding: '2px 8px', borderRadius: '100px', textTransform: 'uppercase' }}>
                                 {ticket.assignee?.full_name || 'UNASSIGNED'}
                             </span>
-                            <SLABadge priority={displayPriority} createdAt={ticket.created_at} status={displayStatus} compact />
+                            <SLABadge
+                                priority={displayPriority}
+                                createdAt={ticket.created_at}
+                                slaBreachAt={ticket.sla_breach_at}
+                                slaStatus={ticket.sla_status}
+                                status={displayStatus}
+                                compact
+                                ticketId={ticket.id}
+                            />
                         </div>
                     </div>
                 </div>
@@ -293,6 +308,67 @@ const AdminTicketDetail = () => {
                 </div>
             </div>
 
+            {ticket.metadata?.spam_analysis?.is_spam && (
+                <div style={{
+                    background: ticket.metadata.spam_analysis.risk_level === 'high' ? '#fef2f2' : '#fffbeb',
+                    border: `1.5px solid ${ticket.metadata.spam_analysis.risk_level === 'high' ? '#fca5a5' : '#fde047'}`,
+                    borderRadius: '16px',
+                    padding: '16px 24px',
+                    color: ticket.metadata.spam_analysis.risk_level === 'high' ? '#991b1b' : '#92400e',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '16px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
+                }}>
+                    <ShieldAlert size={24} style={{ flexShrink: 0, marginTop: '2px', color: ticket.metadata.spam_analysis.risk_level === 'high' ? '#dc2626' : '#d97706' }} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <h4 style={{ margin: 0, fontWeight: 800, fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            SECURITY PROTOCOL ALERT // POTENTIAL {ticket.metadata.spam_analysis.risk_level.toUpperCase()} RISK SPAM/PHISHING
+                        </h4>
+                        <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, lineHeight: 1.5 }}>
+                            This incident contains potential phishing patterns or malicious URLs. To protect system infrastructure, support agents must not click or copy any untrusted hyperlinks below.
+                        </p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                            {ticket.metadata.spam_analysis.reasons.map((reason, i) => (
+                                <span key={i} style={{
+                                    fontSize: '9px',
+                                    fontWeight: 700,
+                                    textTransform: 'uppercase',
+                                    background: ticket.metadata.spam_analysis.risk_level === 'high' ? '#fee2e2' : '#fef3c7',
+                                    color: ticket.metadata.spam_analysis.risk_level === 'high' ? '#991b1b' : '#92400e',
+                                    padding: '2px 8px',
+                                    borderRadius: '100px',
+                                    border: `1px solid ${ticket.metadata.spam_analysis.risk_level === 'high' ? '#fca5a5' : '#fde047'}`
+                                }}>
+                                    {reason}
+                                </span>
+                            ))}
+                        </div>
+                        {ticket.metadata.spam_analysis.suspicious_urls?.length > 0 && (
+                            <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <span style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', color: ticket.metadata.spam_analysis.risk_level === 'high' ? '#991b1b' : '#92400e' }}>Suspicious links locked:</span>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    {ticket.metadata.spam_analysis.suspicious_urls.map((url, idx) => (
+                                        <code key={idx} style={{
+                                            fontSize: '11px',
+                                            fontFamily: 'monospace',
+                                            padding: '4px 8px',
+                                            background: ticket.metadata.spam_analysis.risk_level === 'high' ? '#fee2e240' : '#fef3c740',
+                                            color: '#dc2626',
+                                            borderRadius: '6px',
+                                            border: '1.5px dashed #fca5a5',
+                                            wordBreak: 'break-all'
+                                        }}>
+                                            [LOCKED] {url}
+                                        </code>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Primary Column */}
                 <div className="lg:col-span-8 space-y-8">
@@ -305,8 +381,22 @@ const AdminTicketDetail = () => {
                             <span style={{ fontSize: '10px', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase' }}>{formatFullTimestamp(ticket.created_at)}</span>
                         </div>
                         <div style={{ padding: '28px' }}>
+                            {isTranslated && (
+                                <div style={{ marginBottom: '16px', border: '1px solid #bae6fd', background: '#f0f9ff', borderRadius: '12px', padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                    <span style={{ fontSize: '12px', fontWeight: 600, color: '#0c4a6e' }}>
+                                        Translated from {sourceLanguageName}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowOriginalText(prev => !prev)}
+                                        style={{ fontSize: '11px', fontWeight: 700, color: '#0369a1', background: 'transparent', border: 'none', cursor: 'pointer' }}
+                                    >
+                                        {showOriginalText ? 'View English' : 'View Original'}
+                                    </button>
+                                </div>
+                            )}
                             <div style={{ background: 'linear-gradient(135deg, #0f1f12, #1a3320)', color: '#ffffff', borderRadius: '16px', padding: '24px 28px', fontSize: '15px', fontStyle: 'italic', lineHeight: 1.7 }}>
-                                "{displayText}"
+                                "{renderedText}"
                             </div>
 
                             {imageUrl && (
@@ -319,6 +409,30 @@ const AdminTicketDetail = () => {
                                     </div>
                                 </div>
                             )}
+
+                            {/* Tags */}
+                            <div style={{ marginTop: '20px' }}>
+                                <h4 style={{ fontSize: '11px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Tags</h4>
+                                {ticket.tags?.length > 0 ? (
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                        {ticket.tags.map((t) => (
+                                            <TagChip key={t} tag={t} variant="admin" />
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p style={{ fontSize: '12px', color: '#6b7280' }}>No tags yet.</p>
+                                )}
+
+                                <div style={{ marginTop: '12px' }}>
+                                    <TicketTagManager
+                                        ticketId={ticket.id}
+                                        ticketTitle={ticket.summary}
+                                        ticketBody={ticket.description}
+                                        category={ticket.category}
+                                        companyId={ticket.company_id}
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -335,6 +449,8 @@ const AdminTicketDetail = () => {
                         </div>
                         <TicketTimeline ticket={ticket} />
                     </div>
+
+                    <TicketAuditTimeline ticketId={ticket.id} companyId={ticket.company_id} />
                 </div>
 
                 {/* AI Column */}

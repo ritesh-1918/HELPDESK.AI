@@ -1,0 +1,360 @@
+{
+  "info": {
+    "name": "AI Helpdesk Backend API",
+    "description": "Ticket classification, entity extraction, and duplicate detection API for the AI Helpdesk platform.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health & Status",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/health",
+            "description": "Returns the health status of the API server."
+          }
+        },
+        {
+          "name": "Readiness Check",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/ready",
+            "description": "Returns the readiness status of the API server."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"user@example.com\", \"password\": \"your_password\"}"
+            },
+            "description": "Authenticate a user and establish a session via cookies. Returns { user, message }."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tickets",
+      "item": [
+        {
+          "name": "Get All Tickets",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/tickets?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tickets"
+              ],
+              "query": []
+            },
+            "description": "Retrieve a paginated list of all tickets."
+          }
+        },
+        {
+          "name": "Get Ticket by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/tickets/{{ticket_id}}",
+            "description": "Retrieve a specific ticket by its ID."
+          }
+        },
+        {
+          "name": "Save Ticket",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/tickets/save",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"subject\": \"Login issue\", \"description\": \"Cannot login to the application\", \"priority\": \"high\", \"category\": \"authentication\"}"
+            },
+            "description": "Save a new ticket to the database."
+          }
+        },
+        {
+          "name": "Search Tickets",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/tickets/search?q=login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tickets",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "login"
+                }
+              ]
+            },
+            "description": "Search tickets by keyword."
+          }
+        },
+        {
+          "name": "Get Ticket SLA Estimate",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/tickets/{{ticket_id}}/sla-estimate",
+            "description": "Get SLA estimate for a specific ticket."
+          }
+        },
+        {
+          "name": "Get Ticket Audit Logs",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/tickets/{{ticket_id}}/audit_logs",
+            "description": "Get audit logs for a specific ticket."
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI Analysis",
+      "item": [
+        {
+          "name": "Analyze Ticket",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/ai/analyze_ticket",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"text\": \"Login issue Cannot login to the application\"}"
+            },
+            "description": "Analyze a ticket using AI to classify, extract entities, and detect duplicates."
+          }
+        },
+        {
+          "name": "Analyze (Legacy)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/ai/analyze",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"text\": \"I cannot login to my account\"}"
+            },
+            "description": "Analyze text using AI (legacy endpoint)."
+          }
+        },
+        {
+          "name": "Troubleshoot",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/ai/troubleshoot",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"description\": \"Application crashes when clicking save button\"}"
+            },
+            "description": "Get troubleshooting suggestions for an issue."
+          }
+        },
+        {
+          "name": "Analyze Bug Report",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/ai/analyze_bug",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\": \"App crashes on save\", \"description\": \"When I click save, the app crashes\", \"steps\": \"1. Open app 2. Click save\"}"
+            },
+            "description": "Analyze a bug report to extract severity, category, and suggested fixes."
+          }
+        },
+        {
+          "name": "Check Duplicate",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/ai/check_duplicate",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"text\": \"Login issue: Cannot login to the application\", \"company\": \"acme\"}"
+            },
+            "description": "Check if a ticket is a duplicate of existing tickets."
+          }
+        },
+        {
+          "name": "Reindex Embeddings",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/ai/reindex_embeddings",
+            "description": "Reindex all ticket embeddings for duplicate detection."
+          }
+        }
+      ]
+    },
+    {
+      "name": "SLA Management",
+      "item": [
+        {
+          "name": "Get SLA Stats",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/sla/stats",
+            "description": "Get SLA statistics and metrics."
+          }
+        },
+        {
+          "name": "Get SLA Tickets",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/sla/tickets",
+            "description": "Get all tickets with SLA information."
+          }
+        },
+        {
+          "name": "Get SLA Escalations",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/sla/escalations",
+            "description": "Get all SLA escalations."
+          }
+        },
+        {
+          "name": "Get SLA Policies",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/sla/policies",
+            "description": "Get all SLA policies."
+          }
+        },
+        {
+          "name": "Check SLA",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/sla/check",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"ticket_id\": \"123\"}"
+            },
+            "description": "Check SLA status for a specific ticket."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Translation",
+      "item": [
+        {
+          "name": "Translate Text",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/translate",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"text\": \"Hello\", \"source_lang\": \"en\", \"target_lang\": \"fr\"}"
+            },
+            "description": "Translate text from one language to another."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Weekly Digest",
+      "item": [
+        {
+          "name": "Send Weekly Digest Now",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/digest/send-now",
+            "description": "Trigger the weekly digest email immediately."
+          }
+        }
+      ]
+    },
+    {
+      "name": "System",
+      "item": [
+        {
+          "name": "Get System Settings",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/system/settings",
+            "description": "Get current system settings."
+          }
+        }
+      ]
+    }
+  ]
+}
