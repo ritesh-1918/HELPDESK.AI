@@ -26,6 +26,7 @@ from slowapi.errors import RateLimitExceeded
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.encoders import jsonable_encoder
+import helmet
 import asyncio
 from pathlib import Path
 from pydantic import BaseModel
@@ -274,14 +275,27 @@ limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS — locked to production + local dev only
+# Security headers via Helmet
 app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
+    helmet.middleware.HelmetMiddleware,
+)
+
+# CORS — refactored to use ALLOWED_ORIGINS environment variable
+def get_allowed_origins() -> list[str]:
+    """Parse ALLOWED_ORIGINS from environment variable, comma-separated."""
+    env_origins = os.environ.get("ALLOWED_ORIGINS", "")
+    if env_origins:
+        return [origin.strip() for origin in env_origins.split(",") if origin.strip()]
+    # Fallback to hardcoded defaults for backward compatibility
+    return [
         "https://helpdeskaiv1.vercel.app",
         "http://localhost:5173",
         "http://localhost:3000",
-    ],
+    ]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=get_allowed_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
