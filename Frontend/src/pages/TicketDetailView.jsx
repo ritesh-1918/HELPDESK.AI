@@ -14,6 +14,8 @@ import {
   MessageCircle,
   BrainCircuit,
   ImageIcon,
+  Copy,
+  Check,
 } from 'lucide-react';
 import useTicketStore from '../store/ticketStore';
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -27,6 +29,7 @@ function TicketDetailView() {
   const [ticket, setTicket] = useState(null);
   const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [copied, setCopied] = useState(false);
   const messagesEndRef = useRef(null);
 
   // Force refresh when window gains focus to ensure latest data from Admin updates
@@ -83,7 +86,25 @@ function TicketDetailView() {
                             <CardContent className="p-6 sm:p-8 space-y-6">
                                 <div className="space-y-1">
                                     <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block pl-0.5">Ticket Ident Matrix</span>
-                                    <p className="text-2xl sm:text-3xl font-mono font-black text-emerald-600 dark:text-emerald-400 tracking-wider">#{ticket.ticket_id}</p>
+                                    <div className="flex items-center gap-3">
+                                        <p className="text-2xl sm:text-3xl font-mono font-black text-emerald-600 dark:text-emerald-400 tracking-wider">#{ticket.ticket_id}</p>
+                                        <button
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(ticket.ticket_id.toString());
+                                                setCopied(true);
+                                                setTimeout(() => setCopied(false), 2000);
+                                            }}
+                                            className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 hover:bg-emerald-200 dark:hover:bg-emerald-800/50 transition-colors"
+                                            title="Copy Ticket ID"
+                                        >
+                                            {copied ? (
+                                                <Check size={16} className="text-emerald-600 dark:text-emerald-400" />
+                                            ) : (
+                                                <Copy size={16} className="text-emerald-600 dark:text-emerald-400" />
+                                            )}
+                                        </button>
+                                    </div>
+                                    {copied && <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1">Ticket ID copied successfully</p>}
                                 </div>
                                 <div className="space-y-2">
                                     <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block pl-0.5">Problem Summary</span>
