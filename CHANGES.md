@@ -20,3 +20,5 @@ Previously, tickets created through the normal save flow were stored in Supabase
 ### Validation
 - Ran a backend error check on the modified file.
 - No errors were reported for `backend/main.py`.
+
+- Resolves #1169: Standardize Helmet.js Security Headers
