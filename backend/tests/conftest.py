@@ -446,10 +446,12 @@ def _install_optional_ml_stubs():
             except ModuleNotFoundError:
                 crypto_missing = True
             should_stub = module_name not in sys.modules and crypto_missing
+        elif module_name in sys.modules:
+            should_stub = False
         else:
             try:
                 spec_missing = importlib.util.find_spec(module_name) is None
-            except ModuleNotFoundError:
+            except (ModuleNotFoundError, ValueError):
                 spec_missing = True
             should_stub = module_name not in sys.modules and spec_missing
 
@@ -522,6 +524,8 @@ def mock_ai_services(request):
         "test_notification_routing.py",
         "test_notification_routing_push.py",
         "test_notification_routing_admin_alert.py",
+        "test_spam_detector.py",
+        "test_spam_detector_service.py",
     }:
         yield
         return

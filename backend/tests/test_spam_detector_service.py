@@ -227,6 +227,25 @@ class TestAnalyzeSpamPhishingEdgeCases(unittest.TestCase):
         result = sds.analyze_spam_phishing("Check http://!!!bad-url!!!")
         self.assertIsInstance(result, dict)
 
+    @patch("backend.services.spam_detector_service.urllib.parse.urlparse")
+    def test_url_parser_failure_degrades_gracefully(self, mock_urlparse):
+        """URL parsing failures should not break degraded spam analysis."""
+        mock_urlparse.side_effect = ValueError("malformed URL")
+
+        result = sds.analyze_spam_phishing("Check https://bad.example/login")
+
+        self.assertIsInstance(result, dict)
+        self.assertIn("https://bad.example/login", result["detected_urls"])
+        self.assertEqual(result["suspicious_urls"], [])
+
+    @patch.object(sds, "SPAM_KEYWORDS", ["synthetic spam marker"])
+    def test_spam_keyword_detection_can_run_with_mocked_rules(self):
+        """Keyword classification remains isolated from real ML/model dependencies."""
+        result = sds.analyze_spam_phishing("This contains a synthetic spam marker.")
+
+        self.assertTrue(result["is_spam"])
+        self.assertEqual(result["risk_level"], "low")
+
     def test_case_insensitive_keywords(self):
         result = sds.analyze_spam_phishing("VERIFY YOUR ACCOUNT NOW")
         self.assertTrue(result["is_spam"])

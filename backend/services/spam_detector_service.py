@@ -56,6 +56,7 @@ def analyze_spam_phishing(text: str, ocr_text: str = "") -> dict:
     reasons = []
     detected_urls = []
     suspicious_urls = []
+    untrusted_urls = []
     
     # 1. URL Scanning
     urls = URL_REGEX.findall(combined_text)
@@ -79,6 +80,7 @@ def analyze_spam_phishing(text: str, ocr_text: str = "") -> dict:
                 
             # Check if domain is untrusted AND has suspicious path keywords
             if not is_domain_safe(host):
+                untrusted_urls.append(clean_url)
                 path_lower = parsed.path.lower()
                 query_lower = parsed.query.lower()
                 suspicious_path_keywords = ["login", "signin", "verify", "secure", "update", "account", "billing"]
@@ -110,10 +112,10 @@ def analyze_spam_phishing(text: str, ocr_text: str = "") -> dict:
     if len(suspicious_urls) > 0 or len(matched_phishing) >= 2:
         risk_level = "high"
         is_spam = True
-    elif len(matched_phishing) == 1 or len(matched_spam) >= 2 or len(detected_urls) >= 3:
+    elif len(matched_phishing) == 1 or len(matched_spam) >= 2 or len(detected_urls) >= 5:
         risk_level = "medium"
         is_spam = True
-    elif len(matched_spam) == 1 or len(detected_urls) > 0:
+    elif len(matched_spam) == 1 or len(untrusted_urls) > 0:
         risk_level = "low"
         is_spam = True
         
