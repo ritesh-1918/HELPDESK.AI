@@ -85,7 +85,20 @@ class ClassifierService:
     def predict(self, text: str) -> dict:
         """
         Predict category, subcategory, priority, auto_resolve, assigned_team, and confidence.
+
+        Args:
+            text: The ticket description text to classify.
+
+        Returns:
+            dict with keys: category, subcategory, priority, auto_resolve,
+            assigned_team, confidence.
+
+        Raises:
+            ValueError: If text is empty or contains only whitespace.
         """
+        if not text or not text.strip():
+            raise ValueError("Cannot classify empty or whitespace-only text.")
+
         self.load()
 
         encoding = self.tokenizer(
