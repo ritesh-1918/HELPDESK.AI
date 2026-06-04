@@ -1,15 +1,21 @@
 /**
- * useWebSocket — auto-reconnecting WebSocket hook with heartbeat support.
+ * useWebSocket — auto-reconnecting WebSocket hook.
  *
  * Connects to the backend WebSocket endpoint for real-time ticket updates.
  * Automatically re-establishes the connection on drop with exponential backoff.
+ *
+ * Heartbeat protocol (server-managed):
+ *   - Server sends {"type": "ping"} every 30 s.
+ *   - This hook responds immediately with {"type": "pong"}.
+ *   - Server disconnects clients that miss a pong within 10 s (HEARTBEAT_TIMEOUT).
+ *   - No client-side ping timer is needed; the server owns the keepalive cycle.
  *
  * Usage:
  *   import useWebSocket from "../../hooks/useWebSocket";
  *
  *   const { isConnected, sendMessage, lastMessage } = useWebSocket(companyId);
  *
- *   // lastMessage updates on every incoming message → use in a useEffect
+ *   // lastMessage updates on every incoming message — use in a useEffect
  *   useEffect(() => {
  *     if (lastMessage?.type === "ticket_update") {
  *       store.addTicket(lastMessage.ticket);
@@ -24,8 +30,6 @@ import { useEffect, useRef, useState, useCallback } from "react";
 // ---------------------------------------------------------------------------
 
 const WS_BASE_URL = import.meta.env.VITE_WS_URL || "ws://localhost:7860";
-const PING_INTERVAL_MS = 25_000; // slightly < server-side 30s so pong arrives first
-const PONG_TIMEOUT_MS = 12_000; // slightly > server-side 10s timeout
 const MAX_RECONNECT_DELAY_MS = 30_000;
 const INITIAL_RECONNECT_DELAY_MS = 1_000;
 
@@ -39,8 +43,6 @@ export default function useWebSocket(companyId) {
   const [connectionError, setConnectionError] = useState(null);
 
   const wsRef = useRef(null);
-  const pingTimerRef = useRef(null);
-  const pongTimeoutRef = useRef(null);
   const reconnectTimerRef = useRef(null);
   const reconnectAttemptRef = useRef(0);
   const mountedRef = useRef(true);
@@ -51,14 +53,6 @@ export default function useWebSocket(companyId) {
   // ---- Cleanup helpers ---------------------------------------------------
 
   const clearTimers = useCallback(() => {
-    if (pingTimerRef.current) {
-      clearInterval(pingTimerRef.current);
-      pingTimerRef.current = null;
-    }
-    if (pongTimeoutRef.current) {
-      clearTimeout(pongTimeoutRef.current);
-      pongTimeoutRef.current = null;
-    }
     if (reconnectTimerRef.current) {
       clearTimeout(reconnectTimerRef.current);
       reconnectTimerRef.current = null;
@@ -75,20 +69,6 @@ export default function useWebSocket(companyId) {
       wsRef.current.close();
       wsRef.current = null;
     }
-  }, [clearTimers]);
-
-  // ---- Start heartbeat timers (called after connect) --------------------
-
-  const startHeartbeat = useCallback(() => {
-    // Clear any existing timers first to prevent duplicates on reconnect
-    clearTimers();
-
-    // Periodic pings
-    pingTimerRef.current = setInterval(() => {
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({ type: "ping" }));
-      }
-    }, PING_INTERVAL_MS);
   }, [clearTimers]);
 
   // ---- WebSocket lifecycle & Reconnection ---------------------------------
@@ -136,7 +116,6 @@ export default function useWebSocket(companyId) {
       setIsConnected(true);
       setConnectionError(null);
       reconnectAttemptRef.current = 0;
-      startHeartbeat();
     };
 
     socket.onmessage = (event) => {
@@ -144,7 +123,7 @@ export default function useWebSocket(companyId) {
       try {
         const data = JSON.parse(event.data);
 
-        // Respond to server pings immediately
+        // Respond to server-initiated pings immediately (keepalive protocol)
         if (data.type === "ping") {
           if (socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify({ type: "pong" }));
@@ -174,7 +153,7 @@ export default function useWebSocket(companyId) {
     socket.onerror = () => {
       // onclose fires immediately after onerror, so reconnect is handled there
     };
-  }, [cleanup, clearTimers, startHeartbeat, scheduleReconnect]);
+  }, [cleanup, clearTimers, scheduleReconnect]);
 
   useEffect(() => {
     connectRef.current = connect;
