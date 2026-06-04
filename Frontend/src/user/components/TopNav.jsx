@@ -1,54 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { Bell, Box, CheckCircle2, MessageSquare, Menu, X, LogOut, User as UserIcon, BookOpen, Sun, Moon } from 'lucide-react';
+import React, { useState } from 'react';
+import { Box, MessageSquare, Menu, X, LogOut, User as UserIcon, BookOpen } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
-import { Button } from '../../components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
-// eslint-disable-next-line no-unused-vars
-import useTicketStore from '../../store/ticketStore';
-// removed useNotificationStore
 import NotificationPopover from "./NotificationPopover";
 import ThemeToggle from "../../components/shared/ThemeToggle";
-
 import useAuthStore from "../../store/authStore";
-import ThemeToggle from "../../components/shared/ThemeToggle";
 
 const TopNav = () => {
     const navigate = useNavigate();
-    
- 
     const { profile, logout } = useAuthStore();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [isDark, setIsDark] = useState(false);
 
-    useEffect(() => {
-        setIsDark(document.documentElement.classList.contains('dark'));
-    }, []);
+    const initials = profile?.full_name
+        ? profile.full_name[0].toUpperCase()
+        : profile?.email
+            ? profile.email[0].toUpperCase()
+            : 'U';
 
-    const toggleTheme = () => {
-        const nextDark = !isDark;
-        setIsDark(nextDark);
-        if (nextDark) {
-            document.documentElement.classList.add('dark');
-            localStorage.setItem('theme', 'dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-            localStorage.setItem('theme', 'light');
-        }
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
     };
-
-  const { profile, logout } = useAuthStore();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  const initials = profile?.full_name
-    ? profile.full_name[0].toUpperCase()
-    : profile?.email
-      ? profile.email[0].toUpperCase()
-      : 'U';
-
-
-
-
 
     return (
         <header className="w-full bg-white dark:bg-slate-950 border-b border-gray-200 dark:border-slate-800 sticky top-0 z-50">
@@ -69,11 +41,11 @@ const TopNav = () => {
                     <Link className="text-sm font-semibold text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white transition-colors" to="/docs">Documentation</Link>
                 </nav>
 
-                {/* Right: Profile */}
+                {/* Right: Actions */}
                 <div className="flex items-center gap-3">
                     <ThemeToggle />
                     <NotificationPopover />
-                    
+
                     <div className="h-6 w-px bg-white/[0.08] hidden sm:block" />
 
                     <div className="hidden md:block">
@@ -88,7 +60,7 @@ const TopNav = () => {
                         </Avatar>
                     </div>
 
-                    {/* Mobile Command Trigger */}
+                    {/* Mobile menu toggle */}
                     <button
                         onClick={() => setIsMenuOpen(!isMenuOpen)}
                         className="md:hidden p-2 text-gray-600 focus:outline-none dark:text-slate-200"
@@ -114,32 +86,16 @@ const TopNav = () => {
                         </div>
 
                         <div className="space-y-4">
-                            <Link
-                                to="/dashboard"
-                                onClick={() => setIsMenuOpen(false)}
-                                className="flex items-center gap-3 text-lg font-bold text-gray-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors"
-                            >
+                            <Link to="/dashboard" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 text-lg font-bold text-gray-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors">
                                 <Box size={20} className="text-gray-400 dark:text-slate-500" /> Dashboard
                             </Link>
-                            <Link
-                                to="/my-tickets"
-                                onClick={() => setIsMenuOpen(false)}
-                                className="flex items-center gap-3 text-lg font-bold text-gray-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors"
-                            >
+                            <Link to="/my-tickets" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 text-lg font-bold text-gray-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors">
                                 <MessageSquare size={20} className="text-gray-400 dark:text-slate-500" /> My Tickets
                             </Link>
-                            <Link
-                                to="/profile"
-                                onClick={() => setIsMenuOpen(false)}
-                                className="flex items-center gap-3 text-lg font-bold text-gray-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors"
-                            >
+                            <Link to="/profile" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 text-lg font-bold text-gray-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors">
                                 <UserIcon size={20} className="text-gray-400 dark:text-slate-500" /> My Profile
                             </Link>
-                            <Link
-                                to="/docs"
-                                onClick={() => setIsMenuOpen(false)}
-                                className="flex items-center gap-3 text-lg font-bold text-gray-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors"
-                            >
+                            <Link to="/docs" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 text-lg font-bold text-gray-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors">
                                 <BookOpen size={20} className="text-gray-400 dark:text-slate-500" /> Documentation
                             </Link>
                             <div className="flex items-center justify-between">
