@@ -1,8 +1,11 @@
-javascript
 /**
- * @fileoverview Date utility module for Safari‑safe ISO‑8601 parsing and formatting.
+ * @fileoverview Date utility module for Safari-safe ISO-8601 parsing and formatting.
  * Provides robust fallbacks for invalid or empty dates, and full type annotations
  * for IDE support and static analysis.
+ *
+ * Fixes #1411: adds `safeParseDate`, `normalizeTimestamp`, and `formatDisplayDate`
+ * so that the Ticket Timeline never displays blank or "Invalid Date" text on Safari.
+ *
  * @module dateUtils
  */
 
@@ -28,9 +31,6 @@ const RE_TZ_INDICATOR = /[Z+-]\d{2}:\d{2}$/i;
 
 /** @private @type {RegExp} Comma as decimal separator in milliseconds */
 const RE_COMMA_MILLIS = /,(\d{3})(?=\.\d+|Z|[+-]|$)/g;
-
-/** @private @type {string} Default fallback timestamp (current local time) */
-const FALLBACK_RESULT = 'now';
 
 // ---------------------------------------------------------------------------
 // Logging infrastructure
@@ -124,23 +124,22 @@ export function isValidDateInstance(date) {
 // ---------------------------------------------------------------------------
 
 /**
- * Normalises an ISO‑8601‑like string into a Safari‑safe, strict ISO‑8601 string.
+ * Normalises an ISO-8601-like string into a Safari-safe, strict ISO-8601 string.
  *
  * Handles the following edge cases:
  * - Space instead of 'T' between date and time.
  * - Comma as decimal point for milliseconds.
- * - Timezone offset without colon (e.g., `+0530` → `+05:30`).
+ * - Timezone offset without colon (e.g., `+0530` -> `+05:30`).
  * - Missing timezone indicator (assumes UTC, appends `Z`).
  *
  * @private
  * @param {string} input - Raw timestamp string (e.g., from Supabase).
- * @returns {string} Normalised ISO‑8601 string guaranteed to parse in all modern browsers.
- * @throws {TypeError} If `input` is not a string (callers should validate before).
+ * @returns {string} Normalised ISO-8601 string guaranteed to parse in all modern browsers.
  */
 function normalizeISODate(input) {
   if (typeof input !== 'string') {
     logger.warn(
-      '[dateUtils] normalizeISODate received non‑string input: %s. Converting to string.',
+      '[dateUtils] normalizeISODate received non-string input: %s. Converting to string.',
       typeof input
     );
     input = (input === null || input === undefined) ? '' : String(input);
@@ -151,7 +150,7 @@ function normalizeISODate(input) {
   // Replace space separator with 'T' (Supabase sometimes returns "2022-01-01 00:00:00")
   normalized = normalized.replace(RE_SPACE, 'T');
 
-  // Insert colon in compact timezone offset: +0530 → +05:30
+  // Insert colon in compact timezone offset: +0530 -> +05:30
   const compactTz = RE_TZ_COMPACT.exec(normalized);
   if (compactTz) {
     const offsetStr = compactTz[0];
@@ -166,7 +165,7 @@ function normalizeISODate(input) {
   // Replace comma with dot for milliseconds (Safari may misinterpret comma)
   normalized = normalized.replace(RE_COMMA_MILLIS, '.$1$2');
 
-  // Validate after normalisation (only in debug mode)
+  // Validate after normalisation
   const parsed = Date.parse(normalized);
   if (isNaN(parsed)) {
     logger.warn('[dateUtils] Normalised date is still invalid: "%s" (original: "%s")', normalized, input);
@@ -183,7 +182,7 @@ function normalizeISODate(input) {
  * Parses a date value into a validated `Date` object.
  *
  * - Accepts strings, numbers (timestamps), `Date` instances, `null`, `undefined`.
- * - Returns current date/time for any invalid or empty input.
+ * - Returns current date/time for any invalid or empty input by default.
  * - Every fallback is logged at `warn` level.
  *
  * @param {string|number|Date|null|undefined} input - The date value to parse.
@@ -251,6 +250,78 @@ function fallbackDate(fallbackToNow) {
 }
 
 /**
+ * Parses a date value safely, always returning a valid Date instance.
+ *
+ * Unlike `parseDate`, this function never throws â€” invalid or empty inputs
+ * silently fall back to the current local timestamp.
+ * Used by the Ticket Timeline component to avoid blank date rendering on Safari.
+ *
+ * @param {string|number|Date|null|undefined} input - Raw date value (e.g., from Supabase).
+ * @returns {Date} A valid `Date` object; `new Date()` (current time) if input cannot be parsed.
+ * @example
+ * safeParseDate(null)                         // new Date()  (current time)
+ * safeParseDate('2023-01-15 10:30:00')        // Safari-safe parsed Date
+ * safeParseDate('2023-01-15T10:30:00+0530')   // Parsed with tz colon normalised
+ */
+export function safeParseDate(input) {
+  return parseDate(input, { fallbackToNow: true });
+}
+
+/**
+ * Normalises a raw timestamp string into a strict ISO-8601 string that
+ * Safari's `Date` constructor can parse without errors.
+ *
+ * This is the public surface for the internal `normalizeISODate` helper.
+ * Falls back to the current UTC timestamp (`new Date().toISOString()`) for
+ * falsy or non-parseable inputs so callers always receive a valid string.
+ *
+ * @param {string|null|undefined} input - Raw timestamp from the database.
+ * @returns {string} Safari-safe ISO-8601 string.
+ * @example
+ * normalizeTimestamp('2022-01-01 00:00:00')          // '2022-01-01T00:00:00Z'
+ * normalizeTimestamp('2022-01-15T10:30:00.123456+0530') // '2022-01-15T10:30:00.123456+05:30'
+ * normalizeTimestamp(null)                            // current ISO timestamp
+ * normalizeTimestamp('')                              // current ISO timestamp
+ */
+export function normalizeTimestamp(input) {
+  if (input === null || input === undefined || input === '') {
+    logger.warn('[dateUtils] normalizeTimestamp received empty input; returning current ISO timestamp.');
+    return new Date().toISOString();
+  }
+  try {
+    return normalizeISODate(String(input));
+  } catch (err) {
+    logger.warn('[dateUtils] normalizeTimestamp error for "%s": %s', input, err.message);
+    return new Date().toISOString();
+  }
+}
+
+/**
+ * Formats a date value for display in the Ticket Timeline.
+ *
+ * Unlike `formatDate`, this function never returns a blank or 'â€”' string.
+ * Invalid or empty inputs fall back to the current local timestamp formatted
+ * in the same style, ensuring the UI always shows a meaningful date rather
+ * than a blank or error placeholder.
+ *
+ * @param {string|number|Date|null|undefined} input - Raw date value.
+ * @param {DateFormatOptions} [formatOptions] - Format options (same as `formatDate`).
+ * @returns {string} Formatted date string; never 'â€”' or empty.
+ * @example
+ * formatDisplayDate('2023-01-15T10:30:00Z')  // "Jan 15, 2023, 10:30 AM"
+ * formatDisplayDate(null)                    // formatted current timestamp
+ * formatDisplayDate('corrupted')             // formatted current timestamp
+ */
+export function formatDisplayDate(input, formatOptions = {}) {
+  const formatted = formatDate(input, formatOptions);
+  if (!formatted || formatted === 'â€”') {
+    logger.warn('[dateUtils] formatDisplayDate: invalid date "%s"; falling back to current timestamp.', input);
+    return formatDate(new Date(), formatOptions);
+  }
+  return formatted;
+}
+
+/**
  * Formats a date value into a human-readable string.
  *
  * @param {string|number|Date|null|undefined} input - The date to format.
@@ -258,11 +329,11 @@ function fallbackDate(fallbackToNow) {
  * @param {boolean} [formatOptions.showTime=true] - Include time part.
  * @param {boolean} [formatOptions.use24Hour=false] - 24-hour format.
  * @param {'short'|'long'} [formatOptions.dateStyle='short'] - Date style.
- * @returns {string} Formatted date string. If input is invalid, returns '—' (em dash).
+ * @returns {string} Formatted date string. If input is invalid, returns 'â€”' (em dash).
  * @example
  * formatDate('2023-01-15T10:30:00Z')                  // "Jan 15, 2023, 10:30 AM"
  * formatDate('2023-01-15', { showTime: false })       // "Jan 15, 2023"
- * formatDate('invalid')                               // "—"
+ * formatDate('invalid')                               // "â€”"
  */
 export function formatDate(input, formatOptions = {}) {
   const {
@@ -274,12 +345,11 @@ export function formatDate(input, formatOptions = {}) {
   try {
     const date = parseDate(input, { fallbackToNow: false });
     if (!isValidDateInstance(date)) {
-      return '—';
+      return 'â€”';
     }
 
     const locale = 'en-US';
 
-    // Build formatter options
     /** @type {Intl.DateTimeFormatOptions} */
     const options = {};
 
@@ -308,12 +378,12 @@ export function formatDate(input, formatOptions = {}) {
     return formatter.format(date);
   } catch (err) {
     logger.error('[dateUtils] formatDate unexpected error: %s', err.message);
-    return '—';
+    return 'â€”';
   }
 }
 
 /**
- * Returns the current timestamp in ISO‑8601 format (UTC).
+ * Returns the current timestamp in ISO-8601 format (UTC).
  * Useful for logging timestamps.
  * @returns {string} Current date in ISO string.
  */
@@ -324,12 +394,12 @@ export function nowISO() {
 /**
  * Gets the age of a date from now in human-readable format (e.g., "2h ago", "3d ago").
  * @param {string|number|Date|null|undefined} input - The date to compare.
- * @returns {string} Human readable time difference or "—" if invalid.
+ * @returns {string} Human readable time difference or "â€”" if invalid.
  */
 export function timeAgo(input) {
   const date = parseDate(input, { fallbackToNow: false });
   if (!isValidDateInstance(date)) {
-    return '—';
+    return 'â€”';
   }
 
   const now = new Date();
@@ -361,7 +431,10 @@ export function timeAgo(input) {
  * @property {Function} isValidDate
  * @property {Function} isValidDateInstance
  * @property {Function} parseDate
+ * @property {Function} safeParseDate
+ * @property {Function} normalizeTimestamp
  * @property {Function} formatDate
+ * @property {Function} formatDisplayDate
  * @property {Function} nowISO
  * @property {Function} timeAgo
  */
@@ -372,7 +445,10 @@ const dateUtils = {
   isValidDate,
   isValidDateInstance,
   parseDate,
+  safeParseDate,
+  normalizeTimestamp,
   formatDate,
+  formatDisplayDate,
   nowISO,
   timeAgo,
 };
