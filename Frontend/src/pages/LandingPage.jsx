@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import TeamSection from '../components/landing/TeamSection';
+import ScrollToTopButton from "../components/shared/ScrollToTopButton";
 
 // ---- Count-up animation component ----
 function AnimatedStat({ target, suffix = '', prefix = '', label, isWord = false }) {
@@ -926,6 +927,7 @@ export default function LandingPage() {
                     </div>
                 </div>
             </footer>
+            <ScrollToTopButton />
         </div>
     );
 }
