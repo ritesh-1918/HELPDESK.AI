@@ -20,6 +20,7 @@ import TicketAuditTimeline from "../components/TicketAuditTimeline";
 import TicketTagManager from '../../components/TicketTagManager';
 import TagChip from '../../components/TagChip';
 import { TicketDetailSkeleton } from "../../components/Skeletons";
+import { safeDisplayText } from "../../utils/sanitizeText";
 
 const AdminTicketDetailSkeleton = () => (
     <div
@@ -73,11 +74,6 @@ const AdminTicketDetailSkeleton = () => (
         </div>
     </div>
 );
-
-const safeDisplayText = (text, fallback = 'None') => {
-  if (text === null || text === undefined || text === '') return fallback;
-  return text;
-};
 
 const AdminTicketDetail = () => {
   const { ticket_id } = useParams();
