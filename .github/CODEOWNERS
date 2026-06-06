@@ -1,0 +1,15 @@
+# Default owners for everything
+* @ritesh-1918
+
+# Frontend
+/Frontend/ @ritesh-1918
+
+# Backend
+/backend/ @ritesh-1918
+
+# CI/CD & GitHub config
+/.github/ @ritesh-1918
+
+# Documentation
+/docs/ @ritesh-1918
+*.md @ritesh-1918
