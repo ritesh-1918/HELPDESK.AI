@@ -93,12 +93,11 @@
 
 html{
   overflow-y: scroll;
-  scrollbar-width: none; /* Firefox */
+  scrollbar-width: auto; /* Firefox */
 }
 
 html::-webkit-scrollbar{
-  width: 0;
-  height: 0;
+  
 }
 
 body{
