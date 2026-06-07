@@ -1,8 +1,0 @@
-{
-  "dependencies": {
-    "puppeteer": "^24.40.0"
-  },
-  "devDependencies": {
-    "supabase": "^2.95.3"
-  }
-}
