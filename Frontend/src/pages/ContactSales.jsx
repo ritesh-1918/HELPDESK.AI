@@ -2,7 +2,7 @@ import React, { useState } from 'react';
  
 import { motion } from 'framer-motion';
 import { Building2, Mail, User, Phone, MessageSquare, ArrowRight, CheckCircle2, ShieldCheck, Zap, Server } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 
 export default function ContactSales() {
@@ -266,7 +266,7 @@ export default function ContactSales() {
                                 )}
                             </button>
                             <p className="text-xs text-center text-gray-400 mt-4">
-                                By submitting this form, you agree to our Privacy Policy and Terms of Service.
+                                By submitting this form, you agree to our <Link to="/privacy" className="text-emerald-700 font-bold hover:underline">Privacy Policy</Link> and <Link to="/terms" className="text-emerald-700 font-bold hover:underline">Terms of Service</Link>.
                             </p>
                         </form>
                     </div>
