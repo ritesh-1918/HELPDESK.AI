@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import useAuthStore from "../store/authStore";
@@ -13,10 +13,17 @@ function AdminLobby() {
     const navigate = useNavigate();
     const [status, setStatus] = useState(profile?.status || "pending_approval");
     const [isTransitioning, setIsTransitioning] = useState(false);
+    const profileCheckRef = useRef(false);
 
     const currentStatus = profile?.status || status;
 
     useEffect(() => {
+        // Skip on first render if profile is not yet available — re-run when profile changes
+        if (!profile && !profileCheckRef.current) {
+            profileCheckRef.current = true;
+            return;
+        }
+
         // If they are somehow here without being an admin, kick them out
         if (!profile || profile.role !== "admin") {
             navigate("/login");
