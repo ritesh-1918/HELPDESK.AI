@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bot, User, CheckCircle2, XCircle, Send, RefreshCcw, ShieldCheck } from 'lucide-react';
 import useTicketStore from '../../store/ticketStore';
+import { API_CONFIG } from '../../config';
 
 function AutoResolve() {
     const { aiTicket } = useTicketStore();
@@ -15,7 +16,7 @@ function AutoResolve() {
     const fetchNextStep = async (history = []) => {
         setIsThinking(true);
         try {
-            const response = await fetch('http://127.0.0.1:8000/ai/troubleshoot', {
+            const response = await fetch(`${API_CONFIG.BACKEND_URL}/ai/troubleshoot`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
