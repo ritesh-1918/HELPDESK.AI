@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import useTicketStore from "../../store/ticketStore";
 import useAuthStore from "../../store/authStore";
+import useToastStore from "../../store/toastStore";
 import { Card, CardContent } from "../../components/ui/card";
 import TicketTimeline from "../components/TicketTimeline";
 import axios from 'axios';
@@ -18,6 +19,7 @@ const TicketTracking = () => {
     const { user, profile } = useAuthStore();
     const [isCreating, setIsCreating] = useState(true);
     const [error, setError] = useState(null);
+    const { showToast } = useToastStore();
     const [createdTicket, setCreatedTicket] = useState(null);
     const hasCreated = useRef(false);
     useEffect(() => {
@@ -86,6 +88,7 @@ const TicketTracking = () => {
             } catch (err) {
                 console.error("Tracking Error:", err);
                 setError(err.message || "Failed to create ticket.");
+                showToast(err.message || "Failed to create ticket. Please try again.", "error");
                 setIsCreating(false);
             }
         };
