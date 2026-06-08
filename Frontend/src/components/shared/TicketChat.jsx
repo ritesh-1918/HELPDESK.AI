@@ -127,10 +127,13 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
             .subscribe();
 
         return () => {
-            supabase.removeChannel(channel);
+            if (channelRef.current) {
+                supabase.removeChannel(channelRef.current);
+                channelRef.current = null;
+            }
         };
-     
- 
+
+
     }, [ticketId]);
 
     const handleInputChange = (e) => {
@@ -161,6 +164,17 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
         setIsAtBottom(atBottom);
         if (atBottom) setUnreadCount(0);
     };
+
+    // ─── Auto-scroll on new messages ───────────────────────────────────
+    useEffect(() => {
+        if (messages.length > 0 && scrollContainerRef.current) {
+            const el = scrollContainerRef.current;
+            const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+            if (atBottom) {
+                setTimeout(() => scrollToBottom(), 100);
+            }
+        }
+    }, [messages, scrollToBottom]);
 
     // ─── Send message ────────────────────────────────────────────────────
     const handleSend = async (e) => {
