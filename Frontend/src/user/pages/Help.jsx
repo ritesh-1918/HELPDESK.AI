@@ -32,6 +32,7 @@ const Help = () => {
     const [activeTab, setActiveTab] = useState('All');
     const [videos, setVideos] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [noApiKey, setNoApiKey] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -78,6 +79,7 @@ ${fullName}`;
 
                 const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
                 if (!API_KEY) {
+                    setNoApiKey(true);
                     throw new Error("No API Key");
                 }
 
@@ -224,6 +226,20 @@ ${fullName}`;
                                     ))}
                                 </div>
                             </div>
+
+                            {noApiKey && (
+                                <div className="text-center py-8 px-6 bg-amber-50 rounded-2xl border border-amber-100 mb-8">
+                                    <p className="text-amber-800 font-semibold text-sm mb-2">
+                                        Video resources are not configured. Contact your administrator to set VITE_YOUTUBE_API_KEY.
+                                    </p>
+                                    <a
+                                        href={generateMailto()}
+                                        className="text-amber-600 hover:text-amber-700 font-bold text-sm underline"
+                                    >
+                                        Contact Support
+                                    </a>
+                                </div>
+                            )}
 
                             {/* Resource Library Grid */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
