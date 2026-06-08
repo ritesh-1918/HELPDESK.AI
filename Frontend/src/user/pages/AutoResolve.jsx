@@ -15,6 +15,14 @@ function AutoResolve() {
     const fetchNextStep = async (history = []) => {
         setIsThinking(true);
         try {
+            if (!aiTicket?.summary || !aiTicket?.category) {
+                setMessages(prev => [...prev, {
+                    role: 'bot',
+                    text: 'Unable to process your request. The ticket information appears incomplete. Please go back and try again.'
+                }]);
+                setIsThinking(false);
+                return;
+            }
             const response = await fetch('http://127.0.0.1:8000/ai/troubleshoot', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
