@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock, ChevronRight, Inbox, Loader2, AlertCircle } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
@@ -12,7 +12,7 @@ const RecentTickets = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    const fetchRecentTickets = async () => {
+    const fetchRecentTickets = useCallback(async () => {
         if (!user?.id) {
             setLoading(false);
             return;
@@ -36,12 +36,11 @@ const RecentTickets = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [user]);
 
     useEffect(() => {
         fetchRecentTickets();
-     
-    }, []);
+    }, [fetchRecentTickets]);
 
     const getStatusBadge = (status) => {
         const s = String(status || '').toLowerCase();
