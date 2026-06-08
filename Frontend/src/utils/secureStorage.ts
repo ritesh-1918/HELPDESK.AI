@@ -1,34 +1,36 @@
 import CryptoJS from 'crypto-js';
 
-// Fallback secret if env variable is missing
-const SECRET_KEY = import.meta.env.VITE_STORAGE_KEY || 'emerald-helpdesk-fallback-secret-key-9a8b7c6d5e';
+const SECRET_KEY = import.meta.env.VITE_STORAGE_KEY;
+
+if (!SECRET_KEY) {
+  console.warn('[secureStorage] VITE_STORAGE_KEY not set — encryption disabled, using raw storage');
+}
 
 export const secureStorage = {
-    /**
-     * Encrypts and stores a string value in localStorage.
-     */
     setItem: (key: string, value: string): void => {
         try {
-            const encrypted = CryptoJS.AES.encrypt(value, SECRET_KEY).toString();
-            localStorage.setItem(key, encrypted);
+            if (SECRET_KEY) {
+                const encrypted = CryptoJS.AES.encrypt(value, SECRET_KEY).toString();
+                localStorage.setItem(key, encrypted);
+            } else {
+                localStorage.setItem(key, value);
+            }
         } catch (e) {
             console.error('Error encrypting storage item', e);
         }
     },
 
-    /**
-     * Retrieves and decrypts a value from localStorage.
-     * Returns null if not found or decryption fails.
-     */
     getItem: (key: string): string | null => {
         try {
-            const encrypted = localStorage.getItem(key);
-            if (!encrypted) return null;
-            
-            const decrypted = CryptoJS.AES.decrypt(encrypted, SECRET_KEY).toString(CryptoJS.enc.Utf8);
-            if (!decrypted) return null;
-            
-            return decrypted;
+            const stored = localStorage.getItem(key);
+            if (!stored) return null;
+
+            if (SECRET_KEY) {
+                const decrypted = CryptoJS.AES.decrypt(stored, SECRET_KEY).toString(CryptoJS.enc.Utf8);
+                return decrypted || null;
+            }
+
+            return stored;
         } catch (e) {
             console.error('Error decrypting storage item', e);
             return null;

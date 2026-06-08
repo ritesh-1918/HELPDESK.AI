@@ -2,7 +2,7 @@ version: "3.8"
 
 # HELPDESK.AI Monitoring Stack
 # Usage: docker compose -f docker-compose.monitoring.yml up -d
-# Access: Grafana at http://localhost:3001 (admin/admin)
+# Access: Grafana at http://localhost:3001 (admin / $GRAFANA_ADMIN_PASSWORD)
 
 services:
   prometheus:
@@ -35,7 +35,7 @@ services:
       - "3001:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/helpdesk-dashboard.json
     volumes:
