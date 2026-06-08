@@ -11,7 +11,7 @@ import { Badge } from "../../components/ui/badge";
 import { Select } from "../../components/ui/select";
 import { formatTicketId } from "../../utils/format";
 import TicketStatusBadge from "../components/TicketStatusBadge";
-import { formatTimelineDate, getTimeZoneAbbr } from "../../utils/dateUtils";
+import { formatFullTimestamp, getTimeZoneAbbr } from "../../utils/dateUtils";
 import {
     Tooltip,
     TooltipContent,
@@ -334,7 +334,7 @@ function MyTickets() {
                                              <td className="px-6 py-4">
                                                  <div className="flex flex-col">
                                                      <span className="text-sm font-semibold text-gray-700">
-                                                         {formatTimelineDate(ticket.created_at)}
+                                                         {formatFullTimestamp(ticket.created_at)}
                                                      </span>
                                                      <span className="text-[10px] text-emerald-600 font-black uppercase tracking-widest mt-0.5">
                                                          {getTimeZoneAbbr()} Node
