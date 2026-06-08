@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlusCircle, ListTodo, Sparkles } from 'lucide-react';
 
-const WelcomeCard = ({ userName = "Ritesh" }) => {
+const WelcomeCard = ({ userName = 'there' }) => {
     const navigate = useNavigate();
 
     return (
@@ -36,7 +36,7 @@ const WelcomeCard = ({ userName = "Ritesh" }) => {
                 fontFamily: 'Syne, sans-serif', fontSize: '34px', fontWeight: 800,
                 color: '#0f1f12', letterSpacing: '-0.025em', margin: '0 0 8px 0',
             }}>
-                Welcome back, {userName}
+                Welcome back, {userName || 'there'}
             </h2>
 
             {/* Description */}
