@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     FileText, Database, Zap,
@@ -35,6 +35,7 @@ const DuplicateDetection = () => {
     const [activeStep, setActiveStep] = useState(0);
     const [countdown, setCountdown] = useState(2);
     const [totalCases, setTotalCases] = useState('10,000+');
+    const mountedRef = useRef(true);
 
     // ─── Animated Step Pipeline (Dynamic) ───────────────────────────────────────────
     const pipelineSteps = [
@@ -71,7 +72,14 @@ const DuplicateDetection = () => {
     }, []);
 
     useEffect(() => {
-        if (!isLoading && !aiTicket) navigate('/create-ticket');
+        mountedRef.current = true;
+        return () => { mountedRef.current = false; };
+    }, []);
+
+    useEffect(() => {
+        if (!isLoading && !aiTicket) {
+            if (mountedRef.current) navigate('/create-ticket');
+        }
     }, [isLoading, aiTicket, navigate]);
 
     const isDuplicate = aiTicket?.duplicate_ticket?.is_duplicate === true;
