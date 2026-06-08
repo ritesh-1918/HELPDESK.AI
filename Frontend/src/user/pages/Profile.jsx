@@ -67,6 +67,7 @@ const Profile = () => {
     }, [profile]);
 
     useEffect(() => {
+        if (authLoading) return;
         const fetchUserTickets = async () => {
             if (!user?.id) return;
             const { data } = await supabase
@@ -76,7 +77,7 @@ const Profile = () => {
             setUserTickets(data || []);
         };
         fetchUserTickets();
-    }, [user]);
+    }, [user, authLoading]);
 
     const handleLogout = async () => {
         try {
