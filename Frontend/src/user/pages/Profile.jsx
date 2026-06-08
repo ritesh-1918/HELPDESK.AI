@@ -47,6 +47,7 @@ const Profile = () => {
     });
 
     const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [passwordData, setPasswordData] = useState({
         currentPassword: '',
         newPassword: '',
@@ -79,6 +80,7 @@ const Profile = () => {
     }, [user]);
 
     const handleLogout = async () => {
+        setShowLogoutConfirm(false);
         try {
             await logout();
             navigate("/login");
@@ -505,7 +507,7 @@ const Profile = () => {
                                         />
 
                                         <button
-                                            onClick={handleLogout}
+                                            onClick={() => setShowLogoutConfirm(true)}
                                             className="w-full p-8 flex items-center justify-between hover:bg-amber-50/30 transition-all group border-b border-slate-50"
                                         >
                                             <div className="flex items-center gap-6">
@@ -542,6 +544,46 @@ const Profile = () => {
                     </div>
                 </div>
             </main>
+
+            {/* Logout Confirmation Modal */}
+            <AnimatePresence>
+                {showLogoutConfirm && (
+                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="w-full max-w-sm bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-white"
+                        >
+                            <div className="px-8 py-6 bg-amber-500 text-white flex items-center justify-between">
+                                <h3 className="font-black italic uppercase text-sm tracking-widest flex items-center gap-2">
+                                    <LogOut size={16} /> Confirm Logout
+                                </h3>
+                                <button onClick={() => setShowLogoutConfirm(false)} className="text-white/70 hover:text-white transition-colors">
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            <div className="p-8 text-center">
+                                <p className="text-gray-600 font-medium mb-8">Are you sure you want to log out?</p>
+                                <div className="flex gap-4">
+                                    <button
+                                        onClick={() => setShowLogoutConfirm(false)}
+                                        className="flex-1 py-3 rounded-2xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-all"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleLogout}
+                                        className="flex-1 py-3 rounded-2xl bg-amber-500 text-white font-bold hover:bg-amber-600 transition-all"
+                                    >
+                                        Log Out
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             {/* Change Password Modal */}
             <AnimatePresence>
