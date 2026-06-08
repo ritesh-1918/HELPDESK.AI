@@ -350,7 +350,7 @@ const CreateTicket = () => {
                                     <div className="space-y-2 flex-grow flex flex-col relative">
                                         <div className="flex items-center justify-between">
                                             <label className="text-sm font-bold text-gray-700">Describe your issue</label>
-                                            <span className={`text-xs font-semibold ${issue.length >= MAX_CHARS ? 'text-red-500' : 'text-gray-400'}`}>
+                                            <span className={`text-xs font-semibold ${issue.length >= MAX_CHARS ? 'text-red-500' : issue.length >= MAX_CHARS * 0.9 ? 'text-amber-500' : 'text-gray-400'}`}>
                                                 {issue.length} / {MAX_CHARS}
                                             </span>
                                         </div>
@@ -571,7 +571,7 @@ const CreateTicket = () => {
                                     {/* Primary Submit Button */}
                                     <Button
                                         type="submit"
-                                        disabled={isLoading || isOcrLoading || isTranslating || !issue.trim()}
+                                        disabled={isLoading || isOcrLoading || isTranslating || !issue.trim() || issue.length > MAX_CHARS}
                                         className="w-full h-14 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-lg rounded-2xl flex items-center justify-center gap-2 transition-all border-none shadow-emerald-200/50 shadow-lg hover:shadow-xl active:scale-[0.98] disabled:opacity-50"
                                     >
                                         {(isLoading || isTranslating) ? (
