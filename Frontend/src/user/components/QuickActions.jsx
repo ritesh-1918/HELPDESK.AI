@@ -42,7 +42,16 @@ const QuickActions = () => {
             {actions.map((action, index) => (
                 <div
                     key={index}
+                    role="button"
+                    aria-label={`${action.title}: ${action.description}`}
+                    tabIndex={0}
                     onClick={() => handleActionClick(action.category)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleActionClick(action.category);
+                        }
+                    }}
                     onMouseEnter={() => setHoveredIdx(index)}
                     onMouseLeave={() => setHoveredIdx(null)}
                     style={{
