@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Activity } from 'lucide-react';
 
 import useAuthStore from "../../store/authStore";
+import useToastStore from "../../store/toastStore";
 import { supabase } from "../../lib/supabaseClient";
 import StatCard from "../components/StatCard";
 import TicketTable from "../components/TicketTable";
@@ -70,6 +71,7 @@ const aiIconMap = [
 const AdminDashboard = () => {
     const navigate = useNavigate();
     const { profile } = useAuthStore();
+    const { showToast } = useToastStore();
     const [tickets, setTickets] = React.useState([]);
     const [isLoading, setIsLoading] = React.useState(true);
 
@@ -96,7 +98,10 @@ const AdminDashboard = () => {
                     } else {
                         setTickets(data || []);
                     }
-                } catch (err) { console.error("Dashboard fetch error:", err); }
+                } catch (err) {
+                    console.error("Dashboard fetch error:", err);
+                    showToast('Failed to load dashboard data. Please try again.', 'error');
+                }
                 finally { setIsLoading(false); }
             };
 
