@@ -81,114 +81,19 @@ def get_system_settings(company_id: str) -> dict:
     except Exception as e:
         print(f"[WARNING] Could not fetch system_settings for company_id={company_id}: {e}")
     return defaults
-class TicketRequest(BaseModel):
-    text: str
-    image_base64: str = ""
-    image_text: str = "" # Keep for backward compatibility
-    user_id: str | None = None
-    company: str | None = None
-    image_url: str | None = None
-    confidence_threshold: float = 0.20
-    duplicate_sensitivity: float = 0.85
-
-class TicketSaveRequest(BaseModel):
-    user_id: str
-    subject: str
-    description: str
-    category: str
-    subcategory: str
-    priority: str
-    assigned_team: str
-    status: str
-    auto_resolve: bool
-    is_duplicate: bool
-    confidence: float
-    image_url: str | None = None
-    company: str | None = None
-    company_id: str | None = None
-    sla_breach_at: str
-    metadata: dict
-    entities: list = []
-    solution_steps: list = []
-    ocr_text: str = ""
-    needs_review: bool = False
-    routing_confidence: float
-
-
-class DuplicateInfo(BaseModel):
-    is_duplicate: bool
-    duplicate_ticket_id: str | None = None
-    similarity: float = 0.0
-
-
-class EntityInfo(BaseModel):
-    text: str
-    label: str
-    confidence: float
-
-
-class TicketResponse(BaseModel):
-    id: str | int | None = None
-    ticket_id: str | None = None
-    summary: str
-    category: str
-    subcategory: str
-    priority: str
-    auto_resolve: bool
-    assigned_team: str
-    entities: list[EntityInfo]
-    duplicate_ticket: DuplicateInfo
-    confidence: float
-    needs_review: bool = False
-    reasoning: str = ""
-    decision_factors: list[str] = []
-    image_description: str = ""
-    ocr_text: str = ""
-    image_url: str | None = None
-    highlights: list[str] = []
-    timeline: dict = {} # Map of step_name: timestamp
-    env_metadata: dict = {} # IP, Hostname, Browser/OS
-    sla_breach_at: str | None = None
-    version: str = "2.1.0-Neural-Diagnostic"
-
-
-# --- Persistence Models ---
-class Message(BaseModel):
-    sender: str
-    message: str
-    timestamp: str
-
-
-class TicketRecord(BaseModel):
-    ticket_id: str
-    owner_id: str
-    summary: str
-    category: str
-    subcategory: str
-    priority: str
-    status: str
-    assigned_team: str
-    created_at: str
-    updated_at: str | None = None
-    last_user_viewed_at: str | None = None
-    messages: list[Message] = []
-    metadata: dict = {}
-    timeline: dict = {} # Milestones: created, analyzed, triaged, routed, in_progress, resolved
-
+from backend.schemas.ticket import (
+    TicketRequest, TicketSaveRequest, DuplicateInfo, EntityInfo,
+    TicketResponse, Message, TicketRecord
+)
+from backend.schemas.health import HealthResponse, ReadinessResponse
+from backend.schemas.ai import (
+    TroubleshootRequest, TroubleshootResponse,
+    BugReportAnalysisRequest, BugReportAnalysisResponse
+)
+from backend.schemas.user import LoginBody, SignupBody
 
 # --- In-Memory Database (to be replaced with SQL later) ---
 TICKETS_DB: list[TicketRecord] = []
-
-
-class HealthResponse(BaseModel):
-    status: str
-    classifier_loaded: bool
-    ner_loaded: bool
-
-
-class ReadinessResponse(BaseModel):
-    status: str
-    checks: dict[str, bool]
 
 
 # ---------------------------------------------------------------------------
@@ -291,7 +196,7 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 # Root & Health check
 # ---------------------------------------------------------------------------
-@app.get("/", response_class=HTMLResponse)
+@app.get("/", response_class=HTMLResponse, tags=["System"], summary="API Root / Landing Page", description="Returns the HTML landing page for the backend API.")
 async def root():
     return """
     <!DOCTYPE html>
@@ -373,7 +278,7 @@ async def root():
     """
 
 
-@app.get("/health", response_model=HealthResponse)
+@app.get("/health", response_model=HealthResponse, tags=["System"], summary="System Health Check", description="Returns the loading status of AI models and core systems.")
 async def health_check():
     return HealthResponse(
         status="ok",
@@ -382,7 +287,7 @@ async def health_check():
     )
 
 
-@app.get("/ready", response_model=ReadinessResponse)
+@app.get("/ready", response_model=ReadinessResponse, tags=["System"], summary="Readiness Probe", description="Returns the deep readiness status of all backend dependencies (Supabase, Models, etc).")
 async def readiness_check():
     require_supabase = os.environ.get("REQUIRE_SUPABASE", "false").lower() == "true"
     allow_degraded = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") == "1"
@@ -415,17 +320,9 @@ async def readiness_check():
     )
 
 
-class TroubleshootRequest(BaseModel):
-    text: str
-    category: str
-    history: list[dict] = []
 
-class TroubleshootResponse(BaseModel):
-    step_text: str
-    options: list[str]
-    is_final: bool
 
-@app.post("/ai/troubleshoot", response_model=TroubleshootResponse)
+@app.post("/ai/troubleshoot", response_model=TroubleshootResponse, tags=["AI Diagnostics"], summary="Interactive Troubleshooting", description="Generates dynamic step-by-step troubleshooting questions using Gemini.")
 async def troubleshoot(request: TroubleshootRequest):
     """Get dynamic troubleshooting steps from Gemini."""
     if not gemini_service or not gemini_service._initialized:
@@ -443,16 +340,9 @@ async def troubleshoot(request: TroubleshootRequest):
     return TroubleshootResponse(**result)
 
 
-class BugReportAnalysisRequest(BaseModel):
-    bug_title: str
-    description: str
-    steps_to_reproduce: str = ""
-    console_errors: list[str] = []
 
-class BugReportAnalysisResponse(BaseModel):
-    probable_cause: str
 
-@app.post("/ai/analyze_bug", response_model=BugReportAnalysisResponse)
+@app.post("/ai/analyze_bug", response_model=BugReportAnalysisResponse, tags=["AI Diagnostics"], summary="Analyze Bug Report", description="Analyzes a bug report and console errors to determine probable root causes.")
 async def analyze_bug(request: BugReportAnalysisRequest):
     """Analyze a bug report using Gemini to generate a Probable Cause."""
     if not gemini_service or not gemini_service._initialized:
@@ -474,7 +364,7 @@ async def analyze_bug(request: BugReportAnalysisRequest):
 # ---------------------------------------------------------------------------
 CORRECTIONS_LOG_PATH = Path(__file__).parent / "data" / "corrections_log.json"
 
-@app.post("/ai/log_correction")
+@app.post("/ai/log_correction", tags=["AI Training"], summary="Log Admin Correction", description="Logs human corrections to AI predictions to be used for future model fine-tuning.")
 async def log_correction(raw_request: Request):
     """Log an admin correction when the AI prediction differs from the human decision."""
     try:
@@ -535,7 +425,7 @@ async def log_correction(raw_request: Request):
 # ---------------------------------------------------------------------------
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
-@app.get("/tickets")
+@app.get("/tickets", tags=["Tickets"], summary="Get All Tickets", description="Fetches all persistent tickets from the database, optionally filtered by company_id.")
 async def get_tickets(company_id: str | None = None):
     """Fetch persistent tickets from Supabase."""
     if not supabase:
@@ -548,7 +438,7 @@ async def get_tickets(company_id: str | None = None):
     res = query.execute()
     return res.data
 
-@app.post("/tickets/save")
+@app.post("/tickets/save", tags=["Tickets"], summary="Save Analyzed Ticket", description="Persists a finalized, AI-analyzed ticket to the database.")
 async def save_ticket(request_body: TicketSaveRequest):
     """
     OFFICIAL PERSISTENCE: Saves the analyzed ticket to Supabase.
@@ -651,7 +541,7 @@ async def save_ticket(request_body: TicketSaveRequest):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/tickets/{ticket_id}")
+@app.get("/tickets/{ticket_id}", tags=["Tickets"], summary="Get Ticket by ID", description="Fetches a single ticket from the database by its UUID.")
 async def get_ticket_by_id(ticket_id: str):
     """Fetch single persistent ticket."""
     if not supabase:
@@ -663,7 +553,7 @@ async def get_ticket_by_id(ticket_id: str):
     return res.data
 
 
-@app.post("/tickets", response_model=TicketRecord)
+@app.post("/tickets", response_model=TicketRecord, tags=["Tickets"], summary="Create Ticket (In-Memory)", description="Creates a new ticket in the in-memory database (legacy).")
 async def create_ticket(ticket: TicketRecord):
     """Save a new ticket into the system."""
     # Check for duplicates before adding
@@ -676,7 +566,7 @@ async def create_ticket(ticket: TicketRecord):
     return ticket
 
 
-@app.patch("/tickets/{ticket_id}", response_model=TicketRecord)
+@app.patch("/tickets/{ticket_id}", response_model=TicketRecord, tags=["Tickets"], summary="Update Ticket", description="Partially updates an existing ticket.")
 async def update_ticket(ticket_id: str, updates: dict):
     """Partially update a ticket's fields (e.g., status, viewed_at)."""
     for i, ticket in enumerate(TICKETS_DB):
@@ -694,7 +584,7 @@ async def update_ticket(ticket_id: str, updates: dict):
 # ---------------------------------------------------------------------------
 # Main AI Analyzer endpoint
 # ---------------------------------------------------------------------------
-@app.post("/ai/analyze_ticket", response_model=TicketResponse)
+@app.post("/ai/analyze_ticket", response_model=TicketResponse, tags=["AI Core"], summary="Full Ticket Analysis", description="Analyzes a ticket using OCR, classification, NER, and duplicate detection, returning a full diagnostic response.")
 @limiter.limit("10/minute")
 async def analyze_ticket(request_body: TicketRequest, request: Request):
     """
@@ -730,7 +620,7 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     # Initalize Timeline
     return await analyze_only(request_body)
 
-@app.post("/ai/analyze")
+@app.post("/ai/analyze", tags=["AI Core"], summary="Read-Only Ticket Analysis", description="Performs AI analysis without persisting to the database, allowing for user review.")
 async def analyze_only(request_body: TicketRequest):
     """
     PERFORMANCE UPGRADE: AI Analysis phase only. 
@@ -891,7 +781,7 @@ async def analyze_only(request_body: TicketRequest):
         sla_breach_at=sla_breach_dt.isoformat() + "Z"
     )
 
-@app.post("/ai/analyze_stream")
+@app.post("/ai/analyze_stream", tags=["AI Core"], summary="Streaming Ticket Analysis", description="Streams the AI analysis steps via Server-Sent Events (SSE) for realtime UI feedback.")
 async def analyze_stream(request_body: TicketRequest):
     """
     REAL-TIME SSE ENDPOINT: Streams the AI progress to the frontend dynamically.
@@ -1043,7 +933,7 @@ async def analyze_stream(request_body: TicketRequest):
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
-@app.post("/ai/analyze_ticket/legacy")
+@app.post("/ai/analyze_ticket/legacy", tags=["Legacy AI"], summary="Legacy Ticket Analysis", description="Original v1 synchronous analysis endpoint.")
 async def legacy_analyze_and_save(request_body: TicketRequest):
     """
     BACKWARD COMPATIBILITY: Strictly performs analysis only. 
@@ -1051,7 +941,7 @@ async def legacy_analyze_and_save(request_body: TicketRequest):
     """
     return await analyze_only(request_body)
 
-@app.post("/ai/analyze-v2")
+@app.post("/ai/analyze-v2", tags=["Legacy AI"], summary="V2 Ticket Analysis", description="V2 synchronous analysis endpoint using updated models.")
 async def analyze_ticket_v2(request: TicketRequest):
     text = request.text
     try:
@@ -1139,18 +1029,7 @@ async def get_current_user(request: Request) -> dict:
         return user.dict()
     return dict(user)
 
-class LoginBody(BaseModel):
-    email: str
-    password: str
-
-class SignupBody(BaseModel):
-    email: str
-    password: str
-    full_name: str | None = None
-    role: str | None = "user"
-    company: str | None = None
-
-@app.post("/auth/login")
+@app.post("/auth/login", tags=["Authentication"], summary="User Login", description="Authenticates a user against Supabase and returns session tokens.")
 async def auth_login(body: LoginBody, response: Response):
     if not supabase:
         raise HTTPException(status_code=503, detail="Database connection offline")
@@ -1170,7 +1049,7 @@ async def auth_login(body: LoginBody, response: Response):
     user_payload = user.model_dump() if hasattr(user, "model_dump") else dict(user)
     return {"user": user_payload, "message": "Session cookies set"}
 
-@app.post("/auth/signup")
+@app.post("/auth/signup", tags=["Authentication"], summary="User Signup", description="Registers a new user in Supabase and initializes their profile.")
 async def auth_signup(body: SignupBody, response: Response):
     if not supabase:
         raise HTTPException(status_code=503, detail="Database connection offline")
@@ -1200,12 +1079,12 @@ async def auth_signup(body: SignupBody, response: Response):
     user_payload = user.model_dump() if user and hasattr(user, "model_dump") else None
     return {"user": user_payload, "message": "Signup complete"}
 
-@app.post("/auth/logout")
+@app.post("/auth/logout", tags=["Authentication"], summary="User Logout", description="Signs out the current user and invalidates the session.")
 async def auth_logout(response: Response):
     _clear_session_cookies(response)
     return {"ok": True}
 
-@app.get("/auth/me")
+@app.get("/auth/me", tags=["Authentication"], summary="Get Current User", description="Fetches the profile and permissions of the currently authenticated user.")
 async def auth_me(user: dict = Depends(get_current_user)):
     return {"user": user}
 
