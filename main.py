@@ -24,12 +24,10 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 
 supabase = None
-if SUPABASE_URL and SUPABASE_SERVICE_KEY:
+if SUPABASE_URL and SUPABASE_SERVICE_KEY and os.getenv("ALLOW_DEGRADED_STARTUP") != "1":
     try:
         supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
     except Exception as e:
-        if os.getenv("ALLOW_DEGRADED_STARTUP") != "1":
-            raise
         logger.warning(f"Failed to initialize Supabase client: {e}")
 
 app.include_router(tickets.router)
@@ -170,7 +168,7 @@ async def security_report(
 # ---------------------------------------------------------------------------
 
 @app.get("/auth/csrf-token", tags=["Auth"])
-async def get_csrf_token(response: Response):
+async def get_csrf_token(response: JSONResponse):
     """Issue a CSRF token cookie for authenticated browser sessions."""
     token = set_csrf_cookie(response)
     return {"csrf_token": token}
