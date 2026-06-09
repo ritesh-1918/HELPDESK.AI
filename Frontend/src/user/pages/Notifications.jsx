@@ -27,12 +27,12 @@ const NotificationsPage = () => {
                     <h1 className="text-3xl font-black text-gray-900 tracking-tight">Notifications</h1>
                     <p className="text-gray-500 font-medium mt-1">Keep track of your ticket updates and responses.</p>
                 </div>
-                <button
+                <Button
                     onClick={() => markNotificationsRead()}
                     className="text-sm font-bold text-gray-400 hover:text-emerald-600 transition-colors uppercase tracking-widest"
                 >
                     Mark all as read
-                </button>
+                </Button>
             </div>
 
             <div className="space-y-4">
@@ -74,12 +74,12 @@ const NotificationsPage = () => {
                         <Bell className="w-12 h-12 text-gray-200 mx-auto mb-4" />
                         <h3 className="text-lg font-bold text-gray-900">No notifications yet</h3>
                         <p className="text-gray-500 text-sm mt-1 max-w-xs mx-auto">When your tickets get updated or support replies, you'll see them here.</p>
-                        <button
+                        <Button
                             onClick={() => navigate('/dashboard')}
                             className="mt-8 px-6 py-2.5 bg-white border border-gray-100 text-emerald-600 font-bold rounded-xl shadow-sm hover:shadow-md transition-all"
                         >
                             Back to Dashboard
-                        </button>
+                        </Button>
                     </div>
                 )}
             </div>

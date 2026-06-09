@@ -1,3 +1,5 @@
+import { Input } from '@/components/common/Input';
+import { Button } from '@/components/common/Button';
 import React, { useState } from 'react';
  
 import { motion } from 'framer-motion';
@@ -66,12 +68,12 @@ export default function ContactSales() {
                     <p className="text-gray-600">
                         Thank you for your interest in HelpDesk.ai Enterprise. Our team will review your requirements and get back to you within 24 hours.
                     </p>
-                    <button 
+                    <Button 
                         onClick={() => navigate('/')} 
                         className="w-full bg-emerald-900 text-white font-bold py-4 rounded-xl shadow-[0_10px_40px_-10px_rgba(6,78,59,0.5)] hover:bg-emerald-800 transition-all mt-4"
                     >
                         Return Home
-                    </button>
+                    </Button>
                 </motion.div>
             </div>
         );
@@ -86,9 +88,9 @@ export default function ContactSales() {
                         <img src="/favicon.png" alt="H" className="w-8 h-8 object-contain" />
                         <span className="font-black text-2xl tracking-tighter text-emerald-900 italic uppercase">HelpDesk.ai</span>
                     </div>
-                    <button onClick={() => navigate('/')} className="text-sm font-semibold text-gray-500 hover:text-gray-900">
+                    <Button onClick={() => navigate('/')} className="text-sm font-semibold text-gray-500 hover:text-gray-900">
                         Back to Home
-                    </button>
+                    </Button>
                 </div>
             </div>
 
@@ -146,7 +148,7 @@ export default function ContactSales() {
                                         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                                             <User className="h-5 w-5 text-gray-400" />
                                         </div>
-                                        <input 
+                                        <Input 
                                             type="text" 
                                             required 
                                             name="name"
@@ -164,7 +166,7 @@ export default function ContactSales() {
                                         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                                             <Mail className="h-5 w-5 text-gray-400" />
                                         </div>
-                                        <input 
+                                        <Input 
                                             type="email" 
                                             required 
                                             name="email"
@@ -184,7 +186,7 @@ export default function ContactSales() {
                                         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                                             <Building2 className="h-5 w-5 text-gray-400" />
                                         </div>
-                                        <input 
+                                        <Input 
                                             type="text" 
                                             required 
                                             name="company"
@@ -225,7 +227,7 @@ export default function ContactSales() {
                                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                                         <Phone className="h-5 w-5 text-gray-400" />
                                     </div>
-                                    <input 
+                                    <Input 
                                         type="tel" 
                                         name="phone"
                                         className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all font-medium text-gray-900" 
@@ -249,7 +251,7 @@ export default function ContactSales() {
                                 ></textarea>
                             </div>
 
-                            <button 
+                            <Button 
                                 type="submit" 
                                 disabled={isSubmitting}
                                 className={`w-full py-4 bg-emerald-900 text-white rounded-xl font-bold transition-all shadow-xl shadow-emerald-900/20 flex items-center justify-center gap-2 mt-4 ${isSubmitting ? 'opacity-80 cursor-not-allowed' : 'hover:bg-emerald-800'}`}
@@ -264,7 +266,7 @@ export default function ContactSales() {
                                         Request Enterprise Access <ArrowRight className="w-5 h-5" />
                                     </>
                                 )}
-                            </button>
+                            </Button>
                             <p className="text-xs text-center text-gray-400 mt-4">
                                 By submitting this form, you agree to our Privacy Policy and Terms of Service.
                             </p>

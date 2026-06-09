@@ -1,3 +1,4 @@
+import { Button } from '@/components/common/Button';
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
@@ -107,9 +108,9 @@ function UserLobby() {
                         <p className="text-gray-500 text-sm mb-8">
                             Unfortunately, your request to join your company has been declined by an administrator.
                         </p>
-                        <button onClick={handleLogout} className="px-6 py-2 bg-white border border-gray-200 shadow-sm rounded-xl text-gray-700 text-sm hover:bg-gray-50 font-medium transition">
+                        <Button onClick={handleLogout} className="px-6 py-2 bg-white border border-gray-200 shadow-sm rounded-xl text-gray-700 text-sm hover:bg-gray-50 font-medium transition">
                             Return to Login
-                        </button>
+                        </Button>
                     </div>
                 ) : (
                     <>
@@ -165,19 +166,19 @@ function UserLobby() {
                             </p>
                         </div>
 
-                        <button
+                        <Button
                             onClick={handleLogout}
                             className={`flex items-center justify-center gap-2 w-full px-4 py-3 bg-white border border-gray-200 shadow-sm rounded-xl text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-all text-sm font-semibold ${isRiteshPrivateLtd ? 'mt-4' : ''}`}
                         >
                             <LogOut className="w-4 h-4" />
                             Sign Out
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             onClick={handleLogout}
                             className="mt-4 text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors underline underline-offset-4"
                         >
                             Not you? Go back
-                        </button>
+                        </Button>
                     </>
                 )}
             </div>

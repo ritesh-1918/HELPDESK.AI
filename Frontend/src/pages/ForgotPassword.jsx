@@ -1,3 +1,5 @@
+import { Input } from '@/components/common/Input';
+import { Button } from '@/components/common/Button';
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
@@ -207,7 +209,7 @@ function ForgotPassword() {
                                                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
                                                     <Mail className="w-5 h-5" />
                                                 </div>
-                                                <input
+                                                <Input
                                                     type="email"
                                                     placeholder="personnel@helpdesk.ai"
                                                     className="w-full pl-12 pr-4 py-4 rounded-2xl border border-gray-100 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none text-gray-900 font-bold bg-gray-50/50"
@@ -218,7 +220,7 @@ function ForgotPassword() {
                                             </div>
                                         </div>
 
-                                        <button
+                                        <Button
                                             type="submit"
                                             disabled={loading}
                                             className="w-full rounded-2xl py-4 font-bold transition-all flex items-center justify-center gap-2 group"
@@ -227,7 +229,7 @@ function ForgotPassword() {
                                             onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
                                         >
                                             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Request Access Key <ArrowLeft className="w-5 h-5 rotate-180 transition-transform group-hover:translate-x-1" /></>}
-                                        </button>
+                                        </Button>
                                     </form>
                                 )}
 
@@ -237,7 +239,7 @@ function ForgotPassword() {
                                         <div className="space-y-4">
                                             <label className="text-xs font-black uppercase tracking-widest text-gray-400 text-center block">Verification Sequence</label>
                                             <div className="relative flex justify-center">
-                                                <input
+                                                <Input
                                                     type="text"
                                                     maxLength="6"
                                                     placeholder="000000"
@@ -255,7 +257,7 @@ function ForgotPassword() {
                                             </p>
                                         </div>
 
-                                        <button
+                                        <Button
                                             type="submit"
                                             disabled={loading || otp.length < 6 || timerExpired}
                                             className="w-full rounded-2xl py-4 font-bold transition-all flex items-center justify-center gap-2"
@@ -264,15 +266,15 @@ function ForgotPassword() {
                                             onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
                                         >
                                             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Verify Identity Signature"}
-                                        </button>
+                                        </Button>
                                         {timerExpired && (
-                                            <button
+                                            <Button
                                                 type="button"
                                                 onClick={() => { setStep(1); setOtp(""); setError(""); }}
                                                 className="w-full rounded-2xl py-3 font-bold text-sm transition-all flex items-center justify-center gap-2 border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50"
                                             >
                                                 Request New Code
-                                            </button>
+                                            </Button>
                                         )}
                                     </form>
                                 )}
@@ -287,7 +289,7 @@ function ForgotPassword() {
                                                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
                                                         <Lock className="w-5 h-5" />
                                                     </div>
-                                                    <input
+                                                    <Input
                                                         type="password"
                                                         placeholder="••••••••"
                                                         className="w-full pl-12 pr-4 py-4 rounded-2xl border border-gray-100 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none text-gray-900 font-bold bg-gray-50/50"
@@ -299,7 +301,7 @@ function ForgotPassword() {
                                             </div>
                                         </div>
 
-                                        <button
+                                        <Button
                                             type="submit"
                                             disabled={loading || newPassword.length < 6}
                                             className="w-full rounded-2xl py-4 font-bold transition-all flex items-center justify-center gap-2"
@@ -308,7 +310,7 @@ function ForgotPassword() {
                                             onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
                                         >
                                             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Sync Credentials <KeyRound className="w-5 h-5" /></>}
-                                        </button>
+                                        </Button>
                                     </form>
                                 )}
 

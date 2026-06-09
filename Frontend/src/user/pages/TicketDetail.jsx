@@ -1,3 +1,4 @@
+import { Button } from '@/components/common/Button';
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -107,12 +108,12 @@ const TicketDetail = () => {
                 <TicketStatusBadge status="Error" />
                 <h2 className="text-2xl font-bold mt-4 text-gray-900">Ticket Not Found</h2>
                 <p className="text-gray-500 mt-2 text-center max-w-md">We couldn't locate the ticket you're looking for. It may have been deleted or the ID is incorrect.</p>
-                <button
+                <Button
                     onClick={() => navigate('/my-tickets')}
                     className="mt-6 px-6 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition"
                 >
                     Back to My Tickets
-                </button>
+                </Button>
             </div>
         );
     }
@@ -155,12 +156,12 @@ const TicketDetail = () => {
         <main className="flex-1 max-w-[1200px] w-full mx-auto px-4 sm:px-6 py-8 flex flex-col gap-6">
             {/* Header */}
             <div className="flex flex-col gap-4">
-                <button
+                <Button
                     onClick={() => navigate('/my-tickets')}
                     className="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-emerald-600 w-fit transition-colors"
                 >
                     <ArrowLeft size={16} /> Back to Tickets
-                </button>
+                </Button>
                 <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                     <div className="flex-1">
                         <div className="flex flex-wrap items-center gap-3 mb-3">
@@ -331,9 +332,9 @@ const TicketDetail = () => {
                                             <p className="text-sm text-gray-600">The AI provided an automated resolution to this issue.</p>
                                         )}
                                     </div>
-                                    <button className="w-full mt-5 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-bold hover:bg-gray-50 transition shadow-sm">
+                                    <Button className="w-full mt-5 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-bold hover:bg-gray-50 transition shadow-sm">
                                         Did this help?
-                                    </button>
+                                    </Button>
                                 </div>
                             ) : ticket.status === 'resolved' ? (
                                 <div className="flex flex-col gap-4">
@@ -348,14 +349,14 @@ const TicketDetail = () => {
 
                                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-2">
                                         <p className="text-amber-800 text-sm font-bold mb-2">Issue not fully resolved?</p>
-                                        <button
+                                        <Button
                                             onClick={handleReopen}
                                             disabled={isReopening}
                                             className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white border border-amber-200 text-amber-700 rounded-lg text-sm font-bold hover:bg-amber-50 transition shadow-sm disabled:opacity-50"
                                         >
                                             {isReopening ? <Loader2 size={16} className="animate-spin" /> : <RotateCcw size={16} />}
                                             Reopen Ticket
-                                        </button>
+                                        </Button>
                                     </div>
                                 </div>
                             ) : (

@@ -1,3 +1,5 @@
+import { Input } from '@/components/common/Input';
+import { Button } from '@/components/common/Button';
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -204,7 +206,7 @@ function AdminSignup() {
                             <li className="flex gap-2"><span className="font-bold">3.</span> You'll receive a final confirmation once approved.</li>
                         </ul>
                     </div>
-                    <button
+                    <Button
                         onClick={() => navigate('/login')}
                         className="w-full rounded-xl py-4 font-bold transition-all flex items-center justify-center"
                         style={{ background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: '#fff', border: 'none', cursor: 'pointer', boxShadow: '0 4px 20px rgba(34,160,69,0.3)', fontSize: '15px', fontWeight: 600 }}
@@ -212,7 +214,7 @@ function AdminSignup() {
                         onMouseLeave={(e) => { e.currentTarget.style.transform='translateY(0)'; }}
                     >
                         Return to Login
-                    </button>
+                    </Button>
                 </motion.div>
             </div>
         );
@@ -354,7 +356,7 @@ function AdminSignup() {
                                             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
                                                 <User className="w-3 h-3" /> Full Name
                                             </label>
-                                            <input
+                                            <Input
                                                 type="text"
                                                 name="fullName"
                                                 required
@@ -368,7 +370,7 @@ function AdminSignup() {
                                             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
                                                 <Mail className="w-3 h-3" /> Work Email
                                             </label>
-                                            <input
+                                            <Input
                                                 type="email"
                                                 name="email"
                                                 required
@@ -382,7 +384,7 @@ function AdminSignup() {
                                             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
                                                 <Phone className="w-3 h-3" /> Phone Number
                                             </label>
-                                            <input
+                                            <Input
                                                 type="tel"
                                                 name="phone"
                                                 placeholder="+1 (415) 555-0198"
@@ -395,7 +397,7 @@ function AdminSignup() {
                                             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
                                                 <Briefcase className="w-3 h-3" /> Job Title
                                             </label>
-                                            <input
+                                            <Input
                                                 type="text"
                                                 name="jobTitle"
                                                 placeholder="Director of Operations"
@@ -412,7 +414,7 @@ function AdminSignup() {
                                                 <Lock className="w-3 h-3" /> Create Password
                                             </label>
                                             <div className="relative">
-                                                <input
+                                                <Input
                                                     type={showPassword ? "text" : "password"}
                                                     name="password"
                                                     required
@@ -421,13 +423,13 @@ function AdminSignup() {
                                                     onChange={handleChange}
                                                     className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white outline-none transition-all pr-11"
                                                 />
-                                                <button
+                                                <Button
                                                     type="button"
                                                     onClick={() => setShowPassword(!showPassword)}
                                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                                                 >
                                                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                                </button>
+                                                </Button>
                                             </div>
                                             {/* Password Requirements */}
                                             <div className="mt-2 space-y-1">
@@ -467,7 +469,7 @@ function AdminSignup() {
                                                 <Lock className="w-3 h-3" /> Confirm Password
                                             </label>
                                             <div className="relative">
-                                                <input
+                                                <Input
                                                     type={showConfirmPassword ? "text" : "password"}
                                                     name="confirmPassword"
                                                     required
@@ -476,18 +478,18 @@ function AdminSignup() {
                                                     onChange={handleChange}
                                                     className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white outline-none transition-all pr-11"
                                                 />
-                                                <button
+                                                <Button
                                                     type="button"
                                                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                                                 >
                                                     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                                </button>
+                                                </Button>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <button
+                                    <Button
                                          type="button"
                                          onClick={nextStep}
                                          className="w-full rounded-xl py-4 font-bold transition-all mt-8 flex items-center justify-center gap-2"
@@ -496,7 +498,7 @@ function AdminSignup() {
                                          onMouseLeave={(e) => e.currentTarget.style.transform='translateY(0)'}
                                      >
                                          Continue to Company Details <ChevronRight className="w-5 h-5" />
-                                     </button>
+                                     </Button>
                                 </motion.div>
                             )}
 
@@ -518,7 +520,7 @@ function AdminSignup() {
                                         <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
                                             <Building2 className="w-3 h-3" /> Company Name
                                         </label>
-                                        <input
+                                        <Input
                                             type="text"
                                             name="companyName"
                                             required
@@ -575,7 +577,7 @@ function AdminSignup() {
                                             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
                                                 <Globe className="w-3 h-3" /> Company Website
                                             </label>
-                                            <input
+                                            <Input
                                                 type="url"
                                                 name="website"
                                                 placeholder="https://acme.com"
@@ -588,7 +590,7 @@ function AdminSignup() {
                                             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
                                                 <Globe className="w-3 h-3" /> Country
                                             </label>
-                                            <input
+                                            <Input
                                                 type="text"
                                                 name="country"
                                                 required
@@ -601,22 +603,22 @@ function AdminSignup() {
                                     </div>
 
                                          <div className="flex gap-4 pt-8">
-                                         <button type="button" onClick={prevStep}
+                                         <Button type="button" onClick={prevStep}
                                              className="flex-1 rounded-xl py-4 font-bold transition-all flex items-center justify-center gap-2"
                                              style={{ background: '#f9fafb', color: '#374151', border: '1.5px solid #e5e7eb', cursor: 'pointer' }}
                                              onMouseEnter={(e) => e.currentTarget.style.background='#f3f4f6'}
                                              onMouseLeave={(e) => e.currentTarget.style.background='#f9fafb'}
                                          >
                                              <ChevronLeft className="w-5 h-5" /> Back
-                                         </button>
-                                         <button type="button" onClick={nextStep}
+                                         </Button>
+                                         <Button type="button" onClick={nextStep}
                                              className="flex-[2] rounded-xl py-4 font-bold transition-all flex items-center justify-center gap-2"
                                              style={{ background: 'linear-gradient(135deg,#16a34a,#22c55e)', color: '#fff', border: 'none', cursor: 'pointer', boxShadow: '0 4px 20px rgba(34,160,69,0.3)', fontWeight: 600 }}
                                              onMouseEnter={(e) => e.currentTarget.style.transform='translateY(-1px)'}
                                              onMouseLeave={(e) => e.currentTarget.style.transform='translateY(0)'}
                                          >
                                              Review &amp; Confirm <ChevronRight className="w-5 h-5" />
-                                         </button>
+                                         </Button>
                                      </div>
                                 </motion.div>
                             )}
@@ -637,7 +639,7 @@ function AdminSignup() {
 
                                     <div className="bg-gray-50 border border-gray-100 rounded-2xl p-6 space-y-4">
                                         <label className="flex items-start gap-4 cursor-pointer group">
-                                            <input
+                                            <Input
                                                 type="checkbox"
                                                 name="agreedToTerms"
                                                 checked={formData.agreedToTerms}
@@ -649,7 +651,7 @@ function AdminSignup() {
                                             </span>
                                         </label>
                                         <label className="flex items-start gap-4 cursor-pointer group pt-4 border-t border-gray-200/50">
-                                            <input
+                                            <Input
                                                 type="checkbox"
                                                 name="isAuthorized"
                                                 checked={formData.isAuthorized}
@@ -663,22 +665,22 @@ function AdminSignup() {
                                     </div>
 
                                     <div className="flex gap-4 pt-8">
-                                        <button
+                                        <Button
                                             type="button"
                                             onClick={prevStep}
                                             disabled={loading}
                                             className="flex-1 bg-gray-100 text-gray-700 rounded-xl py-4 font-bold hover:bg-gray-200 transition-all flex items-center justify-center gap-2"
                                         >
                                             <ChevronLeft className="w-5 h-5" /> Back
-                                        </button>
-                                        <button
+                                        </Button>
+                                        <Button
                                             type="submit"
                                             disabled={loading}
                                             className="flex-[2] bg-emerald-900 text-white rounded-xl py-4 font-bold hover:bg-emerald-800 transition-all shadow-xl shadow-emerald-900/20 flex items-center justify-center gap-2"
                                         >
                                             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ShieldCheck className="w-5 h-5" />}
                                             {loading ? "Processing..." : "Submit Registration"}
-                                        </button>
+                                        </Button>
                                     </div>
                                 </motion.div>
                             )}

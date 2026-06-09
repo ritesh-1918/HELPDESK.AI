@@ -1,3 +1,5 @@
+import { Input } from '@/components/common/Input';
+import { Button } from '@/components/common/Button';
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
  
@@ -233,13 +235,13 @@ function Login() {
               </div>
               <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#0f1f12', marginBottom: '8px' }}>Check your email</h3>
               <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '24px' }}>We've sent a magic link to <span style={{ fontWeight: 600, color: '#111827' }}>{email}</span></p>
-              <button
+              <Button
                 onClick={() => setMagicLinkSent(false)}
                 className="hover:underline transition-all"
                 style={{ color: '#16a34a', fontWeight: 700, fontSize: '14px', background: 'none', border: 'none', cursor: 'pointer' }}
               >
                 Try another email
-              </button>
+              </Button>
             </div>
           ) : (
             <form onSubmit={currentSubmitHandler} className="space-y-5">
@@ -251,7 +253,7 @@ function Login() {
                 >
                   Email Address
                 </label>
-                <input
+                <Input
                   type="email"
                   placeholder="Enter your system email"
                   style={{
@@ -292,7 +294,7 @@ function Login() {
                     </Link>
                   </div>
                   <div className="relative">
-                    <input
+                    <Input
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter your password"
                       style={{
@@ -312,20 +314,20 @@ function Login() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                     />
-                    <button
+                    <Button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
                       style={{ color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }}
                     >
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
+                    </Button>
                   </div>
                 </motion.div>
               )}
 
               {/* Sign In Button */}
-              <button
+              <Button
                 type="submit"
                 disabled={loading}
                 className="w-full flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
@@ -346,7 +348,7 @@ function Login() {
               >
                 {loading && <Loader2 className="w-5 h-5 animate-spin" />}
                 {!loading && (isMagicLink ? "Send Magic Link" : "Sign In")}
-              </button>
+              </Button>
 
               {/* Divider */}
               <div className="relative flex items-center py-2">
@@ -356,7 +358,7 @@ function Login() {
               </div>
 
               {/* Magic Link Toggle */}
-              <button
+              <Button
                 type="button"
                 onClick={() => { setIsMagicLink(!isMagicLink); setError(""); }}
                 className="w-full flex items-center justify-center gap-2 transition-all"
@@ -375,7 +377,7 @@ function Login() {
                 onMouseLeave={(e) => e.currentTarget.style.background = '#ffffff'}
               >
                 {isMagicLink ? "Sign in with Password" : "Sign in with Magic Link"}
-              </button>
+              </Button>
 
               {/* Create Account */}
               <p className="text-center" style={{ fontSize: '14px', color: '#6b7280', marginTop: '32px' }}>

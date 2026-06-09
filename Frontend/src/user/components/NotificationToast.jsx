@@ -1,3 +1,4 @@
+import { Button } from '@/components/common/Button';
 import React, { useEffect, useState } from 'react';
  
 import { motion, AnimatePresence } from 'framer-motion';
@@ -72,7 +73,7 @@ const NotificationToast = () => {
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between">
                                 <h4 className="text-sm font-bold text-gray-900 truncate">{currentToast.title}</h4>
-                                <button
+                                <Button
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         setCurrentToast(null);
@@ -80,7 +81,7 @@ const NotificationToast = () => {
                                     className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
                                 >
                                     <X className="w-4 h-4" />
-                                </button>
+                                </Button>
                             </div>
                             <p className="text-xs font-medium text-gray-500 mt-1 line-clamp-2">
                                 {currentToast.message}

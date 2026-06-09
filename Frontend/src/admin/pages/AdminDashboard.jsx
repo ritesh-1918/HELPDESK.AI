@@ -1,3 +1,4 @@
+import { Button } from '@/components/common/Button';
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Activity } from 'lucide-react';
@@ -148,18 +149,18 @@ const AdminDashboard = () => {
 
             {/* KPIs */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <button onClick={() => navigate('/admin/tickets')} className="text-left group focus:outline-none">
+                <Button onClick={() => navigate('/admin/tickets')} className="text-left group focus:outline-none">
                     <StatCard label="Total Tickets" value={metrics.total} color="indigo" subtitle="Lifetime generated" customIcon={<TicketIcon />} />
-                </button>
-                <button onClick={() => navigate('/admin/tickets')} className="text-left group focus:outline-none">
+                </Button>
+                <Button onClick={() => navigate('/admin/tickets')} className="text-left group focus:outline-none">
                     <StatCard label="Active Tickets" value={metrics.active} color="amber" subtitle="Need attention" customIcon={<ActivityIcon />} />
-                </button>
-                <button onClick={() => navigate('/admin/tickets?filter=auto')} className="text-left group focus:outline-none">
+                </Button>
+                <Button onClick={() => navigate('/admin/tickets?filter=auto')} className="text-left group focus:outline-none">
                     <StatCard label="AI Auto-Resolved" value={metrics.autoResolved} color="emerald" subtitle="Resolved by AI" customIcon={<CpuIcon />} />
-                </button>
-                <button onClick={() => navigate('/admin/tickets?filter=human')} className="text-left group focus:outline-none">
+                </Button>
+                <Button onClick={() => navigate('/admin/tickets?filter=human')} className="text-left group focus:outline-none">
                     <StatCard label="Escalated Tickets" value={metrics.humanEscalated} color="red" subtitle="Requires support agent" customIcon={<UsersIcon />} />
-                </button>
+                </Button>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">

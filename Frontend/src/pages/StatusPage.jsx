@@ -1,3 +1,4 @@
+import { Button } from '@/components/common/Button';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Activity, CheckCircle, AlertTriangle, ArrowLeft, RefreshCw } from 'lucide-react';
@@ -32,12 +33,12 @@ export default function StatusPage() {
                             <span className="px-2 py-0.5 text-[10px] font-black bg-emerald-100 text-emerald-800 rounded-md uppercase tracking-wider">Status</span>
                         </div>
                     </div>
-                    <button 
+                    <Button 
                         onClick={() => navigate('/')}
                         className="flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-emerald-600 transition-colors bg-gray-50 hover:bg-emerald-50 px-3.5 py-2 rounded-xl border border-gray-200"
                     >
                         <ArrowLeft size={14} /> Back to Home
-                    </button>
+                    </Button>
                 </div>
             </header>
 
@@ -55,13 +56,13 @@ export default function StatusPage() {
                         <p className="text-slate-300 text-xs font-semibold">100% of microservices running successfully within target parameters.</p>
                     </div>
 
-                    <button 
+                    <Button 
                         onClick={handleRefresh}
                         disabled={isRefreshing}
                         className="self-start md:self-auto px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 border border-white/15 transition-all active:scale-95 disabled:opacity-50"
                     >
                         <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} /> {isRefreshing ? 'Checking...' : 'Refresh Status'}
-                    </button>
+                    </Button>
                 </div>
 
                 {/* Service Cards */}

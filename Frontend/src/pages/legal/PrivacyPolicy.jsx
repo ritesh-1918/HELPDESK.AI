@@ -1,3 +1,4 @@
+import { Button } from '@/components/common/Button';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Shield } from 'lucide-react';
@@ -58,12 +59,12 @@ export default function PrivacyPolicy() {
     return (
         <div className="min-h-screen bg-gray-50 font-sans">
             <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 px-6 py-4 flex items-center justify-between">
-                <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-emerald-700 transition-colors">
+                <Button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-emerald-700 transition-colors">
                     <ArrowLeft className="w-4 h-4" /> Go Back
-                </button>
-                <button onClick={() => navigate('/')} className="font-black text-emerald-900 italic uppercase text-lg hover:text-emerald-700 transition-colors">
+                </Button>
+                <Button onClick={() => navigate('/')} className="font-black text-emerald-900 italic uppercase text-lg hover:text-emerald-700 transition-colors">
                     HelpDesk.ai
-                </button>
+                </Button>
                 <div className="w-24" />
             </nav>
 
@@ -94,9 +95,9 @@ export default function PrivacyPolicy() {
                 <div className="mt-16 pt-8 border-t border-gray-200 text-center">
                     <p className="text-sm text-gray-400">© 2026 HelpDesk.ai. All rights reserved.</p>
                     <div className="flex items-center justify-center gap-4 mt-4">
-                        <button onClick={() => navigate('/terms')} className="text-sm text-emerald-700 hover:underline">Terms of Service</button>
+                        <Button onClick={() => navigate('/terms')} className="text-sm text-emerald-700 hover:underline">Terms of Service</Button>
                         <span className="text-gray-300">|</span>
-                        <button onClick={() => navigate('/security')} className="text-sm text-emerald-700 hover:underline">Security</button>
+                        <Button onClick={() => navigate('/security')} className="text-sm text-emerald-700 hover:underline">Security</Button>
                     </div>
                 </div>
             </div>

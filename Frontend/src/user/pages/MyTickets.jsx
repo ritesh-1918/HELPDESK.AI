@@ -1,3 +1,5 @@
+import { Input } from '@/components/common/Input';
+import { Button } from '@/components/common/Button';
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -131,19 +133,19 @@ function MyTickets() {
                     </h1>
                     <p className="text-gray-500 font-medium mt-1">Manage and track your support requests</p>
                 </div>
-                <button
+                <Button
                     onClick={() => navigate('/create-ticket')}
                     className="px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2 whitespace-nowrap"
                 >
                     Create New Ticket
-                </button>
+                </Button>
             </div>
 
             {/* Toolbar section */}
             <div className="flex flex-col md:flex-row gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
+                    <Input
                         type="text"
                         placeholder="Search tickets by ID or subject..."
                         value={searchQuery}
@@ -217,12 +219,12 @@ function MyTickets() {
                     <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
                     <h3 className="text-lg font-bold text-red-900 mb-1">Database Sync Error</h3>
                     <p className="text-red-700/70 text-sm max-w-sm mb-6">{error}</p>
-                    <button
+                    <Button
                         onClick={fetchTickets}
                         className="px-6 py-2 bg-white border border-red-200 text-red-700 font-bold rounded-xl hover:bg-red-50 transition-colors shadow-sm"
                     >
                         Retry Connection
-                    </button>
+                    </Button>
                 </Card>
             ) : tickets.length === 0 ? (
                 // True Empty State
@@ -234,12 +236,12 @@ function MyTickets() {
                     <p className="text-gray-500 max-w-sm mb-8">
                         You haven't submitted any support requests. Create a ticket to get help from our AI and support team.
                     </p>
-                    <button
+                    <Button
                         onClick={() => navigate('/create-ticket')}
                         className="px-6 py-2.5 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
                     >
                         Create your first ticket
-                    </button>
+                    </Button>
                 </Card>
             ) : filteredTickets.length === 0 ? (
                 // Filter Empty State
@@ -247,7 +249,7 @@ function MyTickets() {
                     <Filter className="text-gray-300 w-12 h-12 mb-4" />
                     <h3 className="text-lg font-bold text-gray-900 mb-1">No matching tickets found</h3>
                     <p className="text-gray-500 text-sm mb-4">Try adjusting your search or filters.</p>
-                    <button
+                    <Button
                         onClick={() => {
                             setSearchQuery('');
                             setStatusFilter('All');
@@ -256,7 +258,7 @@ function MyTickets() {
                         className="text-emerald-600 font-semibold hover:text-emerald-700 text-sm"
                     >
                         Clear all filters
-                    </button>
+                    </Button>
                 </Card>
             ) : (
                 // Table View

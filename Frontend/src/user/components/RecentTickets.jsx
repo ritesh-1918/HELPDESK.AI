@@ -1,3 +1,4 @@
+import { Button } from '@/components/common/Button';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock, ChevronRight, Inbox, Loader2, AlertCircle } from 'lucide-react';
@@ -80,7 +81,7 @@ const RecentTickets = () => {
                         Recent Tickets
                     </span>
                 </div>
-                <button
+                <Button
                     onClick={() => navigate('/my-tickets')}
                     style={{
                         background: 'none', border: 'none', cursor: 'pointer',
@@ -88,7 +89,7 @@ const RecentTickets = () => {
                     }}
                 >
                     View All →
-                </button>
+                </Button>
             </div>
 
             {/* Content */}

@@ -1,3 +1,4 @@
+import { Button } from '@/components/common/Button';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -273,16 +274,16 @@ const DuplicateDetection = () => {
 
                             {/* Actions */}
                             <div className="flex flex-col sm:flex-row gap-3 pt-1">
-                                <button onClick={() => navigate('/auto-resolve')}
+                                <Button onClick={() => navigate('/auto-resolve')}
                                     className="flex-1 bg-emerald-600 text-white px-6 py-3.5 rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-emerald-700 active:scale-[0.98] transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2">
                                     <CheckCircle2 size={16} />
                                     Try This Solution
-                                </button>
-                                <button onClick={handleCreateTicket}
+                                </Button>
+                                <Button onClick={handleCreateTicket}
                                     className="flex-1 bg-white border border-slate-200 text-slate-700 px-6 py-3.5 rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-slate-50 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
                                     Create New Ticket
                                     <ArrowRight size={16} className="text-slate-400" />
-                                </button>
+                                </Button>
                             </div>
                         </div>
                     </div>

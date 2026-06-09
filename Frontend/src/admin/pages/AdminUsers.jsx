@@ -1,3 +1,5 @@
+import { Input } from '@/components/common/Input';
+import { Button } from '@/components/common/Button';
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useToastStore from '../../store/toastStore';
@@ -376,13 +378,13 @@ const AdminUsers = () => {
                     <p className="text-slate-500 font-medium mt-2">Manage your team members and their roles here.</p>
                 </div>
                 <div className="flex gap-2">
-                    <button
+                    <Button
                         onClick={fetchUsers}
                         className="p-4 bg-slate-100 text-slate-600 rounded-2xl hover:bg-slate-200 transition-all flex items-center justify-center"
                         title="Refresh Data"
                     >
                         <Zap size={20} className={loading ? "animate-pulse" : ""} />
-                    </button>
+                    </Button>
                 </div>
             </div>
 
@@ -414,19 +416,19 @@ const AdminUsers = () => {
 
             {/* Tabs */}
             <div className="flex gap-4 border-b border-slate-200">
-                <button
+                <Button
                     className={`pb-3 px-4 font-bold text-sm tracking-wide transition-colors border-b-2 ${activeTab === 'active' ? 'text-indigo-600 border-indigo-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
                     onClick={() => setActiveTab('active')}
                 >
                     All Users
-                </button>
-                <button
+                </Button>
+                <Button
                     className={`pb-3 px-4 font-bold text-sm tracking-wide transition-colors border-b-2 flex items-center gap-2 ${activeTab === 'pending' ? 'text-amber-600 border-amber-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
                     onClick={() => setActiveTab('pending')}
                 >
                     Pending Requests
                     {stats.pending > 0 && <span className="bg-amber-100 text-amber-600 text-[10px] px-2 py-0.5 rounded-full">{stats.pending}</span>}
-                </button>
+                </Button>
             </div>
 
             {/* Terminal Interface */}
@@ -436,7 +438,7 @@ const AdminUsers = () => {
                         <div className="p-8 border-b border-slate-100 bg-slate-50/30">
                             <div className="relative group max-w-md">
                                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors w-5 h-5" />
-                                <input
+                                <Input
                                     type="text"
                                     placeholder="Search by name, email, or role..."
                                     value={searchQuery}
@@ -509,21 +511,21 @@ const AdminUsers = () => {
                                             </td>
                                             <td className="px-8 py-6">
                                                 <div className="flex items-center justify-center gap-2">
-                                                    <button
+                                                    <Button
                                                         onClick={() => openProfile(user)}
                                                         className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-400 rounded-xl hover:text-indigo-600 hover:border-indigo-100 hover:bg-indigo-50 transition-all shadow-sm"
                                                         title="View Profile"
                                                     >
                                                         <Eye size={18} />
-                                                    </button>
-                                                    <button
+                                                    </Button>
+                                                    <Button
                                                         onClick={() => confirmDelete(user)}
                                                         disabled={isProcessing === user.id || user.id === currentUser?.id}
                                                         className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-400 rounded-xl hover:text-red-600 hover:border-red-100 hover:bg-red-50 transition-all shadow-sm disabled:opacity-30"
                                                         title="Permanent Delete"
                                                     >
                                                         {isProcessing === user.id ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
-                                                    </button>
+                                                    </Button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -595,22 +597,22 @@ const AdminUsers = () => {
                                             </td>
                                             <td className="px-8 py-6">
                                                 <div className="flex items-center justify-center gap-2">
-                                                    <button
+                                                    <Button
                                                         onClick={() => handleRejectUser(request)}
                                                         disabled={isProcessing === request.id}
                                                         className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-400 rounded-xl hover:text-red-600 hover:border-red-100 hover:bg-red-50 transition-all shadow-sm disabled:opacity-30"
                                                         title="Reject Request"
                                                     >
                                                         {isProcessing === request.id ? <Loader2 size={18} className="animate-spin" /> : <X size={18} />}
-                                                    </button>
-                                                    <button
+                                                    </Button>
+                                                    <Button
                                                         onClick={() => handleApproveUser(request)}
                                                         disabled={isProcessing === request.id}
                                                         className="flex flex-1 max-w-[120px] items-center justify-center gap-2 bg-emerald-50 text-emerald-600 border border-emerald-200 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-500 hover:text-white transition-all shadow-sm py-2 px-3 disabled:opacity-30"
                                                         title="Approve User"
                                                     >
                                                         {isProcessing === request.id ? <Loader2 size={14} className="animate-spin" /> : <UserCheck size={14} />} Approve
-                                                    </button>
+                                                    </Button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -647,9 +649,9 @@ const AdminUsers = () => {
                                     </p>
                                 </div>
                             </div>
-                            <button onClick={() => setShowProfileModal(false)} className="text-slate-400 hover:text-slate-600 bg-white shadow-sm p-3 rounded-xl border border-slate-200 transition-colors">
+                            <Button onClick={() => setShowProfileModal(false)} className="text-slate-400 hover:text-slate-600 bg-white shadow-sm p-3 rounded-xl border border-slate-200 transition-colors">
                                 <X size={24} />
-                            </button>
+                            </Button>
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-8 space-y-8">
@@ -681,21 +683,21 @@ const AdminUsers = () => {
 
                         {/* Profile Actions */}
                         <div className="p-6 border-t border-slate-100 bg-slate-50 md:rounded-b-[2.5rem] flex gap-3">
-                            <button
+                            <Button
                                 onClick={() => handleUpdateRole(activeProfile.id, activeProfile.role === 'admin' ? 'user' : 'admin')}
                                 disabled={activeProfile.id === currentUser?.id}
                                 className="flex-1 py-4 bg-white border border-slate-200 text-slate-700 font-black rounded-2xl hover:bg-slate-50 transition-all text-xs uppercase tracking-widest shadow-sm flex items-center justify-center gap-2 disabled:opacity-30"
                             >
                                 <ShieldCheck size={16} className="text-indigo-500" />
                                 {activeProfile.role === 'admin' ? "Demote to User" : "Elevate to Admin"}
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                                 onClick={() => confirmDelete(activeProfile)}
                                 disabled={activeProfile.id === currentUser?.id}
                                 className="flex-1 py-4 bg-red-50 text-red-600 font-black rounded-2xl hover:bg-red-100 transition-all text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm disabled:opacity-30"
                             >
                                 <Trash2 size={16} /> Purge Record
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>
@@ -718,18 +720,18 @@ const AdminUsers = () => {
                             </div>
 
                             <div className="flex flex-col gap-3">
-                                <button
+                                <Button
                                     onClick={handleDeleteUser}
                                     className="w-full py-4 bg-red-600 text-white font-black rounded-2xl hover:bg-red-700 shadow-xl shadow-red-500/20 active:scale-95 transition-all text-xs uppercase tracking-widest"
                                 >
                                     Confirm Destruction
-                                </button>
-                                <button
+                                </Button>
+                                <Button
                                     onClick={() => setShowDeleteModal(false)}
                                     className="w-full py-4 bg-slate-50 text-slate-400 font-black rounded-2xl hover:bg-slate-100 transition-all text-xs uppercase tracking-widest"
                                 >
                                     Abort
-                                </button>
+                                </Button>
                             </div>
                         </div>
                     </Card>

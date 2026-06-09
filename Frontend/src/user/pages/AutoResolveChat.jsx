@@ -1,3 +1,5 @@
+import { Input } from '@/components/common/Input';
+import { Button } from '@/components/common/Button';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -240,13 +242,13 @@ const AutoResolveChat = () => {
 
                         {/* "Escalate Anyway" Integrated Option */}
                         <div className="flex gap-3">
-                            <button
+                            <Button
                                 onClick={() => navigate('/ticket-tracking')}
                                 className="group px-6 py-2.5 bg-slate-900/5 hover:bg-slate-900 text-slate-600 hover:text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all duration-300 flex items-center gap-2 border border-slate-200/50 hover:border-slate-900"
                             >
                                 <LifeBuoy size={14} className="group-hover:rotate-12 transition-transform" />
                                 Escalate Anyway
-                            </button>
+                            </Button>
                         </div>
                     </div>
 
@@ -342,20 +344,20 @@ const AutoResolveChat = () => {
                                         <p className="text-[9px] font-black text-emerald-600 uppercase tracking-[0.2em]">Goal Satisfied?</p>
                                     </div>
                                     <div className="flex flex-wrap gap-4 justify-center">
-                                        <button
+                                        <Button
                                             onClick={() => navigate('/resolved')}
                                             className="group px-8 py-3.5 bg-emerald-600 text-white font-black text-[11px] uppercase tracking-[0.15em] rounded-2xl shadow-xl shadow-emerald-500/20 hover:bg-emerald-700 hover:shadow-emerald-500/30 active:scale-95 transition-all flex items-center gap-3"
                                         >
                                             <ShieldCheck size={18} className="group-hover:scale-110 transition-transform" />
                                             Confirm Resolution
-                                        </button>
-                                        <button
+                                        </Button>
+                                        <Button
                                             onClick={() => navigate('/ticket-tracking')}
                                             className="group px-8 py-3.5 bg-slate-900 text-white font-black text-[11px] uppercase tracking-[0.15em] rounded-2xl shadow-xl shadow-slate-900/20 hover:bg-black hover:shadow-slate-900/30 active:scale-95 transition-all flex items-center gap-3"
                                         >
                                             <LifeBuoy size={18} className="group-hover:scale-110 transition-transform" />
                                             Human Liaison Required
-                                        </button>
+                                        </Button>
                                     </div>
                                 </motion.div>
                             )}
@@ -364,20 +366,20 @@ const AutoResolveChat = () => {
                             <div className="relative">
                                 <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500 to-teal-500 blur-2xl opacity-0 group-within:opacity-20 transition-opacity duration-1000" />
                                 <div className="relative flex items-center gap-3 bg-white/60 border border-white rounded-[2.5rem] p-2 pr-3 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.05)] focus-within:bg-white focus-within:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.08)] transition-all duration-500 backdrop-blur-xl">
-                                    <button
+                                    <Button
                                         onClick={() => fileInputRef.current?.click()}
                                         className="w-12 h-12 rounded-full flex items-center justify-center text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-all duration-300"
                                     >
                                         <Paperclip size={20} />
-                                        <input
+                                        <Input
                                             type="file"
                                             ref={fileInputRef}
                                             className="hidden"
                                             accept="image/*"
                                             onChange={handleFileUpload}
                                         />
-                                    </button>
-                                    <input
+                                    </Button>
+                                    <Input
                                         type="text"
                                         value={inputText}
                                         onChange={(e) => setInputText(e.target.value)}
@@ -386,7 +388,7 @@ const AutoResolveChat = () => {
                                         className="flex-1 bg-transparent border-none focus:ring-0 text-[15px] font-bold text-slate-700 placeholder:text-slate-400/80 px-2"
                                     />
                                     <div className="flex items-center gap-1.5 pr-1">
-                                        <button
+                                        <Button
                                             onClick={toggleMic}
                                             className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-500
                                                 ${isListening
@@ -394,14 +396,14 @@ const AutoResolveChat = () => {
                                                     : 'bg-white border border-slate-200 text-slate-400 hover:text-emerald-500 hover:border-emerald-200 shadow-sm'}`}
                                         >
                                             <Mic size={24} />
-                                        </button>
-                                        <button
+                                        </Button>
+                                        <Button
                                             onClick={() => handleSendMessage()}
                                             disabled={!inputText.trim()}
                                             className="w-12 h-12 rounded-full bg-emerald-600 flex items-center justify-center text-white shadow-xl shadow-emerald-500/20 hover:bg-emerald-700 hover:rotate-6 active:scale-95 disabled:opacity-30 disabled:grayscale transition-all duration-300"
                                         >
                                             <Send size={18} className="translate-x-0.5 -translate-y-0.5" />
-                                        </button>
+                                        </Button>
                                     </div>
                                 </div>
                             </div>

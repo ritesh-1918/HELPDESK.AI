@@ -1,3 +1,5 @@
+import { Input } from '@/components/common/Input';
+import { Button } from '@/components/common/Button';
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import useToastStore from "../../store/toastStore";
@@ -57,7 +59,7 @@ function AllAdmins() {
 
                 <div className="relative group">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-emerald-400 transition-colors" />
-                    <input
+                    <Input
                         type="text"
                         placeholder="Search admins..."
                         className="bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all w-72"
@@ -121,13 +123,13 @@ function AllAdmins() {
                             </div>
 
                             <div className="flex gap-2">
-                                <button
+                                <Button
                                     onClick={() => showToast("Admin protocol: Direct editing is restricted to Secure Vault. Launching proxy...", "info")}
                                     className="flex-1 py-2 rounded-xl bg-white/5 text-slate-400 text-xs font-bold hover:bg-white/10 hover:text-white transition-all"
                                 >
                                     Edit Profile
-                                </button>
-                                <button
+                                </Button>
+                                <Button
                                     onClick={() => {
                                         if (window.confirm(`Are you sure you want to delete admin ${admin.full_name}? This will NOT delete their company but will remove their access.`)) {
                                             showToast("Security override required for administrator deletion.", "error");
@@ -136,7 +138,7 @@ function AllAdmins() {
                                     className="p-2 rounded-xl bg-white/5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
                                 >
                                     <Trash2 className="w-4 h-4" />
-                                </button>
+                                </Button>
                             </div>
                         </div>
                     ))

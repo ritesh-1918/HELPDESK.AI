@@ -1,3 +1,5 @@
+import { Input } from '@/components/common/Input';
+import { Button } from '@/components/common/Button';
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import useAuthStore from "../store/authStore";
@@ -277,7 +279,7 @@ function Signup() {
                 <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-white overflow-hidden" style={{ borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 8px 30px rgba(0,0,0,0.1)' }}>
                   <div className="p-2 flex items-center gap-2" style={{ borderBottom: '1px solid #f3f4f6', background: '#f9fafb' }}>
                     <Search className="w-4 h-4 ml-2" style={{ color: '#9ca3af' }} />
-                    <input type="text" placeholder="Search companies..." style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontSize: '14px', padding: '4px 0', color: '#111827' }}
+                    <Input type="text" placeholder="Search companies..." style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontSize: '14px', padding: '4px 0', color: '#111827' }}
                       value={companySearch} onChange={(e) => setCompanySearch(e.target.value)} onClick={(e) => e.stopPropagation()} />
                   </div>
                   <div className="max-h-60 overflow-y-auto p-1">
@@ -310,14 +312,14 @@ function Signup() {
             {/* Full Name */}
             <div>
               <label className="block mb-2" style={labelStyle}>Full Name</label>
-              <input type="text" placeholder="Enter your name" style={inputStyle} onFocus={inputFocus} onBlur={inputBlur}
+              <Input type="text" placeholder="Enter your name" style={inputStyle} onFocus={inputFocus} onBlur={inputBlur}
                 value={fullName} onChange={(e) => { setFullName(e.target.value); setError(""); }} />
             </div>
 
             {/* Email */}
             <div>
               <label className="block mb-2" style={labelStyle}>Email Address</label>
-              <input type="email" placeholder="Enter your system email" style={inputStyle} onFocus={inputFocus} onBlur={inputBlur}
+              <Input type="email" placeholder="Enter your system email" style={inputStyle} onFocus={inputFocus} onBlur={inputBlur}
                 value={email} onChange={(e) => { setEmail(e.target.value); setError(""); }} />
             </div>
 
@@ -326,11 +328,11 @@ function Signup() {
               <div className="relative">
                 <label className="block mb-2" style={labelStyle}>Password</label>
                 <div className="relative">
-                  <input type={showPassword ? "text" : "password"} placeholder="Min 8 chars" style={{ ...inputStyle, paddingRight: '44px' }} onFocus={inputFocus} onBlur={inputBlur}
+                  <Input type={showPassword ? "text" : "password"} placeholder="Min 8 chars" style={{ ...inputStyle, paddingRight: '44px' }} onFocus={inputFocus} onBlur={inputBlur}
                     value={password} onChange={(e) => { setPassword(e.target.value); setError(""); }} />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }}>
+                  <Button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }}>
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                  </Button>
                 </div>
                 {/* Live password requirement checklist */}
                 {password && (
@@ -353,24 +355,24 @@ function Signup() {
               <div className="relative">
                 <label className="block mb-2" style={labelStyle}>Confirm</label>
                 <div className="relative">
-                  <input type={showConfirmPassword ? "text" : "password"} placeholder="Repeat" style={{ ...inputStyle, paddingRight: '44px' }} onFocus={inputFocus} onBlur={inputBlur}
+                  <Input type={showConfirmPassword ? "text" : "password"} placeholder="Repeat" style={{ ...inputStyle, paddingRight: '44px' }} onFocus={inputFocus} onBlur={inputBlur}
                     value={confirmPassword} onChange={(e) => { setConfirmPassword(e.target.value); setError(""); }} />
-                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }}>
+                  <Button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }}>
                     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
 
             {/* Submit */}
-            <button type="submit" disabled={isSubmitting}
+            <Button type="submit" disabled={isSubmitting}
               className="w-full flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
               style={{ background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: '#fff', borderRadius: '12px', padding: '14px', fontWeight: 600, fontSize: '15px', border: 'none', cursor: 'pointer', boxShadow: '0 4px 20px rgba(34,160,69,0.3)', transition: 'transform 0.2s, box-shadow 0.2s', marginTop: '8px' }}
               onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 24px rgba(34,160,69,0.35)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(34,160,69,0.3)'; }}>
               {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
               {isSubmitting ? "Creating Profile..." : "Submit Registration"}
-            </button>
+            </Button>
 
             <p className="text-center" style={{ fontSize: '14px', color: '#6b7280', marginTop: '24px' }}>
               Already have an account?{" "}

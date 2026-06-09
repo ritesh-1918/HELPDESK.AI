@@ -1,3 +1,5 @@
+import { Input } from '@/components/common/Input';
+import { Button } from '@/components/common/Button';
 import React from "react";
 import { Link, useNavigate, useLocation, Outlet } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
@@ -111,13 +113,13 @@ function MasterAdminLayout() {
                 </nav>
 
                 <div className="p-4 border-t border-white/5">
-                    <button
+                    <Button
                         onClick={handleLogout}
                         className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-400 hover:text-red-400 hover:bg-red-500/5 transition-all group"
                     >
                         <LogOut className="w-5 h-5 text-slate-500 group-hover:text-red-400 transition-colors" />
                         Sign Out
-                    </button>
+                    </Button>
                 </div>
             </aside>
 
@@ -128,7 +130,7 @@ function MasterAdminLayout() {
                     <div className="flex items-center gap-4 flex-1 max-w-xl">
                         <div className="relative w-full group">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
-                            <input
+                            <Input
                                 type="text"
                                 placeholder="Global search admins, companies, or IDs..."
                                 className="w-full bg-white/5 border border-white/10 rounded-lg py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all"

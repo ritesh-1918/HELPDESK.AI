@@ -1,3 +1,4 @@
+import { Button } from '@/components/common/Button';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Folder, Network, Cpu, HardDrive, Wifi, Lock, CheckCircle, Zap, Bot } from 'lucide-react';
@@ -21,13 +22,13 @@ export default function AutoCategorizationFeature() {
         <div className="min-h-screen bg-white font-sans">
             {/* Nav */}
             <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 px-6 py-4 flex items-center justify-between">
-                <button onClick={() => navigate('/')} className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-emerald-700 transition-colors">
+                <Button onClick={() => navigate('/')} className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-emerald-700 transition-colors">
                     <ArrowLeft className="w-4 h-4" /> Back to Home
-                </button>
+                </Button>
                 <span className="font-black text-emerald-900 italic uppercase text-lg">HelpDesk.ai</span>
-                <button onClick={() => navigate('/admin-signup')} className="bg-emerald-900 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-800 transition-all">
+                <Button onClick={() => navigate('/admin-signup')} className="bg-emerald-900 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-800 transition-all">
                     Get Started Free
-                </button>
+                </Button>
             </nav>
 
             {/* Hero */}
@@ -92,9 +93,9 @@ export default function AutoCategorizationFeature() {
             <section className="py-24 px-6 text-center bg-white">
                 <h2 className="text-4xl font-extrabold text-gray-900 mb-4">Ready to automate?</h2>
                 <p className="text-gray-500 mb-8">Start routing tickets smarter today.</p>
-                <button onClick={() => navigate('/admin-signup')} className="inline-flex items-center gap-2 bg-emerald-900 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-emerald-800 transition-all shadow-xl shadow-emerald-900/20">
+                <Button onClick={() => navigate('/admin-signup')} className="inline-flex items-center gap-2 bg-emerald-900 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-emerald-800 transition-all shadow-xl shadow-emerald-900/20">
                     Get Started Free <ArrowRight className="w-5 h-5" />
-                </button>
+                </Button>
             </section>
         </div>
     );

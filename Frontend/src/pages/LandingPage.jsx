@@ -1,3 +1,4 @@
+import { Button } from '@/components/common/Button';
 import React, { useRef, useEffect, useState } from 'react';
  
 import { motion, AnimatePresence } from 'framer-motion';
@@ -69,12 +70,12 @@ function DemoModal({ onClose }) {
                 className="relative bg-gray-950 rounded-3xl border border-white/10 shadow-2xl w-full max-w-4xl overflow-hidden z-10 animate-in fade-in zoom-in duration-300"
                 onClick={e => e.stopPropagation()}
             >
-                <button
+                <Button
                     onClick={onClose}
                     className="absolute top-4 right-4 text-gray-400 hover:text-white bg-white/10 rounded-full p-2 transition-colors z-30"
                 >
                     <X className="w-5 h-5" />
-                </button>
+                </Button>
 
                 {/* Video Container */}
                 <div className="aspect-video w-full bg-black flex items-center justify-center relative group">
@@ -123,12 +124,12 @@ function DemoModal({ onClose }) {
                         <p className="text-gray-400 text-xs font-medium">Experience the synergy of AI and human expertise.</p>
                     </div>
                     <div className="flex gap-3 w-full md:w-auto">
-                        <button
+                        <Button
                             onClick={() => { onClose(); window.location.href = '/admin-signup'; }}
                             className="flex-1 md:px-8 bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl font-black italic uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
                         >
                             Start Free <ArrowRight className="w-4 h-4 ml-1" />
-                        </button>
+                        </Button>
                     </div>
                 </div>
             </div>
@@ -296,31 +297,31 @@ export default function LandingPage() {
 
                         {/* CTA Buttons */}
                         <div className="hidden md:flex items-center gap-3">
-                            <button
+                            <Button
                                 onClick={() => navigate('/login')}
                                 className="text-sm font-semibold text-gray-700 hover:text-emerald-800 transition-colors px-4 py-2 rounded-lg hover:bg-gray-50"
                             >
                                 Sign In
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                                 onClick={() => setShowDemo(true)}
                                 className="text-sm font-semibold text-emerald-800 border border-emerald-200 px-4 py-2 rounded-lg hover:bg-emerald-50 transition-all flex items-center gap-1.5"
                             >
                                 <Play className="w-3.5 h-3.5 fill-emerald-700" /> Watch Demo
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                                 onClick={() => navigate('/admin-signup')}
                                 className="bg-emerald-900 hover:bg-emerald-800 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-all shadow-lg shadow-emerald-900/20"
                             >
                                 Get Started Free
-                            </button>
+                            </Button>
                         </div>
 
                         {/* Mobile Menu Button */}
                         <div className="md:hidden">
-                            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-gray-600 hover:text-emerald-800 p-2">
+                            <Button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-gray-600 hover:text-emerald-800 p-2">
                                 {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>
@@ -333,15 +334,15 @@ export default function LandingPage() {
                             <a href="#how-it-works" onClick={() => setIsMenuOpen(false)} className="block text-base font-semibold text-gray-700 hover:text-emerald-800 py-2">How It Works</a>
                             <a href="#pricing" onClick={() => setIsMenuOpen(false)} className="block text-base font-semibold text-gray-700 hover:text-emerald-800 py-2">Pricing</a>
                             <div className="pt-4 flex flex-col gap-3 border-t border-gray-100">
-                                <button onClick={() => { setIsMenuOpen(false); setShowDemo(true); }} className="w-full text-center py-2.5 text-emerald-800 font-semibold border border-emerald-200 rounded-lg flex items-center justify-center gap-2">
+                                <Button onClick={() => { setIsMenuOpen(false); setShowDemo(true); }} className="w-full text-center py-2.5 text-emerald-800 font-semibold border border-emerald-200 rounded-lg flex items-center justify-center gap-2">
                                     <Play className="w-4 h-4 fill-emerald-700" /> Watch Demo
-                                </button>
-                                <button onClick={() => navigate('/login')} className="w-full text-center py-2.5 text-gray-700 font-semibold border border-gray-100 rounded-lg">
+                                </Button>
+                                <Button onClick={() => navigate('/login')} className="w-full text-center py-2.5 text-gray-700 font-semibold border border-gray-100 rounded-lg">
                                     Sign In
-                                </button>
-                                <button onClick={() => navigate('/admin-signup')} className="w-full bg-emerald-900 text-white py-3 rounded-lg font-semibold shadow">
+                                </Button>
+                                <Button onClick={() => navigate('/admin-signup')} className="w-full bg-emerald-900 text-white py-3 rounded-lg font-semibold shadow">
                                     Get Started Free
-                                </button>
+                                </Button>
                             </div>
                         </div>
                     </div>
@@ -368,18 +369,18 @@ export default function LandingPage() {
                     </p>
 
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
-                        <button
+                        <Button
                             onClick={() => navigate('/admin-signup')}
                             className="w-full sm:w-auto px-8 py-4 bg-emerald-900 text-white rounded-xl font-bold shadow-xl shadow-emerald-900/25 hover:bg-emerald-800 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-base"
                         >
                             Get Started Free <ArrowRight className="w-5 h-5" />
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             onClick={() => setShowDemo(true)}
                             className="w-full sm:w-auto px-8 py-4 bg-white text-gray-700 border border-gray-200 rounded-xl font-semibold hover:border-emerald-500 hover:text-emerald-700 transition-all flex items-center justify-center gap-2 text-base"
                         >
                             <Play className="w-4 h-4 fill-gray-500" /> Watch a Demo
-                        </button>
+                        </Button>
                     </div>
 
             
@@ -451,9 +452,9 @@ export default function LandingPage() {
                                                     <span>•</span> via Email
                                                 </div>
                                             </div>
-                                            <button className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors shadow-sm shadow-emerald-200">
+                                            <Button className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors shadow-sm shadow-emerald-200">
                                                 Resolve
-                                            </button>
+                                            </Button>
                                         </div>
                                         <div className="grid grid-cols-2 gap-3">
                                             <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
@@ -545,12 +546,12 @@ export default function LandingPage() {
                                 <p className="text-gray-500 leading-relaxed mb-6">
                                     Instantly detects if an issue is Network, Hardware, Software, or Access-related — no manual tagging.
                                 </p>
-                                <button
+                                <Button
                                     onClick={() => navigate('/features/categorization')}
                                     className="inline-flex items-center text-sm font-semibold text-emerald-900 hover:text-emerald-700 gap-1 group-hover:gap-2 transition-all"
                                 >
                                     Explore <ChevronRight className="w-4 h-4" />
-                                </button>
+                                </Button>
                             </div>
                         </div>
 
@@ -586,12 +587,12 @@ export default function LandingPage() {
                                 <p className="text-gray-500 leading-relaxed mb-6">
                                     Understands urgency signals in text and automatically flags issues from Low to Critical.
                                 </p>
-                                <button
+                                <Button
                                     onClick={() => navigate('/features/priority')}
                                     className="inline-flex items-center text-sm font-semibold text-emerald-900 hover:text-emerald-700 gap-1 group-hover:gap-2 transition-all"
                                 >
                                     Explore <ChevronRight className="w-4 h-4" />
-                                </button>
+                                </Button>
                             </div>
                         </div>
 
@@ -621,12 +622,12 @@ export default function LandingPage() {
                                 <p className="text-gray-500 leading-relaxed mb-6">
                                     Checks historical data to auto-fix simple issues, or routes complex ones to the right human team.
                                 </p>
-                                <button
+                                <Button
                                     onClick={() => navigate('/features/resolution')}
                                     className="inline-flex items-center text-sm font-semibold text-emerald-900 hover:text-emerald-700 gap-1 group-hover:gap-2 transition-all"
                                 >
                                     Explore <ChevronRight className="w-4 h-4" />
-                                </button>
+                                </Button>
                             </div>
                         </div>
                     </div>
@@ -726,18 +727,18 @@ export default function LandingPage() {
 
                         {/* Billing Toggle */}
                         <div className="inline-flex items-center gap-3 bg-white border border-gray-200 rounded-full px-2 py-2 shadow-sm">
-                            <button
+                            <Button
                                 onClick={() => setBillingAnnual(false)}
                                 className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${!billingAnnual ? 'bg-emerald-900 text-white shadow' : 'text-gray-500 hover:text-gray-700'}`}
                             >
                                 Monthly
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                                 onClick={() => setBillingAnnual(true)}
                                 className={`px-5 py-2 rounded-full text-sm font-semibold transition-all flex items-center gap-2 ${billingAnnual ? 'bg-emerald-900 text-white shadow' : 'text-gray-500 hover:text-gray-700'}`}
                             >
                                 Annual <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">Save 20%</span>
-                            </button>
+                            </Button>
                         </div>
                     </div>
 
@@ -757,7 +758,7 @@ export default function LandingPage() {
                                     {priceLabel ? priceLabel : <>₹{price.toLocaleString('en-IN')}<span className="text-base font-normal text-gray-500">{period}</span></>}
                                 </div>
                                 <p className="text-sm text-gray-500 mb-6">{desc}</p>
-                                <button
+                                <Button
                                     onClick={() => handlePricingClick(name)}
                                     disabled={isRedirecting && name === 'Growth'}
                                     className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold transition-all mb-8 text-sm ${ctaStyle} ${isRedirecting && name === 'Growth' ? 'opacity-80 cursor-not-allowed' : ''}`}
@@ -770,7 +771,7 @@ export default function LandingPage() {
                                     ) : (
                                         cta
                                     )}
-                                </button>
+                                </Button>
                                 <ul className="space-y-3">
                                     {features.map(feat => (
                                         <li key={feat} className="flex items-start gap-3 text-sm text-gray-600">
@@ -801,26 +802,26 @@ export default function LandingPage() {
                         Start automating ticket triage today. No credit card required.
                     </p>
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                        <button
+                        <Button
                             onClick={() => navigate('/admin-signup')}
                             className="w-full sm:w-auto px-8 py-4 bg-white text-emerald-900 font-bold rounded-xl hover:bg-green-50 transition-all shadow-xl"
                         >
                             Get Started Free
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             onClick={() => setShowDemo(true)}
                             className="w-full sm:w-auto px-8 py-4 border border-white/30 text-white font-semibold rounded-xl hover:bg-white/10 transition-all flex items-center justify-center gap-2"
                         >
                             <Play className="w-4 h-4 fill-white" /> Watch Demo
-                        </button>
+                        </Button>
                     </div>
                     <div className="mt-8">
-                        <button
+                        <Button
                             onClick={() => navigate('/login')}
                             className="text-white/50 hover:text-white text-sm font-medium transition-colors"
                         >
                             Already have an account? <span className="underline underline-offset-4 decoration-white/20">Sign in</span>
-                        </button>
+                        </Button>
                     </div>
                 </div>
 
@@ -894,12 +895,12 @@ export default function LandingPage() {
                                     {links.map(({ label, href }) => (
                                         <li key={label}>
                                             {href.startsWith('/') ? (
-                                                <button
+                                                <Button
                                                     onClick={() => navigate(href)}
                                                     className="text-sm text-white/65 hover:text-white transition-colors text-left"
                                                 >
                                                     {label}
-                                                </button>
+                                                </Button>
                                             ) : (
                                                 <a href={href} className="text-sm text-white/65 hover:text-white transition-colors">{label}</a>
                                             )}
@@ -916,9 +917,9 @@ export default function LandingPage() {
                             © 2026 HelpDesk.ai. All rights reserved. · Registered in India
                         </p>
                         <div className="flex items-center gap-4">
-                            <button onClick={() => navigate('/terms')} className="text-xs text-white/40 hover:text-white transition-colors">Terms</button>
-                            <button onClick={() => navigate('/privacy')} className="text-xs text-white/40 hover:text-white transition-colors">Privacy</button>
-                            <button onClick={() => navigate('/security')} className="text-xs text-white/40 hover:text-white transition-colors">Security</button>
+                            <Button onClick={() => navigate('/terms')} className="text-xs text-white/40 hover:text-white transition-colors">Terms</Button>
+                            <Button onClick={() => navigate('/privacy')} className="text-xs text-white/40 hover:text-white transition-colors">Privacy</Button>
+                            <Button onClick={() => navigate('/security')} className="text-xs text-white/40 hover:text-white transition-colors">Security</Button>
                             <div className="flex items-center gap-2 text-xs text-white/40 border border-white/10 rounded-lg px-3 py-1.5 cursor-pointer hover:bg-white/10 transition-colors">
                                 <Globe className="w-3.5 h-3.5" />
                                 <span>English (IN)</span>

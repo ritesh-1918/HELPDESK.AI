@@ -1,3 +1,4 @@
+import { Button } from '@/components/common/Button';
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import {
@@ -158,12 +159,12 @@ function MasterAdminDashboard() {
                     <p className="text-slate-400 text-sm mb-8 leading-relaxed">
                         Global configuration settings for AI processing and enterprise tenant policies.
                     </p>
-                    <button
+                    <Button
                         onClick={() => showToast("Read-Only: Platform Config Engine is restricted for security. Use CLI for overrides.", "warning")}
                         className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-indigo-600/20"
                     >
                         Access Engine Settings
-                    </button>
+                    </Button>
                     <p className="mt-4 text-[10px] text-slate-500 uppercase font-black tracking-widest">Master Admin Restricted</p>
                 </div>
             </div>

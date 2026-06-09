@@ -1,3 +1,4 @@
+import { Input } from '@/components/common/Input';
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -359,7 +360,7 @@ const CreateTicket = () => {
                                         <div className="flex items-center gap-2">
                                             <label className="text-xs font-bold text-gray-500 uppercase tracking-wider shrink-0">Language:</label>
                                             <div className="relative flex-1" ref={langRef}>
-                                                <button
+                                                <Button
                                                     type="button"
                                                     onClick={() => setIsLangOpen(!isLangOpen)}
                                                     className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-700 flex items-center justify-between hover:bg-white hover:border-emerald-200 transition-all shadow-sm group"
@@ -374,7 +375,7 @@ const CreateTicket = () => {
                                                     >
                                                         <ChevronDown size={16} />
                                                     </motion.div>
-                                                </button>
+                                                </Button>
 
                                                 <AnimatePresence>
                                                     {isLangOpen && (
@@ -386,7 +387,7 @@ const CreateTicket = () => {
                                                         >
                                                             <div className="max-h-[220px] overflow-y-auto custom-scrollbar space-y-1">
                                                                 {SUPPORTED_LANGUAGES.map(lang => (
-                                                                    <button
+                                                                    <Button
                                                                         key={lang.code}
                                                                         type="button"
                                                                         onClick={() => {
@@ -401,7 +402,7 @@ const CreateTicket = () => {
                                                                     >
                                                                         {lang.label}
                                                                         {selectedLanguage === lang.code && <CheckCircle2 size={14} className="text-emerald-500" />}
-                                                                    </button>
+                                                                    </Button>
                                                                 ))}
                                                             </div>
                                                         </motion.div>
@@ -513,7 +514,7 @@ const CreateTicket = () => {
                                                     onClick={() => fileInputRef.current?.click()}
                                                     className="group relative h-40 border-2 border-dashed border-gray-100 rounded-2xl bg-gray-50/50 hover:bg-emerald-50 hover:border-emerald-200 transition-all cursor-pointer flex flex-col items-center justify-center p-6"
                                                 >
-                                                    <input
+                                                    <Input
                                                         type="file"
                                                         ref={fileInputRef}
                                                         onChange={handleFileChange}
@@ -626,12 +627,12 @@ const CreateTicket = () => {
                                         <p className="text-xs text-emerald-600 font-medium">{isListening ? "Listening..." : "Paused"}</p>
                                     </div>
                                 </div>
-                                <button
+                                <Button
                                     onClick={handleCancelVoice}
                                     className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded-full transition-colors"
                                 >
                                     <X size={20} />
-                                </button>
+                                </Button>
                             </div>
 
                             <div className="p-8 min-h-[200px] max-h-[300px] overflow-y-auto relative">

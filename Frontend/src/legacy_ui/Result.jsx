@@ -1,3 +1,4 @@
+import { Button } from '@/components/common/Button';
 import { useLocation, useNavigate } from "react-router-dom";
 import { Card, Badge, Collapse, Timeline, Alert, Divider, Tag, Progress } from "antd";
 import {
@@ -22,12 +23,12 @@ function Result() {
       <div className="flex items-center justify-center py-12">
         <Card className="text-center" style={{ maxWidth: 400 }}>
           <h2 className="text-xl font-bold mb-4">No Ticket Data Found</h2>
-          <button
+          <Button
             onClick={() => navigate("/")}
             className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
           >
             Go Back
-          </button>
+          </Button>
         </Card>
       </div>
     );
@@ -290,14 +291,14 @@ function Result() {
 
         {/* Action Buttons */}
         <div className="flex justify-between items-center py-4">
-          <button
+          <Button
             onClick={() => navigate("/")}
             className="bg-gray-500 text-white px-8 py-3 rounded-xl font-bold hover:bg-gray-600 transition-all shadow-md active:scale-95"
           >
             Submit Another
-          </button>
+          </Button>
 
-          <button
+          <Button
             onClick={() => {
               const currentUser = JSON.parse(sessionStorage.getItem("currentUser") || "{}");
               if (currentUser.role === "admin") {
@@ -309,7 +310,7 @@ function Result() {
             className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md active:scale-95"
           >
             View History
-          </button>
+          </Button>
         </div>
       </div >
     </div >

@@ -1,3 +1,4 @@
+import { Button } from '@/components/common/Button';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, GitCommit, ArrowLeft, Heart, Zap, Sparkles } from 'lucide-react';
@@ -56,12 +57,12 @@ export default function Changelog() {
                             <span className="px-2 py-0.5 text-[10px] font-black bg-indigo-100 text-indigo-800 rounded-md uppercase tracking-wider">Changelog</span>
                         </div>
                     </div>
-                    <button 
+                    <Button 
                         onClick={() => navigate('/')}
                         className="flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-emerald-600 transition-colors bg-gray-50 hover:bg-emerald-50 px-3.5 py-2 rounded-xl border border-gray-200"
                     >
                         <ArrowLeft size={14} /> Back to Home
-                    </button>
+                    </Button>
                 </div>
             </header>
 

@@ -1,3 +1,5 @@
+import { Input } from '@/components/common/Input';
+import { Button } from '@/components/common/Button';
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from "../../lib/supabaseClient";
 import useToastStore from "../../store/toastStore";
@@ -156,7 +158,7 @@ const MasterBugReports = () => {
             <div className="bg-white/[0.02] backdrop-blur-xl p-6 rounded-[2rem] border border-white/5 shadow-2xl grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="relative group">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors w-5 h-5" />
-                    <input
+                    <Input
                         type="text"
                         placeholder="Scan reports for keywords..."
                         value={searchQuery}
@@ -256,18 +258,18 @@ const MasterBugReports = () => {
                                         </td>
                                         <td className="px-8 py-6 text-center">
                                             <div className="flex items-center justify-center gap-3">
-                                                <button
+                                                <Button
                                                     onClick={() => setSelectedBug(bug)}
                                                     className="w-10 h-10 bg-white/5 text-indigo-400 rounded-xl hover:bg-indigo-500 hover:text-white transition-all shadow-xl border border-white/5 flex items-center justify-center group/btn"
                                                 >
                                                     <Eye size={16} className="group-hover/btn:scale-110 transition-transform" />
-                                                </button>
-                                                <button
+                                                </Button>
+                                                <Button
                                                     onClick={() => deleteBug(bug.id)}
                                                     className="w-10 h-10 bg-white/0 text-slate-700 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all flex items-center justify-center"
                                                 >
                                                     <Trash2 size={16} />
-                                                </button>
+                                                </Button>
                                             </div>
                                         </td>
                                     </tr>
@@ -311,9 +313,9 @@ const MasterBugReports = () => {
                                         <h2 className="text-3xl font-black text-white tracking-tighter uppercase italic italic">{selectedBug.bug_title}</h2>
                                     </div>
                                 </div>
-                                <button onClick={() => setSelectedBug(null)} className="p-4 hover:bg-white/5 rounded-2xl transition-all border border-transparent hover:border-white/10 group">
+                                <Button onClick={() => setSelectedBug(null)} className="p-4 hover:bg-white/5 rounded-2xl transition-all border border-transparent hover:border-white/10 group">
                                     <X className="w-6 h-6 text-slate-500 group-hover:text-white" />
-                                </button>
+                                </Button>
                             </div>
 
                             {/* Modal Content */}
@@ -397,12 +399,12 @@ const MasterBugReports = () => {
                                                         className="w-full h-auto max-h-[500px] object-contain rounded-2xl"
                                                     />
                                                     <div className="absolute inset-0 bg-indigo-900/0 group-hover:bg-indigo-900/60 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100 backdrop-blur-sm">
-                                                        <button
+                                                        <Button
                                                             onClick={() => window.open(selectedBug.diagnostic_data.screenshot_base64, '_blank')}
                                                             className="px-8 py-3 bg-white text-slate-900 text-[10px] font-black uppercase tracking-[0.2em] rounded-full shadow-2xl hover:scale-105 transition-transform"
                                                         >
                                                             Inspect Raw Frame
-                                                        </button>
+                                                        </Button>
                                                     </div>
                                                 </div>
                                             ) : (

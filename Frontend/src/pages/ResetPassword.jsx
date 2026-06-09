@@ -1,3 +1,5 @@
+import { Input } from '@/components/common/Input';
+import { Button } from '@/components/common/Button';
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
@@ -100,20 +102,20 @@ function ResetPassword() {
                                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
                                             <Lock className="w-5 h-5" />
                                         </div>
-                                        <input
+                                        <Input
                                             type={showPassword ? "text" : "password"}
                                             placeholder="Min. 8 characters"
                                             className="w-full pl-12 pr-12 py-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none text-gray-800 placeholder:text-gray-400 font-medium bg-white"
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
                                         />
-                                        <button
+                                        <Button
                                             type="button"
                                             onClick={() => setShowPassword(!showPassword)}
                                             className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                                         >
                                             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                                        </button>
+                                        </Button>
                                     </div>
                                 </div>
 
@@ -123,7 +125,7 @@ function ResetPassword() {
                                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
                                             <Lock className="w-5 h-5" />
                                         </div>
-                                        <input
+                                        <Input
                                             type={showPassword ? "text" : "password"}
                                             placeholder="Repeat password"
                                             className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none text-gray-800 placeholder:text-gray-400 font-medium bg-white"
@@ -134,13 +136,13 @@ function ResetPassword() {
                                 </div>
                             </div>
 
-                            <button
+                            <Button
                                 type="submit"
                                 disabled={loading}
                                 className="w-full bg-emerald-900 text-white rounded-xl py-3.5 font-bold hover:bg-emerald-800 transition-all shadow-lg shadow-emerald-900/20 active:scale-[0.98] disabled:opacity-70 disabled:grayscale flex items-center justify-center gap-2"
                             >
                                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Update Password"}
-                            </button>
+                            </Button>
                         </form>
                     )}
                 </div>

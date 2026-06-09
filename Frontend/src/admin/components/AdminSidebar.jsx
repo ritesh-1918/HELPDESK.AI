@@ -1,3 +1,4 @@
+import { Button } from '@/components/common/Button';
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
@@ -64,7 +65,7 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
                     )}
                 </div>
                 {!isMobile && onToggleCollapse && (
-                    <button
+                    <Button
                         onClick={onToggleCollapse}
                         style={{
                             background: '#f0fdf4', border: '1px solid #d1fae5',
@@ -79,7 +80,7 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
                         className="hover:bg-emerald-100"
                     >
                         {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-                    </button>
+                    </Button>
                 )}
             </div>
 
@@ -142,7 +143,7 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
                     {showLabels && <span className="text-sm tracking-tight animate-in fade-in duration-300">Settings</span>}
                 </NavLink>
 
-                <button
+                <Button
                     onClick={handleLogout}
                     style={{
                         display: 'flex', alignItems: 'center', gap: '12px',
@@ -156,7 +157,7 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
                 >
                     <LogOut size={20} className="shrink-0 group-hover:translate-x-1 transition-transform" />
                     {showLabels && <span className="text-sm tracking-tight animate-in fade-in duration-300">Logout</span>}
-                </button>
+                </Button>
             </div>
         </aside>
     );

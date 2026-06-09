@@ -1,3 +1,4 @@
+import { Input } from '@/components/common/Input';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -241,14 +242,14 @@ const Profile = () => {
                                     </AvatarFallback>
                                 </Avatar>
 
-                                <button
+                                <Button
                                     onClick={() => fileInputRef.current?.click()}
                                     disabled={isUploading}
                                     className="absolute bottom-0 right-0 p-2.5 bg-slate-900 text-white rounded-2xl shadow-xl hover:bg-emerald-600 transition-all active:scale-95 disabled:opacity-50"
                                 >
                                     {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
-                                </button>
-                                <input
+                                </Button>
+                                <Input
                                     type="file"
                                     ref={fileInputRef}
                                     className="hidden"
@@ -297,7 +298,7 @@ const Profile = () => {
                                         >
                                             <div className="space-y-1">
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Identity Signature</label>
-                                                <input
+                                                <Input
                                                     value={formData.full_name}
                                                     onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                                                     className="w-full bg-slate-50 border-2 border-transparent focus:border-emerald-500 px-4 py-2.5 rounded-2xl text-sm font-bold outline-none transition-all"
@@ -306,7 +307,7 @@ const Profile = () => {
                                             </div>
                                             <div className="space-y-1">
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Designation</label>
-                                                <input
+                                                <Input
                                                     value={formData.job_title}
                                                     onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
                                                     className="w-full bg-slate-50 border-2 border-transparent focus:border-emerald-500 px-4 py-2.5 rounded-2xl text-sm font-bold outline-none transition-all"
@@ -315,7 +316,7 @@ const Profile = () => {
                                             </div>
                                             <div className="space-y-1 md:col-span-2">
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Comms Channel</label>
-                                                <input
+                                                <Input
                                                     value={formData.phone}
                                                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                                     className="w-full bg-slate-50 border-2 border-transparent focus:border-emerald-500 px-4 py-2.5 rounded-2xl text-sm font-bold outline-none transition-all"
@@ -470,7 +471,7 @@ const Profile = () => {
                                 </CardHeader>
                                 <CardContent className="p-0">
                                     <div className="divide-y divide-slate-50">
-                                        <button
+                                        <Button
                                             onClick={() => setShowPasswordModal(true)}
                                             className="w-full p-8 flex items-center justify-between hover:bg-slate-50 transition-all group"
                                         >
@@ -484,7 +485,7 @@ const Profile = () => {
                                                 </div>
                                             </div>
                                             <ChevronRight size={18} className="text-slate-300 group-hover:text-indigo-600 transition-all" />
-                                        </button>
+                                        </Button>
 
                                         {/* Bug Report Custom Trigger */}
                                         <BugReportWidget
@@ -505,7 +506,7 @@ const Profile = () => {
                                             }
                                         />
 
-                                        <button
+                                        <Button
                                             onClick={handleLogout}
                                             className="w-full p-8 flex items-center justify-between hover:bg-amber-50/30 transition-all group border-b border-slate-50"
                                         >
@@ -519,9 +520,9 @@ const Profile = () => {
                                                 </div>
                                             </div>
                                             <ChevronRight size={18} className="text-amber-200 group-hover:text-amber-500 transition-all" />
-                                        </button>
+                                        </Button>
 
-                                        <button
+                                        <Button
                                             onClick={handleDeleteAccount}
                                             className="w-full p-8 flex items-center justify-between hover:bg-red-50/30 transition-all group rounded-b-3xl"
                                         >
@@ -535,7 +536,7 @@ const Profile = () => {
                                                 </div>
                                             </div>
                                             <ChevronRight size={18} className="text-red-200 group-hover:text-red-500 transition-all" />
-                                        </button>
+                                        </Button>
                                     </div>
                                 </CardContent>
                             </Card>
@@ -558,15 +559,15 @@ const Profile = () => {
                                 <h3 className="font-black italic uppercase text-sm tracking-widest flex items-center gap-2">
                                     <Lock size={16} className="text-emerald-400" /> Security Sequence
                                 </h3>
-                                <button onClick={() => setShowPasswordModal(false)} className="text-white/60 hover:text-white transition-colors">
+                                <Button onClick={() => setShowPasswordModal(false)} className="text-white/60 hover:text-white transition-colors">
                                     <X size={20} />
-                                </button>
+                                </Button>
                             </div>
                             <div className="p-8 space-y-6">
                                 <div className="space-y-4">
                                     <div className="space-y-1.5">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Current Password</label>
-                                        <input
+                                        <Input
                                             type="password"
                                             placeholder="Enter current password"
                                             className="w-full bg-slate-50 border-2 border-transparent focus:border-emerald-500 rounded-2xl px-4 py-3 text-sm font-bold outline-none transition-all"
@@ -576,7 +577,7 @@ const Profile = () => {
                                     </div>
                                     <div className="space-y-1.5">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">New Sequence</label>
-                                        <input
+                                        <Input
                                             type="password"
                                             placeholder="Enter new password"
                                             className="w-full bg-slate-50 border-2 border-transparent focus:border-emerald-500 rounded-2xl px-4 py-3 text-sm font-bold outline-none transition-all"
@@ -586,7 +587,7 @@ const Profile = () => {
                                     </div>
                                     <div className="space-y-1.5">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Confirm Sequence</label>
-                                        <input
+                                        <Input
                                             type="password"
                                             placeholder="Re-enter password"
                                             className="w-full bg-slate-50 border-2 border-transparent focus:border-emerald-500 rounded-2xl px-4 py-3 text-sm font-bold outline-none transition-all"

@@ -1,3 +1,5 @@
+import { Input } from '@/components/common/Input';
+import { Button } from '@/components/common/Button';
 import React, { useState, useMemo } from 'react';
 import { 
     Rocket, Cpu, Sliders, AlertTriangle, BookOpen, 
@@ -98,12 +100,12 @@ const DocsPortal = () => {
                         </div>
                     </div>
                     
-                    <button 
+                    <Button 
                         onClick={() => navigate('/dashboard')}
                         className="flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-emerald-600 transition-colors bg-gray-50 hover:bg-emerald-50 px-3.5 py-2 rounded-xl border border-gray-200 hover:border-emerald-200 animate-in fade-in slide-in-from-right-2 duration-300"
                     >
                         <ArrowLeft size={14} /> Back to Dashboard
-                    </button>
+                    </Button>
                 </div>
             </header>
 
@@ -131,7 +133,7 @@ const DocsPortal = () => {
                         {/* Search Bar */}
                         <div className="relative max-w-md pt-2">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                            <input 
+                            <Input 
                                 type="text"
                                 placeholder="Search guides, categories, tags..."
                                 value={searchQuery}
@@ -156,7 +158,7 @@ const DocsPortal = () => {
                                     const CategoryIcon = iconMap[category.icon] || BookOpen;
                                     const isSelected = selectedCategory === category.id;
                                     return (
-                                        <button
+                                        <Button
                                             key={category.id}
                                             onClick={() => {
                                                 setSelectedCategory(category.id);
@@ -171,7 +173,7 @@ const DocsPortal = () => {
                                         >
                                             <CategoryIcon size={16} className={isSelected ? 'text-emerald-600' : 'text-gray-400'} />
                                             {category.title}
-                                        </button>
+                                        </Button>
                                     );
                                 })}
                             </div>
@@ -185,7 +187,7 @@ const DocsPortal = () => {
                                     {filteredArticles.map(article => {
                                         const isActive = activeArticleId === article.id;
                                         return (
-                                            <button
+                                            <Button
                                                 key={article.id}
                                                 onClick={() => setActiveArticleId(article.id)}
                                                 className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all text-left
@@ -195,7 +197,7 @@ const DocsPortal = () => {
                                             >
                                                 <span className="truncate max-w-[200px]">{article.title}</span>
                                                 <ChevronRight size={12} className={isActive ? 'text-emerald-500' : 'text-gray-300'} />
-                                            </button>
+                                            </Button>
                                         );
                                     })}
                                 </div>
@@ -257,20 +259,20 @@ const DocsPortal = () => {
                                 <div className="flex flex-col gap-2">
                                     <div className="flex items-center justify-between">
                                         <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Request Payload (JSON)</span>
-                                        <button 
+                                        <Button 
                                             onClick={() => handleCopy(sandboxPayload, 'payload')}
                                             className="text-[10px] font-bold text-emerald-600 hover:underline flex items-center gap-1"
                                         >
                                             {copiedSnippet === 'payload' ? <Check size={12} /> : <Copy size={12} />}
                                             {copiedSnippet === 'payload' ? 'Copied' : 'Copy'}
-                                        </button>
+                                        </Button>
                                     </div>
                                     <textarea 
                                         value={sandboxPayload}
                                         onChange={(e) => setSandboxPayload(e.target.value)}
                                         className="font-mono text-xs p-4 bg-slate-900 text-emerald-400 border border-slate-800 rounded-xl resize-none min-h-[160px] focus:outline-none focus:ring-1 focus:ring-emerald-500"
                                     />
-                                    <button 
+                                    <Button 
                                         onClick={handleSimulateApi}
                                         disabled={isSimulating}
                                         className="h-10 mt-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all disabled:opacity-50"
@@ -285,7 +287,7 @@ const DocsPortal = () => {
                                                 Run Simulation <ArrowRight size={14} />
                                             </>
                                         )}
-                                    </button>
+                                    </Button>
                                 </div>
 
                                 {/* Right: Output Terminal */}

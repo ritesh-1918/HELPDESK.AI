@@ -1,3 +1,4 @@
+import { Button } from '@/components/common/Button';
 import React, { useState, useCallback } from 'react';
 import Joyride, { ACTIONS, EVENTS, STATUS } from 'react-joyride';
 
@@ -56,13 +57,13 @@ function EmeraldTooltip({
                 <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
                     Step {index + 1} of {size}
                 </span>
-                <button
+                <Button
                     {...skipProps}
                     className="text-[11px] font-bold text-gray-400 hover:text-gray-600 transition-colors"
                     title="Skip tour"
                 >
                     Skip
-                </button>
+                </Button>
             </div>
 
             {/* Title */}
@@ -93,27 +94,27 @@ function EmeraldTooltip({
             {/* Actions */}
             <div className="flex items-center gap-2">
                 {index > 0 && (
-                    <button
+                    <Button
                         {...backProps}
                         className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-bold hover:bg-gray-50 transition-all active:scale-95"
                     >
                         Back
-                    </button>
+                    </Button>
                 )}
                 {continuous ? (
-                    <button
+                    <Button
                         {...primaryProps}
                         className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-black transition-all active:scale-95 shadow-sm shadow-emerald-600/20"
                     >
                         {index === size - 1 ? "Got it 🎉" : "Next →"}
-                    </button>
+                    </Button>
                 ) : (
-                    <button
+                    <Button
                         {...closeProps}
                         className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-black transition-all active:scale-95"
                     >
                         Close
-                    </button>
+                    </Button>
                 )}
             </div>
         </div>

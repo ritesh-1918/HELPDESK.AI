@@ -95,12 +95,12 @@ const NotificationPopover = ({ isAdmin = false }) => {
                     )}
                 </div>
                 <div className="p-3 bg-gray-50 border-t border-gray-100">
-                    <button
+                    <Button
                         onClick={() => markNotificationsRead()}
                         className="w-full py-2 text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-emerald-600 transition-colors bg-white rounded-lg border border-gray-100"
                     >
                         Mark all as read
-                    </button>
+                    </Button>
                 </div>
             </PopoverContent>
         </Popover>

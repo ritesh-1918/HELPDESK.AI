@@ -1,3 +1,5 @@
+import { Input } from '@/components/common/Input';
+import { Button } from '@/components/common/Button';
 import React from 'react';
 import {
     Settings,
@@ -57,7 +59,7 @@ const AdminSettings = () => {
                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest max-w-lg mb-2">
                                 Minimum confidence required for AI to process and categorize tickets automatically.
                             </p>
-                            <input
+                            <Input
                                 type="range"
                                 min="0"
                                 max="1"
@@ -78,7 +80,7 @@ const AdminSettings = () => {
                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest max-w-lg mb-2">
                                 Semantic similarity score needed to flag incoming tickets as duplicates.
                             </p>
-                            <input
+                            <Input
                                 type="range"
                                 min="0"
                                 max="1"
@@ -95,12 +97,12 @@ const AdminSettings = () => {
                                 <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest">Enable Auto Resolve</h4>
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Allow AI to close easily solved requests.</p>
                             </div>
-                            <button
+                            <Button
                                 onClick={() => handleChange('enableAutoResolve', !settings.enableAutoResolve)}
                                 className={`w-14 h-8 rounded-full relative transition-all duration-300 shadow-inner shrink-0 ${settings.enableAutoResolve ? 'bg-indigo-600' : 'bg-slate-200'}`}
                             >
                                 <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all duration-300 shadow-md ${settings.enableAutoResolve ? 'right-1' : 'left-1'}`}></div>
-                            </button>
+                            </Button>
                         </div>
                     </CardContent>
                 </Card>
@@ -147,12 +149,12 @@ const AdminSettings = () => {
                                 <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest">Email Notifications</h4>
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Receive daily system digests via email.</p>
                             </div>
-                            <button
+                            <Button
                                 onClick={() => handleChange('emailNotifications', !settings.emailNotifications)}
                                 className={`w-14 h-8 rounded-full relative transition-all duration-300 shadow-inner shrink-0 ${settings.emailNotifications ? 'bg-amber-500' : 'bg-slate-200'}`}
                             >
                                 <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all duration-300 shadow-md ${settings.emailNotifications ? 'right-1' : 'left-1'}`}></div>
-                            </button>
+                            </Button>
                         </div>
 
                         {/* Admin Alert Notifications toggle */}
@@ -161,12 +163,12 @@ const AdminSettings = () => {
                                 <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest">Critical Admin Alerts</h4>
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Push notifications for Priority 1 system events.</p>
                             </div>
-                            <button
+                            <Button
                                 onClick={() => handleChange('adminAlerts', !settings.adminAlerts)}
                                 className={`w-14 h-8 rounded-full relative transition-all duration-300 shadow-inner shrink-0 ${settings.adminAlerts ? 'bg-amber-500' : 'bg-slate-200'}`}
                             >
                                 <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all duration-300 shadow-md ${settings.adminAlerts ? 'right-1' : 'left-1'}`}></div>
-                            </button>
+                            </Button>
                         </div>
                     </CardContent>
                 </Card>

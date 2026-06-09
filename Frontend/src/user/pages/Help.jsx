@@ -1,3 +1,5 @@
+import { Input } from '@/components/common/Input';
+import { Button } from '@/components/common/Button';
 import React, { useState } from 'react';
 import { HelpCircle, Mail, MessageSquare, Book, ChevronRight, ChevronDown, Video, PlayCircle, Filter, Search, LifeBuoy } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
@@ -180,7 +182,7 @@ ${fullName}`;
                         <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
                             <Search className="h-6 w-6 text-emerald-700/50 group-focus-within:text-emerald-600 transition-colors" />
                         </div>
-                        <input
+                        <Input
                             type="text"
                             placeholder="Search tutorials, FAQs, and documentation..."
                             value={searchQuery}
@@ -211,7 +213,7 @@ ${fullName}`;
                                 {/* Modern Tab Filter */}
                                 <div className="flex items-center p-1 bg-gray-100 rounded-xl overflow-x-auto scrollbar-hide">
                                     {VIDEO_CATEGORIES.map((category) => (
-                                        <button
+                                        <Button
                                             key={category}
                                             onClick={() => setActiveTab(category)}
                                             className={`px-5 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-all ${
@@ -221,7 +223,7 @@ ${fullName}`;
                                             }`}
                                         >
                                             {category}
-                                        </button>
+                                        </Button>
                                     ))}
                                 </div>
                             </div>

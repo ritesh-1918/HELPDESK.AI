@@ -1,3 +1,5 @@
+import { Input } from '@/components/common/Input';
+import { Button } from '@/components/common/Button';
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, ShieldAlert, Loader2, Lock } from "lucide-react";
@@ -121,7 +123,7 @@ function MasterAdminLogin() {
                             >
                                 Email
                             </label>
-                            <input
+                            <Input
                                 id="ma-email"
                                 type="email"
                                 autoComplete="username"
@@ -141,7 +143,7 @@ function MasterAdminLogin() {
                                 Password
                             </label>
                             <div className="relative">
-                                <input
+                                <Input
                                     id="ma-password"
                                     type={showPassword ? "text" : "password"}
                                     autoComplete="current-password"
@@ -150,7 +152,7 @@ function MasterAdminLogin() {
                                     onChange={(e) => setPassword(e.target.value)}
                                     className="w-full bg-white/[0.04] border border-white/[0.08] text-white placeholder:text-slate-600 rounded-xl px-4 py-3 pr-11 text-sm outline-none focus:border-indigo-500/60 focus:ring-2 focus:ring-indigo-500/15 transition-all"
                                 />
-                                <button
+                                <Button
                                     type="button"
                                     onClick={() => setShowPassword((v) => !v)}
                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors p-1"
@@ -161,12 +163,12 @@ function MasterAdminLogin() {
                                     ) : (
                                         <Eye className="w-4 h-4" />
                                     )}
-                                </button>
+                                </Button>
                             </div>
                         </div>
 
                         {/* Submit */}
-                        <button
+                        <Button
                             type="submit"
                             disabled={isSubmitting}
                             className="w-full mt-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold rounded-xl py-3 text-sm transition-all shadow-lg shadow-indigo-900/30 active:scale-[0.98] flex items-center justify-center gap-2"
@@ -179,7 +181,7 @@ function MasterAdminLogin() {
                             ) : (
                                 "Authenticate"
                             )}
-                        </button>
+                        </Button>
                     </form>
                 </div>
 

@@ -1,3 +1,4 @@
+import { Button } from '@/components/common/Button';
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
@@ -118,9 +119,9 @@ function AdminLobby() {
                         <p className="text-slate-400 text-sm mb-8">
                             Unfortunately, your request to register a company has been declined by the system administrator.
                         </p>
-                        <button onClick={handleLogout} className="px-6 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm hover:bg-white/10 transition">
+                        <Button onClick={handleLogout} className="px-6 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm hover:bg-white/10 transition">
                             Return to Login
-                        </button>
+                        </Button>
                     </div>
                 ) : (
                     <>
@@ -152,19 +153,19 @@ function AdminLobby() {
                             </div>
                         </div>
 
-                        <button
+                        <Button
                             onClick={handleLogout}
                             className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-all text-sm font-semibold"
                         >
                             <LogOut className="w-4 h-4" />
                             Sign Out
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             onClick={handleLogout}
                             className="mt-4 text-xs font-semibold text-slate-500 hover:text-white transition-colors underline underline-offset-4"
                         >
                             Not you? Go back
-                        </button>
+                        </Button>
                     </>
                 )}
             </div>

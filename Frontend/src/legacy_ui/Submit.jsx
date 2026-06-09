@@ -1,3 +1,5 @@
+import { Input } from '@/components/common/Input';
+import { Button } from '@/components/common/Button';
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { BrainCircuit, Upload, X, ImageIcon, ArrowRight, AlertCircle, Sparkles, ChevronRight, Bell, Mic, CheckCircle2 } from "lucide-react";
@@ -136,7 +138,7 @@ function Submit() {
                 <div className="space-y-6 opacity-60 pointer-events-none select-none grayscale-[0.5]">
                   <div className="flex flex-col gap-2">
                     <label className="text-[var(--stitch-text-main,#111814)] text-sm font-bold">Issue Title</label>
-                    <input
+                    <Input
                       type="text"
                       className="w-full h-11 rounded-lg border-[var(--stitch-border-light,#e2e8e5)] bg-[var(--stitch-background-light,#f6f8f7)] text-[var(--stitch-text-main,#111814)] px-4 text-base outline-none transition-all"
                       readOnly
@@ -257,7 +259,7 @@ function Submit() {
               <label className="block text-sm font-semibold text-[var(--stitch-text-main,#111814)] dark:text-white" htmlFor="ticket-title">
                 Issue Title
               </label>
-              <input
+              <Input
                 id="ticket-title"
                 type="text"
                 className="w-full h-12 px-4 rounded-xl border border-[var(--stitch-border-light,#e2e8e5)] dark:border-[var(--stitch-border-dark,#2a4034)] bg-white dark:bg-[#15261e] text-[var(--stitch-text-main,#111814)] dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 text-base focus:outline-none focus:ring-2 focus:ring-[var(--stitch-primary,#13ec80)]/50 focus:border-[var(--stitch-primary,#13ec80)] transition-all shadow-sm"
@@ -310,7 +312,7 @@ function Submit() {
                       <p className="mb-1 text-sm text-[var(--stitch-text-main,#111814)] dark:text-white font-medium">Click to upload or drag and drop</p>
                       <p className="text-xs text-[var(--stitch-text-muted,#618975)] dark:text-slate-500">SVG, PNG, JPG or GIF (max. 10MB)</p>
                     </label>
-                    <input
+                    <Input
                       id="file-upload"
                       ref={fileInputRef}
                       type="file"
@@ -341,14 +343,14 @@ function Submit() {
                           {(file.size / (1024 * 1024)).toFixed(2)} MB
                         </p>
                       </div>
-                      <button
+                      <Button
                         type="button"
                         onClick={handleRemoveImage}
                         className="shrink-0 flex items-center justify-center w-8 h-8 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
                         disabled={loading}
                       >
                         <X size={16} />
-                      </button>
+                      </Button>
                     </div>
                   </motion.div>
                 )}
@@ -363,14 +365,14 @@ function Submit() {
 
             {/* Action Buttons */}
             <div className="pt-2">
-              <button
+              <Button
                 type="submit"
                 disabled={loading}
                 className="w-full h-12 bg-[var(--stitch-primary,#13ec80)] hover:bg-[#0fd472] text-[var(--stitch-text-main,#111814)] font-bold text-base rounded-[var(--stitch-radius,0.5rem)] shadow-[0_4px_14px_0_rgba(19,236,128,0.39)] hover:shadow-[0_6px_20px_rgba(19,236,128,0.23)] hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:hover:translate-y-0"
               >
                 <span>{file ? "Analyze Text & Image" : "Analyze Issue"}</span>
                 <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
-              </button>
+              </Button>
             </div>
           </form>
         </div>

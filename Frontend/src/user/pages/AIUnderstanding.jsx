@@ -1,3 +1,4 @@
+import { Button } from '@/components/common/Button';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -377,7 +378,7 @@ const AIUnderstanding = () => {
 
                 {/* Collapsible: How AI reached this conclusion */}
                 <Card className="rounded-xl border border-gray-100 shadow-sm bg-white overflow-hidden">
-                    <button
+                    <Button
                         onClick={() => setExplainerOpen(!explainerOpen)}
                         className="w-full p-6 flex items-center justify-between hover:bg-gray-50/50 transition-colors"
                     >
@@ -386,7 +387,7 @@ const AIUnderstanding = () => {
                             How AI reached this conclusion
                         </span>
                         <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${explainerOpen ? 'rotate-180' : ''}`} />
-                    </button>
+                    </Button>
 
                     <div className={`overflow-hidden transition-all duration-300 ease-in-out ${explainerOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
                         <div className="px-6 pb-6 space-y-5 border-t border-gray-100 pt-5">
@@ -433,12 +434,12 @@ const AIUnderstanding = () => {
                                 <AlertCircle className="w-4 h-4 text-emerald-500" />
                                 Is something missing?
                             </h3>
-                            <button
+                            <Button
                                 onClick={handleUpdate}
                                 className="text-xs font-bold text-emerald-600 hover:text-emerald-700 py-1.5 px-3 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
                             >
                                 Update Analysis
-                            </button>
+                            </Button>
                         </div>
                         <textarea
                             value={editedIssue}
@@ -451,13 +452,13 @@ const AIUnderstanding = () => {
 
                 {/* 7. Continue Button */}
                 <div className="flex justify-end pt-4">
-                    <button
+                    <Button
                         onClick={handleContinue}
                         className="h-14 px-10 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-lg rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.98]"
                     >
                         Continue
                         <ArrowRight className="w-5 h-5" />
-                    </button>
+                    </Button>
                 </div>
 
             </div>

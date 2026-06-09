@@ -1,3 +1,5 @@
+import { Input } from '@/components/common/Input';
+import { Button } from '@/components/common/Button';
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -92,12 +94,12 @@ function TicketDetailView() {
     return (
         <main className="flex-1 w-full max-w-[1100px] mx-auto px-4 md:px-6 py-6 md:py-10 flex flex-col gap-6 md:gap-8">
             <div className="w-full">
-                <button
+                <Button
                     onClick={() => navigate('/my-tickets')}
                     className="flex items-center gap-2 text-gray-500 hover:text-emerald-700 font-bold mb-6 transition-colors"
                 >
                     <ArrowLeft size={18} /> Back to My Tickets
-                </button>
+                </Button>
 
                 {/* Resolved Banner */}
                 {isResolved && (
@@ -111,12 +113,12 @@ function TicketDetailView() {
                                 <p className="text-emerald-700 font-medium">Closed on {new Date(ticket.resolved_at).toLocaleString()}</p>
                             </div>
                         </div>
-                        <button
+                        <Button
                             onClick={handleReopenTicket}
                             className="px-5 py-2.5 bg-white border border-emerald-200 text-emerald-700 font-bold rounded-xl hover:bg-emerald-50 hover:border-emerald-300 transition-all flex items-center gap-2 shadow-sm"
                         >
                             <RotateCcw size={16} /> Reopen Ticket
-                        </button>
+                        </Button>
                     </div>
                 )}
 
@@ -258,7 +260,7 @@ function TicketDetailView() {
                                 {/* Message Input */}
                                 <div className="px-6 pb-6 border-t border-gray-100 pt-4">
                                     <form onSubmit={handleSendMessage} className="flex gap-3">
-                                        <input
+                                        <Input
                                             id="message-input"
                                             type="text"
                                             value={newMessage}
@@ -267,7 +269,7 @@ function TicketDetailView() {
                                             disabled={isSending}
                                             className="flex-1 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-sm font-medium text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all disabled:opacity-50"
                                         />
-                                        <button
+                                        <Button
                                             id="send-message-btn"
                                             type="submit"
                                             disabled={!newMessage.trim() || isSending}
@@ -275,7 +277,7 @@ function TicketDetailView() {
                                         >
                                             <Send size={16} />
                                             Send
-                                        </button>
+                                        </Button>
                                     </form>
                                 </div>
                             </CardContent>

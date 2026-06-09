@@ -1,3 +1,4 @@
+import { Button } from '@/components/common/Button';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, Home, ShieldCheck, Clock, Briefcase } from 'lucide-react';
@@ -101,14 +102,14 @@ function Resolved() {
                 </Card>
 
                 <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
-                    <button
+                    <Button
                         onClick={() => navigate('/dashboard')}
                         className="px-10 py-4 bg-emerald-600 text-white font-black rounded-2xl shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 uppercase tracking-wide text-sm"
                     >
                         <Home size={18} />
                         Back to Dashboard
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                         onClick={() => {
                             sessionStorage.removeItem('currentUser');
                             navigate('/');
@@ -116,7 +117,7 @@ function Resolved() {
                         className="px-10 py-4 bg-white text-gray-700 border border-gray-200 font-bold rounded-2xl hover:bg-gray-50 active:scale-[0.98] transition-all flex items-center justify-center gap-2 uppercase tracking-wide text-sm"
                     >
                         Sign Out
-                    </button>
+                    </Button>
                 </div>
             </div>
         </main>

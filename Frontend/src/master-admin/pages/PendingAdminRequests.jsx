@@ -1,3 +1,4 @@
+import { Button } from '@/components/common/Button';
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import useAuthStore from "../../store/authStore";
@@ -265,20 +266,20 @@ function PendingAdminRequests() {
                                 </div>
 
                                 <div className="mt-auto border-t border-white/5 bg-white/[0.01] p-4 flex items-center justify-between gap-4">
-                                    <button
+                                    <Button
                                         onClick={() => handleReject(request)}
                                         className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-red-500/20 text-red-400 text-sm font-bold hover:bg-red-500/10 transition-all active:scale-95"
                                     >
                                         <X className="w-4 h-4" />
                                         Reject Request
-                                    </button>
-                                    <button
+                                    </Button>
+                                    <Button
                                         onClick={() => handleApprove(request)}
                                         className="flex-[1.5] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-bold hover:bg-emerald-500 hover:text-white transition-all shadow-[0_4px_15px_rgba(16,185,129,0.1)] active:scale-95"
                                     >
                                         <Check className="w-4 h-4" />
                                         Approve & Activate
-                                    </button>
+                                    </Button>
                                 </div>
                             </motion.div>
                         ))}

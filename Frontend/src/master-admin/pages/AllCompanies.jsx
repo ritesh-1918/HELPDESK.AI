@@ -1,3 +1,5 @@
+import { Input } from '@/components/common/Input';
+import { Button } from '@/components/common/Button';
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import useToastStore from "../../store/toastStore";
@@ -85,7 +87,7 @@ function AllCompanies() {
                 <div className="flex items-center gap-3">
                     <div className="relative group">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-emerald-400 transition-colors" />
-                        <input
+                        <Input
                             type="text"
                             placeholder="Filter by name..."
                             className="bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all w-64"
@@ -93,9 +95,9 @@ function AllCompanies() {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <button className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white transition-colors">
+                    <Button className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white transition-colors">
                         <Filter className="w-5 h-5" />
-                    </button>
+                    </Button>
                 </div>
             </div>
 
@@ -165,7 +167,7 @@ function AllCompanies() {
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex items-center justify-end gap-2">
-                                            <button
+                                            <Button
                                                 onClick={() => toggleStatus(company)}
                                                 className={`p-2 rounded-lg transition-all ${company.status === 'active'
                                                     ? "hover:bg-red-500/10 text-slate-500 hover:text-red-400"
@@ -174,10 +176,10 @@ function AllCompanies() {
                                                 title={company.status === 'active' ? "Deactivate Company" : "Activate Company"}
                                             >
                                                 {company.status === 'active' ? <XCircle className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
-                                            </button>
-                                            <button className="p-2 rounded-lg hover:bg-white/10 text-slate-500 hover:text-white transition-all">
+                                            </Button>
+                                            <Button className="p-2 rounded-lg hover:bg-white/10 text-slate-500 hover:text-white transition-all">
                                                 <ExternalLink className="w-5 h-5" />
-                                            </button>
+                                            </Button>
                                         </div>
                                     </td>
                                 </tr>
@@ -192,8 +194,8 @@ function AllCompanies() {
                     Showing <span className="text-white">{filteredCompanies.length}</span> of <span className="text-white">{companies.length}</span> registered enterprises
                 </p>
                 <div className="flex gap-2">
-                    <button disabled className="px-4 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs font-bold text-slate-500 cursor-not-allowed">Previous</button>
-                    <button disabled className="px-4 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs font-bold text-slate-500 cursor-not-allowed">Next</button>
+                    <Button disabled className="px-4 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs font-bold text-slate-500 cursor-not-allowed">Previous</Button>
+                    <Button disabled className="px-4 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs font-bold text-slate-500 cursor-not-allowed">Next</Button>
                 </div>
             </div>
         </div>

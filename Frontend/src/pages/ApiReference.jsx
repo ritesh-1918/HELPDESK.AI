@@ -1,3 +1,4 @@
+import { Button } from '@/components/common/Button';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Terminal, Shield, Cpu, Key, ArrowLeft, Check, Copy } from 'lucide-react';
@@ -25,12 +26,12 @@ export default function ApiReference() {
                             <span className="px-2 py-0.5 text-[10px] font-black bg-blue-100 text-blue-800 rounded-md uppercase tracking-wider">API</span>
                         </div>
                     </div>
-                    <button 
+                    <Button 
                         onClick={() => navigate('/')}
                         className="flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-emerald-600 transition-colors bg-gray-50 hover:bg-emerald-50 px-3.5 py-2 rounded-xl border border-gray-200"
                     >
                         <ArrowLeft size={14} /> Back to Home
-                    </button>
+                    </Button>
                 </div>
             </header>
 
@@ -95,12 +96,12 @@ export default function ApiReference() {
   }
 }`}
                                 </pre>
-                                <button 
+                                <Button 
                                     onClick={() => handleCopy(`{\n  "text": "VPN connecting error 789 on router downstairs",\n  "meta": {\n    "source": "Slack Integration",\n    "reporter_email": "user@company.com"\n  }\n}`, 'req')}
                                     className="absolute top-3 right-3 text-slate-500 hover:text-white p-2 bg-slate-900 border border-slate-800 rounded-lg hover:bg-slate-800 transition-colors"
                                 >
                                     {copied === 'req' ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
-                                </button>
+                                </Button>
                             </div>
                         </div>
 

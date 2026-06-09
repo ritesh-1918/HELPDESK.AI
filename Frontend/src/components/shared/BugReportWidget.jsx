@@ -1,3 +1,5 @@
+import { Input } from '@/components/common/Input';
+import { Button } from '@/components/common/Button';
 import React, { useState, useEffect } from 'react';
  
 import { motion, AnimatePresence } from 'framer-motion';
@@ -75,14 +77,14 @@ const CustomSelect = ({ label, value, options, onChange, name }) => {
             <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                 {label}
             </label>
-            <button
+            <Button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
                 className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-[#13ec80] transition-all text-sm text-slate-700 outline-none focus:ring-2 focus:ring-[#13ec80]/20"
             >
                 <span className="truncate">{selectedOption.label}</span>
                 <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-            </button>
+            </Button>
 
             <AnimatePresence>
                 {isOpen && (
@@ -99,7 +101,7 @@ const CustomSelect = ({ label, value, options, onChange, name }) => {
                             className="absolute z-[70] w-full mt-2 py-1 bg-white border border-slate-100 rounded-xl shadow-xl overflow-hidden"
                         >
                             {options.map((option) => (
-                                <button
+                                <Button
                                     key={option.value}
                                     type="button"
                                     onClick={() => {
@@ -116,7 +118,7 @@ const CustomSelect = ({ label, value, options, onChange, name }) => {
                                     {value === option.value && (
                                         <Check className="w-4 h-4 text-[#13ec80]" />
                                     )}
-                                </button>
+                                </Button>
                             ))}
                         </motion.div>
                     </>
@@ -428,12 +430,12 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                                     </div>
                                     <h2 className="text-xl font-bold text-slate-800">Report a Bug</h2>
                                 </div>
-                                <button
+                                <Button
                                     onClick={handleClose}
                                     className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-colors"
                                 >
                                     <X className="w-5 h-5" />
-                                </button>
+                                </Button>
                             </div>
 
                             {/* Scrollable Content */}
@@ -456,7 +458,7 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                                             <label className="block text-sm font-semibold text-slate-700 mb-1.5" htmlFor="bug_title">
                                                 Bug Title <span className="text-red-500">*</span>
                                             </label>
-                                            <input
+                                            <Input
                                                 type="text"
                                                 id="bug_title"
                                                 name="bug_title"
@@ -571,7 +573,7 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                                         <>
                                             {/* Permission */}
                                             <label className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors mt-2">
-                                                <input
+                                                <Input
                                                     type="checkbox"
                                                     name="contact_permission"
                                                     checked={formData.contact_permission}
@@ -610,7 +612,7 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                                                     <p className="text-xs text-slate-500 mt-1">Capture your screen to show exactly what's wrong.</p>
                                                 </div>
                                                 {!screenshotData && (
-                                                    <button
+                                                    <Button
                                                         type="button"
                                                         onClick={handleCaptureScreenshot}
                                                         disabled={isSubmitting}
@@ -618,7 +620,7 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                                                     >
                                                         <Crop className="w-3.5 h-3.5" />
                                                         Select Region & Snap
-                                                    </button>
+                                                    </Button>
                                                 )}
                                             </div>
 
@@ -632,14 +634,14 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                                                     >
                                                         <img src={screenshotData} alt="Captured screen" className="w-full h-auto max-h-48 object-cover rounded-lg" />
                                                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                            <button
+                                                            <Button
                                                                 type="button"
                                                                 onClick={handleClearScreenshot}
                                                                 className="px-3 py-1.5 bg-red-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 hover:bg-red-600 transition-colors shadow-lg"
                                                             >
                                                                 <Trash2 className="w-3.5 h-3.5" />
                                                                 Remove
-                                                            </button>
+                                                            </Button>
                                                         </div>
                                                     </motion.div>
                                                 )}
@@ -652,14 +654,14 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
 
                             {/* Footer */}
                             <div className="p-5 border-t border-slate-100 bg-slate-50 rounded-b-2xl shrink-0 flex justify-end gap-3">
-                                <button
+                                <Button
                                     type="button"
                                     onClick={handleClose}
                                     className="px-5 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-200 transition-colors rounded-xl"
                                 >
                                     Cancel
-                                </button>
-                                <button
+                                </Button>
+                                <Button
                                     type="submit"
                                     form="bugReportForm"
                                     disabled={isSubmitting}
@@ -667,7 +669,7 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                                 >
                                     {isSubmitting ? 'Sending...' : 'Submit Bug Report'}
                                     {!isSubmitting && <Send className="w-4 h-4" />}
-                                </button>
+                                </Button>
                             </div>
 
                         </motion.div>
@@ -706,12 +708,12 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                             />
                         )}
 
-                        <button
+                        <Button
                             onClick={(e) => { e.stopPropagation(); handleCancelSelection(); }}
                             className="fixed top-6 right-6 p-2 bg-white rounded-full shadow-lg text-slate-600 hover:text-red-500 transition-colors pointer-events-auto"
                         >
                             <X className="w-6 h-6" />
-                        </button>
+                        </Button>
                     </motion.div>
                 )}
             </AnimatePresence>

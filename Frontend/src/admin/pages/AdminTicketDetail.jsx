@@ -1,3 +1,4 @@
+import { Button } from '@/components/common/Button';
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -186,7 +187,7 @@ const AdminTicketDetail = () => {
             <AlertCircle className="w-16 h-16 text-red-500" />
             <h3 className="text-xl font-black text-slate-900 uppercase italic">Access Denied</h3>
             <p className="text-sm text-slate-500 max-w-xs">{error}</p>
-            <button onClick={() => navigate('/admin/tickets')} className="px-6 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Return to Base</button>
+            <Button onClick={() => navigate('/admin/tickets')} className="px-6 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Return to Base</Button>
         </div>
     );
 
@@ -212,13 +213,13 @@ const AdminTicketDetail = () => {
                 flexWrap: 'wrap', gap: '16px', margin: '-24px -24px 24px -24px'
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <button
+                    <Button
                         onClick={() => navigate('/admin/tickets')}
                         style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         className="hover:bg-slate-50 rounded-xl transition-colors"
                     >
                         <CornerUpLeft size={20} />
-                    </button>
+                    </Button>
                     <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <h2 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, color: '#0f1f12', fontSize: '14px', margin: 0, textTransform: 'uppercase' }}>
@@ -247,7 +248,7 @@ const AdminTicketDetail = () => {
                     {!ticket.status?.toLowerCase()?.includes('resolv') ? (
                         <>
                             {ticket.status?.toLowerCase() !== 'in progress' && (
-                                <button
+                                <Button
                                     onClick={handleAccept}
                                     disabled={!!isUpdating}
                                     style={{ background: 'linear-gradient(135deg,#16a34a,#22c55e)', color: '#ffffff', borderRadius: '10px', fontWeight: 600, fontSize: '11px', padding: '10px 20px', border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(34,160,69,0.3)', display: 'flex', alignItems: 'center', gap: '8px', textTransform: 'uppercase' }}
@@ -255,9 +256,9 @@ const AdminTicketDetail = () => {
                                 >
                                     {isUpdating === 'accept' ? <Loader2 size={14} className="animate-spin" /> : <CheckSquare size={14} />}
                                     Accept
-                                </button>
+                                </Button>
                             )}
-                            <button
+                            <Button
                                 onClick={() => setIsReassigning(true)}
                                 disabled={!!isUpdating}
                                 style={{ background: '#ffffff', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontWeight: 600, fontSize: '11px', padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', textTransform: 'uppercase' }}
@@ -265,8 +266,8 @@ const AdminTicketDetail = () => {
                             >
                                 {isUpdating === 'reassign' ? <Loader2 size={14} className="animate-spin" /> : <MoveRight size={14} color="#374151" />}
                                 Divert
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                                 onClick={() => setIsCorrecting(true)}
                                 disabled={!!isUpdating}
                                 style={{ background: '#ffffff', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontWeight: 600, fontSize: '11px', padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', textTransform: 'uppercase' }}
@@ -274,8 +275,8 @@ const AdminTicketDetail = () => {
                             >
                                 {isUpdating === 'correct' ? <Loader2 size={14} className="animate-spin" /> : <Eraser size={14} color="#374151" />}
                                 Correct
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                                 onClick={handleClose}
                                 disabled={!!isUpdating}
                                 style={{ background: '#0f1f12', color: '#ffffff', borderRadius: '10px', fontWeight: 600, fontSize: '11px', padding: '10px 20px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', textTransform: 'uppercase' }}
@@ -283,7 +284,7 @@ const AdminTicketDetail = () => {
                             >
                                 {isUpdating === 'resolve' ? <Loader2 size={14} className="animate-spin" /> : <XCircle size={14} />}
                                 Resolve
-                            </button>
+                            </Button>
                         </>
                     ) : (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: '#f8faf9', border: '1px solid #e5e7eb', borderRadius: '10px' }}>
@@ -470,8 +471,8 @@ const AdminTicketDetail = () => {
                             </div>
                         </div>
                         <div className="flex gap-3 pt-2">
-                            <button onClick={handleReassign} style={{ flex: 1, padding: '12px', background: '#0f1f12', color: '#ffffff', borderRadius: '10px', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}>Execute</button>
-                            <button onClick={() => setIsReassigning(false)} style={{ flex: 1, padding: '12px', background: '#f3f4f6', color: '#475569', borderRadius: '10px', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}>Abort</button>
+                            <Button onClick={handleReassign} style={{ flex: 1, padding: '12px', background: '#0f1f12', color: '#ffffff', borderRadius: '10px', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}>Execute</Button>
+                            <Button onClick={() => setIsReassigning(false)} style={{ flex: 1, padding: '12px', background: '#f3f4f6', color: '#475569', borderRadius: '10px', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}>Abort</Button>
                         </div>
                     </Card>
                 </div>
@@ -495,8 +496,8 @@ const AdminTicketDetail = () => {
                             </div>
                         </div>
                         <div className="flex gap-3 pt-2">
-                            <button onClick={handleSaveCorrection} style={{ flex: 1, padding: '12px', background: '#0f1f12', color: '#ffffff', borderRadius: '10px', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}>Save</button>
-                            <button onClick={() => setIsCorrecting(false)} style={{ flex: 1, padding: '12px', background: '#f3f4f6', color: '#475569', borderRadius: '10px', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}>Abort</button>
+                            <Button onClick={handleSaveCorrection} style={{ flex: 1, padding: '12px', background: '#0f1f12', color: '#ffffff', borderRadius: '10px', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}>Save</Button>
+                            <Button onClick={() => setIsCorrecting(false)} style={{ flex: 1, padding: '12px', background: '#f3f4f6', color: '#475569', borderRadius: '10px', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}>Abort</Button>
                         </div>
                     </Card>
                 </div>

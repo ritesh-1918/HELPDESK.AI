@@ -1,3 +1,4 @@
+import { Button } from '@/components/common/Button';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bot, User, CheckCircle2, XCircle, Send, RefreshCcw, ShieldCheck } from 'lucide-react';
@@ -134,7 +135,7 @@ function AutoResolve() {
                     {!isFinal ? (
                         <div className="flex flex-wrap gap-3 justify-center">
                             {currentOptions.map((option, idx) => (
-                                <button
+                                <Button
                                     key={idx}
                                     disabled={isThinking}
                                     onClick={() => handleUserChoice(option)}
@@ -142,31 +143,31 @@ function AutoResolve() {
                                 >
                                     {option}
                                     <Send size={14} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
-                                </button>
+                                </Button>
                             ))}
                         </div>
                     ) : (
                         <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
-                            <button
+                            <Button
                                 onClick={() => navigate('/resolved')}
                                 className="w-full sm:w-auto px-8 py-4 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                             >
                                 <CheckCircle2 size={20} />
                                 Yes, It Works
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                                 onClick={() => navigate('/ticket-tracking')}
                                 className="w-full sm:w-auto px-8 py-4 bg-gray-900 text-white font-black rounded-xl hover:bg-black shadow-lg shadow-gray-900/10 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                             >
                                 <XCircle size={20} />
                                 Still Not Working
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                                 onClick={() => window.location.reload()}
                                 className="w-full sm:w-auto px-4 py-4 text-gray-400 hover:text-emerald-600 transition-colors"
                             >
                                 <RefreshCcw size={20} />
-                            </button>
+                            </Button>
                         </div>
                     )}
                 </div>

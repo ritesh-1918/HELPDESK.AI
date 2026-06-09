@@ -59,12 +59,12 @@ const TopNav = () => {
                             <AvatarFallback className="bg-gray-100 font-bold text-gray-600 text-xs">{initials}</AvatarFallback>
                         </Avatar>
                     </div>
-                    <button
+                    <Button
                         onClick={() => setIsMenuOpen(!isMenuOpen)}
                         className="md:hidden p-2 text-gray-600 focus:outline-none"
                     >
                         {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-                    </button>
+                    </Button>
                 </div>
             </div>
 
@@ -115,12 +115,12 @@ const TopNav = () => {
                         </div>
 
                         <div className="pt-6 border-t border-gray-50">
-                            <button
+                            <Button
                                 onClick={handleLogout}
                                 className="w-full py-4 bg-gray-50 rounded-2xl flex items-center justify-center gap-2 text-red-600 font-bold active:scale-95 transition-all"
                             >
                                 <LogOut size={18} /> Sign Out
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>

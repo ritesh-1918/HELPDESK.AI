@@ -1,3 +1,5 @@
+import { Input } from '@/components/common/Input';
+import { Button } from '@/components/common/Button';
 import React, { useState, useRef, useEffect } from 'react';
 import {
     User, Mail, Shield, Bell, Lock, Globe, Camera, ShieldCheck, Key,
@@ -146,10 +148,10 @@ const AdminProfile = () => {
                     </div>
                     {isEditingProfile && (
                         <>
-                            <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
-                            <button onClick={() => fileInputRef.current?.click()} style={{ position: 'absolute', bottom: -4, right: -4, background: '#fff', border: '1.5px solid #d1fae5', borderRadius: '12px', padding: '8px', cursor: 'pointer', color: '#15803d', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', zIndex: 20 }}>
+                            <Input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
+                            <Button onClick={() => fileInputRef.current?.click()} style={{ position: 'absolute', bottom: -4, right: -4, background: '#fff', border: '1.5px solid #d1fae5', borderRadius: '12px', padding: '8px', cursor: 'pointer', color: '#15803d', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', zIndex: 20 }}>
                                 <Camera size={18} />
-                            </button>
+                            </Button>
                         </>
                     )}
                 </div>
@@ -171,25 +173,25 @@ const AdminProfile = () => {
                                 </>
                             ) : (
                                 <div className="space-y-4 max-w-sm mx-auto md:mx-0">
-                                    <input type="text" value={profileForm.name} onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-lg font-bold focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none" placeholder="Admin Name" />
-                                    <input type="email" value={profileForm.email} onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none" placeholder="Admin Email" />
+                                    <Input type="text" value={profileForm.name} onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-lg font-bold focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none" placeholder="Admin Name" />
+                                    <Input type="email" value={profileForm.email} onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none" placeholder="Admin Email" />
                                 </div>
                             )}
                         </div>
                         <div className="flex shrink-0 justify-center">
                             {!isEditingProfile ? (
-                                <button onClick={() => { setProfileForm({ name: adminProfile?.full_name || '', email: adminProfile?.email || '', profile_picture: adminProfile?.profile_picture }); setIsEditingProfile(true); }}
+                                <Button onClick={() => { setProfileForm({ name: adminProfile?.full_name || '', email: adminProfile?.email || '', profile_picture: adminProfile?.profile_picture }); setIsEditingProfile(true); }}
                                     style={{ background: '#fff', border: '1.5px solid #d1fae5', color: '#15803d', borderRadius: '10px', fontWeight: 600, fontSize: '13px', padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}>
                                     <Edit2 size={15} /> Edit Profile
-                                </button>
+                                </Button>
                             ) : (
                                 <div className="flex items-center gap-3">
-                                    <button onClick={() => setIsEditingProfile(false)} style={{ background: '#f3f4f6', color: '#6b7280', border: 'none', borderRadius: '10px', fontWeight: 600, fontSize: '13px', padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <Button onClick={() => setIsEditingProfile(false)} style={{ background: '#f3f4f6', color: '#6b7280', border: 'none', borderRadius: '10px', fontWeight: 600, fontSize: '13px', padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                         <X size={15} /> Cancel
-                                    </button>
-                                    <button onClick={handleSaveProfile} style={{ background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 600, fontSize: '13px', padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(22,163,74,0.3)' }}>
+                                    </Button>
+                                    <Button onClick={handleSaveProfile} style={{ background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 600, fontSize: '13px', padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(22,163,74,0.3)' }}>
                                         <Save size={15} /> Save Changes
-                                    </button>
+                                    </Button>
                                 </div>
                             )}
                         </div>
@@ -227,9 +229,9 @@ const AdminProfile = () => {
                                     <Key size={14} color="#16a34a" /> Password
                                 </h4>
                                 <p style={{ fontSize: '12px', color: '#6b7280' }}>Update your administrative password to keep your account secure.</p>
-                                <button onClick={() => setShowPasswordModal(true)} style={{ width: '100%', padding: '12px', background: '#fff', border: '1.5px solid #d1fae5', color: '#15803d', borderRadius: '10px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}>
+                                <Button onClick={() => setShowPasswordModal(true)} style={{ width: '100%', padding: '12px', background: '#fff', border: '1.5px solid #d1fae5', color: '#15803d', borderRadius: '10px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}>
                                     <Edit2 size={14} /> Change Password
-                                </button>
+                                </Button>
                             </div>
                             {/* 2FA */}
                             <div style={{ background: '#f8faf9', borderRadius: '14px', border: '1px solid #e5e7eb', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
@@ -239,9 +241,9 @@ const AdminProfile = () => {
                                     </h4>
                                     <p style={{ fontSize: '11px', color: '#6b7280' }}>Enforce extra verification for secure admin actions.</p>
                                 </div>
-                                <button onClick={() => setIsAdmin2FAEnabled(!isAdmin2FAEnabled)} style={{ width: '52px', height: '28px', borderRadius: '100px', position: 'relative', transition: 'all 0.4s', background: isAdmin2FAEnabled ? '#22c55e' : '#d1d5db', border: 'none', cursor: 'pointer', flexShrink: 0 }}>
+                                <Button onClick={() => setIsAdmin2FAEnabled(!isAdmin2FAEnabled)} style={{ width: '52px', height: '28px', borderRadius: '100px', position: 'relative', transition: 'all 0.4s', background: isAdmin2FAEnabled ? '#22c55e' : '#d1d5db', border: 'none', cursor: 'pointer', flexShrink: 0 }}>
                                     <div style={{ position: 'absolute', top: '2px', width: '24px', height: '24px', background: '#fff', borderRadius: '50%', transition: 'all 0.4s', boxShadow: '0 1px 3px rgba(0,0,0,0.15)', left: isAdmin2FAEnabled ? '26px' : '2px' }}></div>
-                                </button>
+                                </Button>
                             </div>
                             {/* Bug Report */}
                             <div style={{ border: '1px solid #fee2e2', background: '#fff5f5', borderRadius: '14px', padding: '20px' }} className="space-y-4">
@@ -250,15 +252,15 @@ const AdminProfile = () => {
                                 </h4>
                                 <p style={{ fontSize: '11px', color: '#6b7280' }}>Submit a detailed system bug report with attachments.</p>
                                 <BugReportWidget advanced={true} customTrigger={
-                                    <button style={{ width: '100%', padding: '12px', background: '#fff', border: '1.5px solid #fecaca', color: '#dc2626', borderRadius: '10px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                    <Button style={{ width: '100%', padding: '12px', background: '#fff', border: '1.5px solid #fecaca', color: '#dc2626', borderRadius: '10px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                                         <AlertCircle size={14} /> Report Bug
-                                    </button>
+                                    </Button>
                                 } />
                             </div>
 
-                            <button onClick={handleLogout} style={{ width: '100%', padding: '14px', background: '#fff5f5', border: '1.5px solid #fecaca', color: '#dc2626', borderRadius: '12px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', transition: 'all 0.2s', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                            <Button onClick={handleLogout} style={{ width: '100%', padding: '14px', background: '#fff5f5', border: '1.5px solid #fecaca', color: '#dc2626', borderRadius: '12px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', transition: 'all 0.2s', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                                 <LogOut size={16} /> Logout
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>
@@ -270,9 +272,9 @@ const AdminProfile = () => {
                             <h3 style={{ fontFamily: 'Syne, sans-serif', fontSize: '15px', fontWeight: 700, color: '#0f1f12', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
                                 <History size={18} color="#16a34a" /> ACTIVITY LOG
                             </h3>
-                            <button onClick={handleDownloadArchive} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: '#fff', border: '1.5px solid #d1fae5', color: '#15803d', borderRadius: '10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                            <Button onClick={handleDownloadArchive} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: '#fff', border: '1.5px solid #d1fae5', color: '#15803d', borderRadius: '10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                                 <Download size={13} /> Download Log
-                            </button>
+                            </Button>
                         </div>
                         <div className="flex-1 overflow-x-auto">
                             <table className="w-full border-collapse">
@@ -314,20 +316,20 @@ const AdminProfile = () => {
                     <div style={{ background: '#fff', borderRadius: '20px', boxShadow: '0 25px 50px rgba(0,0,0,0.15)', overflow: 'hidden', width: '100%', maxWidth: '400px' }} className="animate-in zoom-in-95 duration-300">
                         <div style={{ background: '#0f1f12', padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <h3 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, color: '#fff', fontSize: '16px', margin: 0 }}>Update Password</h3>
-                            <button onClick={() => setShowPasswordModal(false)} style={{ color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+                            <Button onClick={() => setShowPasswordModal(false)} style={{ color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></Button>
                         </div>
                         <div style={{ padding: '28px' }} className="space-y-5">
                             {[{ label: 'New Password', key: 'newPassword', ph: 'Enter new password' }, { label: 'Confirm Password', key: 'confirmPassword', ph: 'Confirm password' }].map((f, i) => (
                                 <div key={i} className="space-y-1.5">
                                     <label style={{ fontSize: '10px', fontWeight: 600, color: '#9ca3af', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{f.label}</label>
-                                    <input type="password" placeholder={f.ph} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none"
+                                    <Input type="password" placeholder={f.ph} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none"
                                         value={passwordForm[f.key]} onChange={(e) => setPasswordForm({ ...passwordForm, [f.key]: e.target.value })} />
                                 </div>
                             ))}
-                            <button onClick={handlePasswordChange} disabled={passwordLoading}
+                            <Button onClick={handlePasswordChange} disabled={passwordLoading}
                                 style={{ width: '100%', padding: '14px', background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(22,163,74,0.3)' }}>
                                 {passwordLoading ? 'Updating...' : <><Save size={15} /> Update Password</>}
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>

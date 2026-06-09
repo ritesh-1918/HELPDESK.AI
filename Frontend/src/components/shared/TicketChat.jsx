@@ -1,3 +1,5 @@
+import { Input } from '@/components/common/Input';
+import { Button } from '@/components/common/Button';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, User, ShieldCheck, Bot, MessageSquare, Circle, Loader2 } from 'lucide-react';
 import { supabase } from "../../lib/supabaseClient";
@@ -258,18 +260,18 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
                 <div className="flex items-center gap-4">
                     {isStaff && (
                         <div style={{ display: 'flex', alignItems: 'center', background: 'transparent', gap: '4px' }}>
-                            <button
+                            <Button
                                 onClick={() => setIsInternal(false)}
                                 style={{ padding: '4px 12px', fontSize: '10px', fontWeight: 700, borderRadius: '8px', cursor: 'pointer', border: 'none', transition: 'all 0.2s', ...( !isInternal ? { background: '#0f1f12', color: '#ffffff' } : { background: 'transparent', color: '#6b7280' } ) }}
                             >
                                 PUBLIC
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                                 onClick={() => setIsInternal(true)}
                                 style={{ padding: '4px 12px', fontSize: '10px', fontWeight: 700, borderRadius: '8px', cursor: 'pointer', border: 'none', transition: 'all 0.2s', ...( isInternal ? { background: '#0f1f12', color: '#ffffff' } : { background: 'transparent', color: '#6b7280' } ) }}
                             >
                                 INTERNAL
-                            </button>
+                            </Button>
                         </div>
                     )}
                 </div>
@@ -360,7 +362,7 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
             {/* Input */}
             <div style={{ padding: '16px 20px', borderTop: '1px solid #f0fdf4', background: '#ffffff' }}>
                 <form onSubmit={handleSend} className="flex gap-3">
-                    <input
+                    <Input
                         ref={inputRef}
                         type="text"
                         value={inputValue}
@@ -369,7 +371,7 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
                         style={{ flex: 1, background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: '12px', padding: '10px 16px', fontSize: '13px', outline: 'none' }}
                         className="focus:border-emerald-500 transition-colors"
                     />
-                    <button
+                    <Button
                         type="submit"
                         disabled={!inputValue.trim() || !user}
                         style={{ padding: '10px 20px', background: '#16a34a', color: '#ffffff', borderRadius: '10px', fontWeight: 600, fontSize: '12px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
@@ -377,7 +379,7 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
                     >
                         {isInternal ? <ShieldCheck size={14} /> : <Send size={14} />}
                         <span className="hidden sm:inline">{isInternal ? 'Note' : 'Send'}</span>
-                    </button>
+                    </Button>
                 </form>
             </div>
         </div>

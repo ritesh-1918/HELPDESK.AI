@@ -1,3 +1,4 @@
+import { Button } from '@/components/common/Button';
 import React from 'react';
  
 import { motion, AnimatePresence } from 'framer-motion';
@@ -52,12 +53,12 @@ const Toaster = () => {
                                 </p>
                             </div>
 
-                            <button
+                            <Button
                                 onClick={() => removeToast(toast.id)}
                                 className="shrink-0 p-1 hover:bg-white/10 rounded-lg transition-colors"
                             >
                                 <X className="w-4 h-4 opacity-50 hover:opacity-100" />
-                            </button>
+                            </Button>
                         </div>
                     </motion.div>
                 ))}

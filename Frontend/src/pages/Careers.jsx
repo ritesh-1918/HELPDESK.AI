@@ -1,3 +1,4 @@
+import { Button } from '@/components/common/Button';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Briefcase, ArrowLeft, ArrowRight, Star } from 'lucide-react';
@@ -24,12 +25,12 @@ export default function Careers() {
                             <span className="px-2 py-0.5 text-[10px] font-black bg-blue-100 text-blue-800 rounded-md uppercase tracking-wider">Careers</span>
                         </div>
                     </div>
-                    <button 
+                    <Button 
                         onClick={() => navigate('/')}
                         className="flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-emerald-600 transition-colors bg-gray-50 hover:bg-emerald-50 px-3.5 py-2 rounded-xl border border-gray-200"
                     >
                         <ArrowLeft size={14} /> Back to Home
-                    </button>
+                    </Button>
                 </div>
             </header>
 
@@ -53,9 +54,9 @@ export default function Careers() {
                             </div>
                             <div className="flex items-center gap-4">
                                 <span className="text-xs font-bold text-emerald-700">{job.scale}</span>
-                                <button className="p-2 bg-gray-50 hover:bg-emerald-50 rounded-lg border border-gray-100 hover:border-emerald-100 text-slate-500 hover:text-emerald-700 transition-colors">
+                                <Button className="p-2 bg-gray-50 hover:bg-emerald-50 rounded-lg border border-gray-100 hover:border-emerald-100 text-slate-500 hover:text-emerald-700 transition-colors">
                                     <ArrowRight size={16} />
-                                </button>
+                                </Button>
                             </div>
                         </Card>
                     ))}

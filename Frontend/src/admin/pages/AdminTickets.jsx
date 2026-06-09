@@ -1,3 +1,5 @@
+import { Input } from '@/components/common/Input';
+import { Button } from '@/components/common/Button';
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from "../../store/authStore";
@@ -226,7 +228,7 @@ const AdminTickets = () => {
                     {/* Search Field */}
                     <div className="relative group lg:col-span-1">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-emerald-500 transition-colors w-5 h-5" />
-                        <input
+                        <Input
                             type="text"
                             placeholder="Search..."
                             value={searchQuery}
@@ -281,7 +283,7 @@ const AdminTickets = () => {
                     <div className="p-12 text-center text-red-500 space-y-4">
                         <AlertCircle className="mx-auto w-12 h-12" />
                         <p className="font-bold uppercase tracking-widest text-xs">{error}</p>
-                        <button onClick={fetchTickets} className="px-6 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Retry</button>
+                        <Button onClick={fetchTickets} className="px-6 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Retry</Button>
                     </div>
                 )}
 
@@ -407,7 +409,7 @@ const AdminTickets = () => {
                                                     ))}
                                                 </select>
                                             ) : (
-                                                <button
+                                                <Button
                                                     onClick={() => handleUpdateTicket(ticket.id, { 
                                                         assigned_agent_id: user.id,
                                                         status: 'in progress'
@@ -415,7 +417,7 @@ const AdminTickets = () => {
                                                     className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
                                                 >
                                                     Claim
-                                                </button>
+                                                </Button>
                                             )}
                                         </div>
                                     </td>
@@ -445,13 +447,13 @@ const AdminTickets = () => {
                                     {/* Action: Open Ticket */}
                                     <td className="px-6 py-6 text-center">
                                         <div className="flex items-center justify-center gap-2">
-                                            <button
+                                            <Button
                                                 onClick={() => navigate(`/admin/ticket/${ticket.id}`)}
                                                 className="p-2 bg-slate-900 text-white rounded-xl hover:bg-emerald-600 transition-all shadow-lg shadow-slate-900/10 hover:shadow-emerald-500/20"
                                                 title="Open Detailed View"
                                             >
                                                 <ArrowUpRight size={14} />
-                                            </button>
+                                            </Button>
                                         </div>
                                     </td>
                                 </tr>

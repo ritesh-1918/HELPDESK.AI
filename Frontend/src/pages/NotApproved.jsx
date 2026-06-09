@@ -1,3 +1,4 @@
+import { Button } from '@/components/common/Button';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
@@ -35,21 +36,21 @@ const NotApproved = () => {
                 </div>
 
                 <div className="space-y-4">
-                    <button
+                    <Button
                         onClick={() => window.location.href = 'mailto:support@helpdesk.ai'}
                         className="w-full py-3.5 px-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-900/20"
                     >
                         <MailQuestion size={18} />
                         Contact Support
-                    </button>
+                    </Button>
 
-                    <button
+                    <Button
                         onClick={handleLogout}
                         className="w-full py-3.5 px-4 bg-white hover:bg-slate-50 text-slate-600 font-bold rounded-xl transition-all flex items-center justify-center gap-2 border border-slate-200"
                     >
                         <LogOut size={18} />
                         Sign Out
-                    </button>
+                    </Button>
                 </div>
             </div>
 

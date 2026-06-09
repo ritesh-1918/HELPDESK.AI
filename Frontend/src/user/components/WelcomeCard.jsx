@@ -1,3 +1,4 @@
+import { Button } from '@/components/common/Button';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlusCircle, ListTodo, Sparkles } from 'lucide-react';
@@ -46,7 +47,7 @@ const WelcomeCard = ({ userName = "Ritesh" }) => {
 
             {/* Buttons */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-                <button
+                <Button
                     id="tour-create-ticket"
                     onClick={() => navigate('/create-ticket')}
                     style={{
@@ -61,8 +62,8 @@ const WelcomeCard = ({ userName = "Ritesh" }) => {
                 >
                     <PlusCircle size={18} />
                     Report New Issue
-                </button>
-                <button
+                </Button>
+                <Button
                     onClick={() => navigate('/my-tickets')}
                     style={{
                         display: 'inline-flex', alignItems: 'center', gap: '8px',
@@ -76,7 +77,7 @@ const WelcomeCard = ({ userName = "Ritesh" }) => {
                 >
                     <ListTodo size={18} />
                     View My Tickets
-                </button>
+                </Button>
             </div>
         </div>
     );
