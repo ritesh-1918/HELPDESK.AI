@@ -1,7 +1,7 @@
 import logging
 import os
 from fastapi import FastAPI, Request, HTTPException, Depends
-from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
 from supabase import create_client
@@ -23,15 +23,13 @@ app.add_middleware(CSRFTokenMiddleware)
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 
-# Initialize Supabase client
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
-
 supabase = None
-if SUPABASE_URL and SUPABASE_SERVICE_KEY and os.getenv("ALLOW_DEGRADED_STARTUP") != "1":
+if SUPABASE_URL and SUPABASE_SERVICE_KEY:
     try:
         supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
     except Exception as e:
+        if os.getenv("ALLOW_DEGRADED_STARTUP") != "1":
+            raise
         logger.warning(f"Failed to initialize Supabase client: {e}")
 
 app.include_router(tickets.router)
