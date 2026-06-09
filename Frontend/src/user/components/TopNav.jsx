@@ -10,12 +10,13 @@ import useTicketStore from "../../store/ticketStore";
 import NotificationPopover from "./NotificationPopover";
 
 import useAuthStore from "../../store/authStore";
+import { useShallow } from 'zustand/react/shallow';
 
 const TopNav = () => {
     const navigate = useNavigate();
     
  
-    const { profile, logout } = useAuthStore();
+    const { profile, logout } = useAuthStore(useShallow(state => ({ profile: state.profile, logout: state.logout })));
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const initials = profile?.full_name ? profile.full_name[0].toUpperCase() : (profile?.email ? profile.email[0].toUpperCase() : 'U');

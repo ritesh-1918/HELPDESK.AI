@@ -5,6 +5,7 @@ import {
     AlertTriangle, Lightbulb, TicketCheck
 } from 'lucide-react';
 import useTicketStore from '../store/ticketStore';
+import { useShallow } from 'zustand/react/shallow';
 
 /* ─── Animated progress steps at the top ─────────────────────────────────── */
 const steps = [
@@ -14,7 +15,7 @@ const steps = [
 ];
 
 function KnowledgeCheck() {
-    const { aiTicket } = useTicketStore();
+    const { aiTicket } = useTicketStore(useShallow(state => ({ aiTicket: state.aiTicket })));
     const navigate = useNavigate();
     const [activeStep, setActiveStep] = useState(0);
 

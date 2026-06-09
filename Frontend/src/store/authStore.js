@@ -11,6 +11,28 @@ const useAuthStore = create(
             profile: null,
             loading: false,
 
+            // --- ADMIN STATE (Merged from adminStore) ---
+            users: [], // System users for management
+            settings: {
+                aiConfidenceThreshold: 0.80,
+                duplicateSensitivity: 0.85,
+                enableAutoResolve: false,
+                autoCloseDays: 7,
+                emailNotifications: false,
+                adminAlerts: false
+            },
+
+            setUsers: (users) => set({ users }),
+            updateSettings: (newSettings) => set((state) => ({
+                settings: { ...state.settings, ...newSettings }
+            })),
+            addUser: (user) => set((state) => ({
+                users: [...state.users, { ...user, id: Date.now() }]
+            })),
+            deleteUser: (userId) => set((state) => ({
+                users: state.users.filter(u => u.id !== userId)
+            })),
+
             // --- SUPABASE AUTH METHODS ---
 
             // Helper to fetch profile linked to auth user
@@ -294,7 +316,8 @@ const useAuthStore = create(
             partialize: (state) => ({
                 // We keep profile persisted for quick UI transitions, 
                 // but session is handled by Supabase cookie/localStorage
-                profile: state.profile
+                profile: state.profile,
+                settings: state.settings // Persist admin settings
             }),
         }
     )

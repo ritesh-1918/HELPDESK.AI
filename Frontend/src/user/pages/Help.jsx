@@ -4,6 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/ca
 import { YOUTUBE_RESOURCES, VIDEO_CATEGORIES } from '../../data/youtubeResources';
 
 import useAuthStore from "../../store/authStore";
+import { useShallow } from 'zustand/react/shallow';
 
 const FAQItem = ({ faq }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -28,7 +29,7 @@ const FAQItem = ({ faq }) => {
 };
 
 const Help = () => {
-    const { profile } = useAuthStore();
+    const { profile } = useAuthStore(useShallow(state => ({ profile: state.profile })));
     const [activeTab, setActiveTab] = useState('All');
     const [videos, setVideos] = useState([]);
     const [isLoading, setIsLoading] = useState(true);

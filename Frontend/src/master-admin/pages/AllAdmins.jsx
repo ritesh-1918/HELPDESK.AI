@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabaseClient";
 import useToastStore from "../../store/toastStore";
 // eslint-disable-next-line no-unused-vars
 import { format } from "date-fns";
+import { useShallow } from 'zustand/react/shallow';
 import {
     Users, Search, UserCheck, Shield,
     Mail, Briefcase, Building2, MoreHorizontal,
@@ -13,7 +14,7 @@ function AllAdmins() {
     const [admins, setAdmins] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
-    const { showToast } = useToastStore();
+    const { showToast } = useToastStore(useShallow(state => ({ showToast: state.showToast })));
 
     useEffect(() => {
         fetchAdmins();

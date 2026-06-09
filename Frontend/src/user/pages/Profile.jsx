@@ -32,10 +32,11 @@ import useAuthStore from "../../store/authStore";
 import useToastStore from "../../store/toastStore";
 import { supabase } from "../../lib/supabaseClient";
 import BugReportWidget from "../../components/shared/BugReportWidget";
+import { useShallow } from 'zustand/react/shallow';
 const Profile = () => {
     const navigate = useNavigate();
-    const { profile, user, logout, loading: authLoading, updateProfile } = useAuthStore();
-    const { showToast } = useToastStore();
+    const { profile, user, logout, loading: authLoading, updateProfile } = useAuthStore(useShallow(state => ({ profile: state.profile, user: state.user, logout: state.logout, loading: state.loading, updateProfile: state.updateProfile })));
+    const { showToast } = useToastStore(useShallow(state => ({ showToast: state.showToast })));
 
     const [userTickets, setUserTickets] = useState([]);
     const [isEditing, setIsEditing] = useState(false);

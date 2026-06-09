@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import useAuthStore from '../../store/authStore';
+import { useShallow } from 'zustand/react/shallow';
 
 /**
  * ProtectedRoute Component
@@ -9,7 +10,7 @@ import useAuthStore from '../../store/authStore';
  * Redirects to the login page if not authenticated.
  */
 const ProtectedRoute = () => {
-    const { user, profile, loading, getCurrentUser } = useAuthStore();
+    const { user, profile, loading, getCurrentUser } = useAuthStore(useShallow(state => ({ user: state.user, profile: state.profile, loading: state.loading, getCurrentUser: state.getCurrentUser })));
     const [isChecking, setIsChecking] = useState(true);
 
     useEffect(() => {

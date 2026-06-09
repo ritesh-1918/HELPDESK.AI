@@ -10,13 +10,14 @@ import {
  
  
 import { motion, AnimatePresence } from "framer-motion";
+import { useShallow } from 'zustand/react/shallow';
 
 function PendingAdminRequests() {
     const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(null); // id of request being processed
-    const { user: masterAdmin } = useAuthStore();
-    const { showToast } = useToastStore();
+    const { user: masterAdmin } = useAuthStore(useShallow(state => ({ user: state.user })));
+    const { showToast } = useToastStore(useShallow(state => ({ showToast: state.showToast })));
 
     useEffect(() => {
         fetchRequests();

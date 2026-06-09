@@ -7,11 +7,12 @@ import useToastStore from '../../store/toastStore';
 import { Card } from "../../components/ui/card";
 import AIProcessingSteps from "../components/AIProcessingSteps";
 import useTicketStore from "../../store/ticketStore";
-import useAdminStore from '../../admin/store/adminStore';
+
 import useAuthStore from '../../store/authStore';
 import { supabase } from '../../lib/supabaseClient';
 import { API_CONFIG } from '../../config';
 import { analyzeTicketWithAI } from '../../services/aiAssistant';
+import { useShallow } from 'zustand/react/shallow';
 
 const steps = [
     "Reading your message",
@@ -26,9 +27,9 @@ const AIProcessing = () => {
     const location = useLocation();
     const { text, image_text, image_base64, template_id, template_used, user_modified, ticket_title, original_text, original_language } = location.state || {};
     const setAITicket = useTicketStore((state) => state.setAITicket);
-    const { settings } = useAdminStore();
-    const { user, profile } = useAuthStore();
-    const { showToast } = useToastStore();
+    const { settings } = useAuthStore(useShallow(state => ({ settings: state.settings })));
+    const { user, profile } = useAuthStore(useShallow(state => ({ user: state.user, profile: state.profile })));
+    const { showToast } = useToastStore(useShallow(state => ({ showToast: state.showToast })));
     const hasCalledAPI = useRef(false);
     const [activeStep, setActiveStep] = useState(0);
 

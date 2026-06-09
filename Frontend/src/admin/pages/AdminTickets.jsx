@@ -25,12 +25,13 @@ import { Select } from "../../components/ui/select";
 import { formatTicketId } from "../../utils/format";
 import SLABadge from "../components/SLABadge";
 import { formatTimelineDate } from "../../utils/dateUtils";
+import { useShallow } from 'zustand/react/shallow';
 
 const AdminTickets = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { user } = useAuthStore();
-    const { showToast } = useToastStore();
+    const { user } = useAuthStore(useShallow(state => ({ user: state.user })));
+    const { showToast } = useToastStore(useShallow(state => ({ showToast: state.showToast })));
 
     // Data State
     const [tickets, setTickets] = useState([]);

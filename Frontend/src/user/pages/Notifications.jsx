@@ -5,10 +5,11 @@ import useTicketStore from "../../store/ticketStore";
 import { Card } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { formatTicketId } from "../../utils/format";
+import { useShallow } from 'zustand/react/shallow';
 
 const NotificationsPage = () => {
     const navigate = useNavigate();
-    const { notifications = [], markNotificationsRead } = useTicketStore();
+    const { notifications = [], markNotificationsRead } = useTicketStore(useShallow(state => ({ notifications: state.notifications, markNotificationsRead: state.markNotificationsRead })));
 
     const getIcon = (type) => {
         switch (type) {

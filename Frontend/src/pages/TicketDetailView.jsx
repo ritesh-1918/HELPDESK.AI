@@ -8,10 +8,11 @@ import {
 } from 'lucide-react';
 import useTicketStore from '../store/ticketStore';
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { useShallow } from 'zustand/react/shallow';
 
 function TicketDetailView() {
     const { ticket_id } = useParams();
-    const { tickets, appendMessage, updateTicket } = useTicketStore();
+    const { tickets, appendMessage, updateTicket } = useTicketStore(useShallow(state => ({ tickets: state.tickets, appendMessage: state.appendMessage, updateTicket: state.updateTicket })));
     const navigate = useNavigate();
     const [ticket, setTicket] = useState(null);
     const [newMessage, setNewMessage] = useState('');

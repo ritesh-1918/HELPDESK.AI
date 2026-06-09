@@ -7,16 +7,17 @@ import {
     Save,
     ShieldCheck
 } from 'lucide-react';
-import useAdminStore from '../store/adminStore';
+import useAuthStore from '../../store/authStore';
 import { Card, CardContent } from "../../components/ui/card";
 import { Select } from "../../components/ui/select";
+import { useShallow } from 'zustand/react/shallow';
 
 /**
  * AdminSettings Page
  * Comprehensive configuration for system parameters, AI thresholds, and notifications.
  */
 const AdminSettings = () => {
-    const { settings, updateSettings } = useAdminStore();
+    const { settings, updateSettings } = useAuthStore(useShallow(state => ({ settings: state.settings, updateSettings: state.updateSettings })));
 
     // Handlers
     const handleChange = (key, value) => {

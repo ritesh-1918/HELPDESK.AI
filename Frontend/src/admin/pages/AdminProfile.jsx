@@ -8,10 +8,11 @@ import useAuthStore from '../../store/authStore';
 import useToastStore from '../../store/toastStore';
 import { supabase } from "../../lib/supabaseClient";
 import BugReportWidget from "../../components/shared/BugReportWidget";
+import { useShallow } from 'zustand/react/shallow';
 
 const AdminProfile = () => {
-    const { user, profile: adminProfile } = useAuthStore();
-    const { showToast } = useToastStore();
+    const { user, profile: adminProfile } = useAuthStore(useShallow(state => ({ user: state.user, profile: state.profile })));
+    const { showToast } = useToastStore(useShallow(state => ({ showToast: state.showToast })));
     const [isEditingProfile, setIsEditingProfile] = useState(false);
     const [profileForm, setProfileForm] = useState({
         name: adminProfile?.full_name || '',

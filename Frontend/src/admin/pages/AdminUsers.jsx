@@ -10,12 +10,13 @@ import useAuthStore from "../../store/authStore";
 import StatCard from '../components/StatCard';
 import { Card } from "../../components/ui/card";
 import { Select } from "../../components/ui/select";
+import { useShallow } from 'zustand/react/shallow';
 
 const AdminUsers = () => {
 // eslint-disable-next-line no-unused-vars
     const navigate = useNavigate();
-    const { user: currentUser, profile: currentProfile } = useAuthStore();
-    const { showToast } = useToastStore();
+    const { user: currentUser, profile: currentProfile } = useAuthStore(useShallow(state => ({ user: state.user, profile: state.profile })));
+    const { showToast } = useToastStore(useShallow(state => ({ showToast: state.showToast })));
 
     // Data State
     const [users, setUsers] = useState([]);

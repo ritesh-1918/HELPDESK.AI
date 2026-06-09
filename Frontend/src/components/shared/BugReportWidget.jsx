@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabaseClient';
 import useAuthStore from '../../store/authStore';
 import useToastStore from '../../store/toastStore';
 import { API_CONFIG } from '../../config';
+import { useShallow } from 'zustand/react/shallow';
 
 // Reusable Hook for Auto-Diagnostics
 function useDiagnostics() {
@@ -128,8 +129,8 @@ const CustomSelect = ({ label, value, options, onChange, name }) => {
 
 const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const { user } = useAuthStore();
-    const { showToast: addToast } = useToastStore();
+    const { user } = useAuthStore(useShallow(state => ({ user: state.user })));
+    const { showToast: addToast } = useToastStore(useShallow(state => ({ showToast: state.showToast })));
     const { diagnostics, refreshUrl } = useDiagnostics();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [lastSubmitTime, setLastSubmitTime] = useState(0);

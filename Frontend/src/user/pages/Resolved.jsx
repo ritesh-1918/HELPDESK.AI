@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, Home, ShieldCheck, Clock, Briefcase } from 'lucide-react';
 import useTicketStore from '../../store/ticketStore';
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { useShallow } from 'zustand/react/shallow';
 
 function Resolved() {
-    const { aiTicket, addAutoResolvedTicket } = useTicketStore();
+    const { aiTicket, addAutoResolvedTicket } = useTicketStore(useShallow(state => ({ aiTicket: state.aiTicket, addAutoResolvedTicket: state.addAutoResolvedTicket })));
     const navigate = useNavigate();
     const [isInitializing, setIsInitializing] = useState(true);
     const [displayRecord, setDisplayRecord] = useState(null);

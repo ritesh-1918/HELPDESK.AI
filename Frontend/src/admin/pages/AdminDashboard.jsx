@@ -7,6 +7,7 @@ import { supabase } from "../../lib/supabaseClient";
 import StatCard from "../components/StatCard";
 import TicketTable from "../components/TicketTable";
 import { formatTimelineDate } from "../../utils/dateUtils";
+import { useShallow } from 'zustand/react/shallow';
 
 // Inline SVG icon components
 const TicketIcon = () => (
@@ -69,7 +70,7 @@ const aiIconMap = [
 
 const AdminDashboard = () => {
     const navigate = useNavigate();
-    const { profile } = useAuthStore();
+    const { profile } = useAuthStore(useShallow(state => ({ profile: state.profile })));
     const [tickets, setTickets] = React.useState([]);
     const [isLoading, setIsLoading] = React.useState(true);
 

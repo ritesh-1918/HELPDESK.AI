@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import NotificationPopover from '../../user/components/NotificationPopover';
 import useAuthStore from '../../store/authStore';
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
+import { useShallow } from 'zustand/react/shallow';
 
 /**
  * AdminHeader Component
@@ -17,7 +18,7 @@ const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar })
     const dropdownRef = useRef(null);
     const searchRef = useRef(null);
     const navigate = useNavigate();
-    const { logout, profile: adminProfile } = useAuthStore();
+    const { logout, profile: adminProfile } = useAuthStore(useShallow(state => ({ logout: state.logout, profile: state.profile })));
     const initials = adminProfile?.full_name ? adminProfile.full_name.split(' ').map(n => n[0]).join('').toUpperCase() : 'AD';
 
     const handleSearchKeyDown = (e) => {

@@ -13,6 +13,7 @@ import {
     ChevronRight
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
+import { useShallow } from 'zustand/react/shallow';
 
 const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
     const navItems = [
@@ -23,7 +24,7 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
         { label: 'Profile', path: '/admin/profile', icon: UserCircle },
     ];
 
-    const { logout } = useAuthStore();
+    const { logout } = useAuthStore(useShallow(state => ({ logout: state.logout })));
     const navigate = useNavigate();
 
     const handleLogout = async () => {

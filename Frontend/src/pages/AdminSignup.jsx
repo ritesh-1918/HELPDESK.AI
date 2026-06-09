@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import useAuthStore from "../store/authStore";
 import { Select } from "../components/ui/select";
+import { useShallow } from 'zustand/react/shallow';
 
 /**
  * AdminSignup — Premium Multi-step Company Registration
@@ -43,7 +44,7 @@ function AdminSignup() {
     const [passwordStrength, setPasswordStrength] = useState(0);
 
     const navigate = useNavigate();
-    const { signup, loading, user, profile } = useAuthStore();
+    const { signup, loading, user, profile } = useAuthStore(useShallow(state => ({ signup: state.signup, loading: state.loading, user: state.user, profile: state.profile })));
 
     // Redirect if already logged in and verified
     useEffect(() => {

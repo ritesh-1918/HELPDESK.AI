@@ -16,12 +16,13 @@ import { formatTicketId } from "../../utils/format";
 import SLABadge from "../components/SLABadge";
 import { formatFullTimestamp } from "../../utils/dateUtils";
 import TicketTimeline from "../../user/components/TicketTimeline";
+import { useShallow } from 'zustand/react/shallow';
 
 const AdminTicketDetail = () => {
     const { ticket_id } = useParams();
     const navigate = useNavigate();
-    const { user } = useAuthStore();
-    const { showToast } = useToastStore();
+    const { user } = useAuthStore(useShallow(state => ({ user: state.user })));
+    const { showToast } = useToastStore(useShallow(state => ({ showToast: state.showToast })));
 
     const [ticket, setTicket] = useState(null);
     const [isLoading, setIsLoading] = useState(true);

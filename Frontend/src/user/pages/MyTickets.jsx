@@ -12,6 +12,7 @@ import { Select } from "../../components/ui/select";
 import { formatTicketId } from "../../utils/format";
 import TicketStatusBadge from "../components/TicketStatusBadge";
 import { formatTimelineDate, getTimeZoneAbbr } from "../../utils/dateUtils";
+import { useShallow } from 'zustand/react/shallow';
 import {
     Tooltip,
     TooltipContent,
@@ -21,7 +22,7 @@ import {
 
 function MyTickets() {
     const navigate = useNavigate();
-    const { user } = useAuthStore();
+    const { user } = useAuthStore(useShallow(state => ({ user: state.user })));
 
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);

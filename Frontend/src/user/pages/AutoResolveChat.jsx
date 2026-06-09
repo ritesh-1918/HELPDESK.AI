@@ -14,16 +14,17 @@ import useTicketStore from '../../store/ticketStore';
 import { Card, CardContent } from "../../components/ui/card";
 import { askAI } from '../../services/aiAssistant';
 import useToastStore from '../../store/toastStore';
+import { useShallow } from 'zustand/react/shallow';
 
 const AutoResolveChat = () => {
-    const { aiTicket } = useTicketStore();
+    const { aiTicket } = useTicketStore(useShallow(state => ({ aiTicket: state.aiTicket })));
     const navigate = useNavigate();
     const [messages, setMessages] = useState([]);
     const [isThinking, setIsThinking] = useState(false);
     const [isFinal, setIsFinal] = useState(false);
     const [inputText, setInputText] = useState('');
     const [isListening, setIsListening] = useState(false);
-    const { showToast } = useToastStore();
+    const { showToast } = useToastStore(useShallow(state => ({ showToast: state.showToast })));
     const scrollRef = useRef(null);
     const fileInputRef = useRef(null);
 

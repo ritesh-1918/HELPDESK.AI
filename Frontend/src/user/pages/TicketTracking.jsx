@@ -10,12 +10,13 @@ import { Card, CardContent } from "../../components/ui/card";
 import TicketTimeline from "../components/TicketTimeline";
 import axios from 'axios';
 import { API_CONFIG } from '../../config';
+import { useShallow } from 'zustand/react/shallow';
 
 const TicketTracking = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { aiTicket, addTicket } = useTicketStore();
-    const { user, profile } = useAuthStore();
+    const { aiTicket, addTicket } = useTicketStore(useShallow(state => ({ aiTicket: state.aiTicket, addTicket: state.addTicket })));
+    const { user, profile } = useAuthStore(useShallow(state => ({ user: state.user, profile: state.profile })));
     const [isCreating, setIsCreating] = useState(true);
     const [error, setError] = useState(null);
     const [createdTicket, setCreatedTicket] = useState(null);

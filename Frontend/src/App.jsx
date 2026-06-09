@@ -87,6 +87,7 @@ import MasterAdminDashboard from "./master-admin/pages/MasterAdminDashboard";
 import PendingAdminRequests from "./master-admin/pages/PendingAdminRequests";
 import AllCompanies from "./master-admin/pages/AllCompanies";
 import AllAdmins from "./master-admin/pages/AllAdmins";
+import { useShallow } from 'zustand/react/shallow';
 
 
 function TitleUpdater() {
@@ -150,7 +151,7 @@ function ScrollToTop() {
 }
 
 function AppLayout() {
-  const { user, profile } = useAuthStore();
+  const { user, profile } = useAuthStore(useShallow(state => ({ user: state.user, profile: state.profile })));
 
   // Initialize Global Realtime Notifications Listener
   useRealtimeNotifications();
@@ -217,7 +218,7 @@ function AppLayout() {
 
 
 function App() {
-  const { initialize } = useAuthStore();
+  const { initialize } = useAuthStore(useShallow(state => ({ initialize: state.initialize })));
 
   useEffect(() => {
     initialize();

@@ -3,13 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import useAuthStore from "../store/authStore";
 import { Clock, LogOut, ShieldAlert, CheckCircle2 } from "lucide-react";
+import { useShallow } from 'zustand/react/shallow';
 
 /**
  * AdminLobby — Waiting room for verified admins pending master admin approval.
  * Route: /admin-lobby
  */
 function AdminLobby() {
-    const { profile, logout } = useAuthStore();
+    const { profile, logout } = useAuthStore(useShallow(state => ({ profile: state.profile, logout: state.logout })));
     const navigate = useNavigate();
     const [status, setStatus] = useState(profile?.status || "pending_approval");
     const [isTransitioning, setIsTransitioning] = useState(false);

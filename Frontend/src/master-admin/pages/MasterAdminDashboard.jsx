@@ -7,6 +7,7 @@ import {
 import useToastStore from "../../store/toastStore";
  
 import { motion } from "framer-motion";
+import { useShallow } from 'zustand/react/shallow';
 
 /**
  * MasterAdminDashboard (Overview)
@@ -20,7 +21,7 @@ function MasterAdminDashboard() {
         pendingRequests: 0
     });
     const [loading, setLoading] = useState(true);
-    const { showToast } = useToastStore();
+    const { showToast } = useToastStore(useShallow(state => ({ showToast: state.showToast })));
 
     useEffect(() => {
         fetchStats();

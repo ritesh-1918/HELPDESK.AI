@@ -4,10 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/popover";
 import { Button } from "../../components/ui/button";
 import useTicketStore from "../../store/ticketStore";
+import { useShallow } from 'zustand/react/shallow';
 
 const NotificationPopover = ({ isAdmin = false }) => {
     const navigate = useNavigate();
-    const { notifications = [], markNotificationsRead } = useTicketStore();
+    const { notifications = [], markNotificationsRead } = useTicketStore(useShallow(state => ({ notifications: state.notifications, markNotificationsRead: state.markNotificationsRead })));
     const currentRole = isAdmin ? 'admin' : 'user';
 
     // Filter to only show notifications meant for this role.

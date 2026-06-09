@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bot, User, CheckCircle2, XCircle, Send, RefreshCcw, ShieldCheck } from 'lucide-react';
 import useTicketStore from '../../store/ticketStore';
+import { useShallow } from 'zustand/react/shallow';
 
 function AutoResolve() {
-    const { aiTicket } = useTicketStore();
+    const { aiTicket } = useTicketStore(useShallow(state => ({ aiTicket: state.aiTicket })));
     const navigate = useNavigate();
     const [messages, setMessages] = useState([]);
     const [isThinking, setIsThinking] = useState(false);

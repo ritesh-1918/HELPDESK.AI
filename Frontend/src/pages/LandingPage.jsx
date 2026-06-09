@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import TeamSection from '../components/landing/TeamSection';
+import { useShallow } from 'zustand/react/shallow';
 
 // ---- Count-up animation component ----
 function AnimatedStat({ target, suffix = '', prefix = '', label, isWord = false }) {
@@ -138,7 +139,7 @@ function DemoModal({ onClose }) {
 
 export default function LandingPage() {
     const navigate = useNavigate();
-    const { user, profile, loading } = useAuthStore();
+    const { user, profile, loading } = useAuthStore(useShallow(state => ({ user: state.user, profile: state.profile, loading: state.loading })));
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [showDemo, setShowDemo] = useState(false);
     const [billingAnnual, setBillingAnnual] = useState(false);

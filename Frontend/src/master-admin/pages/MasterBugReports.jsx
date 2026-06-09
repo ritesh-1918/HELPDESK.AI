@@ -23,9 +23,10 @@ import {
  
  
 import { motion, AnimatePresence } from 'framer-motion';
+import { useShallow } from 'zustand/react/shallow';
 
 const MasterBugReports = () => {
-    const { addToast } = useToastStore();
+    const { addToast } = useToastStore(useShallow(state => ({ addToast: state.addToast })));
     const [bugs, setBugs] = useState([]);
     const [loading, setLoading] = useState(true);
  

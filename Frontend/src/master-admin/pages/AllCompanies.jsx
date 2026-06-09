@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import useToastStore from "../../store/toastStore";
 import { format } from "date-fns";
+import { useShallow } from 'zustand/react/shallow';
 import {
     Building2, Search, ExternalLink, Calendar,
     Filter, MoreHorizontal, User, ShieldCheck,
@@ -12,7 +13,7 @@ function AllCompanies() {
     const [companies, setCompanies] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
-    const { showToast } = useToastStore();
+    const { showToast } = useToastStore(useShallow(state => ({ showToast: state.showToast })));
 
     useEffect(() => {
         fetchCompanies();
