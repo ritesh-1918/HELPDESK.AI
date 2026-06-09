@@ -174,7 +174,7 @@ async def security_report(
 # ---------------------------------------------------------------------------
 
 @app.get("/auth/csrf-token", tags=["Auth"])
-async def get_csrf_token(response: Response):
+async def get_csrf_token(response: JSONResponse):
     """Issue a CSRF token cookie for authenticated browser sessions."""
     token = set_csrf_cookie(response)
     return {"csrf_token": token}
