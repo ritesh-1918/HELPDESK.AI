@@ -13,6 +13,29 @@ const makeChannelName = (baseName, company) => {
     return `${baseName}_${safeCompany}`;
 };
 
+const REALTIME_EVENTS = new Set(['INSERT', 'UPDATE', 'DELETE']);
+
+const isRecord = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+
+const isValidTicketRealtimePayload = (payload) => {
+    if (!isRecord(payload) || !REALTIME_EVENTS.has(payload.eventType)) {
+        return false;
+    }
+
+    if (payload.eventType === 'DELETE') {
+        return isRecord(payload.old);
+    }
+
+    return isRecord(payload.new);
+};
+
+const warnMalformedRealtimePayload = (payload, error) => {
+    console.warn('useTicketsRealtime: ignored malformed realtime payload', {
+        payload,
+        error: error instanceof Error ? error.message : error,
+    });
+};
+
 const useTicketsRealtime = ({
     company,
     enabled = true,
@@ -42,20 +65,16 @@ const useTicketsRealtime = ({
                     ...(realtimeFilter ? { filter: realtimeFilter } : {}),
                 },
                 (payload) => {
+                    if (!isValidTicketRealtimePayload(payload)) {
+                        warnMalformedRealtimePayload(payload);
+                        return;
+                    }
+
                     try {
-                        if (!payload || typeof payload !== 'object') {
-                            throw new Error('Invalid socket payload format: expected object');
-                        }
-
                         const ticket = payload.new || payload.old;
-                        if (!ticket || typeof ticket !== 'object') {
-                            console.warn('Realtime payload missing ticket data, ignoring.', payload);
-                            return;
-                        }
-
                         const ticketId = getTicketRecordId(ticket);
                         if (!ticketId) {
-                            console.warn('Realtime payload missing ticket ID, ignoring.', payload);
+                            warnMalformedRealtimePayload(payload, 'Missing ticket ID');
                             return;
                         }
 
@@ -91,8 +110,8 @@ const useTicketsRealtime = ({
                                 setLastChangedTicketId(null);
                             }, 3500);
                         }
-                    } catch (err) {
-                        console.error('Caught error processing realtime notification payload:', err);
+                    } catch (error) {
+                        warnMalformedRealtimePayload(payload, error);
                     }
                 },
             )
