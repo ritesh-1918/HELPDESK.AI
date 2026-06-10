@@ -5,6 +5,7 @@ Uses sentence-transformers all-MiniLM-L6-v2 to detect similar tickets.
 
 import uuid
 import os
+import threading
 from sentence_transformers import SentenceTransformer, util
 
 SIMILARITY_THRESHOLD = 0.70
@@ -15,6 +16,7 @@ class DuplicateService:
         self.model = None
         self._loaded = False
         self._load_failed = False
+        self._lock = threading.Lock()
         # In-memory store: list of (ticket_id, embedding, text)
         self._tickets: list[tuple[str, object, str]] = []
         self.storage_file = os.path.join(os.path.dirname(__file__), "..", "data", "case_history_cache.json")
@@ -28,6 +30,13 @@ class DuplicateService:
         """Load the sentence-transformer model and saved tickets."""
         if self._loaded or self._load_failed:
             return
+            
+        with self._lock:
+            # Double-checked lock confirmation
+            if self._loaded or self._load_failed:
+                return
+            
+            print("[DuplicateService] Loading model...")
         
         print("[DuplicateService] Loading model...")
         try:
@@ -94,8 +103,10 @@ class DuplicateService:
             print(f"[DuplicateService] DEGRADED: Skipping embedding for ticket {ticket_id} (model not available)")
             return
         embedding = self.model.encode(text, convert_to_tensor=True)
-        self._tickets.append((ticket_id, embedding, text))
-        self.save_to_disk(ticket_id, text)
+        
+        with self._lock:
+            self._tickets.append((ticket_id, embedding, text))
+            self.save_to_disk(ticket_id, text)
 
     def check_duplicate(self, text: str, threshold: float = None) -> dict:
         """
