@@ -17,8 +17,11 @@ class DuplicateService:
         self._loaded = False
         self._load_failed = False
         self._lock = threading.Lock()
-        # In-memory store: list of (ticket_id, embedding, text)
-        self._tickets: list[tuple[str, object, str]] = []
+        
+        # Parallel vector tracking structures for optimized tensor math
+        self._ticket_ids: list[str] = []
+        self._embeddings_tensor: torch.Tensor | None = None
+        
         self.storage_file = os.path.join(os.path.dirname(__file__), "..", "data", "case_history_cache.json")
         os.makedirs(os.path.dirname(self.storage_file), exist_ok=True)
 
@@ -56,11 +59,21 @@ class DuplicateService:
                 try:
                     with open(self.storage_file, "r") as f:
                         data = json.load(f)
+                        
+                        temp_embeddings = []
                         for item in data:
                             text = item["text"]
                             embedding = self.model.encode(text, convert_to_tensor=True)
-                            self._tickets.append((item["ticket_id"], embedding, text))
-                    print(f"[DuplicateService] Loaded {len(self._tickets)} tickets.")
+                            
+                            self._ticket_ids.append(item["ticket_id"])
+                            temp_embeddings.append(embedding)
+                        
+                        if temp_embeddings:
+                            # Stacks standalone 1D vectors into a contiguous [N, D] tensor matrix
+                            import torch
+                            self._embeddings_tensor = torch.stack(temp_embeddings).squeeze(1)
+                            
+                    print(f"[DuplicateService] Loaded {len(self._ticket_ids)} tickets.")
                 except Exception as e:
                     print(f"[DuplicateService] Error loading storage: {e}")
         except Exception as e:
@@ -97,15 +110,24 @@ class DuplicateService:
             print(f"[DuplicateService] Failed to save to disk: {e}")
 
     def add_ticket(self, ticket_id: str, text: str):
-        """Add a ticket to the in-memory store and persist to disk."""
+        """Add a ticket to the parallel tracking structures and persist to disk."""
         self.load()
         if not self.is_available():
             print(f"[DuplicateService] DEGRADED: Skipping embedding for ticket {ticket_id} (model not available)")
             return
-        embedding = self.model.encode(text, convert_to_tensor=True)
+        
+        # Format explicitly as a 2D matrix row [1, D]
+        import torch
+        embedding = self.model.encode(text, convert_to_tensor=True).view(1, -1)
         
         with self._lock:
-            self._tickets.append((ticket_id, embedding, text))
+            self._ticket_ids.append(ticket_id)
+            if self._embeddings_tensor is None:
+                self._embeddings_tensor = embedding
+            else:
+                # Vertically appends the new embedding vector onto the matrix stack
+                self._embeddings_tensor = torch.cat([self._embeddings_tensor, embedding], dim=0)
+                
             self.save_to_disk(ticket_id, text)
 
     def check_duplicate(self, text: str, threshold: float = None) -> dict:
@@ -134,26 +156,27 @@ class DuplicateService:
                 "similarity": 0.0,
             }
         
-        # Use provided threshold or default to global constant
+       # Use provided threshold or default to global constant
         active_threshold = threshold if threshold is not None else SIMILARITY_THRESHOLD
 
-        if not self._tickets:
+        if not self._ticket_ids or self._embeddings_tensor is None:
             return {
                 "is_duplicate": False,
                 "duplicate_ticket_id": None,
                 "similarity": 0.0,
             }
 
-        query_embedding = self.model.encode(text, convert_to_tensor=True)
+        import torch
+        # Query vector matrix row shape configuration: [1, D]
+        query_embedding = self.model.encode(text, convert_to_tensor=True).view(1, -1)
 
-        best_score = 0.0
-        best_id = None
-
-        for ticket_id, stored_emb, _ in self._tickets:
-            score = util.cos_sim(query_embedding, stored_emb).item()
-            if score > best_score:
-                best_score = score
-                best_id = ticket_id
+        # Computes similarity against all matrix keys simultaneously in parallel. Shape: [1, N]
+        similarity_matrix = util.cos_sim(query_embedding, self._embeddings_tensor)
+        
+        # Extract the highest matrix matching vector score index instantly via torch argmax
+        best_index = torch.argmax(similarity_matrix).item()
+        best_score = similarity_matrix[0, best_index].item()
+        best_id = self._ticket_ids[best_index]
 
         is_dup = best_score >= active_threshold
 
