@@ -13,6 +13,10 @@ def reset_env(monkeypatch):
     monkeypatch.delenv("REDIS_URL", raising=False)
     monkeypatch.delenv("ALLOW_DEGRADED_STARTUP", raising=False)
     monkeypatch.delenv("REDIS_CACHE_TTL_SECONDS", raising=False)
+    monkeypatch.delenv("REDIS_SOCKET_CONNECT_TIMEOUT_SECONDS", raising=False)
+    monkeypatch.delenv("REDIS_SOCKET_TIMEOUT_SECONDS", raising=False)
+    monkeypatch.delenv("REDIS_HEALTH_CHECK_INTERVAL_SECONDS", raising=False)
+    monkeypatch.delenv("REDIS_RECONNECT_INTERVAL_SECONDS", raising=False)
 
 
 def test_text_key_is_stable():
@@ -77,3 +81,51 @@ def test_degraded_startup_bypasses_redis(monkeypatch):
 
     assert cache.available is False
     assert cache.get_embedding("x") is None
+
+
+def test_connect_uses_explicit_timeout_and_retry_policy(monkeypatch):
+    monkeypatch.setenv("USE_REDIS_CACHE", "true")
+    monkeypatch.setenv("REDIS_SOCKET_CONNECT_TIMEOUT_SECONDS", "1.5")
+    monkeypatch.setenv("REDIS_SOCKET_TIMEOUT_SECONDS", "3")
+    monkeypatch.setenv("REDIS_HEALTH_CHECK_INTERVAL_SECONDS", "15")
+
+    client = MagicMock()
+    client.ping.return_value = True
+
+    cache = RedisInferenceCache()
+    with patch("redis.from_url", return_value=client) as from_url:
+        cache.connect()
+
+    from_url.assert_called_once_with(
+        "redis://127.0.0.1:6379/0",
+        decode_responses=True,
+        socket_connect_timeout=1.5,
+        socket_timeout=3.0,
+        retry_on_timeout=True,
+        health_check_interval=15,
+    )
+    assert cache.available is True
+
+
+def test_command_failure_marks_unavailable_and_reconnects(monkeypatch):
+    monkeypatch.setenv("USE_REDIS_CACHE", "true")
+    monkeypatch.setenv("ALLOW_DEGRADED_STARTUP", "1")
+    monkeypatch.setenv("REDIS_RECONNECT_INTERVAL_SECONDS", "0")
+
+    first_client = MagicMock()
+    first_client.ping.return_value = True
+    first_client.get.side_effect = ConnectionError("redis went away")
+
+    second_client = MagicMock()
+    second_client.ping.return_value = True
+    second_client.get.return_value = '{"category":"Billing"}'
+
+    cache = RedisInferenceCache()
+    with patch("redis.from_url", side_effect=[first_client, second_client]):
+        cache.connect()
+
+        assert cache.get_classification("payment failed") is None
+        assert cache.available is False
+
+        assert cache.get_classification("payment failed") == {"category": "Billing"}
+        assert cache.available is True

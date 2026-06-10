@@ -6,6 +6,7 @@ import hashlib
 import json
 import logging
 import os
+import time
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -39,38 +40,72 @@ class RedisInferenceCache:
         self.enabled = _truthy(os.getenv("USE_REDIS_CACHE"))
         self.allow_degraded = _truthy(os.getenv("ALLOW_DEGRADED_STARTUP"))
         self.ttl_seconds = int(os.getenv("REDIS_CACHE_TTL_SECONDS", "3600"))
+        self.socket_connect_timeout = float(os.getenv("REDIS_SOCKET_CONNECT_TIMEOUT_SECONDS", "2"))
+        self.socket_timeout = float(os.getenv("REDIS_SOCKET_TIMEOUT_SECONDS", "2"))
+        self.health_check_interval = int(os.getenv("REDIS_HEALTH_CHECK_INTERVAL_SECONDS", "30"))
+        self.reconnect_interval = float(os.getenv("REDIS_RECONNECT_INTERVAL_SECONDS", "5"))
+        self._last_connect_attempt = 0.0
 
     @property
     def available(self) -> bool:
         return self.enabled and self._client is not None
 
-    def connect(self) -> None:
+    def connect(self, *, raise_on_failure: bool | None = None) -> None:
         if not self.enabled:
             logger.info("[RedisCache] Disabled (USE_REDIS_CACHE=false)")
             return
+
+        if raise_on_failure is None:
+            raise_on_failure = not self.allow_degraded
+
+        self._last_connect_attempt = time.monotonic()
 
         try:
             import redis
 
             url = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
-            client = redis.from_url(url, decode_responses=True, socket_connect_timeout=2)
+            client = redis.from_url(
+                url,
+                decode_responses=True,
+                socket_connect_timeout=self.socket_connect_timeout,
+                socket_timeout=self.socket_timeout,
+                retry_on_timeout=True,
+                health_check_interval=self.health_check_interval,
+            )
             client.ping()
             self._client = client
             logger.info("[RedisCache] Connected")
         except Exception as error:
             self._client = None
             message = f"[RedisCache] Unavailable: {error}"
-            if self.allow_degraded:
+            if not raise_on_failure:
                 logger.warning("%s — bypassing cache", message)
             else:
                 raise RuntimeError(message) from error
+
+    def _ensure_client(self) -> bool:
+        if not self.enabled:
+            return False
+
+        if self._client is not None:
+            return True
+
+        if time.monotonic() - self._last_connect_attempt < self.reconnect_interval:
+            return False
+
+        self.connect(raise_on_failure=False)
+        return self._client is not None
+
+    def _mark_unavailable(self, operation: str, error: Exception) -> None:
+        self._client = None
+        logger.warning("[RedisCache] %s failed: %s — will retry on a later cache operation", operation, error)
 
     def get_classification(self, text: str) -> dict | None:
         """
         Retrieve a cached classification result for the given text.
         Handles empty text gracefully by returning None.
         """
-        if not self.available:
+        if not self._ensure_client():
             return None
             
         try:
@@ -83,7 +118,7 @@ class RedisInferenceCache:
             raw = self._client.get(cache_key)
             return json.loads(raw) if raw else None
         except Exception as error:
-            logger.warning("[RedisCache] classification get failed: %s", error)
+            self._mark_unavailable("classification get", error)
             return None
 
     def set_classification(self, text: str, payload: dict) -> None:
@@ -91,7 +126,7 @@ class RedisInferenceCache:
         Cache a classification result for the given text.
         Handles empty text gracefully by returning early.
         """
-        if not self.available:
+        if not self._ensure_client():
             return
             
         try:
@@ -107,14 +142,14 @@ class RedisInferenceCache:
                 json.dumps(payload),
             )
         except Exception as error:
-            logger.warning("[RedisCache] classification set failed: %s", error)
+            self._mark_unavailable("classification set", error)
 
     def get_embedding(self, text: str) -> list[float] | None:
         """
         Retrieve a cached embedding for the given text.
         Handles empty text gracefully by returning None.
         """
-        if not self.available:
+        if not self._ensure_client():
             return None
             
         try:
@@ -130,7 +165,7 @@ class RedisInferenceCache:
             values = json.loads(raw)
             return [float(v) for v in values]
         except Exception as error:
-            logger.warning("[RedisCache] embedding get failed: %s", error)
+            self._mark_unavailable("embedding get", error)
             return None
 
     def set_embedding(self, text: str, embedding: list[float]) -> None:
@@ -138,7 +173,7 @@ class RedisInferenceCache:
         Cache an embedding for the given text.
         Handles empty text gracefully by returning early.
         """
-        if not self.available:
+        if not self._ensure_client():
             return
             
         try:
@@ -154,7 +189,7 @@ class RedisInferenceCache:
                 json.dumps(embedding),
             )
         except Exception as error:
-            logger.warning("[RedisCache] embedding set failed: %s", error)
+            self._mark_unavailable("embedding set", error)
 
 
 redis_cache = RedisInferenceCache()
