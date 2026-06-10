@@ -22,7 +22,8 @@ class DuplicateService:
         self._ticket_ids: list[str] = []
         self._embeddings_tensor: torch.Tensor | None = None
         
-        self.storage_file = os.path.join(os.path.dirname(__file__), "..", "data", "case_history_cache.json")
+        # Optimize persistence payload by changing file targets to .jsonl
+        self.storage_file = os.path.join(os.path.dirname(__file__), "..", "data", "case_history_cache.jsonl")
         os.makedirs(os.path.dirname(self.storage_file), exist_ok=True)
 
     def is_available(self) -> bool:
@@ -54,28 +55,29 @@ class DuplicateService:
             self._loaded = True
             
             if os.path.exists(self.storage_file):
-                print(f"[DuplicateService] Syncing previous ticket history from {self.storage_file}...")
-                import json
-                try:
-                    with open(self.storage_file, "r") as f:
-                        data = json.load(f)
-                        
-                        temp_embeddings = []
-                        for item in data:
-                            text = item["text"]
-                            embedding = self.model.encode(text, convert_to_tensor=True)
+                    print(f"[DuplicateService] Syncing previous ticket history from {self.storage_file}...")
+                    try:
+                        with open(self.storage_file, "r") as f:
+                            temp_embeddings = []
+                            # Stream the dataset line-by-line rather than reading into memory all at once
+                            for line in f:
+                                line = line.strip()
+                                if not line:
+                                    continue
+                                    
+                                item = json.loads(line)
+                                text = item["text"]
+                                embedding = self.model.encode(text, convert_to_tensor=True)
+                                
+                                self._ticket_ids.append(item["ticket_id"])
+                                temp_embeddings.append(embedding)
                             
-                            self._ticket_ids.append(item["ticket_id"])
-                            temp_embeddings.append(embedding)
-                        
-                        if temp_embeddings:
-                            # Stacks standalone 1D vectors into a contiguous [N, D] tensor matrix
-                            import torch
-                            self._embeddings_tensor = torch.stack(temp_embeddings).squeeze(1)
-                            
-                    print(f"[DuplicateService] Loaded {len(self._ticket_ids)} tickets.")
-                except Exception as e:
-                    print(f"[DuplicateService] Error loading storage: {e}")
+                            if temp_embeddings:
+                                self._embeddings_tensor = torch.stack(temp_embeddings).squeeze(1)
+                                
+                        print(f"[DuplicateService] Loaded {len(self._ticket_ids)} tickets.")
+                    except Exception as e:
+                        print(f"[DuplicateService] Error loading storage: {e}")
         except Exception as e:
             allow_degraded = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") == "1"
             self._load_failed = True
@@ -88,24 +90,16 @@ class DuplicateService:
                 raise
 
     def save_to_disk(self, ticket_id: str, text: str):
-        """Append a new ticket to the JSON storage."""
-        import json
-        data = []
+        """Append a new ticket to the JSONL storage file in O(1) constant time."""
         try:
             os.makedirs(os.path.dirname(self.storage_file), exist_ok=True)
-            if os.path.exists(self.storage_file):
-                with open(self.storage_file, "r") as f:
-                    try:
-                        data = json.load(f)
-                        if not isinstance(data, list):
-                            data = []
-                    except:
-                        data = []
             
-            data.append({"ticket_id": ticket_id, "text": text})
-            with open(self.storage_file, "w") as f:
-                json.dump(data, f, indent=2)
-            print(f"[DuplicateService] Indexed ticket {ticket_id} to case history.")
+            # Open the resource directly in append mode ("a") to completely bypass full reads
+            with open(self.storage_file, "a") as f:
+                entry = {"ticket_id": ticket_id, "text": text}
+                f.write(json.dumps(entry) + "\n")
+                
+            print(f"[DuplicateService] Indexed ticket {ticket_id} to case history (JSONL append).")
         except Exception as e:
             print(f"[DuplicateService] Failed to save to disk: {e}")
 
