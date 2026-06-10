@@ -56,6 +56,7 @@ class NotificationRoutingMiddleware:
             os.getenv("SUPABASE_SERVICE_ROLE_KEY")
         )
         self._settings_cache: Dict[str, Dict] = {}
+        self._cache_lock = threading.Lock()
         self.log_level = os.getenv("NOTIFICATION_ROUTING_LOG_LEVEL", "info").lower()
 
     def _fetch_system_settings(self, company_id: str) -> Dict:
@@ -92,16 +93,15 @@ class NotificationRoutingMiddleware:
     def get_system_settings(self, company_id: str) -> Dict:
         """
         Get company settings with caching.
-        
-        Args:
-            company_id: UUID of company
-            
-        Returns:
-            Dict with company notification preferences
+        ...
         """
-        if company_id not in self._settings_cache:
-            self._settings_cache[company_id] = self._fetch_system_settings(company_id)
-        return self._settings_cache[company_id]
+        with self._cache_lock:
+            if company_id not in self._settings_cache:
+                # We pull the heavy database fetch outside the lock context if needed,
+                # but since we are inserting into the dict safely, we evaluate here.
+                settings = self._fetch_system_settings(company_id)
+                self._settings_cache[company_id] = settings
+            return self._settings_cache[company_id]
 
     def should_send_email_notification(self, company_id: str, notification_type: NotificationType) -> bool:
         """
@@ -215,26 +215,30 @@ class NotificationRoutingMiddleware:
     def invalidate_cache(self, company_id: str) -> None:
         """
         Invalidate cached settings for a company.
-        Call this after updating system_settings in DB.
-        
-        Args:
-            company_id: UUID of company
+        ...
         """
-        if company_id in self._settings_cache:
-            del self._settings_cache[company_id]
-            logger.info(f"Invalidated settings cache for company {company_id}")
+        with self._cache_lock:
+            if company_id in self._settings_cache:
+                del self._settings_cache[company_id]
+                logger.info(f"Invalidated settings cache for company {company_id}")
 
 
-# Singleton instance
+
+import threading
+
+# Singleton instance and initialization lock
 _instance: Optional[NotificationRoutingMiddleware] = None
-
+_instance_lock = threading.Lock()
 
 def load():
     """Load and return singleton instance of NotificationRoutingMiddleware."""
     global _instance
     if _instance is None:
-        _instance = NotificationRoutingMiddleware()
-        logger.info("NotificationRoutingMiddleware loaded")
+        with _instance_lock:
+            # Double-checked locking pattern
+            if _instance is None:
+                _instance = NotificationRoutingMiddleware()
+                logger.info("NotificationRoutingMiddleware loaded")
     return _instance
 
 
