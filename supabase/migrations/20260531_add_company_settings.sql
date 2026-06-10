@@ -12,7 +12,9 @@ CREATE TABLE IF NOT EXISTS system_settings (
     auto_close_days         INTEGER DEFAULT 7,
     email_notifications     BOOLEAN DEFAULT TRUE,
     admin_alerts            BOOLEAN DEFAULT TRUE,
-    digest_frequency        TEXT    DEFAULT 'daily'
+    digest_frequency        TEXT    DEFAULT 'daily',
+    created_at            TIMESTAMPTZ DEFAULT now(),
+    updated_at            TIMESTAMPTZ DEFAULT now()
 );
 
 -- Enable Row Level Security
@@ -29,6 +31,15 @@ CREATE POLICY "Users can view own company settings" ON system_settings
             SELECT company_id FROM user_companies WHERE user_id = auth.uid()
         )
     );
+
+-- Function to auto-update updated_at on modification
+CREATE OR REPLACE FUNCTION update_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
 -- Trigger to auto-update updated_at on modification
 CREATE TRIGGER update_system_settings_timestamp
