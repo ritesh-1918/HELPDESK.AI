@@ -45,20 +45,11 @@ class DuplicateService:
                 print(f"[DuplicateService] Syncing previous ticket history from {self.storage_file}...")
                 import json
                 try:
-                    import torch
                     with open(self.storage_file, "r") as f:
                         data = json.load(f)
                         for item in data:
                             text = item["text"]
-                            # Fixed: Check if an embedding is cached, fallback safely if not found
-                            if "embedding" in item and item["embedding"] is not None:
-                                embedding = torch.tensor(item["embedding"], dtype=torch.float32)
-                                # Move to model device if available
-                                if hasattr(self.model, 'device'):
-                                    embedding = embedding.to(self.model.device)
-                            else:
-                                embedding = self.model.encode(text, convert_to_tensor=True)
-                            
+                            embedding = self.model.encode(text, convert_to_tensor=True)
                             self._tickets.append((item["ticket_id"], embedding, text))
                     print(f"[DuplicateService] Loaded {len(self._tickets)} tickets.")
                 except Exception as e:
@@ -74,8 +65,8 @@ class DuplicateService:
             else:
                 raise
 
-    def save_to_disk(self, ticket_id: str, text: str, embedding_tensor=None):
-        """Append a new ticket along with its serialized embedding array to the JSON storage."""
+    def save_to_disk(self, ticket_id: str, text: str):
+        """Append a new ticket to the JSON storage."""
         import json
         data = []
         try:
@@ -89,22 +80,7 @@ class DuplicateService:
                     except:
                         data = []
             
-            # Convert PyTorch tensor to standard Python list for valid JSON serialization
-            embedding_list = None
-            if embedding_tensor is not None:
-                if hasattr(embedding_tensor, "tolist"):
-                    embedding_list = embedding_tensor.tolist()
-                elif hasattr(embedding_tensor, "numpy"):
-                    embedding_list = embedding_tensor.numpy().tolist()
-                else:
-                    embedding_list = list(embedding_tensor)
-
-            data.append({
-                "ticket_id": ticket_id, 
-                "text": text, 
-                "embedding": embedding_list
-            })
-            
+            data.append({"ticket_id": ticket_id, "text": text})
             with open(self.storage_file, "w") as f:
                 json.dump(data, f, indent=2)
             print(f"[DuplicateService] Indexed ticket {ticket_id} to case history.")
@@ -112,15 +88,14 @@ class DuplicateService:
             print(f"[DuplicateService] Failed to save to disk: {e}")
 
     def add_ticket(self, ticket_id: str, text: str):
-        """Add a ticket to the in-memory store and persist to disk with its embedding."""
+        """Add a ticket to the in-memory store and persist to disk."""
         self.load()
         if not self.is_available():
             print(f"[DuplicateService] DEGRADED: Skipping embedding for ticket {ticket_id} (model not available)")
             return
         embedding = self.model.encode(text, convert_to_tensor=True)
         self._tickets.append((ticket_id, embedding, text))
-        # Fixed: Pass the generated embedding tensor to be stored
-        self.save_to_disk(ticket_id, text, embedding_tensor=embedding)
+        self.save_to_disk(ticket_id, text)
 
     def check_duplicate(self, text: str, threshold: float = None) -> dict:
         """
