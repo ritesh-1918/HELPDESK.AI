@@ -56,6 +56,8 @@ class NotificationRoutingMiddleware:
             os.getenv("SUPABASE_SERVICE_ROLE_KEY")
         )
         self._settings_cache: Dict[str, Dict] = {}
+        self._cache_lock = threading.Lock()
+        self._max_cache_size = int(os.getenv("NOTIFICATION_CACHE_MAX_SIZE", "10000"))
         self.log_level = os.getenv("NOTIFICATION_ROUTING_LOG_LEVEL", "info").lower()
 
     def _fetch_system_settings(self, company_id: str) -> Dict:
@@ -98,16 +100,18 @@ class NotificationRoutingMiddleware:
     def get_system_settings(self, company_id: str) -> Dict:
         """
         Get company settings with caching.
-        
-        Args:
-            company_id: UUID of company
-            
-        Returns:
-            Dict with company notification preferences
         """
-        if company_id not in self._settings_cache:
-            self._settings_cache[company_id] = self._fetch_system_settings(company_id)
-        return self._settings_cache[company_id]
+        with self._cache_lock:
+            if company_id not in self._settings_cache:
+                # Evict the oldest item (FIFO style) if cache limit is reached
+                if len(self._settings_cache) >= self._max_cache_size:
+                    oldest_key = next(iter(self._settings_cache))
+                    del self._settings_cache[oldest_key]
+                    logger.info(f"Cache limit reached. Evicted oldest key: {oldest_key}")
+
+                settings = self._fetch_system_settings(company_id)
+                self._settings_cache[company_id] = settings
+            return self._settings_cache[company_id]
 
     def should_send_email_notification(self, company_id: str, notification_type: NotificationType) -> bool:
         """
