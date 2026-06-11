@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from "../../store/authStore";
+import { useShallow } from 'zustand/react';
 import useToastStore from "../../store/toastStore";
 import { supabase } from "../../lib/supabaseClient";
 import {
@@ -29,7 +30,7 @@ import { formatTimelineDate } from "../../utils/dateUtils";
 const AdminTickets = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { user } = useAuthStore();
+    const { user } = useAuthStore(useShallow(state => ({ user: state.user })));
     const { showToast } = useToastStore();
 
     // Data State

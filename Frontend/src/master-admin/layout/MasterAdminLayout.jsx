@@ -2,6 +2,7 @@ import React from "react";
 import { Link, useNavigate, useLocation, Outlet } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import useAuthStore from "../../store/authStore";
+import { useShallow } from 'zustand/react';
 import {
     ShieldCheck,
     LayoutDashboard,
@@ -21,7 +22,7 @@ import {
  * MasterAdminLayout — Professional sidebar-based layout for platform oversight.
  */
 function MasterAdminLayout() {
-    const { profile, logout } = useAuthStore();
+    const { profile, logout } = useAuthStore(useShallow(state => ({ profile: state.profile, logout: state.logout })));
     const navigate = useNavigate();
     const location = useLocation();
 

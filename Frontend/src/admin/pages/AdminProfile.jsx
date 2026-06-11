@@ -5,12 +5,13 @@ import {
     LogOut, Eye, Save, X, Edit2, Download
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
+import { useShallow } from 'zustand/react';
 import useToastStore from '../../store/toastStore';
 import { supabase } from "../../lib/supabaseClient";
 import BugReportWidget from "../../components/shared/BugReportWidget";
 
 const AdminProfile = () => {
-    const { user, profile: adminProfile } = useAuthStore();
+    const { user, profile: adminProfile } = useAuthStore(useShallow(state => ({ user: state.user, profile: state.profile })));
     const { showToast } = useToastStore();
     const [isEditingProfile, setIsEditingProfile] = useState(false);
     const [profileForm, setProfileForm] = useState({

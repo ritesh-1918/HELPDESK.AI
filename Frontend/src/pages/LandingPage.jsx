@@ -11,6 +11,7 @@ import {
     Shield, Lock, Network, HardDrive, Cpu, Copy,
     Users, BarChart3, Inbox, Building2, BrainCircuit
 } from 'lucide-react';
+import { useShallow } from "zustand/react";
 import useAuthStore from '../store/authStore';
 import TeamSection from '../components/landing/TeamSection';
 
@@ -138,7 +139,7 @@ function DemoModal({ onClose }) {
 
 export default function LandingPage() {
     const navigate = useNavigate();
-    const { user, profile, loading } = useAuthStore();
+    const { user, profile, loading } = useAuthStore(useShallow(state => ({ user: state.user, profile: state.profile, loading: state.loading })));
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [showDemo, setShowDemo] = useState(false);
     const [billingAnnual, setBillingAnnual] = useState(false);

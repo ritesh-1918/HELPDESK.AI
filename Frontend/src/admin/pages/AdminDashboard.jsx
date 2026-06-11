@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Activity } from 'lucide-react';
 
 import useAuthStore from "../../store/authStore";
+import { useShallow } from 'zustand/react';
 import { supabase } from "../../lib/supabaseClient";
 import StatCard from "../components/StatCard";
 import TicketTable from "../components/TicketTable";
@@ -69,7 +70,7 @@ const aiIconMap = [
 
 const AdminDashboard = () => {
     const navigate = useNavigate();
-    const { profile } = useAuthStore();
+    const { profile } = useAuthStore(useShallow(state => ({ profile: state.profile })));
     const [tickets, setTickets] = React.useState([]);
     const [isLoading, setIsLoading] = React.useState(true);
 

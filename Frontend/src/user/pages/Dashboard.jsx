@@ -5,9 +5,10 @@ import RecentTickets from "../components/RecentTickets";
 import OnboardingTour from "../components/OnboardingTour";
 
 import useAuthStore from "../../store/authStore";
+import { useShallow } from 'zustand/react';
 
 const Dashboard = () => {
-    const { profile } = useAuthStore();
+    const { profile } = useAuthStore(useShallow(state => ({ profile: state.profile })));
     const userName = profile?.full_name || "Guest";
 
     return (

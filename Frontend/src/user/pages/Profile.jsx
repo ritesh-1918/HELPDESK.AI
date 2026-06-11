@@ -29,12 +29,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar"
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import useAuthStore from "../../store/authStore";
+import { useShallow } from 'zustand/react';
 import useToastStore from "../../store/toastStore";
 import { supabase } from "../../lib/supabaseClient";
 import BugReportWidget from "../../components/shared/BugReportWidget";
 const Profile = () => {
     const navigate = useNavigate();
-    const { profile, user, logout, loading: authLoading, updateProfile } = useAuthStore();
+    const { profile, user, logout, loading: authLoading, updateProfile } = useAuthStore(useShallow(state => ({ profile: state.profile, user: state.user, logout: state.logout, loading: state.loading, updateProfile: state.updateProfile })));
     const { showToast } = useToastStore();
 
     const [userTickets, setUserTickets] = useState([]);

@@ -12,12 +12,13 @@ import { supabase } from "../../lib/supabaseClient";
 import StatCard from '../components/StatCard';
 import { Card, CardContent } from "../../components/ui/card";
 import useAuthStore from "../../store/authStore";
+import { useShallow } from 'zustand/react';
 import { formatTimelineDate } from "../../utils/dateUtils";
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#a855f7', '#ec4899'];
 
 const AdminAnalytics = () => {
-    const { profile } = useAuthStore();
+    const { profile } = useAuthStore(useShallow(state => ({ profile: state.profile })));
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);
 

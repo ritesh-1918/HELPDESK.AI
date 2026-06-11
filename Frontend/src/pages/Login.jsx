@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
  
 import { motion } from "framer-motion";
+import { useShallow } from "zustand/react";
 import useAuthStore from "../store/authStore";
 import { Eye, EyeOff, BrainCircuit, ArrowRight, Loader2, ArrowLeft } from "lucide-react";
 
@@ -15,7 +16,7 @@ function Login() {
   const [magicLinkSent, setMagicLinkSent] = useState(false);
 
   const navigate = useNavigate();
-  const { login, signInWithMagicLink, loading, user, profile } = useAuthStore();
+  const { login, signInWithMagicLink, loading, user, profile } = useAuthStore(useShallow(state => ({ login: state.login, signInWithMagicLink: state.signInWithMagicLink, loading: state.loading, user: state.user, profile: state.profile })));
 
   // Auto-redirect if already logged in
   useEffect(() => {

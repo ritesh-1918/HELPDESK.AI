@@ -11,6 +11,41 @@ const useAuthStore = create(
             profile: null,
             loading: false,
 
+            // --- ADMIN IDENTITY (consolidated from adminStore) ---
+            adminProfile: {
+                name: "Ritesh Singh",
+                email: "admin@emerald-prime.io",
+                profile_picture: null,
+                role: "Root Administrator",
+                id: "ADM-9921-X",
+                lastLogin: "2026-03-01 22:15:04",
+                region: "Unified Global Ops"
+            },
+            updateAdminProfile: (updates) => set((state) => ({
+                adminProfile: { ...state.adminProfile, ...updates }
+            })),
+
+            // --- ADMIN SYSTEM STATE (consolidated from admin/store/adminStore) ---
+            users: [],
+            settings: {
+                aiConfidenceThreshold: 0.80,
+                duplicateSensitivity: 0.85,
+                enableAutoResolve: false,
+                autoCloseDays: 7,
+                emailNotifications: false,
+                adminAlerts: false
+            },
+            setUsers: (users) => set({ users }),
+            updateSettings: (newSettings) => set((state) => ({
+                settings: { ...state.settings, ...newSettings }
+            })),
+            addUser: (user) => set((state) => ({
+                users: [...state.users, { ...user, id: Date.now() }]
+            })),
+            deleteUser: (userId) => set((state) => ({
+                users: state.users.filter(u => u.id !== userId)
+            })),
+
             // --- SUPABASE AUTH METHODS ---
 
             // Helper to fetch profile linked to auth user
@@ -292,9 +327,9 @@ const useAuthStore = create(
         {
             name: 'auth-storage',
             partialize: (state) => ({
-                // We keep profile persisted for quick UI transitions, 
-                // but session is handled by Supabase cookie/localStorage
-                profile: state.profile
+                profile: state.profile,
+                adminProfile: state.adminProfile,
+                settings: state.settings,
             }),
         }
     )

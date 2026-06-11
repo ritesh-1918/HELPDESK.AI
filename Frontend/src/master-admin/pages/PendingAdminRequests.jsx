@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import useAuthStore from "../../store/authStore";
+import { useShallow } from 'zustand/react';
 import useToastStore from "../../store/toastStore";
 import { format } from "date-fns";
 import {
@@ -15,7 +16,7 @@ function PendingAdminRequests() {
     const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(null); // id of request being processed
-    const { user: masterAdmin } = useAuthStore();
+    const { user: masterAdmin } = useAuthStore(useShallow(state => ({ user: state.user })));
     const { showToast } = useToastStore();
 
     useEffect(() => {

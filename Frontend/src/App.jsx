@@ -77,6 +77,7 @@ import Security from "./pages/legal/Security";
 import AdminProtectedRoute from "./components/shared/AdminProtectedRoute";
 import MasterAdminProtectedRoute from "./components/shared/MasterAdminProtectedRoute";
 import ProtectedRoute from "./components/shared/ProtectedRoute";
+import { useShallow } from "zustand/react";
 import useAuthStore from "./store/authStore";
 import NotApproved from "./pages/NotApproved";
 
@@ -150,7 +151,7 @@ function ScrollToTop() {
 }
 
 function AppLayout() {
-  const { user, profile } = useAuthStore();
+  const { user, profile } = useAuthStore(useShallow(state => ({ user: state.user, profile: state.profile })));
 
   // Initialize Global Realtime Notifications Listener
   useRealtimeNotifications();
@@ -217,7 +218,7 @@ function AppLayout() {
 
 
 function App() {
-  const { initialize } = useAuthStore();
+  const { initialize } = useAuthStore(useShallow(state => ({ initialize: state.initialize })));
 
   useEffect(() => {
     initialize();

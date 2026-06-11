@@ -5,6 +5,7 @@ import { Bug, X, Info, Send, AlertTriangle, ScreenShare, ShieldAlert, Camera, Tr
 import html2canvas from 'html2canvas';
 import { supabase } from '../../lib/supabaseClient';
 import useAuthStore from '../../store/authStore';
+import { useShallow } from 'zustand/react';
 import useToastStore from '../../store/toastStore';
 import { API_CONFIG } from '../../config';
 
@@ -128,7 +129,7 @@ const CustomSelect = ({ label, value, options, onChange, name }) => {
 
 const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const { user } = useAuthStore();
+    const { user } = useAuthStore(useShallow(state => ({ user: state.user })));
     const { showToast: addToast } = useToastStore();
     const { diagnostics, refreshUrl } = useDiagnostics();
     const [isSubmitting, setIsSubmitting] = useState(false);

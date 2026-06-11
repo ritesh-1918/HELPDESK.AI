@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { supabase } from "../../lib/supabaseClient";
 import useAuthStore from "../../store/authStore";
+import { useShallow } from 'zustand/react';
 import useToastStore from "../../store/toastStore";
 import { Card } from "../../components/ui/card";
 import { Select } from "../../components/ui/select";
@@ -20,7 +21,7 @@ import TicketTimeline from "../../user/components/TicketTimeline";
 const AdminTicketDetail = () => {
     const { ticket_id } = useParams();
     const navigate = useNavigate();
-    const { user } = useAuthStore();
+    const { user } = useAuthStore(useShallow(state => ({ user: state.user })));
     const { showToast } = useToastStore();
 
     const [ticket, setTicket] = useState(null);

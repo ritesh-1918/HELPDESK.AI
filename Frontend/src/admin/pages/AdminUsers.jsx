@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { supabase } from "../../lib/supabaseClient";
 import useAuthStore from "../../store/authStore";
+import { useShallow } from 'zustand/react';
 import StatCard from '../components/StatCard';
 import { Card } from "../../components/ui/card";
 import { Select } from "../../components/ui/select";
@@ -14,7 +15,7 @@ import { Select } from "../../components/ui/select";
 const AdminUsers = () => {
 // eslint-disable-next-line no-unused-vars
     const navigate = useNavigate();
-    const { user: currentUser, profile: currentProfile } = useAuthStore();
+    const { user: currentUser, profile: currentProfile } = useAuthStore(useShallow(state => ({ user: state.user, profile: state.profile })));
     const { showToast } = useToastStore();
 
     // Data State

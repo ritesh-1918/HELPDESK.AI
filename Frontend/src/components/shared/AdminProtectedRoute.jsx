@@ -1,13 +1,14 @@
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
+import { useShallow } from 'zustand/react';
 
 /**
  * AdminProtectedRoute Component
  * Restricts access to routes to only users with the 'admin' role.
  */
 const AdminProtectedRoute = () => {
-    const { user, profile, loading } = useAuthStore();
+    const { user, profile, loading } = useAuthStore(useShallow(state => ({ user: state.user, profile: state.profile, loading: state.loading })));
 
     if (loading) {
         return (

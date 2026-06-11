@@ -1,10 +1,11 @@
 import { useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import useAuthStore from '../store/authStore';
+import { useShallow } from 'zustand/react';
 import useTicketStore from '../store/ticketStore';
 
 const useTicketsRealtime = () => {
-    const { user, profile } = useAuthStore();
+    const { user, profile } = useAuthStore(useShallow(state => ({ user: state.user, profile: state.profile })));
     const { addTicket, updateTicket, removeTicket } = useTicketStore();
 
     useEffect(() => {

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
+import { useShallow } from "zustand/react";
 import useAuthStore from "../store/authStore";
 import { Clock, LogOut, ShieldAlert, CheckCircle2 } from "lucide-react";
 
@@ -9,7 +10,7 @@ import { Clock, LogOut, ShieldAlert, CheckCircle2 } from "lucide-react";
  * Route: /admin-lobby
  */
 function AdminLobby() {
-    const { profile, logout } = useAuthStore();
+    const { profile, logout } = useAuthStore(useShallow(state => ({ profile: state.profile, logout: state.logout })));
     const navigate = useNavigate();
     const [status, setStatus] = useState(profile?.status || "pending_approval");
     const [isTransitioning, setIsTransitioning] = useState(false);

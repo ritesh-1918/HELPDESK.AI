@@ -1,11 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
+import { useShallow } from 'zustand/react';
 import { ShieldX, LogOut, MailQuestion } from 'lucide-react';
 
 const NotApproved = () => {
     const navigate = useNavigate();
-    const { logout, profile } = useAuthStore();
+    const { logout, profile } = useAuthStore(useShallow(state => ({ logout: state.logout, profile: state.profile })));
 
     const handleLogout = async () => {
         await logout();

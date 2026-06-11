@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, User, ShieldCheck, Bot, MessageSquare, Circle, Loader2 } from 'lucide-react';
 import { supabase } from "../../lib/supabaseClient";
 import useAuthStore from "../../store/authStore";
+import { useShallow } from 'zustand/react';
 
 const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
     const [messages, setMessages] = useState([]);
@@ -15,7 +16,7 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
     const [isInternal, setIsInternal] = useState(false);
     const [isStaff, setIsStaff] = useState(false);
 
-    const { user, profile } = useAuthStore();
+    const { user, profile } = useAuthStore(useShallow(state => ({ user: state.user, profile: state.profile })));
     const messagesEndRef = useRef(null);
     const scrollContainerRef = useRef(null);
     const inputRef = useRef(null);

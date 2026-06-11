@@ -8,6 +8,7 @@ import {
     Building2, User, Lock, Phone,
     Briefcase, Globe, Info
 } from "lucide-react";
+import { useShallow } from "zustand/react";
 import useAuthStore from "../store/authStore";
 import { Select } from "../components/ui/select";
 
@@ -43,7 +44,7 @@ function AdminSignup() {
     const [passwordStrength, setPasswordStrength] = useState(0);
 
     const navigate = useNavigate();
-    const { signup, loading, user, profile } = useAuthStore();
+    const { signup, loading, user, profile } = useAuthStore(useShallow(state => ({ signup: state.signup, loading: state.loading, user: state.user, profile: state.profile })));
 
     // Redirect if already logged in and verified
     useEffect(() => {

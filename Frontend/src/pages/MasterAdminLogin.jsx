@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, ShieldAlert, Loader2, Lock } from "lucide-react";
+import { useShallow } from "zustand/react";
 import useAuthStore from "../store/authStore";
 import { supabase } from "../lib/supabaseClient";
 
@@ -19,7 +20,7 @@ function MasterAdminLogin() {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const navigate = useNavigate();
-    const { login, logout, profile } = useAuthStore();
+    const { login, logout, profile } = useAuthStore(useShallow(state => ({ login: state.login, logout: state.logout, profile: state.profile })));
 
     // If already logged in as master_admin, skip straight to the dashboard
     useEffect(() => {

@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock, ChevronRight, Inbox, Loader2, AlertCircle } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
+import { useShallow } from 'zustand/react';
 import { supabase } from '../../lib/supabaseClient';
 import { formatTimelineDate } from '../../utils/dateUtils';
 
 const RecentTickets = () => {
     const navigate = useNavigate();
-    const { user } = useAuthStore();
+    const { user } = useAuthStore(useShallow(state => ({ user: state.user })));
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);

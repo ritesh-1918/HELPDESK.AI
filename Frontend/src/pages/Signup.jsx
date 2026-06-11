@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useShallow } from "zustand/react";
 import useAuthStore from "../store/authStore";
 import { supabase } from "../lib/supabaseClient";
 import { Eye, EyeOff, BrainCircuit, ArrowRight, Loader2, CheckCircle2, ChevronDown, Search, Building2, ArrowLeft } from "lucide-react";
@@ -26,7 +27,7 @@ function Signup() {
 
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
-  const { signup, user, profile } = useAuthStore();
+  const { signup, user, profile } = useAuthStore(useShallow(state => ({ signup: state.signup, user: state.user, profile: state.profile })));
 
   // Fetch and subscribe to companies
   useEffect(() => {

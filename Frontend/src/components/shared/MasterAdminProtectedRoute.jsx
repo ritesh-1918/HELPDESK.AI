@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
+import { useShallow } from 'zustand/react';
 
 /**
  * MasterAdminProtectedRoute
@@ -9,7 +10,7 @@ import useAuthStore from '../../store/authStore';
  * regular admins) are redirected back to the hidden login page.
  */
 const MasterAdminProtectedRoute = () => {
-    const { user, profile, loading } = useAuthStore();
+    const { user, profile, loading } = useAuthStore(useShallow(state => ({ user: state.user, profile: state.profile, loading: state.loading })));
 
     if (loading) {
         return (
