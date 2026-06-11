@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Clock, ChevronRight, Inbox, Loader2, AlertCircle } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import { supabase } from '../../lib/supabaseClient';
+import { EmptyState } from '../../components/ui/empty-state';
 import { formatTimelineDate } from '../../utils/dateUtils';
 
 const RecentTickets = () => {
@@ -116,11 +117,12 @@ const RecentTickets = () => {
                         <p style={{ fontSize: '10px', marginTop: '4px', color: '#f87171' }}>{error}</p>
                     </div>
                 ) : tickets.length === 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 0', textAlign: 'center', color: '#6b7280', background: 'rgba(249,250,251,0.5)', borderRadius: '16px', border: '1px dashed #e5e7eb' }}>
-                        <Inbox size={32} style={{ marginBottom: '12px', opacity: 0.2 }} />
-                        <p style={{ fontSize: '14px', fontWeight: 500 }}>No tickets yet.</p>
-                        <p style={{ fontSize: '12px', marginTop: '4px' }}>Report an issue and our AI will start helping immediately.</p>
-                    </div>
+                    <EmptyState
+                        icon={<Inbox size={32} className="text-gray-400" />}
+                        title="No tickets yet"
+                        description="Report an issue and our AI will start helping immediately."
+                        className="py-12 border-dashed border-gray-200 bg-gray-50/50 rounded-2xl"
+                    />
                 ) : (
                     <div style={{ overflowX: 'auto' }}>
                         <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>

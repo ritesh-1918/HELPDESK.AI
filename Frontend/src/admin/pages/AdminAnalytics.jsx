@@ -11,6 +11,7 @@ import {
 import { supabase } from "../../lib/supabaseClient";
 import StatCard from '../components/StatCard';
 import { Card, CardContent } from "../../components/ui/card";
+import { EmptyState } from "../../components/ui/empty-state";
 import useAuthStore from "../../store/authStore";
 import { formatTimelineDate } from "../../utils/dateUtils";
 
@@ -254,7 +255,12 @@ const AdminAnalytics = () => {
                                     </AreaChart>
                                 </ResponsiveContainer>
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center text-slate-300 font-black uppercase text-[10px] italic tracking-widest">No activity data</div>
+                                <EmptyState
+                                    icon={<Activity size={24} className="text-slate-300" />}
+                                    title="No activity data"
+                                    description="Data will appear here once tickets are created and processed."
+                                    className="h-full justify-center"
+                                />
                             )}
                         </div>
                     </div>

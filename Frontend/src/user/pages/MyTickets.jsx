@@ -9,6 +9,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { Card } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { Select } from "../../components/ui/select";
+import { EmptyState } from "../../components/ui/empty-state";
 import { formatTicketId } from "../../utils/format";
 import TicketStatusBadge from "../components/TicketStatusBadge";
 import { formatTimelineDate, getTimeZoneAbbr } from "../../utils/dateUtils";
@@ -224,39 +225,39 @@ function MyTickets() {
                     </button>
                 </Card>
             ) : tickets.length === 0 ? (
-                // True Empty State
-                <Card className="flex flex-col items-center justify-center py-20 text-center border-dashed border-2 border-gray-200 bg-transparent shadow-none rounded-2xl">
-                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                        <Inbox className="text-gray-400 w-8 h-8" />
-                    </div>
-                    <h3 className="text-xl font-bold text-gray-800 mb-1">No tickets yet</h3>
-                    <p className="text-gray-500 max-w-sm mb-8">
-                        You haven't submitted any support requests. Create a ticket to get help from our AI and support team.
-                    </p>
-                    <button
-                        onClick={() => navigate('/create-ticket')}
-                        className="px-6 py-2.5 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
-                    >
-                        Create your first ticket
-                    </button>
-                </Card>
+                <EmptyState
+                    icon={<Inbox className="text-gray-400 w-8 h-8" />}
+                    title="No tickets yet"
+                    description="You haven't submitted any support requests. Create a ticket to get help from our AI and support team."
+                    action={
+                        <button
+                            onClick={() => navigate('/create-ticket')}
+                            className="px-6 py-2.5 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
+                        >
+                            Create your first ticket
+                        </button>
+                    }
+                    className="py-20 border-2 border-gray-200 bg-transparent shadow-none rounded-2xl"
+                />
             ) : filteredTickets.length === 0 ? (
-                // Filter Empty State
-                <Card className="flex flex-col items-center justify-center py-16 text-center border border-gray-100 shadow-sm rounded-2xl bg-white">
-                    <Filter className="text-gray-300 w-12 h-12 mb-4" />
-                    <h3 className="text-lg font-bold text-gray-900 mb-1">No matching tickets found</h3>
-                    <p className="text-gray-500 text-sm mb-4">Try adjusting your search or filters.</p>
-                    <button
-                        onClick={() => {
-                            setSearchQuery('');
-                            setStatusFilter('All');
-                            setPriorityFilter('All');
-                        }}
-                        className="text-emerald-600 font-semibold hover:text-emerald-700 text-sm"
-                    >
-                        Clear all filters
-                    </button>
-                </Card>
+                <EmptyState
+                    icon={<Filter className="text-gray-300 w-12 h-12" />}
+                    title="No matching tickets found"
+                    description="Try adjusting your search or filters."
+                    action={
+                        <button
+                            onClick={() => {
+                                setSearchQuery('');
+                                setStatusFilter('All');
+                                setPriorityFilter('All');
+                            }}
+                            className="text-emerald-600 font-semibold hover:text-emerald-700 text-sm"
+                        >
+                            Clear all filters
+                        </button>
+                    }
+                    className="py-16 border border-gray-100 shadow-sm rounded-2xl bg-white"
+                />
             ) : (
                 // Table View
                 <Card className="border border-gray-100 rounded-2xl bg-white shadow-sm overflow-hidden">

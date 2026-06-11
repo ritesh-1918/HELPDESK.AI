@@ -21,6 +21,7 @@ import {
     Save,
     RotateCcw,
 } from 'lucide-react';
+import { EmptyState } from "../../components/ui/empty-state";
 import { Select } from "../../components/ui/select";
 import { formatTicketId } from "../../utils/format";
 import SLABadge from "../components/SLABadge";
@@ -460,13 +461,12 @@ const AdminTickets = () => {
                 </div>
 
                 {!loading && filteredTickets.length === 0 && (
-                    <div className="py-32 text-center bg-slate-50/30 w-full flex flex-col items-center">
-                        <div className="w-20 h-20 bg-white border border-slate-100 rounded-[2rem] flex items-center justify-center text-slate-200 mb-6 shadow-sm">
-                            <Inbox size={40} />
-                        </div>
-                        <h3 className="text-xl font-black text-slate-900 uppercase italic tracking-tight">No Incidents Found</h3>
-                        <p className="text-sm text-slate-500 font-medium max-w-xs mx-auto mt-2 italic">Refine your search parameters to view more data points.</p>
-                    </div>
+                    <EmptyState
+                        icon={<Inbox size={40} className="text-slate-300" />}
+                        title="No Incidents Found"
+                        description="Refine your search parameters to view more data points."
+                        className="py-24"
+                    />
                 )}
             </div>
         </div>
