@@ -18,7 +18,7 @@ export const masterAdminService = {
   },
 
   subscribeToVitals: (onUpdate: any) => {
-    return supabase.channel('dashboard_vitals')
+    const channel = supabase.channel('dashboard_vitals')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, onUpdate)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'companies' }, onUpdate)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_requests' }, onUpdate)
@@ -27,5 +27,6 @@ export const masterAdminService = {
               console.log("Dashboard real-time connected.");
           }
       });
+    return channel;
   }
 };
