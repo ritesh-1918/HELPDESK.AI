@@ -17,14 +17,11 @@ const AIAssistant = () => {
     const messagesEndRef = useRef(null);
     const abortControllerRef = useRef(null);
 
-    // Auto-scroll to bottom
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
-
+    // Auto-scroll to bottom — only depends on messages to avoid
+    // unnecessary scrolls when isTyping toggles
     useEffect(() => {
-        scrollToBottom();
-    }, [messages, isTyping]);
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
 
     // Cleanup hook for SSE streams on unmount (Resolves Issue #2185)
     useEffect(() => {
