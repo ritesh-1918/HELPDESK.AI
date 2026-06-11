@@ -136,6 +136,29 @@ def _clear_session_cookies(response: Response) -> None:
     response.delete_cookie(REFRESH_COOKIE, path=kwargs["path"])
 
 
+def get_user_role(user: dict | None) -> str:
+    """Return the normalized role from Supabase user metadata or direct payload."""
+    if not user:
+        return "user"
+
+    metadata = user.get("user_metadata") or {}
+    app_metadata = user.get("app_metadata") or {}
+    role = (
+        user.get("role")
+        or metadata.get("role")
+        or app_metadata.get("role")
+        or app_metadata.get("user_role")
+        or "user"
+    )
+    return str(role).strip().lower().replace("-", "_") or "user"
+
+
+ADMIN_ROLES = frozenset({"admin", "company_admin", "super_admin", "master_admin"})
+AGENT_ROLES = frozenset(
+    {"agent", "support_agent", "admin", "company_admin", "super_admin", "master_admin"}
+)
+
+
 async def get_current_user(request: Request) -> dict:
     token = extract_token(request)
     if not token:
@@ -164,6 +187,28 @@ async def get_current_user(request: Request) -> dict:
     if hasattr(user, "dict"):
         return user.dict()
     return dict(user)
+
+
+def require_roles(*allowed_roles: str):
+    """Build a FastAPI dependency that rejects authenticated users without a role."""
+    normalized_roles = {
+        role.strip().lower().replace("-", "_") for role in allowed_roles
+    }
+
+    async def _dependency(user: dict = Depends(get_current_user)) -> dict:
+        role = get_user_role(user)
+        if role not in normalized_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient role permissions",
+            )
+        return user
+
+    return _dependency
+
+
+get_current_active_admin = require_roles(*ADMIN_ROLES)
+get_current_active_agent = require_roles(*AGENT_ROLES)
 
 
 class LoginBody(BaseModel):
