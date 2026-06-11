@@ -727,7 +727,7 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
             text = f"{text} {local_ocr_text}".strip()
             print(f"[AI] OCR added {len(local_ocr_text)} chars to context.")
 
-    # Initalize Timeline
+    # Initialize Timeline
     return await analyze_only(request_body)
 
 @app.post("/ai/analyze")
