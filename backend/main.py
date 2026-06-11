@@ -1143,6 +1143,8 @@ class LoginBody(BaseModel):
     email: str
     password: str
 
+ALLOWED_SELF_SIGNUP_ROLES = frozenset({"user"})
+
 class SignupBody(BaseModel):
     email: str
     password: str
@@ -1177,8 +1179,13 @@ async def auth_signup(body: SignupBody, response: Response):
     metadata = {}
     if body.full_name:
         metadata["full_name"] = body.full_name
-    if body.role:
-        metadata["role"] = body.role
+    safe_role = body.role or "user"
+    if safe_role not in ALLOWED_SELF_SIGNUP_ROLES:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Invalid role '{safe_role}'. Self-signup only allows: {', '.join(sorted(ALLOWED_SELF_SIGNUP_ROLES))}"
+        )
+    metadata["role"] = safe_role
     if body.company:
         metadata["company"] = body.company
 
