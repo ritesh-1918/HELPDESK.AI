@@ -58,6 +58,7 @@ from backend.services.classifier_v2 import classifier_v2
 from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
+from backend.services.duplicate_detector import SemanticDuplicateDetector
 from backend.services.rag_service import RagService
 
 
@@ -197,6 +198,7 @@ class ReadinessResponse(BaseModel):
 classifier_service = ClassifierService()
 ner_service = NERService()
 duplicate_service = DuplicateService()
+semantic_dup_detector = SemanticDuplicateDetector()
 rag_service = RagService()
 
 try:
@@ -231,6 +233,10 @@ async def lifespan(app: FastAPI):
         duplicate_service.load()
     except Exception as e:
         print(f"[WARNING] Duplicate service not loaded: {e}")
+    try:
+        semantic_dup_detector.load()
+    except Exception as e:
+        print(f"[WARNING] Semantic duplicate detector not loaded: {e}")
     try:
         rag_service.load()
     except Exception as e:
@@ -392,6 +398,7 @@ async def readiness_check():
         "classifier_loaded": classifier_service._loaded,
         "ner_loaded": ner_service._loaded,
         "duplicate_index_loaded": duplicate_service.is_available(),
+        "semantic_dup_detector_loaded": semantic_dup_detector.is_available(),
         "rag_loaded": rag_service.is_available(),
     }
     if require_supabase:
@@ -399,7 +406,7 @@ async def readiness_check():
 
     # In degraded mode, duplicate and RAG services are optional
     if allow_degraded:
-        required_checks = {k: v for k, v in checks.items() if k not in ["duplicate_index_loaded", "rag_loaded"]}
+        required_checks = {k: v for k, v in checks.items() if k not in ["duplicate_index_loaded", "semantic_dup_detector_loaded", "rag_loaded"]}
         all_required_pass = all(required_checks.values())
         
         if all_required_pass:
@@ -822,6 +829,19 @@ async def analyze_only(request_body: TicketRequest):
     except Exception:
         dup_result = {"is_duplicate": False, "duplicate_ticket_id": None, "similarity": 0.0}
 
+    # --- Tenant-scoped semantic duplicate check ---
+    try:
+        tenant_dup = semantic_dup_detector.find_duplicates(
+            text,
+            company_id=request_body.company,
+            supabase_client=supabase,
+            threshold=duplicate_sensitivity,
+        )
+        if tenant_dup["is_duplicate"] and tenant_dup["similarity"] > dup_result.get("similarity", 0.0):
+            dup_result = tenant_dup
+    except Exception:
+        pass
+
     # --- RAG Knowledge Base Check ---
     rag_match = None
     try:
@@ -976,6 +996,19 @@ async def analyze_stream(request_body: TicketRequest):
             dup_result = duplicate_service.check_duplicate(text, threshold=duplicate_sensitivity)
         except Exception:
             dup_result = {"is_duplicate": False, "duplicate_ticket_id": None, "similarity": 0.0}
+
+        # Tenant-scoped semantic duplicate check
+        try:
+            tenant_dup = semantic_dup_detector.find_duplicates(
+                text,
+                company_id=request_body.company,
+                supabase_client=supabase,
+                threshold=duplicate_sensitivity,
+            )
+            if tenant_dup["is_duplicate"] and tenant_dup["similarity"] > dup_result.get("similarity", 0.0):
+                dup_result = tenant_dup
+        except Exception:
+            pass
 
         # 5. RAG / Solutions
         yield f"data: {json.dumps({'step': 'Finding possible solutions', 'status': 'in_progress'})}\n\n"
