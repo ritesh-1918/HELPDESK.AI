@@ -283,6 +283,7 @@ const AdminTickets = () => {
     const [isUpdating, setIsUpdating] = useState(null);
     const [newlyBreachedTicketIds, setNewlyBreachedTicketIds] = useState([]);
     const [agents, setAgents] = useState([]);
+    const mountedRef = useRef(true);
 
     // ── Filter State ────────────────────────────────
     const [searchQuery, setSearchQuery] = useState('');
@@ -327,9 +328,9 @@ const AdminTickets = () => {
     }, [categoryFilter, priorityFilter, statusFilter, teamFilter, languageFilter, tagFilters]);
 
     const handleRealtimeInsert = useCallback((ticket) => {
-        showToast(`New Incident Reported: #${formatTicketId(ticket.id)}`, "success");
+        useToastStore.getState().showToast(`New Incident Reported: #${formatTicketId(ticket.id)}`, "success");
         setTicketAnnouncement(`New ticket ${formatTicketId(ticket.id)} added to ticket management.`);
-    }, [showToast]);
+    }, []);
 
     const { lastChangedTicketId } = useTicketsRealtime({
         company: profile?.company,
@@ -341,27 +342,20 @@ const AdminTickets = () => {
     });
 
     // ── Data Fetching ───────────────────────────────
-    const fetchInitialData = async () => {
-        setLoading(true);
-        try {
-            const { profile } = useAuthStore.getState();
-
-            if (profile?.company) {
-                const { data: agentData } = await supabase
-                    .from('profiles')
-                    .select('id, full_name, role')
-                    .eq('company', profile.company)
-                    .in('role', ['admin', 'super_admin', 'agent']);
-                setAgents(agentData || []);
-            }
-
-            fetchTickets();
-        } catch (err) {
-            console.error("Initialization error:", err);
-        } finally {
-            setLoading(false);
+    const fetchInitialData = useCallback(async () => {
+        if (!mountedRef.current) return;
+        if (mountedRef.current) setLoading(true);
+        const { profile } = useAuthStore.getState();
+        if (profile?.company) {
+            const { data: agentData } = await supabase
+                .from('profiles')
+                .select('id, full_name, role')
+                .eq('company', profile.company)
+                .in('role', ['admin', 'super_admin', 'agent']);
+            if (mountedRef.current) setAgents(agentData || []);
         }
-    };
+        fetchTickets();
+    }, [fetchTickets]);
 
     const fetchTickets = useCallback(async () => {
         setError(null);
@@ -414,18 +408,10 @@ const AdminTickets = () => {
         }
     }, [debouncedSearch, statusFilter, categoryFilter, priorityFilter, teamFilter]);
 
-    const fetchInitialData = useCallback(async () => {
-        const { profile } = useAuthStore.getState();
-        if (profile?.company) {
-            const { data: agentData } = await supabase
-                .from('profiles')
-                .select('id, full_name, role')
-                .eq('company', profile.company)
-                .in('role', ['admin', 'super_admin', 'agent']);
-            setAgents(agentData || []);
-        }
-        fetchTickets();
-    }, [fetchTickets]);
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => { mountedRef.current = false; };
+    }, []);
 
     useEffect(() => {
         if (!user) return;
@@ -434,6 +420,7 @@ const AdminTickets = () => {
 
     // SLA breach realtime listener
     useEffect(() => {
+        if (!mountedRef.current) return;
         const channelSla = supabase
             .channel('sla-alerts')
             .on(
@@ -445,15 +432,15 @@ const AdminTickets = () => {
                     if (profile?.company_id && companyId && profile.company_id !== companyId) return;
 
                     const formattedId = String(ticketId).slice(0, 8).toUpperCase();
-                    showToast(`⚠️ SLA BREACH: Ticket #${formattedId} ("${subject}") escalated from '${originalTeam}' to '${escalatedTeam}'!`, "error");
-                    setTicketAnnouncement(`SLA breach for ticket ${formattedId}. Escalated from ${originalTeam} to ${escalatedTeam}.`);
+                    if (mountedRef.current) showToast(`⚠️ SLA BREACH: Ticket #${formattedId} ("${subject}") escalated from '${originalTeam}' to '${escalatedTeam}'!`, "error");
+                    if (mountedRef.current) setTicketAnnouncement(`SLA breach for ticket ${formattedId}. Escalated from ${originalTeam} to ${escalatedTeam}.`);
 
-                    setNewlyBreachedTicketIds(prev => [...prev, ticketId]);
-                    setTimeout(() => {
-                        setNewlyBreachedTicketIds(prev => prev.filter(id => id !== ticketId));
+                    if (mountedRef.current) setNewlyBreachedTicketIds(prev => [...prev, ticketId]);
+                    if (mountedRef.current) setTimeout(() => {
+                        if (mountedRef.current) setNewlyBreachedTicketIds(prev => prev.filter(id => id !== ticketId));
                     }, 12000);
 
-                    setTickets(prev => prev.map(t =>
+                    if (mountedRef.current) setTickets(prev => prev.map(t =>
                         t.id === ticketId
                             ? { ...t, sla_status: 'BREACHED', assigned_team: escalatedTeam, escalation_level: (t.escalation_level || 0) + 1, updated_at: new Date().toISOString() }
                             : t
