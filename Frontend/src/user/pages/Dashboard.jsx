@@ -1,5 +1,6 @@
 import React from 'react';
 import WelcomeCard from "../components/WelcomeCard";
+import UserScorecard from "../components/UserScorecard";
 import QuickActions from "../components/QuickActions";
 import RecentTickets from "../components/RecentTickets";
 import OnboardingTour from "../components/OnboardingTour";
@@ -27,6 +28,14 @@ const Dashboard = () => {
                     {/* Hero Section */}
                     <section>
                         <WelcomeCard userName={userName} />
+                    </section>
+
+                    {/* Scorecard */}
+                    <section>
+                        <div className="flex items-center justify-between mb-4 px-2">
+                            <h2 style={{ fontSize: '11px', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase' }}>Your Scorecard</h2>
+                        </div>
+                        <UserScorecard />
                     </section>
 
                     {/* Quick Actions Grid */}
