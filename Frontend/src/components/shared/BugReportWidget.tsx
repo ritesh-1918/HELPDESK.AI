@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
  
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bug, X, Info, Send, AlertTriangle, ScreenShare, ShieldAlert, Camera, Trash2, Crop, MousePointer2, ChevronDown, Check } from 'lucide-react';
@@ -18,33 +18,35 @@ function useDiagnostics() {
         consoleErrors: [],
         networkErrors: []
     });
+    const mountedRef = useRef(true);
 
     useEffect(() => {
-        // Collect static info
+        mountedRef.current = true;
+        return () => { mountedRef.current = false; };
+    }, []);
+
+    useEffect(() => {
         const browserInfo = navigator.userAgent;
         const screenInfo = `${window.innerWidth}x${window.innerHeight}`;
 
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setDiagnostics(prev => ({
+        if (mountedRef.current) setDiagnostics(prev => ({
             ...prev,
             url: window.location.href,
             browser: browserInfo,
             screen: screenInfo
         }));
 
-        // Intercept console.error
         const originalConsoleError = console.error;
         console.error = function (...args) {
-            setDiagnostics(prev => ({
+            if (mountedRef.current) setDiagnostics(prev => ({
                 ...prev,
-                consoleErrors: [...prev.consoleErrors, args.join(' ')].slice(-10) // keep last 10
+                consoleErrors: [...prev.consoleErrors, args.join(' ')].slice(-10)
             }));
             originalConsoleError.apply(console, args);
         };
 
-        // Global Error Listener
         const handleError = (e) => {
-            setDiagnostics(prev => ({
+            if (mountedRef.current) setDiagnostics(prev => ({
                 ...prev,
                 consoleErrors: [...prev.consoleErrors, `Uncaught: ${e.message}`].slice(-10)
             }));
