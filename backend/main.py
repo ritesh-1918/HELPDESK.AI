@@ -1209,3 +1209,11 @@ async def auth_logout(response: Response):
 async def auth_me(user: dict = Depends(get_current_user)):
     return {"user": user}
 
+
+@app.post("/api/voice/webhook")
+async def voice_webhook():
+    from backend.services.twilio_voice import TwilioVoiceAgent
+    agent = TwilioVoiceAgent()
+    return agent.generate_twiml_response("Thank you for contacting Helpdesk. Your ticket has been logged and enqueued.")
+
+
