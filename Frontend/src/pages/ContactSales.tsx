@@ -69,6 +69,7 @@ export default function ContactSales() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
         setIsSubmitting(true);
         
         try {
