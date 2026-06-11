@@ -315,6 +315,7 @@ const Profile = () => {
                                             <div className="space-y-1 md:col-span-2">
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Comms Channel</label>
                                                 <input
+                                                    type="tel"
                                                     value={formData.phone}
                                                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                                     className="w-full bg-slate-50 border-2 border-transparent focus:border-emerald-500 px-4 py-2.5 rounded-2xl text-sm font-bold outline-none transition-all"
