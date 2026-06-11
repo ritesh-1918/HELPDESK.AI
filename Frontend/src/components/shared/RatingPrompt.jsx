@@ -11,7 +11,7 @@ export default function RatingPrompt({ ticketId, onRated }) {
   const [error, setError] = useState(null);
 
   const handleSubmit = async () => {
-    if (rating === 0) return;
+    if (rating === 0 || loading || submitted) return;
     setLoading(true);
     setError(null);
     try {

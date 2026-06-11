@@ -9,8 +9,8 @@ export default function AnimatedStat({ target, suffix = '', prefix = '', label, 
         const el = ref.current;
         if (!el) return;
         const observer = new IntersectionObserver(
-            ([entry]) => { 
-                if (entry.isIntersecting && !triggered) setTriggered(true); 
+            ([entry]) => {
+                if (entry.isIntersecting && !triggered) setTriggered(true);
             },
             { threshold: 0.5 }
         );
@@ -23,16 +23,22 @@ export default function AnimatedStat({ target, suffix = '', prefix = '', label, 
         const duration = 1500;
         const start = performance.now();
         const to = parseFloat(target);
-        
+
+        let rafId;
         const step = (now) => {
             const progress = Math.min((now - start) / duration, 1);
             const eased = 1 - Math.pow(1 - progress, 3);
             const current = Math.round(to * eased);
             setDisplay(String(current));
-            if (progress < 1) requestAnimationFrame(step);
+            if (progress < 1) {
+                rafId = requestAnimationFrame(step);
+            }
         };
-        
-        requestAnimationFrame(step);
+
+        rafId = requestAnimationFrame(step);
+        return () => {
+            if (rafId) cancelAnimationFrame(rafId);
+        };
     }, [triggered, target, isWord]);
 
     return (

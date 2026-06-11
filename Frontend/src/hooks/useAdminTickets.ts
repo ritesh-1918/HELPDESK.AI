@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ticketService } from '../services/ticketService';
 import useAuthStore from '../store/authStore';
 import useToastStore from '../store/toastStore';
@@ -13,42 +13,48 @@ export function useAdminTickets(filters: any) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isUpdating, setIsUpdating] = useState<string | null>(null);
+    const mountedRef = useRef(true);
 
     const fetchInitialData = useCallback(async () => {
-        setLoading(true);
-        setError(null);
+        if (mountedRef.current) setLoading(true);
+        if (mountedRef.current) setError(null);
         try {
             if (profile?.company) {
                 const agentsData = await ticketService.fetchCompanyAgents(profile.company);
-                setAgents(agentsData);
+                if (mountedRef.current) setAgents(agentsData);
             }
             const ticketsData = await ticketService.fetchAdminTickets({
                 company: profile?.role === 'admin' ? profile?.company : undefined,
                 ...filters
             });
-            setTickets(ticketsData);
+            if (mountedRef.current) setTickets(ticketsData);
         } catch (err: any) {
-            setError(err.message);
+            if (mountedRef.current) setError(err.message);
         } finally {
-            setLoading(false);
+            if (mountedRef.current) setLoading(false);
         }
     }, [filters, profile]);
 
     useEffect(() => {
+        mountedRef.current = true;
+        return () => { mountedRef.current = false; };
+    }, []);
+
+    useEffect(() => {
         fetchInitialData();
-        
+
         const channel = ticketService.subscribeToCompanyTickets(
             profile?.company,
             {
                 onInsert: (newTicket: any) => {
-                    setTickets(prev => [newTicket, ...prev]);
+                    if (mountedRef.current) setTickets(prev => [newTicket, ...prev]);
                     showToast(`New Incident Reported: #${newTicket.id}`, "success");
                 },
                 onUpdate: (updatedTicket: any) => {
-                    setTickets(prev => prev.map(t => t.id === updatedTicket.id ? { ...t, ...updatedTicket } : t));
+                    if (mountedRef.current) setTickets(prev => prev.map(t => t.id === updatedTicket.id ? { ...t, ...updatedTicket } : t));
                 },
                 onDelete: (deletedTicket: any) => {
-                    setTickets(prev => prev.filter(t => t.id !== deletedTicket.id));
+                    if (mountedRef.current) setTickets(prev => prev.filter(t => t.id !== deletedTicket.id));
                 }
             }
         );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import useAuthStore from "../../store/authStore";
 
@@ -15,31 +15,37 @@ const WebhookSettings = () => {
   const [message, setMessage] = useState({ text: "", type: "" });
 
   const companyId = profile?.company_id;
+  const mountedRef = useRef(true);
+
+  const fetchSettings = useCallback(async () => {
+    if (!companyId) return;
+    if (mountedRef.current) setFetching(true);
+    try {
+      const { data } = await supabase
+        .from("webhook_settings")
+        .select("webhook_url, is_enabled")
+        .eq("company_id", companyId)
+        .single();
+
+      if (data && mountedRef.current) {
+        setWebhookUrl(data.webhook_url || "");
+        setIsEnabled(data.is_enabled || false);
+      }
+    } catch {
+      console.log("No webhook settings found — first time setup");
+    } finally {
+      if (mountedRef.current) setFetching(false);
+    }
+  }, [companyId]);
 
   useEffect(() => {
-    const fetchSettings = async () => {
-      if (!companyId) return;
-      setFetching(true);
-      try {
-        const { data } = await supabase
-          .from("webhook_settings")
-          .select("webhook_url, is_enabled")
-          .eq("company_id", companyId)
-          .single();
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
-        if (data) {
-          setWebhookUrl(data.webhook_url || "");
-          setIsEnabled(data.is_enabled || false);
-        }
-      } catch {
-        console.log("No webhook settings found — first time setup");
-      } finally {
-        setFetching(false);
-      }
-    };
-
+  useEffect(() => {
     fetchSettings();
-  }, [companyId]);
+  }, [fetchSettings]);
 
   const detectPlatform = (url) => {
     if (url.includes("hooks.slack.com")) return "Slack";

@@ -1,5 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { API_CONFIG } from '../../config';
+import { logger } from '../../utils/logger';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
@@ -37,19 +40,24 @@ const TicketDetail = () => {
     const [showOriginalText, setShowOriginalText] = useState(false);
     const [copied, setCopied] = useState(false);
     const { showToast } = useToastStore();
+    const mountedRef = useRef(true);
+
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => { mountedRef.current = false; };
+    }, []);
 
     useEffect(() => {
         window.scrollTo(0, 0);
 
         const fetchInitialTicket = async () => {
+            if (!mountedRef.current) return;
             setLoading(true);
             try {
                 const response = await axios.get(`${API_CONFIG.BACKEND_URL}/tickets/${ticket_id}`);
                 const data = response.data;
-                const error = null;
 
-                if (error) throw error;
-                if (data) {
+                if (data && mountedRef.current) {
                     setTicket({
                         ...data,
                         ticket_id: data.id,
@@ -60,7 +68,7 @@ const TicketDetail = () => {
             } catch (err) {
                 logger.error("Error fetching ticket:", err);
             } finally {
-                setLoading(false);
+                if (mountedRef.current) setLoading(false);
             }
         };
 
@@ -74,7 +82,7 @@ const TicketDetail = () => {
                 table: 'tickets',
                 filter: `id=eq.${ticket_id}`
             }, (payload) => {
-                setTicket(prev => ({
+                if (mountedRef.current) setTicket(prev => ({
                     ...prev,
                     ...payload.new,
                     ticket_id: payload.new.id,
@@ -89,8 +97,8 @@ const TicketDetail = () => {
                 filter: `id=eq.${ticket_id}`
             }, (payload) => {
                 console.warn("Ticket was deleted:", payload.old);
-                showToast('This ticket has been removed.', 'warning');
-                navigate('/my-tickets');
+                if (mountedRef.current) showToast('This ticket has been removed.', 'warning');
+                if (mountedRef.current) navigate('/my-tickets');
             })
             .subscribe();
 

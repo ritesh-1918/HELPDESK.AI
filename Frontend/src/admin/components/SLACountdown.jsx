@@ -21,7 +21,7 @@ const SLACountdown = ({ ticketCreatedAt, ticketPriority, ticketStatus }) => {
 
   useEffect(() => {
     // Check if ticket is already resolved
-    const isResolved = ticketStatus?.toLowerCase().includes('resolv');
+    const isResolved = ticketStatus && ticketStatus.toLowerCase().includes('resolv');
     if (isResolved) {
       setStatus('resolved');
       setTimeLeft(0);

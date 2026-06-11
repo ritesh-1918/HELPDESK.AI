@@ -14,6 +14,12 @@ import { useState, useRef, useEffect, useCallback } from 'react';
  */
 export function useFocusTrap(isOpen, onClose) {
     const containerRef = useRef(null);
+    const onCloseRef = useRef(onClose);
+
+    // Keep ref current so the effect doesn't re-run when onClose reference changes
+    useEffect(() => {
+        onCloseRef.current = onClose;
+    }, [onClose]);
 
     useEffect(() => {
         if (!isOpen || !containerRef.current) return;
@@ -38,7 +44,7 @@ export function useFocusTrap(isOpen, onClose) {
         const handleKeyDown = (e) => {
             if (e.key === 'Escape') {
                 e.preventDefault();
-                onClose?.();
+                onCloseRef.current?.();
                 return;
             }
             if (e.key !== 'Tab') return;
@@ -63,7 +69,7 @@ export function useFocusTrap(isOpen, onClose) {
 
         container.addEventListener('keydown', handleKeyDown);
         return () => container.removeEventListener('keydown', handleKeyDown);
-    }, [isOpen, onClose]);
+    }, [isOpen]);
 
     return { containerRef };
 }

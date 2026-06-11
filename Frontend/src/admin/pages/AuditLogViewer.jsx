@@ -30,6 +30,10 @@ const AuditLogViewer = () => {
     const [offset, setOffset] = useState(0);
     const offsetRef = useRef(0);
     useEffect(() => { offsetRef.current = offset; }, [offset]);
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => { mountedRef.current = false; };
+    }, []);
     const limit = 50;
 
     // Selected Log Detail Modal
@@ -47,6 +51,7 @@ const AuditLogViewer = () => {
     // Integrity State
     const [verificationResult, setVerificationResult] = useState(null);
     const [verifying, setVerifying] = useState(false);
+    const mountedRef = useRef(true);
 
     // Fetch Auth Token
     const getAuthHeaders = async () => {
@@ -59,11 +64,12 @@ const AuditLogViewer = () => {
 
     // 1. Fetch Audit Logs
     const fetchLogs = useCallback(async (reset = false) => {
+        if (!mountedRef.current) return;
         setLoading(true);
         try {
             const headers = await getAuthHeaders();
             const currentOffset = reset ? 0 : offsetRef.current;
-            
+
             // Build query params
             const params = new URLSearchParams({
                 limit: limit.toString(),
@@ -80,8 +86,9 @@ const AuditLogViewer = () => {
             });
 
             if (!response.ok) throw new Error("API call failed");
-            
+
             const data = await response.json();
+            if (!mountedRef.current) return;
             if (reset) {
                 setLogs(data);
                 setOffset(limit);
@@ -93,12 +100,13 @@ const AuditLogViewer = () => {
             console.error("Failed to load audit logs:", err);
             showToast("Failed to fetch audit logs.", "error");
         } finally {
-            setLoading(false);
+            if (mountedRef.current) setLoading(false);
         }
     }, [actionFilter, statusFilter, ipFilter, dateFrom, dateTo]);
 
     // 2. Fetch Security Alerts
     const fetchAlerts = async () => {
+        if (!mountedRef.current) return;
         setAlertsLoading(true);
         try {
             const headers = await getAuthHeaders();
@@ -107,17 +115,18 @@ const AuditLogViewer = () => {
             });
             if (!response.ok) throw new Error("Failed to load alerts");
             const data = await response.json();
-            setAlerts(data);
+            if (mountedRef.current) setAlerts(data);
         } catch (err) {
             console.error("Alert load error:", err);
             showToast("Could not load security alerts.", "error");
         } finally {
-            setAlertsLoading(false);
+            if (mountedRef.current) setAlertsLoading(false);
         }
     };
 
     // 3. Generate Compliance Report
     const fetchReport = async () => {
+        if (!mountedRef.current) return;
         setReportLoading(true);
         setReportData(null);
         try {
@@ -127,18 +136,19 @@ const AuditLogViewer = () => {
             });
             if (!response.ok) throw new Error("Failed to generate report");
             const data = await response.json();
-            setReportData(data);
+            if (mountedRef.current) setReportData(data);
             showToast(`${selectedReport} Compliance Audit Report generated.`, "success");
         } catch (err) {
             console.error("Report generation error:", err);
             showToast("Report generation failed.", "error");
         } finally {
-            setReportLoading(false);
+            if (mountedRef.current) setReportLoading(false);
         }
     };
 
     // 4. Verify cryptographic integrity chain
     const verifyChain = async () => {
+        if (!mountedRef.current) return;
         setVerifying(true);
         setVerificationResult(null);
         try {
@@ -149,6 +159,7 @@ const AuditLogViewer = () => {
             });
             if (!response.ok) throw new Error("Verification protocol aborted");
             const data = await response.json();
+            if (!mountedRef.current) return;
             setVerificationResult(data);
             if (data.verified) {
                 showToast("Chain of custody verified: Zero tampering detected.", "success");
@@ -159,7 +170,7 @@ const AuditLogViewer = () => {
             console.error("Integrity check error:", err);
             showToast("Cryptographic verification failed.", "error");
         } finally {
-            setVerifying(false);
+            if (mountedRef.current) setVerifying(false);
         }
     };
 

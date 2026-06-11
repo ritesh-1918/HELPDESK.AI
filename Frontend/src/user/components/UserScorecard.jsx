@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Activity, RefreshCw, AlertTriangle } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import { API_CONFIG } from '../../config';
@@ -15,22 +15,29 @@ const UserScorecard = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const mountedRef = useRef(true);
 
   const load = useCallback(async () => {
     if (!user?.id || !profile?.company_id) return;
-    setLoading(true);
-    setError(null);
+    if (mountedRef.current) setLoading(true);
+    if (mountedRef.current) setError(null);
     try {
       const url = `${BACKEND}/api/scorecard/agent/${encodeURIComponent(user.id)}?company_id=${encodeURIComponent(profile.company_id)}&days=30`;
       const res = await fetch(url);
       if (!res.ok) throw new Error(`API error ${res.status}`);
-      setData(await res.json());
+      const json = await res.json();
+      if (mountedRef.current) setData(json);
     } catch (err) {
-      setError(err.message || 'Failed to load scorecard');
+      if (mountedRef.current) setError(err.message || 'Failed to load scorecard');
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }, [user?.id, profile?.company_id]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   useEffect(() => { load(); }, [load]);
 
