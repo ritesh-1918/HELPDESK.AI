@@ -73,6 +73,9 @@ class NotificationRoutingMiddleware:
                 "email_notifications, admin_alerts, digest_frequency"
             ).eq("company_id", company_id).single().execute()
 
+            if response.error:
+                logger.warning(f"Supabase API error fetching company settings for {company_id}: {response.error}")
+
             if response.data:
                 return {
                     "email_notifications": response.data.get("email_notifications", True),

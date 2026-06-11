@@ -76,6 +76,8 @@ def get_system_settings(company_id: str) -> dict:
         res = supabase.table("system_settings").select(
             "ai_confidence_threshold, duplicate_sensitivity, enable_auto_resolve"
         ).eq("company_id", company_id).single().execute()
+        if getattr(res, 'error', None):
+            print(f"[WARNING] Supabase API error fetching system_settings for company_id={company_id}: {res.error}")
         if res.data:
             return {**defaults, **res.data}
     except Exception as e:

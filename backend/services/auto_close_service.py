@@ -57,7 +57,10 @@ class AutoCloseService:
             response = self.supabase.table("system_settings").select(
                 "auto_close_days, auto_close_enabled"
             ).eq("company_id", company_id).single().execute()
-            
+
+            if response.error:
+                logger.warning(f"Supabase API error fetching settings for company {company_id}: {response.error}")
+
             if response.data:
                 return {
                     "auto_close_days": response.data.get("auto_close_days", self.default_auto_close_days),
