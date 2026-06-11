@@ -14,6 +14,11 @@ import { useState, useRef, useEffect, useCallback } from 'react';
  */
 export function useFocusTrap(isOpen, onClose) {
     const containerRef = useRef(null);
+    const onCloseRef = useRef(onClose);
+
+    useEffect(() => {
+        onCloseRef.current = onClose;
+    }, [onClose]);
 
     useEffect(() => {
         if (!isOpen || !containerRef.current) return;
@@ -32,13 +37,12 @@ export function useFocusTrap(isOpen, onClose) {
         const firstEl = focusableElements[0];
         const lastEl = focusableElements[focusableElements.length - 1];
 
-        // Auto-focus first element when trap activates
         firstEl?.focus();
 
         const handleKeyDown = (e) => {
             if (e.key === 'Escape') {
                 e.preventDefault();
-                onClose?.();
+                onCloseRef.current?.();
                 return;
             }
             if (e.key !== 'Tab') return;
@@ -63,7 +67,7 @@ export function useFocusTrap(isOpen, onClose) {
 
         container.addEventListener('keydown', handleKeyDown);
         return () => container.removeEventListener('keydown', handleKeyDown);
-    }, [isOpen, onClose]);
+    }, [isOpen]);
 
     return { containerRef };
 }
