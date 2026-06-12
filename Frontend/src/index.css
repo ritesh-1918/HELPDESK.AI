@@ -91,14 +91,28 @@
   }
 }
 
-html{
+html {
   overflow-y: scroll;
-  scrollbar-width: none; /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #618975 #f1f1f1;
 }
 
-html::-webkit-scrollbar{
-  width: 0;
-  height: 0;
+html::-webkit-scrollbar {
+  width: 12px;
+}
+
+html::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+html::-webkit-scrollbar-thumb {
+  background: #618975;
+  border-radius: 10px;
+}
+
+html::-webkit-scrollbar-thumb:hover {
+  background: #4a6a5a;
 }
 
 body{
