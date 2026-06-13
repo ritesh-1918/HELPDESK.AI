@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useState, useEffect } from 'react';
  
 import { motion, AnimatePresence } from 'framer-motion';
@@ -728,3 +729,16 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
 };
 
 export default BugReportWidget;
+
+CustomSelect.propTypes = {
+  label: PropTypes.any, // TODO: refine type
+  value: PropTypes.any, // TODO: refine type
+  options: PropTypes.any, // TODO: refine type
+  onChange: PropTypes.func,
+  name: PropTypes.any, // TODO: refine type
+};
+
+BugReportWidget.propTypes = {
+  advanced: PropTypes.any, // TODO: refine type
+  customTrigger: PropTypes.any, // TODO: refine type
+};

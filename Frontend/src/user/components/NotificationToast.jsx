@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
  
 import { motion, AnimatePresence } from 'framer-motion';
@@ -94,3 +95,7 @@ const NotificationToast = () => {
 };
 
 export default NotificationToast;
+
+NotificationToast.propTypes = {
+  // TODO: Add props
+};

@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
@@ -50,3 +51,7 @@ const AdminProtectedRoute = () => {
 };
 
 export default AdminProtectedRoute;
+
+AdminProtectedRoute.propTypes = {
+  // TODO: Add props
+};

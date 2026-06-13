@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import {
     CheckCircle2, Clock,
@@ -333,3 +334,22 @@ const SummaryField = ({ Icon, label, value, valueClass }) => (
 );
 
 export default TicketTimeline;
+
+StepNode.propTypes = {
+  state: PropTypes.any, // TODO: refine type
+  Icon: PropTypes.any, // TODO: refine type
+};
+
+TicketTimeline.propTypes = {
+  ticketId: PropTypes.any, // TODO: refine type
+  ticket: PropTypes.any, // TODO: refine type
+  className: PropTypes.any, // TODO: refine type
+  forceStep: PropTypes.any, // TODO: refine type
+};
+
+SummaryField.propTypes = {
+  Icon: PropTypes.any, // TODO: refine type
+  label: PropTypes.any, // TODO: refine type
+  value: PropTypes.any, // TODO: refine type
+  valueClass: PropTypes.any, // TODO: refine type
+};

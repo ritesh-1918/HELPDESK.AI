@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import * as React from "react"
 import { cva } from "class-variance-authority"
 
@@ -31,3 +32,8 @@ function Badge({ className, variant, ...props }) {
 
  
 export { Badge, badgeVariants }
+
+Badge.propTypes = {
+  className: PropTypes.any, // TODO: refine type
+  variant: PropTypes.any, // TODO: refine type
+};

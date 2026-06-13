@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useMemo, useState, useEffect } from 'react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -414,3 +415,7 @@ const AdminAnalytics = () => {
 };
 
 export default AdminAnalytics;
+
+AdminAnalytics.propTypes = {
+  // TODO: Add props
+};

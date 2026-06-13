@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
  
 import { motion } from 'framer-motion';
@@ -28,3 +29,10 @@ const QuickActionCard = ({ icon: Icon, title, description, colorClass }) => {
 };
 
 export default QuickActionCard;
+
+QuickActionCard.propTypes = {
+  icon: PropTypes.any, // TODO: refine type
+  title: PropTypes.any, // TODO: refine type
+  description: PropTypes.any, // TODO: refine type
+  colorClass: PropTypes.any, // TODO: refine type
+};

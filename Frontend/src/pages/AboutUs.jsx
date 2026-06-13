@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, Heart, Sparkles, ArrowLeft, Target, Award } from 'lucide-react';
@@ -63,3 +64,7 @@ export default function AboutUs() {
         </div>
     );
 }
+
+AboutUs.propTypes = {
+  // TODO: Add props
+};

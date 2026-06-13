@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, Bell, Menu, User, ChevronDown, Settings, LogOut, UserCircle, X, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -155,3 +156,9 @@ const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar })
 };
 
 export default AdminHeader;
+
+AdminHeader.propTypes = {
+  onMobileNavToggle: PropTypes.func,
+  isSidebarCollapsed: PropTypes.bool,
+  onToggleSidebar: PropTypes.func,
+};

@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -505,3 +506,7 @@ const AdminTicketDetail = () => {
 };
 
 export default AdminTicketDetail;
+
+AdminTicketDetail.propTypes = {
+  // TODO: Add props
+};

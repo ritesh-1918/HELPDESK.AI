@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -396,3 +397,7 @@ const TicketDetail = () => {
 };
 
 export default TicketDetail;
+
+TicketDetail.propTypes = {
+  // TODO: Add props
+};

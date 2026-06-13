@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Folder, Network, Cpu, HardDrive, Wifi, Lock, CheckCircle, Zap, Bot } from 'lucide-react';
@@ -99,3 +100,7 @@ export default function AutoCategorizationFeature() {
         </div>
     );
 }
+
+AutoCategorizationFeature.propTypes = {
+  // TODO: Add props
+};

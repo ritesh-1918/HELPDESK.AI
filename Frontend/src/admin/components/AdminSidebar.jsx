@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
@@ -162,3 +163,10 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
 };
 
 export default AdminSidebar;
+
+AdminSidebar.propTypes = {
+  isMobile: PropTypes.bool,
+  onClose: PropTypes.func,
+  isCollapsed: PropTypes.bool,
+  onToggleCollapse: PropTypes.func,
+};

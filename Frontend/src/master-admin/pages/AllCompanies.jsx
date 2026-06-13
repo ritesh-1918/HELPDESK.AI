@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import useToastStore from "../../store/toastStore";
@@ -200,3 +201,7 @@ function AllCompanies() {
 }
 
 export default AllCompanies;
+
+AllCompanies.propTypes = {
+  // TODO: Add props
+};

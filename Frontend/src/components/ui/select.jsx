@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
  
@@ -68,4 +69,14 @@ export const Select = ({ value, onChange, options, placeholder = "Select an opti
             </AnimatePresence>
         </div>
     );
+};
+
+Select.propTypes = {
+  value: PropTypes.any, // TODO: refine type
+  onChange: PropTypes.func,
+  options: PropTypes.any, // TODO: refine type
+  placeholder: PropTypes.any, // TODO: refine type
+  className: PropTypes.any, // TODO: refine type
+  buttonClassName: PropTypes.any, // TODO: refine type
+  disabled: PropTypes.any, // TODO: refine type
 };

@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useState } from 'react';
 import { Star, CheckCircle2, X, Loader2, MessageSquare } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
@@ -153,3 +154,9 @@ export default function CSATModal({ ticketId, onSubmit, onDismiss }) {
         </div>
     );
 }
+
+CSATModal.propTypes = {
+  ticketId: PropTypes.any, // TODO: refine type
+  onSubmit: PropTypes.func,
+  onDismiss: PropTypes.func,
+};

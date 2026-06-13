@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
@@ -332,3 +333,6 @@ function ForgotPassword() {
 
 export default ForgotPassword;
 
+ForgotPassword.propTypes = {
+  // TODO: Add props
+};

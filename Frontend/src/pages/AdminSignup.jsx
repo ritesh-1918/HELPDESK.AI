@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -700,3 +701,7 @@ function AdminSignup() {
 }
 
 export default AdminSignup;
+
+AdminSignup.propTypes = {
+  // TODO: Add props
+};

@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, User, ShieldCheck, Bot, MessageSquare, Circle, Loader2 } from 'lucide-react';
 import { supabase } from "../../lib/supabaseClient";
@@ -384,3 +385,8 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
 };
 
 export default TicketChat;
+
+TicketChat.propTypes = {
+  ticketId: PropTypes.any, // TODO: refine type
+  currentUserRole: PropTypes.any, // TODO: refine type
+};

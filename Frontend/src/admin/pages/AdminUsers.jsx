@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useToastStore from '../../store/toastStore';
@@ -739,3 +740,7 @@ const AdminUsers = () => {
 };
 
 export default AdminUsers;
+
+AdminUsers.propTypes = {
+  // TODO: Add props
+};

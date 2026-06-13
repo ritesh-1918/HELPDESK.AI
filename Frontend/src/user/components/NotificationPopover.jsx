@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import { Bell, CheckCircle2, MessageSquare, Ticket, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -107,3 +108,7 @@ const NotificationPopover = ({ isAdmin = false }) => {
 };
 
 export default NotificationPopover;
+
+NotificationPopover.propTypes = {
+  isAdmin: PropTypes.bool,
+};

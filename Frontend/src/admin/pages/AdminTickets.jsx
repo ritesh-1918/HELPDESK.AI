@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from "../../store/authStore";
@@ -474,3 +475,7 @@ const AdminTickets = () => {
 };
 
 export default AdminTickets;
+
+AdminTickets.propTypes = {
+  // TODO: Add props
+};

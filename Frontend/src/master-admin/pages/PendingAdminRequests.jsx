@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import useAuthStore from "../../store/authStore";
@@ -289,3 +290,7 @@ function PendingAdminRequests() {
 }
 
 export default PendingAdminRequests;
+
+PendingAdminRequests.propTypes = {
+  // TODO: Add props
+};

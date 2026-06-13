@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -362,3 +363,7 @@ function TicketDetailView() {
 }
 
 export default TicketDetailView;
+
+TicketDetailView.propTypes = {
+  // TODO: Add props
+};

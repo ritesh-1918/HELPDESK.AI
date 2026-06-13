@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useState, useCallback } from 'react';
 import Joyride, { ACTIONS, EVENTS, STATUS } from 'react-joyride';
 
@@ -165,3 +166,19 @@ const UserTour = () => {
 };
 
 export default UserTour;
+
+UserTour.propTypes = {
+  // TODO: Add props
+};
+
+EmeraldTooltip.propTypes = {
+  continuous: PropTypes.any, // TODO: refine type
+  index: PropTypes.any, // TODO: refine type
+  step: PropTypes.any, // TODO: refine type
+  backProps: PropTypes.any, // TODO: refine type
+  closeProps: PropTypes.any, // TODO: refine type
+  primaryProps: PropTypes.any, // TODO: refine type
+  skipProps: PropTypes.any, // TODO: refine type
+  tooltipProps: PropTypes.any, // TODO: refine type
+  size: PropTypes.any, // TODO: refine type
+};

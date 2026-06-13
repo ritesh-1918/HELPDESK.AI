@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -466,3 +467,15 @@ const AIUnderstanding = () => {
 };
 
 export default AIUnderstanding;
+
+Shimmer.propTypes = {
+  className: PropTypes.any, // TODO: refine type
+};
+
+SkeletonLoader.propTypes = {
+  // TODO: Add props
+};
+
+AIUnderstanding.propTypes = {
+  // TODO: Add props
+};

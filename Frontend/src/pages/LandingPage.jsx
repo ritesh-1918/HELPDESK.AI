@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useRef, useEffect, useState } from 'react';
  
 import { motion, AnimatePresence } from 'framer-motion';
@@ -930,3 +931,19 @@ export default function LandingPage() {
     );
 }
 // Nudge for redeploy
+
+AnimatedStat.propTypes = {
+  target: PropTypes.any, // TODO: refine type
+  suffix: PropTypes.any, // TODO: refine type
+  prefix: PropTypes.any, // TODO: refine type
+  label: PropTypes.any, // TODO: refine type
+  isWord: PropTypes.bool,
+};
+
+DemoModal.propTypes = {
+  onClose: PropTypes.func,
+};
+
+LandingPage.propTypes = {
+  // TODO: Add props
+};

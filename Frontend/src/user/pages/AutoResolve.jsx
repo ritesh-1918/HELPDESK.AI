@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bot, User, CheckCircle2, XCircle, Send, RefreshCcw, ShieldCheck } from 'lucide-react';
@@ -175,3 +176,7 @@ function AutoResolve() {
 }
 
 export default AutoResolve;
+
+AutoResolve.propTypes = {
+  // TODO: Add props
+};

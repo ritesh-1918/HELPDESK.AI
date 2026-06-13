@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -354,3 +355,7 @@ function MyTickets() {
 }
 
 export default MyTickets;
+
+MyTickets.propTypes = {
+  // TODO: Add props
+};

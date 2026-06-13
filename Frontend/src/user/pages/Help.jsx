@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useState } from 'react';
 import { HelpCircle, Mail, MessageSquare, Book, ChevronRight, ChevronDown, Video, PlayCircle, Filter, Search, LifeBuoy } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
@@ -329,3 +330,11 @@ ${fullName}`;
 };
 
 export default Help;
+
+FAQItem.propTypes = {
+  faq: PropTypes.any, // TODO: refine type
+};
+
+Help.propTypes = {
+  // TODO: Add props
+};

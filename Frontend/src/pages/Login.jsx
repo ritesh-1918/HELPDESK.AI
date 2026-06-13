@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
  
@@ -392,3 +393,7 @@ function Login() {
 }
 
 export default Login;
+
+Login.propTypes = {
+  // TODO: Add props
+};

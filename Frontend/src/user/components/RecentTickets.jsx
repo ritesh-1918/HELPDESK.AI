@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock, ChevronRight, Inbox, Loader2, AlertCircle } from 'lucide-react';
@@ -172,3 +173,6 @@ const RecentTickets = () => {
 
 export default RecentTickets;
 
+RecentTickets.propTypes = {
+  // TODO: Add props
+};

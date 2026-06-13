@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useState, useEffect } from 'react';
 import { Clock, AlertTriangle, ShieldCheck } from 'lucide-react';
 
@@ -89,3 +90,10 @@ export default function SLABadge({ priority, createdAt, status, compact = false 
         </span>
     );
 }
+
+SLABadge.propTypes = {
+  priority: PropTypes.any, // TODO: refine type
+  createdAt: PropTypes.any, // TODO: refine type
+  status: PropTypes.any, // TODO: refine type
+  compact: PropTypes.any, // TODO: refine type
+};

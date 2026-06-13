@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, GitCommit, ArrowLeft, Heart, Zap, Sparkles } from 'lucide-react';
@@ -114,3 +115,7 @@ export default function Changelog() {
         </div>
     );
 }
+
+Changelog.propTypes = {
+  // TODO: Add props
+};

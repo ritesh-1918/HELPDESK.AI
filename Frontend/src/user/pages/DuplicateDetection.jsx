@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -308,3 +309,15 @@ const DuplicateDetection = () => {
 };
 
 export default DuplicateDetection;
+
+Shimmer.propTypes = {
+  className: PropTypes.any, // TODO: refine type
+};
+
+SkeletonLoader.propTypes = {
+  // TODO: Add props
+};
+
+DuplicateDetection.propTypes = {
+  // TODO: Add props
+};

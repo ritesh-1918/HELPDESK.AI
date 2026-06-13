@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
@@ -65,3 +66,7 @@ const ProtectedRoute = () => {
 };
 
 export default ProtectedRoute;
+
+ProtectedRoute.propTypes = {
+  // TODO: Add props
+};

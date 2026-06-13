@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useState } from 'react';
 import { Bell, Box, CheckCircle2, MessageSquare, Menu, X, LogOut, User as UserIcon, BookOpen } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -129,3 +130,7 @@ const TopNav = () => {
 };
 
 export default TopNav;
+
+TopNav.propTypes = {
+  // TODO: Add props
+};

@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import useToastStore from "../../store/toastStore";
@@ -146,3 +147,7 @@ function AllAdmins() {
 }
 
 export default AllAdmins;
+
+AllAdmins.propTypes = {
+  // TODO: Add props
+};

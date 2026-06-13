@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useState, useEffect } from 'react';
 import Joyride, { STATUS } from 'react-joyride';
 
@@ -95,3 +96,7 @@ const OnboardingTour = () => {
 };
 
 export default OnboardingTour;
+
+OnboardingTour.propTypes = {
+  // TODO: Add props
+};

@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useState, useMemo } from 'react';
 import { 
     Rocket, Cpu, Sliders, AlertTriangle, BookOpen, 
@@ -311,3 +312,7 @@ const DocsPortal = () => {
 };
 
 export default DocsPortal;
+
+DocsPortal.propTypes = {
+  // TODO: Add props
+};

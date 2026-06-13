@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 
@@ -52,3 +53,13 @@ const StatCard = ({ label, value, subtitle, icon: Icon, trend, color = 'indigo',
 };
 
 export default StatCard;
+
+StatCard.propTypes = {
+  label: PropTypes.any, // TODO: refine type
+  value: PropTypes.any, // TODO: refine type
+  subtitle: PropTypes.any, // TODO: refine type
+  icon: PropTypes.any, // TODO: refine type
+  trend: PropTypes.any, // TODO: refine type
+  color: PropTypes.any, // TODO: refine type
+  customIcon: PropTypes.any, // TODO: refine type
+};

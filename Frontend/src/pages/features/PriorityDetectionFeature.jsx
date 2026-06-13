@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
@@ -96,3 +97,7 @@ export default function PriorityDetectionFeature() {
         </div>
     );
 }
+
+PriorityDetectionFeature.propTypes = {
+  // TODO: Add props
+};

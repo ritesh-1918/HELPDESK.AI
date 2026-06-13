@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
@@ -60,3 +61,7 @@ const NotApproved = () => {
 };
 
 export default NotApproved;
+
+NotApproved.propTypes = {
+  // TODO: Add props
+};

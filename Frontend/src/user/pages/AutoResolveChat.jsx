@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -422,3 +423,7 @@ const AutoResolveChat = () => {
 };
 
 export default AutoResolveChat;
+
+AutoResolveChat.propTypes = {
+  // TODO: Add props
+};

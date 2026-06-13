@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import useAuthStore from "../store/authStore";
@@ -383,3 +384,7 @@ function Signup() {
 }
 
 export default Signup;
+
+Signup.propTypes = {
+  // TODO: Add props
+};

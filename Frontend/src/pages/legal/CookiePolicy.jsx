@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldAlert, ArrowLeft } from 'lucide-react';
@@ -56,3 +57,7 @@ export default function CookiePolicy() {
         </div>
     );
 }
+
+CookiePolicy.propTypes = {
+  // TODO: Add props
+};

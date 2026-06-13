@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import * as React from "react";
  
 import { AnimatePresence, motion } from "framer-motion";
@@ -100,3 +101,14 @@ export function ExpandableTabs({
         </div>
     );
 }
+
+Separator.propTypes = {
+  // TODO: Add props
+};
+
+ExpandableTabs.propTypes = {
+  tabs: PropTypes.any, // TODO: refine type
+  className: PropTypes.any, // TODO: refine type
+  activeColor: PropTypes.any, // TODO: refine type
+  onChange: PropTypes.func,
+};

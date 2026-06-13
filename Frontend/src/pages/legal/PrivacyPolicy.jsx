@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Shield } from 'lucide-react';
@@ -103,3 +104,7 @@ export default function PrivacyPolicy() {
         </div>
     );
 }
+
+PrivacyPolicy.propTypes = {
+  // TODO: Add props
+};

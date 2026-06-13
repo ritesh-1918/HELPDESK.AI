@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { Button } from "@/components/ui/button";
 import {
     Empty,
@@ -46,3 +47,7 @@ export function NotFound() {
         </div>
     );
 }
+
+NotFound.propTypes = {
+  // TODO: Add props
+};

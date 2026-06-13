@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import { Github, Linkedin } from 'lucide-react';
 
@@ -289,3 +290,7 @@ export default function TeamSection() {
         </section>
     );
 }
+
+TeamSection.propTypes = {
+  // TODO: Add props
+};

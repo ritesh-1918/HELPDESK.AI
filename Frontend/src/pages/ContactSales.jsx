@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useState } from 'react';
  
 import { motion } from 'framer-motion';
@@ -275,3 +276,7 @@ export default function ContactSales() {
         </div>
     );
 }
+
+ContactSales.propTypes = {
+  // TODO: Add props
+};

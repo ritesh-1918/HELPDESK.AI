@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, Home, ShieldCheck, Clock, Briefcase } from 'lucide-react';
@@ -123,3 +124,7 @@ function Resolved() {
 }
 
 export default Resolved;
+
+Resolved.propTypes = {
+  // TODO: Add props
+};

@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useEffect, useRef, useState } from 'react';
 
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -426,3 +427,7 @@ const AIProcessing = () => {
 };
 
 export default AIProcessing;
+
+AIProcessing.propTypes = {
+  // TODO: Add props
+};

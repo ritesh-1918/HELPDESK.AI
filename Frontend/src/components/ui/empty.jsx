@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import * as React from "react"
 import { cva } from "class-variance-authority"
 
@@ -103,3 +104,28 @@ export {
     EmptyContent,
     EmptyMedia,
 }
+
+Empty.propTypes = {
+  className: PropTypes.any, // TODO: refine type
+};
+
+EmptyHeader.propTypes = {
+  className: PropTypes.any, // TODO: refine type
+};
+
+EmptyMedia.propTypes = {
+  className: PropTypes.any, // TODO: refine type
+  variant: PropTypes.any, // TODO: refine type
+};
+
+EmptyTitle.propTypes = {
+  className: PropTypes.any, // TODO: refine type
+};
+
+EmptyDescription.propTypes = {
+  className: PropTypes.any, // TODO: refine type
+};
+
+EmptyContent.propTypes = {
+  className: PropTypes.any, // TODO: refine type
+};

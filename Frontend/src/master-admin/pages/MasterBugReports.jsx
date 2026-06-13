@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from "../../lib/supabaseClient";
 import useToastStore from "../../store/toastStore";
@@ -454,3 +455,7 @@ const MasterBugReports = () => {
 };
 
 export default MasterBugReports;
+
+MasterBugReports.propTypes = {
+  // TODO: Add props
+};

@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import {
@@ -171,3 +172,7 @@ function MasterAdminDashboard() {
 }
 
 export default MasterAdminDashboard;
+
+MasterAdminDashboard.propTypes = {
+  // TODO: Add props
+};

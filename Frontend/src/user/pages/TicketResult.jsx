@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 
 const TicketResult = () => {
@@ -10,3 +11,7 @@ const TicketResult = () => {
 };
 
 export default TicketResult;
+
+TicketResult.propTypes = {
+  // TODO: Add props
+};

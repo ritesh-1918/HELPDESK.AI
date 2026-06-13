@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Terminal, Shield, Cpu, Key, ArrowLeft, Check, Copy } from 'lucide-react';
@@ -125,3 +126,7 @@ export default function ApiReference() {
         </div>
     );
 }
+
+ApiReference.propTypes = {
+  // TODO: Add props
+};

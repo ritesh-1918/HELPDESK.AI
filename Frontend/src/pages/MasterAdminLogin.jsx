@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, ShieldAlert, Loader2, Lock } from "lucide-react";
@@ -192,3 +193,7 @@ function MasterAdminLogin() {
 }
 
 export default MasterAdminLogin;
+
+MasterAdminLogin.propTypes = {
+  // TODO: Add props
+};

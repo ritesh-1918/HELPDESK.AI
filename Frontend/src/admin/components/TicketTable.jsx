@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, Clock, ExternalLink } from 'lucide-react';
@@ -185,3 +186,9 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
 };
 
 export default TicketTable;
+
+TicketTable.propTypes = {
+  tickets: PropTypes.any, // TODO: refine type
+  isLoading: PropTypes.bool,
+  limit: PropTypes.any, // TODO: refine type
+};

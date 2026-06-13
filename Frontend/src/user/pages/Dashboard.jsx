@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import WelcomeCard from "../components/WelcomeCard";
 import QuickActions from "../components/QuickActions";
@@ -55,3 +56,7 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+
+Dashboard.propTypes = {
+  // TODO: Add props
+};

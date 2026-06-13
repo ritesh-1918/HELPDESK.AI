@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileText } from 'lucide-react';
@@ -107,3 +108,7 @@ export default function TermsOfService() {
         </div>
     );
 }
+
+TermsOfService.propTypes = {
+  // TODO: Add props
+};

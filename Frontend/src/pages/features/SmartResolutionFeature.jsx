@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Bot, CheckCircle, Users, MessageSquare, Zap, Database } from 'lucide-react';
@@ -96,3 +97,7 @@ export default function SmartResolutionFeature() {
         </div>
     );
 }
+
+SmartResolutionFeature.propTypes = {
+  // TODO: Add props
+};

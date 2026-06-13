@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useState, useRef, useEffect } from 'react';
 import {
     User, Mail, Shield, Bell, Lock, Globe, Camera, ShieldCheck, Key,
@@ -336,3 +337,7 @@ const AdminProfile = () => {
 };
 
 export default AdminProfile;
+
+AdminProfile.propTypes = {
+  // TODO: Add props
+};

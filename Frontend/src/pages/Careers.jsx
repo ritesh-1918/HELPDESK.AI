@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Briefcase, ArrowLeft, ArrowRight, Star } from 'lucide-react';
@@ -64,3 +65,7 @@ export default function Careers() {
         </div>
     );
 }
+
+Careers.propTypes = {
+  // TODO: Add props
+};

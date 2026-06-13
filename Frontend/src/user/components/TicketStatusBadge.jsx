@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import { Badge } from "../../components/ui/badge";
  
@@ -61,3 +62,7 @@ const TicketStatusBadge = ({ status }) => {
 };
 
 export default TicketStatusBadge;
+
+TicketStatusBadge.propTypes = {
+  status: PropTypes.any, // TODO: refine type
+};

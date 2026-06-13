@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, Loader2, Circle } from 'lucide-react';
 
@@ -66,3 +67,10 @@ const AIProcessingSteps = ({ steps = [], onComplete, delay = 1200, activeStep = 
 };
 
 export default AIProcessingSteps;
+
+AIProcessingSteps.propTypes = {
+  steps: PropTypes.any, // TODO: refine type
+  onComplete: PropTypes.func,
+  delay: PropTypes.any, // TODO: refine type
+  activeStep: PropTypes.any, // TODO: refine type
+};

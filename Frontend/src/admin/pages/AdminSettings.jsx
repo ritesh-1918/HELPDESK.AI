@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import {
     Settings,
@@ -175,3 +176,7 @@ const AdminSettings = () => {
 };
 
 export default AdminSettings;
+
+AdminSettings.propTypes = {
+  // TODO: Add props
+};

@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ShieldCheck, Lock, Server, Eye, Key, Activity, AlertCircle } from 'lucide-react';
@@ -90,3 +91,7 @@ export default function Security() {
         </div>
     );
 }
+
+Security.propTypes = {
+  // TODO: Add props
+};

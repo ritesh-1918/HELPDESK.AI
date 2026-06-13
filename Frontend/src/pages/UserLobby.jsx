@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
@@ -185,3 +186,7 @@ function UserLobby() {
 }
 
 export default UserLobby;
+
+UserLobby.propTypes = {
+  // TODO: Add props
+};

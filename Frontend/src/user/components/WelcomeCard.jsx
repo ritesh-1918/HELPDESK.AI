@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlusCircle, ListTodo, Sparkles } from 'lucide-react';
@@ -84,3 +85,6 @@ const WelcomeCard = ({ userName = "Ritesh" }) => {
 
 export default WelcomeCard;
 
+WelcomeCard.propTypes = {
+  userName: PropTypes.any, // TODO: refine type
+};

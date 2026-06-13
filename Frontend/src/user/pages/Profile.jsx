@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -614,3 +615,7 @@ const Profile = () => {
 };
 
 export default Profile;
+
+Profile.propTypes = {
+  // TODO: Add props
+};

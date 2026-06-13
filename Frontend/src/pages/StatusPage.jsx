@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Activity, CheckCircle, AlertTriangle, ArrowLeft, RefreshCw } from 'lucide-react';
@@ -85,3 +86,7 @@ export default function StatusPage() {
         </div>
     );
 }
+
+StatusPage.propTypes = {
+  // TODO: Add props
+};

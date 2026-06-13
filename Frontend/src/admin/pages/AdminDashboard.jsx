@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Activity } from 'lucide-react';
@@ -232,3 +233,39 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
+
+TicketIcon.propTypes = {
+  // TODO: Add props
+};
+
+ActivityIcon.propTypes = {
+  // TODO: Add props
+};
+
+CpuIcon.propTypes = {
+  // TODO: Add props
+};
+
+UsersIcon.propTypes = {
+  // TODO: Add props
+};
+
+ClassifierIcon.propTypes = {
+  // TODO: Add props
+};
+
+PriorityIcon.propTypes = {
+  // TODO: Add props
+};
+
+SemanticIcon.propTypes = {
+  // TODO: Add props
+};
+
+DuplicateIcon.propTypes = {
+  // TODO: Add props
+};
+
+AdminDashboard.propTypes = {
+  // TODO: Add props
+};
