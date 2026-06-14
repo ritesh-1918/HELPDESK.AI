@@ -9,7 +9,7 @@ import { COLORS, SHADOWS } from '../../styles/theme';
 import {
   User, Mail, Building2, ShieldCheck, Calendar, Ticket, Zap,
   Lock, LogOut, ChevronRight, Pencil, Check, X, Phone, Briefcase,
-  ArrowUpRight, Eye, EyeOff, Camera,
+  ArrowUpRight, Eye, EyeOff, Camera, Bell,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
@@ -332,6 +332,21 @@ const ProfileScreen = () => {
             </View>
             <ChevronRight size={18} color={COLORS.textMuted} />
           </TouchableOpacity>
+
+          <TouchableOpacity style={styles.settingItem}>
+  <View style={[styles.settingIcon, { backgroundColor: '#ede9fe' }]}>
+    <Bell size={18} color="#7c3aed" />
+  </View>
+
+  <View style={{ flex: 1 }}>
+    <Text style={styles.settingTitle}>Notification Preferences</Text>
+    <Text style={styles.settingDesc}>
+      Customize ticket and alert notifications
+    </Text>
+  </View>
+
+  <ChevronRight size={18} color={COLORS.textMuted} />
+</TouchableOpacity>
 
           <TouchableOpacity style={[styles.settingItem, { borderBottomWidth: 0 }]} onPress={handleLogout}>
             <View style={[styles.settingIcon, { backgroundColor: '#fef2f2' }]}>
