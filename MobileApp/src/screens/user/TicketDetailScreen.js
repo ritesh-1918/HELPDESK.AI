@@ -22,6 +22,7 @@ const TicketDetailScreen = ({ route }) => {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [ticket, setTicket] = useState(null);
+  const [isWatching, setIsWatching] = useState(false);
   const navigation = useNavigation();
   const flatListRef = useRef(null);
 
@@ -138,6 +139,14 @@ const TicketDetailScreen = ({ route }) => {
           </Text>
           <Text style={styles.headerSubtitle}>#{ticketId?.slice(0, 8).toUpperCase()}</Text>
         </View>
+        <TouchableOpacity
+  style={styles.watchBtn}
+  onPress={() => setIsWatching(!isWatching)}
+>
+  <Text style={styles.watchBtnText}>
+    {isWatching ? "Watching" : "Watch"}
+  </Text>
+</TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView
@@ -263,6 +272,18 @@ const styles = StyleSheet.create({
     ...SHADOWS.medium
   },
   sendBtnDisabled: { backgroundColor: COLORS.textMuted, elevation: 0 },
+  watchBtn: {
+  backgroundColor: COLORS.primary,
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+  borderRadius: 20,
+},
+
+watchBtnText: {
+  color: COLORS.white,
+  fontWeight: '700',
+  fontSize: 12,
+},
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 100 },
   emptyText: { textAlign: 'center', color: COLORS.textMuted, fontSize: 14 }
 });
