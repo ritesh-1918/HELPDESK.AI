@@ -6,7 +6,9 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse, PlainTextResponse
 from supabase import create_client
 
+from contextlib import asynccontextmanager
 from backend.csrf import CSRFTokenMiddleware, set_csrf_cookie, CSRF_COOKIE_NAME
+from backend.database import close_supabase as close_db_supabase
 
 from backend.routers import tickets, ai, admin, health, auth
 from backend.routes import translation, estimator, voice, privacy, active_learning, weekly_digest
@@ -14,7 +16,14 @@ from backend.routes import translation, estimator, voice, privacy, active_learni
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+    close_db_supabase()
+
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(CSRFTokenMiddleware)
 

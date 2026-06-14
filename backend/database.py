@@ -8,6 +8,8 @@ logger = logging.getLogger(__name__)
 env_path = Path(__file__).parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
+_supabase_instance = None
+
 try:
     from supabase import create_client, Client
     url = os.environ.get("SUPABASE_URL")
@@ -17,9 +19,24 @@ try:
         supabase = None
     else:
         supabase = create_client(url, key)
+        _supabase_instance = supabase
 except (ImportError, Exception) as e:
     logger.warning("Supabase initialization failed: %s", e)
     supabase = None
+
+
+def close_supabase() -> None:
+    """Close the Supabase connection pool on application shutdown."""
+    global _supabase_instance
+    if _supabase_instance is not None:
+        try:
+            _supabase_instance.close()
+            logger.info("Supabase connection pool closed")
+        except Exception as e:
+            logger.warning("Failed to close Supabase connection: %s", e)
+        _supabase_instance = None
+    else:
+        logger.debug("No Supabase instance to close")
 
 def get_system_settings(company_id: str) -> dict:
     defaults = {
