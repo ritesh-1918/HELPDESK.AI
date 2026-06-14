@@ -6,10 +6,11 @@ import datetime
 import traceback
 import asyncio
 from pathlib import Path
-from fastapi import APIRouter, Depends, Request, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from fastapi.encoders import jsonable_encoder
 from backend.auth_cookie import get_current_user
+from backend.limiter import limiter, ML_HEAVY_LIMIT, ML_LIGHT_LIMIT
 from backend.dependencies import (
     limiter, get_system_settings,
     classifier_service, classifier_v3, classifier_v2,
@@ -28,7 +29,8 @@ router = APIRouter(prefix="/ai", tags=["ai"])
 
 CORRECTIONS_LOG_PATH = Path(__file__).parent.parent / "data" / "corrections_log.json"
 @router.post("/troubleshoot", response_model=TroubleshootResponse)
-async def troubleshoot(request: TroubleshootRequest, user: dict = Depends(get_current_user)):
+@limiter.limit(ML_HEAVY_LIMIT)
+async def troubleshoot(troubleshoot_request: TroubleshootRequest, request: Request, user: dict = Depends(get_current_user)):
     """Get dynamic troubleshooting steps from Gemini."""
     if not gemini_service or not gemini_service._initialized:
         return TroubleshootResponse(
@@ -38,15 +40,16 @@ async def troubleshoot(request: TroubleshootRequest, user: dict = Depends(get_cu
         )
     
     result = gemini_service.get_troubleshooting_step(
-        request.text,
-        request.history,
-        request.category
+        troubleshoot_request.text,
+        troubleshoot_request.history,
+        troubleshoot_request.category
     )
     return TroubleshootResponse(**result)
 
 
 @router.post("/analyze_bug", response_model=BugReportAnalysisResponse)
-async def analyze_bug(request: BugReportAnalysisRequest, user: dict = Depends(get_current_user)):
+@limiter.limit(ML_HEAVY_LIMIT)
+async def analyze_bug(bug_request: BugReportAnalysisRequest, request: Request, user: dict = Depends(get_current_user)):
     """Analyze a bug report using Gemini to generate a Probable Cause."""
     if not gemini_service or not gemini_service._initialized:
         return BugReportAnalysisResponse(
@@ -54,10 +57,10 @@ async def analyze_bug(request: BugReportAnalysisRequest, user: dict = Depends(ge
         )
     
     cause = gemini_service.analyze_bug_report(
-        request.bug_title,
-        request.description,
-        request.steps_to_reproduce,
-        request.console_errors
+        bug_request.bug_title,
+        bug_request.description,
+        bug_request.steps_to_reproduce,
+        bug_request.console_errors
     )
     return BugReportAnalysisResponse(probable_cause=cause)
 
@@ -158,7 +161,8 @@ async def analyze_ticket(request_body: TicketRequest, request: Request, user: di
     return await analyze_only(request_body)
 
 @router.post("/analyze")
-async def analyze_only(request_body: TicketRequest, user: dict = Depends(get_current_user)):
+@limiter.limit(ML_HEAVY_LIMIT)
+async def analyze_only(request_body: TicketRequest, request: Request, user: dict = Depends(get_current_user)):
     """
     PERFORMANCE UPGRADE: AI Analysis phase only. 
     Does NOT persist to DB. This allows the user to review the analysis 
@@ -319,7 +323,8 @@ async def analyze_only(request_body: TicketRequest, user: dict = Depends(get_cur
     )
 
 @router.post("/analyze_stream")
-async def analyze_stream(request_body: TicketRequest, user: dict = Depends(get_current_user)):
+@limiter.limit(ML_HEAVY_LIMIT)
+async def analyze_stream(request_body: TicketRequest, request: Request, user: dict = Depends(get_current_user)):
     """
     REAL-TIME SSE ENDPOINT: Streams the AI progress to the frontend dynamically.
     """
@@ -471,7 +476,8 @@ async def analyze_stream(request_body: TicketRequest, user: dict = Depends(get_c
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 @router.post("/analyze_ticket/legacy")
-async def legacy_analyze_and_save(request_body: TicketRequest, user: dict = Depends(get_current_user)):
+@limiter.limit(ML_HEAVY_LIMIT)
+async def legacy_analyze_and_save(request_body: TicketRequest, request: Request, user: dict = Depends(get_current_user)):
     """
     BACKWARD COMPATIBILITY: Strictly performs analysis only. 
     Does NOT persist to DB to avoid foreign key violations.
@@ -479,8 +485,9 @@ async def legacy_analyze_and_save(request_body: TicketRequest, user: dict = Depe
     return await analyze_only(request_body)
 
 @router.post("/analyze-v2")
-async def analyze_ticket_v2(request: TicketRequest, user: dict = Depends(get_current_user)):
-    text = request.text
+@limiter.limit(ML_HEAVY_LIMIT)
+async def analyze_ticket_v2(ticket_request: TicketRequest, request: Request, user: dict = Depends(get_current_user)):
+    text = ticket_request.text
     try:
         prediction = classifier_v2.predict(text)
         return {

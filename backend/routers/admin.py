@@ -1,11 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from backend.database import supabase
 from backend.auth_cookie import get_current_user
+from backend.limiter import limiter, ADMIN_LIMIT
 
 router = APIRouter(prefix="/api", tags=["Admin"])
 
 @router.get("/profiles")
+@limiter.limit(ADMIN_LIMIT)
 async def api_get_profiles(
+    request: Request,
     role: str = None,
     status: str = None,
     limit: int = 50,

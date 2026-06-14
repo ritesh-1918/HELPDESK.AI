@@ -2,8 +2,9 @@
 import logging
 import hashlib
 import traceback
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from backend.auth_cookie import get_current_user
+from backend.limiter import limiter, TICKET_WRITE_LIMIT, TICKET_READ_LIMIT
 from backend.dependencies import supabase, duplicate_service
 from backend.models import TicketSaveRequest, TicketRecord, TICKETS_DB
 from backend.sanitization import sanitize_ticket_data
@@ -12,7 +13,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 @router.get("")
-async def get_tickets(company_id: str | None = None, user: dict = Depends(get_current_user)):
+@limiter.limit(TICKET_READ_LIMIT)
+async def get_tickets(request: Request, company_id: str | None = None, user: dict = Depends(get_current_user)):
     """Fetch persistent tickets from Supabase."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
@@ -25,7 +27,8 @@ async def get_tickets(company_id: str | None = None, user: dict = Depends(get_cu
     return res.data
 
 @router.post("/save")
-async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_current_user)):
+@limiter.limit(TICKET_WRITE_LIMIT)
+async def save_ticket(request_body: TicketSaveRequest, request: Request, user: dict = Depends(get_current_user)):
     """
     OFFICIAL PERSISTENCE: Saves the analyzed ticket to Supabase.
     This is called AFTER the user confirms the analysis results.
