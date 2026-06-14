@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 from supabase import create_client
 
 from backend.csrf import CSRFTokenMiddleware, set_csrf_cookie, CSRF_COOKIE_NAME
+from backend.payload_middleware import PayloadLimitMiddleware
 
 from backend.routers import tickets, ai, admin, health, auth
 from backend.routes import translation, estimator, voice, privacy, active_learning, weekly_digest
@@ -16,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
+app.add_middleware(PayloadLimitMiddleware)
 app.add_middleware(CSRFTokenMiddleware)
 
 # Initialize Supabase client
