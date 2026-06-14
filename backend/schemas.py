@@ -71,3 +71,46 @@ class TicketResponse(BaseModel):
     version: str = "2.1.0-Neural-Diagnostic"
 
 
+class CorrectionLogRequest(BaseModel):
+    ticket_id: str = ""
+    original_text: str = ""
+    ocr_text: str = ""
+    confidence: float = 0.0
+    original_prediction: dict = {}
+    corrected_prediction: dict = {}
+
+
+class Message(BaseModel):
+    sender: str = ""
+    message: str = ""
+    timestamp: str = ""
+
+
+class TicketRecord(BaseModel):
+    ticket_id: str = ""
+    owner_id: str = ""
+    summary: str = ""
+    category: str = ""
+    subcategory: str = ""
+    priority: str = ""
+    status: str = ""
+    assigned_team: str = ""
+    created_at: str = ""
+    updated_at: str | None = None
+    last_user_viewed_at: str | None = None
+    messages: list[Message] = []
+    metadata: dict = {}
+    timeline: dict = {}
+
+
+class HealthResponse(BaseModel):
+    status: str = "healthy"
+    message: str = "Backend system operational."
+
+
+class ReadinessResponse(BaseModel):
+    status: str = "healthy"
+    db_status: str = "ok"
+    ai_status: str = "ready"
+
+
