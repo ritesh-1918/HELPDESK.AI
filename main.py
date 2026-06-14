@@ -1,5 +1,6 @@
 import logging
 import os
+import traceback
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
@@ -44,6 +45,20 @@ app.include_router(voice.router)
 app.include_router(privacy.router)
 app.include_router(active_learning.router)
 app.include_router(weekly_digest.router)
+
+
+# ---------------------------------------------------------------------------
+# Global exception handler — prevents PII/stack-trace leakage
+# ---------------------------------------------------------------------------
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled exception on {request.method} {request.url.path}: {exc}")
+    logger.debug(traceback.format_exc())
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "An internal server error occurred. Please try again later."},
+    )
 
 
 # ---------------------------------------------------------------------------
