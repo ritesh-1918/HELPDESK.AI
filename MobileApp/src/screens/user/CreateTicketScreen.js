@@ -24,6 +24,24 @@ import React, { useState, useEffect } from 'react';
 
 const CreateTicketScreen = () => {
   const [description, setDescription] = useState('');
+  const templates = [
+  {
+    name: "Password Reset",
+    text: "Password Reset Request\n\nUsername:\nIssue Description:"
+  },
+  {
+    name: "VPN Access",
+    text: "VPN Access Request\n\nDepartment:\nReason for Access:"
+  },
+  {
+    name: "Hardware Issue",
+    text: "Hardware Issue Report\n\nDevice Name:\nProblem:"
+  },
+  {
+    name: "Software Install",
+    text: "Software Installation Request\n\nSoftware Name:\nPurpose:"
+  }
+];
   const [loading, setLoading] = useState(false);
   const [image, setImage] = useState(null);
   const navigation = useNavigation();
@@ -125,6 +143,29 @@ useEffect(() => {
               <Text style={styles.inputLabel}>Issue Details</Text>
               <Text style={styles.charCount}>{description.length}/1000</Text>
             </View>
+
+            <View style={styles.templateContainer}>
+  <Text style={styles.templateTitle}>
+    Quick Templates
+  </Text>
+
+  <ScrollView
+    horizontal
+    showsHorizontalScrollIndicator={false}
+  >
+    {templates.map((template) => (
+      <TouchableOpacity
+        key={template.name}
+        style={styles.templateBtn}
+        onPress={() => setDescription(template.text)}
+      >
+        <Text style={styles.templateBtnText}>
+          {template.name}
+        </Text>
+      </TouchableOpacity>
+    ))}
+  </ScrollView>
+</View>
             
             <TextInput
               style={styles.input}
@@ -221,6 +262,30 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     lineHeight: 24
   },
+  templateContainer: {
+  marginBottom: 16,
+},
+
+templateTitle: {
+  fontSize: 14,
+  fontWeight: '700',
+  marginBottom: 10,
+  color: COLORS.text,
+},
+
+templateBtn: {
+  backgroundColor: COLORS.primaryLight,
+  paddingHorizontal: 14,
+  paddingVertical: 8,
+  borderRadius: 12,
+  marginRight: 8,
+},
+
+templateBtnText: {
+  color: COLORS.primary,
+  fontWeight: '700',
+  fontSize: 12,
+},
   imagePreviewContainer: { marginTop: 16, position: 'relative', borderRadius: 16, overflow: 'hidden', height: 180, borderWidth: 1, borderColor: COLORS.border },
   imagePreview: { width: '100%', height: '100%' },
   removeImageBtn: { position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.5)', width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
