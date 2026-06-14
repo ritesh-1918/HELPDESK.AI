@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 from supabase import create_client
 
 from backend.csrf import CSRFTokenMiddleware, set_csrf_cookie, CSRF_COOKIE_NAME
+from backend.services.cache_service import cleanup_cache_service
 
 from backend.routers import tickets, ai, admin, health, auth
 from backend.routes import translation, estimator, voice, privacy, active_learning, weekly_digest
@@ -17,6 +18,13 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 
 app.add_middleware(CSRFTokenMiddleware)
+
+# Register shutdown hooks for resource cleanup
+@app.on_event("shutdown")
+async def shutdown_event():
+    logger.info("Shutting down — cleaning up resources...")
+    cleanup_cache_service()
+    logger.info("Shutdown complete.")
 
 # Initialize Supabase client
 SUPABASE_URL = os.getenv("SUPABASE_URL")

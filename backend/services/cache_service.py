@@ -89,9 +89,12 @@ class CacheService:
     def close(self) -> None:
         if self._client is not None:
             try:
+                pool = getattr(self._client, "connection_pool", None)
+                if pool is not None:
+                    pool.disconnect()
                 self._client.close()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("[CacheService] Error during close: %s", e)
         self._available = False
         self._client = None
 
@@ -208,3 +211,11 @@ class CacheService:
 
 # Module-level singleton shared across all services
 cache_service = CacheService()
+
+
+def cleanup_cache_service() -> None:
+    """Shutdown hook — gracefully disconnects the Redis pool."""
+    if cache_service.is_available:
+        logger.info("[CacheService] Shutting down Redis connection pool...")
+        cache_service.close()
+        logger.info("[CacheService] Redis connection pool closed.")
