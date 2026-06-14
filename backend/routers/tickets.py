@@ -5,7 +5,8 @@ import traceback
 from fastapi import APIRouter, Depends, HTTPException
 from backend.auth_cookie import get_current_user
 from backend.dependencies import supabase, duplicate_service
-from backend.models import TicketSaveRequest, TicketRecord, TICKETS_DB
+from backend.models import TicketSaveRequest, TicketRecord
+from backend.ticket_store import ticket_store
 from backend.sanitization import sanitize_ticket_data
 
 logger = logging.getLogger(__name__)
@@ -142,31 +143,23 @@ async def get_ticket_by_id(ticket_id: str, user: dict = Depends(get_current_user
 
 @router.post("", response_model=TicketRecord)
 async def create_ticket(ticket: TicketRecord):
-    """Save a new ticket into the system."""
+    """Save a new ticket into the system using a thread-safe store."""
     ticket_dict = sanitize_ticket_data(ticket.dict())
     ticket = TicketRecord(**ticket_dict)
-    # Check for duplicates before adding
-    existing = next((t for t in TICKETS_DB if t.ticket_id == ticket.ticket_id), None)
+    existing = ticket_store.get(ticket.ticket_id)
     if existing:
         return existing
-        
-    TICKETS_DB.append(ticket)
-    print(f"[DB] Ticket #{ticket.ticket_id} created for user {ticket.owner_id}")
-    return ticket
+    created = ticket_store.add(ticket)
+    logger.info(f"[DB] Ticket #{created.ticket_id} created for user {created.owner_id}")
+    return created
 
 
 @router.patch("/{ticket_id}", response_model=TicketRecord)
 async def update_ticket(ticket_id: str, updates: dict):
-    """Partially update a ticket's fields (e.g., status, viewed_at)."""
+    """Partially update a ticket's fields (e.g., status, viewed_at) with thread safety."""
     sanitized_updates = sanitize_ticket_data(updates)
-    for i, ticket in enumerate(TICKETS_DB):
-        if str(ticket.ticket_id) == str(ticket_id):
-            # Convert to dict, update, then back to model
-            ticket_dict = ticket.dict()
-            ticket_dict.update(sanitized_updates)
-            updated_ticket = TicketRecord(**ticket_dict)
-            TICKETS_DB[i] = updated_ticket
-            return updated_ticket
-    
-    raise HTTPException(status_code=404, detail="Ticket not found")
+    updated = ticket_store.update(ticket_id, sanitized_updates)
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    return updated
 
