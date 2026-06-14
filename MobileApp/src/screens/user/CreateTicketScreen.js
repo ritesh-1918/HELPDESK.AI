@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   StyleSheet, 
   View, 
@@ -19,6 +19,8 @@ import { useNavigation } from '@react-navigation/native';
 import { useNotification } from '../../components/NotificationProvider';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useState, useEffect } from 'react';
 
 const CreateTicketScreen = () => {
   const [description, setDescription] = useState('');
@@ -26,6 +28,32 @@ const CreateTicketScreen = () => {
   const [image, setImage] = useState(null);
   const navigation = useNavigation();
   const { success, error: notifyError } = useNotification();
+  useEffect(() => {
+  loadDraft();
+}, []);
+
+const loadDraft = async () => {
+  try {
+    const savedDraft = await AsyncStorage.getItem('ticketDraft');
+    if (savedDraft) {
+      setDescription(savedDraft);
+    }
+  } catch (error) {
+    console.log('Draft load error:', error);
+  }
+};
+
+useEffect(() => {
+  const timer = setTimeout(async () => {
+    try {
+      await AsyncStorage.setItem('ticketDraft', description);
+    } catch (error) {
+      console.log('Draft save error:', error);
+    }
+  }, 2000);
+
+  return () => clearTimeout(timer);
+}, [description]);
 
   const pickImage = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -58,6 +86,8 @@ const CreateTicketScreen = () => {
           reader.readAsDataURL(blob);
         });
       }
+
+      await AsyncStorage.removeItem('ticketDraft');
 
       navigation.navigate('AIProcessing', {
         text: description,
