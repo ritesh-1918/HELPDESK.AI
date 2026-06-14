@@ -23,6 +23,8 @@ const TicketDetailScreen = ({ route }) => {
   const [loading, setLoading] = useState(true);
   const [ticket, setTicket] = useState(null);
   const [isWatching, setIsWatching] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [feedback, setFeedback] = useState('');
   const navigation = useNavigation();
   const flatListRef = useRef(null);
 
@@ -101,6 +103,22 @@ const TicketDetailScreen = ({ route }) => {
     }
   };
 
+  const submitFeedback = async () => {
+  try {
+    await supabase
+      .from('ticket_feedback')
+      .insert({
+        ticket_id: ticketId,
+        rating,
+        feedback,
+      });
+
+    alert('Feedback submitted successfully');
+  } catch (error) {
+    console.error(error);
+  }
+};
+
   const renderMessage = ({ item }) => {
     const isUser = item.sender_role === 'user';
     const isAI = item.sender_role === 'ai';
@@ -173,6 +191,50 @@ const TicketDetailScreen = ({ route }) => {
             }
           />
         )}
+
+        {ticket?.status === 'resolved' && (
+  <View style={styles.feedbackContainer}>
+    <Text style={styles.feedbackTitle}>
+      Rate Your Support Experience
+    </Text>
+
+    <View style={{ flexDirection: 'row', marginVertical: 10 }}>
+      {[1,2,3,4,5].map((star) => (
+        <TouchableOpacity
+          key={star}
+          onPress={() => setRating(star)}
+        >
+          <Text
+            style={{
+              fontSize: 28,
+              color: star <= rating ? '#FFD700' : '#CCCCCC',
+              marginRight: 5
+            }}
+          >
+            ★
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+
+    <TextInput
+      placeholder="Share your feedback..."
+      value={feedback}
+      onChangeText={setFeedback}
+      multiline
+      style={styles.feedbackInput}
+    />
+
+    <TouchableOpacity
+      style={styles.feedbackBtn}
+      onPress={submitFeedback}
+    >
+      <Text style={styles.feedbackBtnText}>
+        Submit Feedback
+      </Text>
+    </TouchableOpacity>
+  </View>
+)}
 
         <View style={styles.inputContainer}>
           <TextInput
@@ -283,6 +345,39 @@ watchBtnText: {
   color: COLORS.white,
   fontWeight: '700',
   fontSize: 12,
+},
+feedbackContainer: {
+  backgroundColor: COLORS.white,
+  padding: 15,
+  margin: 12,
+  borderRadius: 12,
+},
+
+feedbackTitle: {
+  fontSize: 16,
+  fontWeight: '700',
+},
+
+feedbackInput: {
+  borderWidth: 1,
+  borderColor: COLORS.border,
+  borderRadius: 10,
+  padding: 10,
+  minHeight: 80,
+  marginTop: 10,
+},
+
+feedbackBtn: {
+  backgroundColor: COLORS.primary,
+  padding: 12,
+  borderRadius: 10,
+  marginTop: 10,
+},
+
+feedbackBtnText: {
+  color: COLORS.white,
+  textAlign: 'center',
+  fontWeight: '700',
 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 100 },
   emptyText: { textAlign: 'center', color: COLORS.textMuted, fontSize: 14 }
