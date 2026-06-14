@@ -318,155 +318,215 @@ async def analyze_only(request_body: TicketRequest, user: dict = Depends(get_cur
         sla_breach_at=sla_breach_dt.isoformat() + "Z"
     )
 
+async def _sse_disconnect_guard(request: Request) -> None:
+    """Check client connection; raises asyncio.CancelledError if disconnected."""
+    if await request.is_disconnected():
+        raise asyncio.CancelledError("Client disconnected")
+
+async def _sse_safe_yield(gen, request: Request, data: str) -> None:
+    """Yield SSE data with disconnect guard."""
+    await _sse_disconnect_guard(request)
+    try:
+        yield data
+    except asyncio.CancelledError:
+        logger.warning("[SSE] Client cancelled during yield, cleaning up")
+        raise
+
 @router.post("/analyze_stream")
-async def analyze_stream(request_body: TicketRequest, user: dict = Depends(get_current_user)):
+async def analyze_stream(request_body: TicketRequest, request: Request, user: dict = Depends(get_current_user)):
     """
     REAL-TIME SSE ENDPOINT: Streams the AI progress to the frontend dynamically.
+    Includes client-disconnect detection and 60-second timeout protection.
     """
     import datetime
     def get_now_ist():
         return datetime.datetime.utcnow().isoformat() + "Z"
 
     async def event_generator():
-        text = request_body.text
-        env_metadata = {
-            "timestamp": get_now_ist(),
-            "model_version": "3.0.0-PRO",
-            "api_endpoint": "/analyze_stream"
-        }
-        timeline = {"received": get_now_ist()} 
-        settings = get_system_settings(request_body.company)
-        confidence_threshold = settings["ai_confidence_threshold"]
-        duplicate_sensitivity = settings["duplicate_sensitivity"]
-        enable_auto_resolve = settings["enable_auto_resolve"]
+        generator_cancelled = False
+        start_time = datetime.datetime.utcnow()
+        max_duration = 60.0
 
-        # 1. Reading
-        yield f"data: {json.dumps({'step': 'Reading your message', 'status': 'in_progress'})}\n\n"
-        await asyncio.sleep(0.5)
+        def _check_timeout():
+            if (datetime.datetime.utcnow() - start_time).total_seconds() > max_duration:
+                logger.warning("[SSE] Generator timed out after 60s")
+                return True
+            return False
 
-        gemini_analysis = {"ocr_text": request_body.image_text or "", "image_description": ""}
-        if request_body.image_base64 and not gemini_analysis["ocr_text"]:
+        try:
+            text = request_body.text
+            env_metadata = {
+                "timestamp": get_now_ist(),
+                "model_version": "3.0.0-PRO",
+                "api_endpoint": "/analyze_stream"
+            }
+            timeline = {"received": get_now_ist()}
+            settings = get_system_settings(request_body.company)
+            confidence_threshold = settings["ai_confidence_threshold"]
+            duplicate_sensitivity = settings["duplicate_sensitivity"]
+            enable_auto_resolve = settings["enable_auto_resolve"]
+
+            # 1. Reading
+            if _check_timeout():
+                yield f"data: {json.dumps({'step': 'timeout', 'status': 'failed', 'error': 'Analysis timed out'})}\n\n"
+                return
+            await _sse_disconnect_guard(request)
+            yield f"data: {json.dumps({'step': 'Reading your message', 'status': 'in_progress'})}\n\n"
             try:
-                vision_result = gemini_service.analyze_image(request_body.image_base64, text)
-                gemini_analysis.update(vision_result)
+                await asyncio.wait_for(asyncio.sleep(0.5), timeout=5.0)
+            except asyncio.TimeoutError:
+                logger.warning("[SSE] Sleep timeout, continuing")
+
+            gemini_analysis = {"ocr_text": request_body.image_text or "", "image_description": ""}
+            if request_body.image_base64 and not gemini_analysis["ocr_text"]:
+                try:
+                    vision_result = gemini_service.analyze_image(request_body.image_base64, text)
+                    gemini_analysis.update(vision_result)
+                except Exception as e:
+                    pass
+
+            summary = text[:100] + ("…" if len(text) > 100 else "")
+
+            # 2. NER
+            await _sse_disconnect_guard(request)
+            yield f"data: {json.dumps({'step': 'Extracting technical entities', 'status': 'in_progress'})}\n\n"
+            try:
+                await asyncio.wait_for(asyncio.sleep(0.2), timeout=5.0)
+            except asyncio.TimeoutError:
+                pass
+            try:
+                entities = ner_service.extract_entities(text)
+            except Exception:
+                entities = []
+            timeline["metadata_harvested"] = get_now_ist()
+
+            # 3. Classification
+            await _sse_disconnect_guard(request)
+            yield f"data: {json.dumps({'step': 'Detecting category and priority', 'status': 'in_progress'})}\n\n"
+            try:
+                await asyncio.wait_for(asyncio.sleep(0.2), timeout=5.0)
+            except asyncio.TimeoutError:
+                pass
+            try:
+                classification_v3_res = classifier_v3.predict(text)
+                if "error" in classification_v3_res:
+                    classification = classifier_service.predict(text)
+                else:
+                    cat = classification_v3_res.get("Category", {}).get("prediction", "Unknown")
+                    sub = classification_v3_res.get("Subcategory", {}).get("prediction", "Unknown")
+                    pri = classification_v3_res.get("priority", {}).get("prediction", "Medium")
+                    conf = classification_v3_res.get("Category", {}).get("confidence", 0.0)
+
+                    from backend.services.classifier_service import TEAM_MAP, AUTO_RESOLVE_SUBS
+                    assigned_team = TEAM_MAP.get(cat, "General Support")
+                    auto_resolve = sub in AUTO_RESOLVE_SUBS
+
+                    classification = {
+                        "category": cat,
+                        "subcategory": sub,
+                        "priority": pri,
+                        "auto_resolve": auto_resolve,
+                        "assigned_team": assigned_team,
+                        "confidence": float(conf)
+                    }
+            except Exception as e:
+                classification = {
+                    "category": "Unknown", "subcategory": "Unknown", "priority": "Medium",
+                    "auto_resolve": False, "assigned_team": "General Support", "confidence": 0.0,
+                }
+            timeline["ai_analyzed"] = get_now_ist()
+            timeline["triaged"] = get_now_ist()
+
+            # 4. Duplicates
+            await _sse_disconnect_guard(request)
+            yield f"data: {json.dumps({'step': 'Checking duplicate issues', 'status': 'in_progress'})}\n\n"
+            try:
+                await asyncio.wait_for(asyncio.sleep(0.2), timeout=5.0)
+            except asyncio.TimeoutError:
+                pass
+            try:
+                dup_result = duplicate_service.check_duplicate(text, threshold=duplicate_sensitivity)
+            except Exception:
+                dup_result = {"is_duplicate": False, "duplicate_ticket_id": None, "similarity": 0.0}
+
+            # 5. RAG / Solutions
+            await _sse_disconnect_guard(request)
+            yield f"data: {json.dumps({'step': 'Finding possible solutions', 'status': 'in_progress'})}\n\n"
+            try:
+                await asyncio.wait_for(asyncio.sleep(0.2), timeout=5.0)
+            except asyncio.TimeoutError:
+                pass
+            rag_match = None
+            try:
+                rag_match = rag_service.search_knowledge_base(text, threshold=0.85)
+                if rag_match:
+                    classification["auto_resolve"] = True
+                    classification["assigned_team"] = "Auto-Resolve AI"
+                    classification["confidence"] = max(classification["confidence"], float(rag_match["similarity"]))
             except Exception as e:
                 pass
 
-        summary = text[:100] + ("…" if len(text) > 100 else "") 
-
-        # 2. NER
-        yield f"data: {json.dumps({'step': 'Extracting technical entities', 'status': 'in_progress'})}\n\n"
-        await asyncio.sleep(0.2)
-        try:
-            entities = ner_service.extract_entities(text)
-        except Exception:
-            entities = []
-        timeline["metadata_harvested"] = get_now_ist()
-
-        # 3. Classification
-        yield f"data: {json.dumps({'step': 'Detecting category and priority', 'status': 'in_progress'})}\n\n"
-        await asyncio.sleep(0.2)
-        try:
-            classification_v3_res = classifier_v3.predict(text)
-            if "error" in classification_v3_res:
-                classification = classifier_service.predict(text)
-            else:
-                cat = classification_v3_res.get("Category", {}).get("prediction", "Unknown")
-                sub = classification_v3_res.get("Subcategory", {}).get("prediction", "Unknown")
-                pri = classification_v3_res.get("priority", {}).get("prediction", "Medium")
-                conf = classification_v3_res.get("Category", {}).get("confidence", 0.0)
-                
-                from backend.services.classifier_service import TEAM_MAP, AUTO_RESOLVE_SUBS
-                assigned_team = TEAM_MAP.get(cat, "General Support")
-                auto_resolve = sub in AUTO_RESOLVE_SUBS
-                
-                classification = {
-                    "category": cat,
-                    "subcategory": sub,
-                    "priority": pri,
-                    "auto_resolve": auto_resolve,
-                    "assigned_team": assigned_team,
-                    "confidence": float(conf)
-                }
-        except Exception as e:
-            classification = {
-                "category": "Unknown", "subcategory": "Unknown", "priority": "Medium",
-                "auto_resolve": False, "assigned_team": "General Support", "confidence": 0.0,
-            }
-        timeline["ai_analyzed"] = get_now_ist()
-        timeline["triaged"] = get_now_ist()
-
-        # 4. Duplicates
-        yield f"data: {json.dumps({'step': 'Checking duplicate issues', 'status': 'in_progress'})}\n\n"
-        await asyncio.sleep(0.2)
-        try:
-            dup_result = duplicate_service.check_duplicate(text, threshold=duplicate_sensitivity)
-        except Exception:
-            dup_result = {"is_duplicate": False, "duplicate_ticket_id": None, "similarity": 0.0}
-
-        # 5. RAG / Solutions
-        yield f"data: {json.dumps({'step': 'Finding possible solutions', 'status': 'in_progress'})}\n\n"
-        await asyncio.sleep(0.2)
-        rag_match = None
-        try:
-            rag_match = rag_service.search_knowledge_base(text, threshold=0.85)
+            decision_factors = []
+            if classification["confidence"] > confidence_threshold:
+                decision_factors.append(f"High confidence match for '{classification['subcategory']}'")
+            if entities:
+                decision_factors.append(f"Detected entities: {', '.join([e['text'] for e in entities[:2]])}")
+            if dup_result["is_duplicate"]:
+                decision_factors.append(f"Found similar incident ({int(dup_result['similarity']*100)}%)")
             if rag_match:
-                classification["auto_resolve"] = True
-                classification["assigned_team"] = "Auto-Resolve AI"
-                classification["confidence"] = max(classification["confidence"], float(rag_match["similarity"]))
+                decision_factors.append(f"Found solution article: '{rag_match['title']}'")
+
+            if not enable_auto_resolve:
+                classification["auto_resolve"] = False
+            reasoning = f"Categorized as '{classification['category']}' - {classification['subcategory']}."
+            if classification["auto_resolve"]:
+                reasoning += " Flagged for AI auto-resolution via Knowledge Base." if rag_match else " Flagged for auto-resolution."
+
+            timeline["routed"] = get_now_ist()
+
+            if gemini_service and gemini_service._initialized:
+                summary = gemini_service.get_summary(text)
+
+            hours_map = {"Critical": 2, "High": 8, "Medium": 24, "Low": 72}
+            sla_hours = hours_map.get(classification["priority"], 72)
+            sla_breach_dt = datetime.datetime.utcnow() + datetime.timedelta(hours=sla_hours)
+
+            ticket_response_dict = {
+                "ticket_id": str(uuid.uuid4()),
+                "summary": summary,
+                "category": classification["category"],
+                "subcategory": classification["subcategory"],
+                "priority": classification["priority"],
+                "auto_resolve": classification["auto_resolve"],
+                "assigned_team": classification["assigned_team"],
+                "entities": [e for e in entities],
+                "duplicate_ticket": dup_result,
+                "confidence": classification["confidence"],
+                "needs_review": classification["confidence"] < confidence_threshold,
+                "reasoning": reasoning,
+                "decision_factors": decision_factors,
+                "image_description": gemini_analysis["image_description"],
+                "ocr_text": gemini_analysis["ocr_text"],
+                "image_url": request_body.image_url,
+                "highlights": entities,
+                "timeline": timeline,
+                "env_metadata": env_metadata,
+                "sla_breach_at": sla_breach_dt.isoformat() + "Z"
+            }
+
+            # 6. Final Result
+            await _sse_disconnect_guard(request)
+            yield f"data: {json.dumps({'step': 'done', 'result': jsonable_encoder(ticket_response_dict)})}\n\n"
+
+        except asyncio.CancelledError:
+            generator_cancelled = True
+            logger.info("[SSE] Generator cancelled, cleaning up resources")
         except Exception as e:
-            pass
-
-        decision_factors = []
-        if classification["confidence"] > confidence_threshold:
-            decision_factors.append(f"High confidence match for '{classification['subcategory']}'")
-        if entities:
-            decision_factors.append(f"Detected entities: {', '.join([e['text'] for e in entities[:2]])}")
-        if dup_result["is_duplicate"]:
-            decision_factors.append(f"Found similar incident ({int(dup_result['similarity']*100)}%)")
-        if rag_match:
-            decision_factors.append(f"Found solution article: '{rag_match['title']}'")
-
-        if not enable_auto_resolve:
-            classification["auto_resolve"] = False
-        reasoning = f"Categorized as '{classification['category']}' - {classification['subcategory']}."
-        if classification["auto_resolve"]:
-            reasoning += " Flagged for AI auto-resolution via Knowledge Base." if rag_match else " Flagged for auto-resolution."
-        
-        timeline["routed"] = get_now_ist()
-
-        if gemini_service and gemini_service._initialized:
-            summary = gemini_service.get_summary(text)
-        
-        hours_map = {"Critical": 2, "High": 8, "Medium": 24, "Low": 72}
-        sla_hours = hours_map.get(classification["priority"], 72)
-        sla_breach_dt = datetime.datetime.utcnow() + datetime.timedelta(hours=sla_hours)
-
-        ticket_response_dict = {
-            "ticket_id": str(uuid.uuid4()),
-            "summary": summary,
-            "category": classification["category"],
-            "subcategory": classification["subcategory"],
-            "priority": classification["priority"],
-            "auto_resolve": classification["auto_resolve"],
-            "assigned_team": classification["assigned_team"],
-            "entities": [e for e in entities],
-            "duplicate_ticket": dup_result,
-            "confidence": classification["confidence"],
-            "needs_review": classification["confidence"] < confidence_threshold,
-            "reasoning": reasoning,
-            "decision_factors": decision_factors,
-            "image_description": gemini_analysis["image_description"],
-            "ocr_text": gemini_analysis["ocr_text"],
-            "image_url": request_body.image_url,
-            "highlights": entities,
-            "timeline": timeline,
-            "env_metadata": env_metadata,
-            "sla_breach_at": sla_breach_dt.isoformat() + "Z"
-        }
-
-        # 6. Final Result
-        yield f"data: {json.dumps({'step': 'done', 'result': jsonable_encoder(ticket_response_dict)})}\n\n"
+            logger.error(f"[SSE] Generator error: {e}")
+            yield f"data: {json.dumps({'step': 'error', 'status': 'failed', 'error': 'Analysis interrupted'})}\n\n"
+        finally:
+            if not generator_cancelled:
+                logger.info("[SSE] Stream complete, resources released")
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
