@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, Request, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.encoders import jsonable_encoder
 from backend.auth_cookie import get_current_user
+from backend.ocr_json_safety import sanitize_and_validate_base64_image
 from backend.dependencies import (
     limiter, get_system_settings,
     classifier_service, classifier_v3, classifier_v2,
@@ -25,6 +26,20 @@ from backend.models import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/ai", tags=["ai"])
+
+
+def _safe_image_base64(image_base64: str) -> str:
+    if not image_base64:
+        return ""
+    try:
+        return sanitize_and_validate_base64_image(image_base64)
+    except ValueError as e:
+        logger.warning("Image base64 validation failed: %s", e)
+        return ""
+    except Exception as e:
+        logger.error("Unexpected error during image base64 validation: %s", e)
+        return ""
+
 
 CORRECTIONS_LOG_PATH = Path(__file__).parent.parent / "data" / "corrections_log.json"
 @router.post("/troubleshoot", response_model=TroubleshootResponse)
@@ -147,9 +162,10 @@ async def analyze_ticket(request_body: TicketRequest, request: Request, user: di
 
     # --- Layer 1: Local OCR (CPU, no API required) ---
     local_ocr_text = ""
-    if request_body.image_base64 and ocr_service:
+    safe_base64 = _safe_image_base64(request_body.image_base64)
+    if safe_base64 and ocr_service:
         print("[AI] Extracting text via local OCR...")
-        local_ocr_text = ocr_service.extract_text(request_body.image_base64)
+        local_ocr_text = ocr_service.extract_text(safe_base64)
         if local_ocr_text:
             text = f"{text} {local_ocr_text}".strip()
             print(f"[AI] OCR added {len(local_ocr_text)} chars to context.")
@@ -190,10 +206,11 @@ async def analyze_only(request_body: TicketRequest, user: dict = Depends(get_cur
         "image_description": ""
     }
     
-    if request_body.image_base64 and not gemini_analysis["ocr_text"]:
+    safe_base64 = _safe_image_base64(request_body.image_base64)
+    if safe_base64 and not gemini_analysis["ocr_text"]:
         try:
             print("[AI] Detecting visual context via Gemini...")
-            vision_result = gemini_service.analyze_image(request_body.image_base64, text)
+            vision_result = gemini_service.analyze_image(safe_base64, text)
             gemini_analysis.update(vision_result)
         except Exception as e:
             print(f"[VISION ERROR] {e}")
@@ -345,9 +362,10 @@ async def analyze_stream(request_body: TicketRequest, user: dict = Depends(get_c
         await asyncio.sleep(0.5)
 
         gemini_analysis = {"ocr_text": request_body.image_text or "", "image_description": ""}
-        if request_body.image_base64 and not gemini_analysis["ocr_text"]:
+        safe_base64 = _safe_image_base64(request_body.image_base64)
+        if safe_base64 and not gemini_analysis["ocr_text"]:
             try:
-                vision_result = gemini_service.analyze_image(request_body.image_base64, text)
+                vision_result = gemini_service.analyze_image(safe_base64, text)
                 gemini_analysis.update(vision_result)
             except Exception as e:
                 pass
