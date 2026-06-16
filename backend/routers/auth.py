@@ -63,11 +63,11 @@ async def get_current_user(request: Request) -> dict:
         raise HTTPException(status_code=503, detail="Database connection offline")
     try:
         result = supabase.auth.get_user(token)
-    except Exception as exc:
+    except Exception:
         raise HTTPException(
             status_code=401,
-            detail=f"Invalid session: {exc}",
-        ) from exc
+            detail="Invalid session",
+        )
     user = getattr(result, "user", None) or (result.get("user") if isinstance(result, dict) else None)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid session")
