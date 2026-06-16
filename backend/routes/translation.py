@@ -12,10 +12,6 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Optional, Any
 from backend.auth_cookie import get_current_user
-from backend.services.rate_limit_config import limiter
-
-
-
 from backend.limiter import limiter
 from backend.services.translation_service import (
     detect_language,
