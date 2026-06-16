@@ -1,10 +1,12 @@
 
+import hashlib
 import logging
 import os
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+
 from backend.dependencies import supabase
-from backend.models import LoginBody, SignupBody
 from backend.limiter import limiter, AUTH_LIMIT
+from backend.models import LoginBody, SignupBody
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +57,57 @@ def _clear_session_cookies(response: Response) -> None:
     response.delete_cookie(ACCESS_COOKIE, path=kwargs["path"])
     response.delete_cookie(REFRESH_COOKIE, path=kwargs["path"])
 
+_REVOKED_PREFIX = "helpdesk:revoked:"
+
+
+def _anon_supabase():
+    from supabase import create_client
+
+    url = os.environ.get("SUPABASE_URL")
+    key = os.environ.get("SUPABASE_ANON_KEY") or os.environ.get("SUPABASE_SERVICE_KEY")
+    if not url or not key:
+        raise HTTPException(
+            status_code=503,
+            detail="Auth backend not configured (SUPABASE_URL / SUPABASE_ANON_KEY missing)",
+        )
+    return create_client(url, key)
+
+
+def _service_supabase():
+    from supabase import create_client
+
+    url = os.environ.get("SUPABASE_URL")
+    key = os.environ.get("SUPABASE_SERVICE_KEY")
+    if not url or not key:
+        return None
+    return create_client(url, key)
+
+
+def _get_redis():
+    try:
+        import redis as _redis
+
+        url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        client = _redis.from_url(url, decode_responses=True, socket_connect_timeout=1)
+        client.ping()
+        return client
+    except Exception:
+        return None
+
+
+def _token_hash(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def _revoke_token(token: str, ttl: int = 3600) -> None:
+    try:
+        redis = _get_redis()
+        if redis:
+            redis.setex(f"{_REVOKED_PREFIX}{_token_hash(token)}", ttl, "1")
+    except Exception as exc:
+        logger.warning("[Auth] Redis denylist write failed: %s", exc)
+
+
 async def get_current_user(request: Request) -> dict:
     token = extract_token(request)
     if not token:
@@ -80,7 +133,7 @@ async def get_current_user(request: Request) -> dict:
 
 @router.post("/login")
 @limiter.limit(AUTH_LIMIT)
-async def auth_login(body: LoginBody, response: Response):
+async def auth_login(request: Request, body: LoginBody, response: Response):
     """Authenticate a user with email and password.
 
     On success, sets HttpOnly session cookies (access_token + refresh_token)
@@ -109,7 +162,7 @@ async def auth_login(body: LoginBody, response: Response):
 
 @router.post("/signup")
 @limiter.limit(AUTH_LIMIT)
-async def auth_signup(body: SignupBody, response: Response):
+async def auth_signup(request: Request, body: SignupBody, response: Response):
     """Register a new user account.
 
     Accepts email, password, and optional full_name/role/company metadata.
@@ -147,8 +200,28 @@ async def auth_signup(body: SignupBody, response: Response):
     return {"user": user_payload, "message": "Signup complete"}
 
 @router.post("/logout")
-async def auth_logout(response: Response):
-    """Clear session cookies to log out the current user."""
+@limiter.limit(AUTH_LIMIT)
+async def auth_logout(request: Request, response: Response):
+    """Log out the current user, invalidating the session server-side.
+
+    Performs three layers of session invalidation:
+    1. Adds the access token to a Redis denylist for immediate rejection
+    2. Calls the Supabase admin API to sign the user out server-side
+    3. Clears both the access_token and refresh_token HttpOnly cookies
+    """
+    token = extract_token(request)
+    if token:
+        _revoke_token(token, ttl=3600)
+        try:
+            admin = _service_supabase()
+            if admin:
+                user_result = admin.auth.get_user(token)
+                user = getattr(user_result, "user", None)
+                user_id = getattr(user, "id", None) if user else None
+                if user_id:
+                    admin.auth.admin.sign_out(user_id)
+        except Exception as exc:
+            logger.warning("[Auth] Admin sign-out failed: %s", exc)
     _clear_session_cookies(response)
     return {"ok": True}
 
