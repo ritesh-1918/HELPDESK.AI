@@ -14,7 +14,7 @@ const isLikelyValidUrl = (value) => {
 	if (!value || INVALID_MARKERS.has(value)) return false
 	try {
 		const parsed = new URL(value)
-		return parsed.protocol === 'https:' || parsed.protocol === 'http:'
+		return parsed.protocol === 'https:'
 	} catch {
 		return false
 	}
