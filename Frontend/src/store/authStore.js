@@ -245,17 +245,24 @@ const useAuthStore = create(
 
 
             updateProfile: async (updates) => {
-                const { profile } = get();
-                if (!profile?.id) return;
+    const { profile } = get();
+    if (!profile?.id) return;
 
-                set({ loading: true });
-                try {
-                    const { data, error } = await supabase
-                        .from('profiles')
-                        .update(updates)
-                        .eq('id', profile.id)
-                        .select()
-                        .single();
+    // Whitelist: only permit safe, user-editable fields
+    const ALLOWED_FIELDS = ['full_name', 'avatar_url', 'phone', 'company'];
+    const safeUpdates = Object.fromEntries(
+        Object.entries(updates).filter(([key]) => ALLOWED_FIELDS.includes(key))
+    );
+    if (Object.keys(safeUpdates).length === 0) return;
+
+    set({ loading: true });
+    try {
+        const { data, error } = await supabase
+            .from('profiles')
+            .update(safeUpdates)
+            .eq('id', profile.id)
+            .select()
+            .single();
 
                     if (error) throw error;
                     if (data) {
