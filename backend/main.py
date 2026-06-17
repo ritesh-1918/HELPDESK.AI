@@ -68,19 +68,58 @@ def get_system_settings(company_id: str) -> dict:
     defaults = {
         "ai_confidence_threshold": 0.80,
         "duplicate_sensitivity": 0.85,
-        "enable_auto_resolve": False
+        "enable_auto_resolve": False,
+        "max_ai_requests_per_hour": 100
     }
     if not supabase or not company_id:
         return defaults
     try:
         res = supabase.table("system_settings").select(
-            "ai_confidence_threshold, duplicate_sensitivity, enable_auto_resolve"
+            "ai_confidence_threshold, duplicate_sensitivity, enable_auto_resolve, max_ai_requests_per_hour"
         ).eq("company_id", company_id).single().execute()
         if res.data:
             return {**defaults, **res.data}
     except Exception as e:
         print(f"[WARNING] Could not fetch system_settings for company_id={company_id}: {e}")
     return defaults
+
+
+def log_ai_usage(user_id: str | None, company_id: str | None, endpoint: str) -> None:
+    """Log each AI call to ai_usage_log for audit and billing."""
+    if not supabase:
+        return
+    try:
+        supabase.table("ai_usage_log").insert({
+            "user_id": user_id,
+            "company_id": company_id,
+            "endpoint": endpoint,
+            "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
+        }).execute()
+    except Exception as e:
+        print(f"[WARNING] ai_usage_log insert failed: {e}")
+
+
+def check_tenant_quota(company_id: str | None, settings: dict) -> None:
+    """Raise 429 if this tenant has exceeded their hourly AI request quota."""
+    if not supabase or not company_id:
+        return
+    max_requests = settings.get("max_ai_requests_per_hour", 100)
+    try:
+        one_hour_ago = (datetime.datetime.utcnow() - datetime.timedelta(hours=1)).isoformat() + "Z"
+        res = supabase.table("ai_usage_log").select(
+            "id", count="exact"
+        ).eq("company_id", company_id).gte("timestamp", one_hour_ago).execute()
+        count = res.count or 0
+        if count >= max_requests:
+            raise HTTPException(
+                status_code=429,
+                detail=f"Tenant hourly AI quota of {max_requests} requests exceeded."
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[WARNING] Tenant quota check failed: {e}")
+
 class TicketRequest(BaseModel):
     text: str
     image_base64: str = ""
@@ -269,8 +308,20 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Rate limiter — 10 AI requests per minute per IP (free tier protection)
-limiter = Limiter(key_func=get_remote_address)
+# Rate limiter — per-user for authenticated requests, IP fallback for anonymous
+def get_rate_limit_key(request: Request) -> str:
+    token = extract_token(request)
+    if token and supabase:
+        try:
+            result = supabase.auth.get_user(token)
+            user = getattr(result, "user", None)
+            if user:
+                return f"user:{user.id}"
+        except Exception:
+            pass
+    return get_remote_address(request)
+
+limiter = Limiter(key_func=get_rate_limit_key)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -739,11 +790,14 @@ async def analyze_only(request_body: TicketRequest):
     """
     text = request_body.text
     print(f"[AI] Starting Analysis (READ-ONLY) for: {text[:50]}...") 
-    settings = get_system_settings(request_body.company)
+
+   settings = get_system_settings(request_body.company)
+    check_tenant_quota(request_body.company, settings)
+    log_ai_usage(request_body.user_id, request_body.company, "/ai/analyze")
     confidence_threshold = settings["ai_confidence_threshold"]
     duplicate_sensitivity = settings["duplicate_sensitivity"]
     enable_auto_resolve = settings["enable_auto_resolve"]
-    
+
     # --- Context & Environment ---
     import datetime
     def get_now_ist():
@@ -908,11 +962,13 @@ async def analyze_stream(request_body: TicketRequest):
             "api_endpoint": "/ai/analyze_stream"
         }
         timeline = {"received": get_now_ist()} 
-        settings = get_system_settings(request_body.company)
+       settings = get_system_settings(request_body.company)
+        check_tenant_quota(request_body.company, settings)
+        log_ai_usage(request_body.user_id, request_body.company, "/ai/analyze_stream")
         confidence_threshold = settings["ai_confidence_threshold"]
         duplicate_sensitivity = settings["duplicate_sensitivity"]
         enable_auto_resolve = settings["enable_auto_resolve"]
-
+        
         # 1. Reading
         yield f"data: {json.dumps({'step': 'Reading your message', 'status': 'in_progress'})}\n\n"
         await asyncio.sleep(0.5)
