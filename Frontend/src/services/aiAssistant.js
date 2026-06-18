@@ -119,8 +119,15 @@ const runWithFailover = async (promptText, history, image) => {
     const configList = buildConfigList();
     if (configList.length === 0) throw new Error("No AI API keys configured in .env");
 
+    const blacklistedKeys = new Set();
+
     for (let i = 0; i < configList.length; i++) {
         const config = configList[i];
+        if (blacklistedKeys.has(config.key)) {
+            console.log(`[AI Failover] Skipping blacklisted key for ${config.provider} (${config.model})`);
+            continue;
+        }
+
         console.log(`[AI Failover] Trying ${i + 1}/${configList.length}: ${config.provider} (${config.model})`);
 
         try {
@@ -142,6 +149,18 @@ const runWithFailover = async (promptText, history, image) => {
                 || error.message?.includes('quota')
                 || error.message?.includes('RESOURCE_EXHAUSTED')
                 || error.message?.includes('rate_limit');
+
+            const isExpiredOrInvalid = error.message?.includes('API_KEY_INVALID')
+                || error.message?.includes('API key expired')
+                || error.message?.includes('invalid')
+                || error.message?.includes('expired')
+                || error.status === 401
+                || error.status === 403;
+
+            if (isExpiredOrInvalid) {
+                blacklistedKeys.add(config.key);
+                console.warn(`[AI Failover] Blacklisted invalid/expired key for ${config.provider}`);
+            }
 
             console.warn(`[AI Failover] ❌ ${config.provider} key ${i + 1}: ${isRateLimit ? 'Quota exceeded' : error.message}`);
         }
