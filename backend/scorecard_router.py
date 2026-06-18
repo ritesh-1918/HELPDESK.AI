@@ -2,6 +2,7 @@
 scorecard_router.py — Agent performance scorecard endpoints
 Issue #774
 """
+import logging
 import os
 from typing import Optional
 
@@ -25,16 +26,38 @@ def _get_sb():
     return _sb
 
 
-def _require_auth(authorization: Optional[str]) -> None:
+def _require_auth(authorization: Optional[str]) -> dict:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Unauthorized")
     token = authorization[7:]
     sb = _get_sb()
     if sb:
         try:
-            sb.auth.get_user(token)
+            user = sb.auth.get_user(token)
+            return {"id": user.user.id, "email": user.user.email}
         except Exception:
             raise HTTPException(status_code=401, detail="Invalid or expired token")
+    return {}
+
+
+def _verify_tenant_access(company_id: str, user_info: dict) -> None:
+    """Verify the authenticated user belongs to the requested company."""
+    sb = _get_sb()
+    if not sb or not user_info.get("id"):
+        return
+    try:
+        profile = sb.table("profiles").select("company_id").eq("id", user_info["id"]).maybe_single().execute()
+        user_company = (profile.data or {}).get("company_id") if profile.data else None
+        if user_company and str(user_company) != str(company_id):
+            raise HTTPException(
+                status_code=403,
+                detail="Access to this company's scorecard is forbidden",
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger = logging.getLogger(__name__)
+        logger.warning("Tenant verification failed for user %s: %s", user_info.get("id"), e)
 
 
 @router.get("/company/{company_id}")
@@ -44,9 +67,10 @@ async def company_scorecard(
     authorization: Optional[str] = Header(None),
 ):
     """Get ranked performance scorecard for all agents in a company."""
-    _require_auth(authorization)
+    user_info = _require_auth(authorization)
     if not company_id or len(company_id) > 100:
         raise HTTPException(status_code=400, detail="Invalid company_id")
+    _verify_tenant_access(company_id, user_info)
     data = get_company_scorecard(company_id, days=days)
     return {"success": True, "agents": data, "total": len(data)}
 
@@ -59,7 +83,8 @@ async def agent_scorecard(
     authorization: Optional[str] = Header(None),
 ):
     """Get individual agent scorecard with metrics + score + AI coaching tip."""
-    _require_auth(authorization)
+    user_info = _require_auth(authorization)
+    _verify_tenant_access(company_id, user_info)
     data = refresh_agent_scorecard(agent_id, company_id, days=days)
     if not data["metrics"]["has_data"]:
         return {
@@ -80,6 +105,7 @@ async def refresh_scorecard(
     authorization: Optional[str] = Header(None),
 ):
     """Force-refresh an agent's scorecard (recomputes from latest Supabase data)."""
-    _require_auth(authorization)
+    user_info = _require_auth(authorization)
+    _verify_tenant_access(company_id, user_info)
     data = refresh_agent_scorecard(agent_id, company_id, agent_name, days=days)
     return {"success": True, **data}
