@@ -3,11 +3,14 @@ Generic Webhook Service for Slack & Microsoft Teams.
 Handles storing webhook URLs in Supabase and sending notifications.
 """
 
+import ipaddress
 import json
 import logging
 import os
+import socket
 from enum import Enum
 from typing import Optional
+from urllib.parse import urlparse
 from pydantic import BaseModel, ConfigDict, Field
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -142,6 +145,34 @@ def detect_webhook_type(url: str) -> str:
     return "slack"  # default
 
 
+def _validate_webhook_url(url: str) -> None:
+    """Validate webhook URL to prevent SSRF to internal networks."""
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError(f"Invalid scheme '{parsed.scheme}' — only http/https allowed")
+    host = parsed.hostname
+    if not host:
+        raise ValueError("URL has no hostname")
+    if host in ("localhost", "127.0.0.1", "::1", "0.0.0.0"):
+        raise ValueError(f"Webhook URL must not point to localhost ({host})")
+    if host.endswith(".local") or host.endswith(".internal"):
+        raise ValueError(f"Webhook URL must not point to internal hostname ({host})")
+    try:
+        addr = socket.getaddrinfo(host, None)
+        for family, _, _, _, sockaddr in addr:
+            raw_ip = sockaddr[0]
+            if isinstance(ipaddress.ip_address(raw_ip), ipaddress.IPv4Address):
+                ip = ipaddress.IPv4Address(raw_ip)
+                if ip.is_private or ip.is_loopback or ip.is_link_local:
+                    raise ValueError(
+                        f"Webhook URL resolves to a private IP ({raw_ip}) — blocked to prevent SSRF"
+                    )
+    except (socket.gaierror, ValueError) as e:
+        if isinstance(e, ValueError):
+            raise
+        raise ValueError(f"Could not resolve webhook URL host '{host}' — {e}")
+
+
 def send_webhook_notification(webhook_url: str, ticket: TicketPayload) -> bool:
     """
     Send notification to Slack or Teams based on webhook URL.
@@ -155,6 +186,12 @@ def send_webhook_notification(webhook_url: str, ticket: TicketPayload) -> bool:
     """
     if not webhook_url:
         logger.debug("Webhook notification skipped: no URL provided")
+        return False
+
+    try:
+        _validate_webhook_url(webhook_url)
+    except ValueError as e:
+        logger.error("Webhook URL rejected (%s): %s", webhook_url, e)
         return False
 
     webhook_type = detect_webhook_type(webhook_url)
