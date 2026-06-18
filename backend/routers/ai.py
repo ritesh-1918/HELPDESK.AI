@@ -5,6 +5,7 @@ import uuid
 import datetime
 import traceback
 import asyncio
+import os 
 from pathlib import Path
 from fastapi import APIRouter, Depends, Request, HTTPException
 from fastapi.responses import StreamingResponse
@@ -21,7 +22,8 @@ from backend.models import (
     TroubleshootRequest, TroubleshootResponse,
     BugReportAnalysisRequest, BugReportAnalysisResponse
 )
-
+from pydantic import BaseModel, Field, validator
+import uuid as uuid_lib
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/ai", tags=["ai"])
@@ -62,64 +64,98 @@ async def analyze_bug(request: BugReportAnalysisRequest, user: dict = Depends(ge
     return BugReportAnalysisResponse(probable_cause=cause)
 
 
+# --- Correction Log Schema ---
+class PredictionSnapshot(BaseModel):
+    category: str = Field("", max_length=100)
+    subcategory: str = Field("", max_length=100)
+    priority: str = Field("", max_length=50)
+    assigned_team: str = Field("", max_length=100)
+
+class CorrectionLogRequest(BaseModel):
+    ticket_id: str = Field(..., max_length=100)
+    original_text: str = Field("", max_length=5000)
+    ocr_text: str = Field("", max_length=2000)
+    confidence: float = Field(0.0, ge=0.0, le=1.0)
+    original_prediction: PredictionSnapshot = Field(default_factory=PredictionSnapshot)
+    corrected_prediction: PredictionSnapshot = Field(default_factory=PredictionSnapshot)
+
+    @validator("ticket_id")
+    def ticket_id_must_not_be_empty(cls, v):
+        if not v.strip():
+            raise ValueError("ticket_id cannot be empty")
+        return v.strip()
+    
+MAX_LOG_SIZE_BYTES = 5 * 1024 * 1024  # 5MB
 
 @router.post("/log_correction")
-async def log_correction(raw_request: Request, user: dict = Depends(get_current_user)):
-    """Log an admin correction when the AI prediction differs from the human decision."""
-    try:
-        body = await raw_request.json()
-    except Exception as e:
-        print(f"[CORRECTION ERROR] Could not parse request body: {e}")
-        return {"status": "error", "message": "Invalid JSON body"}
+async def log_correction(body: CorrectionLogRequest, user: dict = Depends(get_current_user)):
+    """Log an admin correction with schema validation, auth, log rotation and atomic writes."""
 
-    print(f"[CORRECTION RECEIVED] Payload keys: {list(body.keys())}")
-
-    ticket_id = str(body.get("ticket_id", "unknown"))
-    original_text = str(body.get("original_text", ""))
-    ocr_text = str(body.get("ocr_text", ""))
-    confidence = float(body.get("confidence") or 0.0)
-    original_prediction = body.get("original_prediction") or {}
-    corrected_prediction = body.get("corrected_prediction") or {}
-
-    # Only log if something actually changed
     changed_fields = [
         field for field in ["category", "subcategory", "priority", "assigned_team"]
-        if original_prediction.get(field) != corrected_prediction.get(field)
+        if getattr(body.original_prediction, field) != getattr(body.corrected_prediction, field)
     ]
 
     if not changed_fields:
         return {"status": "no_change", "message": "Prediction matches correction, nothing logged."}
 
+    correlation_id = str(uuid_lib.uuid4())
+
     entry = {
-        "ticket_id": ticket_id,
-        "original_text": original_text,
-        "ocr_text": ocr_text,
-        "original_prediction": original_prediction,
-        "corrected_prediction": corrected_prediction,
+        "correlation_id": correlation_id,
+        "ticket_id": body.ticket_id,
+        "original_text": body.original_text,
+        "ocr_text": body.ocr_text,
+        "original_prediction": body.original_prediction.dict(),
+        "corrected_prediction": body.corrected_prediction.dict(),
         "changed_fields": changed_fields,
-        "confidence": confidence,
+        "confidence": body.confidence,
+        "logged_by": user.get("id", "unknown"),
         "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
     }
 
     try:
+        # Log rotation: archive if over 5MB
+        if CORRECTIONS_LOG_PATH.exists() and CORRECTIONS_LOG_PATH.stat().st_size > MAX_LOG_SIZE_BYTES:
+            archive_path = CORRECTIONS_LOG_PATH.with_suffix(
+                f".{datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')}.json"
+            )
+            CORRECTIONS_LOG_PATH.rename(archive_path)
+            logger.info(f"[CORRECTION] Log rotated to {archive_path}")
+
+        # Load existing logs
         if CORRECTIONS_LOG_PATH.exists() and CORRECTIONS_LOG_PATH.stat().st_size > 2:
             with open(CORRECTIONS_LOG_PATH, "r", encoding="utf-8") as f:
                 logs = json.load(f)
         else:
             logs = []
 
+        # Deduplication: skip if same ticket_id + changed_fields logged in last 60s
+        now = datetime.datetime.utcnow()
+        for existing in logs[-50:]:  # only check recent entries
+            if (
+                existing.get("ticket_id") == body.ticket_id
+                and existing.get("changed_fields") == changed_fields
+            ):
+                existing_ts = datetime.datetime.fromisoformat(existing["timestamp"].rstrip("Z"))
+                if (now - existing_ts).total_seconds() < 60:
+                    return {"status": "duplicate", "message": "Duplicate correction ignored."}
+
         logs.append(entry)
 
-        with open(CORRECTIONS_LOG_PATH, "w", encoding="utf-8") as f:
+        # Atomic write: write to .tmp then replace
+        tmp_path = CORRECTIONS_LOG_PATH.with_suffix(".tmp")
+        with open(tmp_path, "w", encoding="utf-8") as f:
             json.dump(logs, f, indent=2)
+        os.replace(tmp_path, CORRECTIONS_LOG_PATH)
 
-        print(f"[CORRECTION SAVED] Ticket ID: {ticket_id} | Changed: {changed_fields}")
-        return {"status": "saved", "changed_fields": changed_fields}
+        logger.info(f"[CORRECTION SAVED] ticket_id={body.ticket_id} | changed={changed_fields} | correlation_id={correlation_id}")
+        return {"status": "saved", "changed_fields": changed_fields, "correlation_id": correlation_id}
 
     except Exception as e:
-        print(f"[CORRECTION ERROR] Could not save: {e}")
-        return {"status": "error", "message": str(e)}
-
+        logger.error(f"[CORRECTION ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to save correction log.")
+    
 
 @router.post("/analyze_ticket", response_model=TicketResponse)
 @limiter.limit("10/minute")
