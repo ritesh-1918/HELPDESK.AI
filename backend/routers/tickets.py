@@ -13,13 +13,16 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 @router.get("")
 async def get_tickets(company_id: str | None = None, user: dict = Depends(get_current_user)):
-    """Fetch persistent tickets from Supabase."""
+    """Fetch persistent tickets from Supabase, scoped to user's tenant."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
     
-    query = supabase.table("tickets").select("*").order("created_at", desc=True)
-    if company_id:
-        query = query.eq("company_id", company_id)
+    user_company = (user.get("user_metadata") or {}).get("company_id") or user.get("company_id")
+    effective_company = company_id or user_company
+    if not effective_company:
+        raise HTTPException(status_code=400, detail="User has no tenant assignment")
+    
+    query = supabase.table("tickets").select("*").eq("company_id", effective_company).order("created_at", desc=True)
         
     res = query.execute()
     return res.data
@@ -130,18 +133,21 @@ async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_
 
 @router.get("/{ticket_id}")
 async def get_ticket_by_id(ticket_id: str, user: dict = Depends(get_current_user)):
-    """Fetch single persistent ticket."""
+    """Fetch single persistent ticket with tenant ownership verification."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
     
+    user_company = (user.get("user_metadata") or {}).get("company_id") or user.get("company_id")
     res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Ticket not found")
+    if user_company and str(res.data.get("company_id", "")) != str(user_company):
+        raise HTTPException(status_code=403, detail="Access to this ticket is forbidden")
     return res.data
 
 
 @router.post("", response_model=TicketRecord)
-async def create_ticket(ticket: TicketRecord):
+async def create_ticket(ticket: TicketRecord, user: dict = Depends(get_current_user)):
     """Save a new ticket into the system."""
     ticket_dict = sanitize_ticket_data(ticket.dict())
     ticket = TicketRecord(**ticket_dict)
@@ -156,12 +162,11 @@ async def create_ticket(ticket: TicketRecord):
 
 
 @router.patch("/{ticket_id}", response_model=TicketRecord)
-async def update_ticket(ticket_id: str, updates: dict):
+async def update_ticket(ticket_id: str, updates: dict, user: dict = Depends(get_current_user)):
     """Partially update a ticket's fields (e.g., status, viewed_at)."""
     sanitized_updates = sanitize_ticket_data(updates)
     for i, ticket in enumerate(TICKETS_DB):
         if str(ticket.ticket_id) == str(ticket_id):
-            # Convert to dict, update, then back to model
             ticket_dict = ticket.dict()
             ticket_dict.update(sanitized_updates)
             updated_ticket = TicketRecord(**ticket_dict)
