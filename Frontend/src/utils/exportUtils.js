@@ -139,9 +139,13 @@ export function generateTicketPrintHTML(ticket) {
 }
 
 function escapeHTML(s) {
-  const div = document.createElement('div');
-  div.textContent = s ?? '';
-  return div.innerHTML;
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
 }
 
 /**
@@ -150,7 +154,7 @@ function escapeHTML(s) {
  */
 export function printTicket(ticket) {
   if (!ticket) return;
-  const win = window.open('', '_blank');
+  const win = window.open('', '_blank', 'noopener,noreferrer');
   if (!win) return;
   win.document.write(generateTicketPrintHTML(ticket));
   win.document.close();
