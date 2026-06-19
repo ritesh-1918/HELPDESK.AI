@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from backend.auth_cookie import get_current_user
+from backend.dependencies import supabase
 from backend.services.digest_service import (
     get_weekly_stats,
     generate_ai_summary,
@@ -21,6 +22,24 @@ from backend.services.digest_service import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/digest", tags=["Weekly Digest"])
+
+
+def _verify_company_access(company_id: str, user: dict) -> str:
+    """Verify the authenticated user belongs to the requested company and return the company_id."""
+    user_id = user.get("id") or user.get("sub")
+    if not user_id or not supabase:
+        raise HTTPException(status_code=403, detail="Access denied")
+    result = supabase.table("profiles").select("company_id, role").eq("id", user_id).single().execute()
+    profile = result.data if hasattr(result, "data") else result.get("data") if isinstance(result, dict) else None
+    if not profile:
+        raise HTTPException(status_code=403, detail="User profile not found")
+    user_company = profile.get("company_id")
+    user_role = profile.get("role", "user")
+    if user_role == "master_admin":
+        return company_id
+    if not user_company or user_company != company_id:
+        raise HTTPException(status_code=403, detail="Tenant access denied")
+    return company_id
 
 
 # ---------------------------------------------------------------------------
@@ -57,8 +76,9 @@ async def preview_weekly_digest(
     """
     Generate and return a preview of the weekly digest — ticket stats,
     team performance metrics, and an AI-generated summary — without
-    sending any email.
+    sending any email.  Scoped to the authenticated user's tenant.
     """
+    company_id = _verify_company_access(company_id, user)
     stats = get_weekly_stats(company_id)
     summary = generate_ai_summary(stats)
     return {"stats": stats, "ai_summary": summary}
@@ -71,16 +91,16 @@ async def trigger_weekly_digest(
 ):
     """
     Manually trigger the dispatch of a weekly operations digest email
-    to the specified admin email address.
+    to the specified admin email address.  Scoped to the authenticated
+    user's tenant.
 
     The digest includes:
     - Ticket trend counts (open, closed, pending)
     - Team performance metrics (per-team resolution rates, avg times)
     - AI-generated summary with recommendations
     """
-    from backend.main import supabase
-
-    stats = get_weekly_stats(body.company_id)
+    company_id = _verify_company_access(body.company_id, user)
+    stats = get_weekly_stats(company_id)
     summary = generate_ai_summary(stats)
     success = send_digest_email(body.email, stats, summary)
 
@@ -95,7 +115,7 @@ async def trigger_weekly_digest(
         try:
             supabase.table("system_settings").update({
                 "digest_last_sent": datetime.datetime.now(datetime.timezone.utc).isoformat()
-            }).eq("company_id", body.company_id).execute()
+            }).eq("company_id", company_id).execute()
         except Exception as e:
             logger.warning(f"[Digest] Failed to update digest_last_sent: {e}")
 
