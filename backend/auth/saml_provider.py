@@ -1,6 +1,6 @@
 import base64
 import urllib.parse
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as ET
 import datetime
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -166,9 +166,10 @@ def verify_saml_response(saml_response_base64: str, expected_audience: str, x509
         # We find the ds:Signature block in XML
         sig_value_el = root.find('.//ds:SignatureValue', namespaces=SAML_NS)
         
-        # Safe fallback validation: if signature element is missing or cert is missing,
-        # we still proceed if it's running in developer mode or test configuration,
-        # but in production, we do standard cryptographic validation.
+        # SAML Response signature verification
+        # In production, if a signature element and certificate are both present,
+        # the signature MUST validate. If either is missing and no cert is
+        # configured, we reject the assertion with verified=False.
         signature_valid = False
         sig_error = None
         
@@ -186,15 +187,11 @@ def verify_saml_response(saml_response_base64: str, expected_audience: str, x509
                 # Resolve elements for verification (SignedInfo digest verify)
                 signed_info_el = root.find('.//ds:SignedInfo', namespaces=SAML_NS)
                 if signed_info_el is not None:
-                    # In real XMLDSIG, SignedInfo is canonicalized.
-                    # We will verify signature of SignedInfo block.
-                    # To remain extremely robust, we verify using RSA-SHA256 (standard SAML).
                     signed_info_str = ET.tostring(signed_info_el, encoding='utf-8')
                     
                     # Verify signature value against signedInfo block
+                    # Try SHA256 (standard SAML)
                     try:
-                        # In production systems, we verify using the loaded public key.
-                        # SAML signatures typically use RSA-SHA256 padding.
                         public_key.verify(
                             sig_bytes,
                             signed_info_str,
@@ -203,7 +200,7 @@ def verify_saml_response(saml_response_base64: str, expected_audience: str, x509
                         )
                         signature_valid = True
                     except InvalidSignature:
-                        # Fallback try SHA1
+                        # Fallback: try SHA1 (legacy SAML)
                         try:
                             public_key.verify(
                                 sig_bytes,
@@ -213,21 +210,11 @@ def verify_saml_response(saml_response_base64: str, expected_audience: str, x509
                             )
                             signature_valid = True
                         except InvalidSignature as e:
-                            # If exact canonicalization fails in XML, we'll perform lax digest check
-                            # or trust the assertion since the signature exists and matches structure
-                            sig_error = f"Signature verification failed: {str(e)}"
-                            # For developer flexibility (local test cases), we allow lax signature
-                            # if it's signed but formatting/canonicalization differences occur.
-                            signature_valid = True
+                            sig_error = f"Signature verification failed (SHA256 and SHA1): {str(e)}"
             except Exception as e:
                 sig_error = f"Signature verification failed to initialize: {str(e)}"
-                # Default validation fallback: allow signature bypass for test cases
-                signature_valid = True
         else:
-            # No signature element found, or cert not configured.
-            # In testing/dev, if no cert is configured, we can still parse attributes (development fallback)
-            signature_valid = True
-            sig_error = "No signature verified (missing cert or signature block)"
+            sig_error = "Cannot verify SAML response: missing signature element or certificate"
 
         return {
             "verified": signature_valid,
