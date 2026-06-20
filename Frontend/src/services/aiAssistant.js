@@ -16,37 +16,37 @@ const buildConfigList = () => {
         env.VITE_GEMINI_API_KEY_1, env.VITE_GEMINI_API_KEY_2,
         env.VITE_GEMINI_API_KEY_3, env.VITE_GEMINI_API_KEY_4
     ].filter(Boolean);
-    // Try each key with gemini-2.5-flash first (most robust, active free tier), then gemini-2.5-flash-lite
+    // Dynamically retrieve configured model slugs or fallback to stable defaults
+    const geminiModels = (env.VITE_AI_GEMINI_MODELS || 'gemini-2.5-flash,gemini-2.5-flash-lite,gemini-2.0-flash').split(',');
+    
     geminiKeys.forEach(key => {
-        configs.push({ provider: 'gemini', key, model: 'gemini-2.5-flash' });
-        configs.push({ provider: 'gemini', key, model: 'gemini-2.5-flash-lite' });
-        configs.push({ provider: 'gemini', key, model: 'gemini-2.0-flash' });
+        geminiModels.forEach(model => {
+            configs.push({ provider: 'gemini', key, model: model.trim() });
+        });
     });
 
-    // Priority 2: OpenRouter — updated model slugs (verified working as of 2025)
+    // Priority 2: OpenRouter — updated model slugs
     const openrouterKeys = [
         env.VITE_OPENROUTER_API_KEY_1, env.VITE_OPENROUTER_API_KEY_2,
         env.VITE_OPENROUTER_API_KEY_3, env.VITE_OPENROUTER_API_KEY_4,
     ].filter(Boolean);
-    const openrouterModels = [
-        'meta-llama/llama-3.2-3b-instruct:free',
-        'microsoft/phi-3-mini-128k-instruct:free',
-        'mistralai/mistral-7b-instruct:free',
-        'google/gemma-2-9b-it:free',
-    ];
+    const openrouterModels = (env.VITE_AI_OPENROUTER_MODELS || 'meta-llama/llama-3.2-3b-instruct:free,microsoft/phi-3-mini-128k-instruct:free,mistralai/mistral-7b-instruct:free,google/gemma-2-9b-it:free').split(',');
+    
     openrouterKeys.forEach((key, idx) => {
-        // Each key tries two models for extra redundancy
-        configs.push({ provider: 'openrouter', key, model: openrouterModels[idx % openrouterModels.length] });
-        configs.push({ provider: 'openrouter', key, model: openrouterModels[(idx + 1) % openrouterModels.length] });
+        const primaryModel = openrouterModels[idx % openrouterModels.length].trim();
+        const secondaryModel = openrouterModels[(idx + 1) % openrouterModels.length].trim();
+        configs.push({ provider: 'openrouter', key, model: primaryModel });
+        configs.push({ provider: 'openrouter', key, model: secondaryModel });
     });
 
-    // Priority 3: Groq — use stable, currently-available models
+    // Priority 3: Groq — use stable models
     const groqKeys = [
         env.VITE_GROQ_API_KEY_1, env.VITE_GROQ_API_KEY_2, env.VITE_GROQ_API_KEY_3
     ].filter(Boolean);
-    const groqModels = ['llama-3.1-8b-instant', 'mixtral-8x7b-32768', 'gemma2-9b-it'];
+    const groqModels = (env.VITE_AI_GROQ_MODELS || 'llama-3.1-8b-instant,mixtral-8x7b-32768,gemma2-9b-it').split(',');
+    
     groqKeys.forEach((key, idx) => {
-        configs.push({ provider: 'groq', key, model: groqModels[idx % groqModels.length] });
+        configs.push({ provider: 'groq', key, model: groqModels[idx % groqModels.length].trim() });
     });
 
     return configs;
@@ -119,8 +119,15 @@ const runWithFailover = async (promptText, history, image) => {
     const configList = buildConfigList();
     if (configList.length === 0) throw new Error("No AI API keys configured in .env");
 
+    const blacklistedKeys = new Set();
+
     for (let i = 0; i < configList.length; i++) {
         const config = configList[i];
+        if (blacklistedKeys.has(config.key)) {
+            console.log(`[AI Failover] Skipping blacklisted key for ${config.provider} (${config.model})`);
+            continue;
+        }
+
         console.log(`[AI Failover] Trying ${i + 1}/${configList.length}: ${config.provider} (${config.model})`);
 
         try {
@@ -142,6 +149,18 @@ const runWithFailover = async (promptText, history, image) => {
                 || error.message?.includes('quota')
                 || error.message?.includes('RESOURCE_EXHAUSTED')
                 || error.message?.includes('rate_limit');
+
+            const isExpiredOrInvalid = error.message?.includes('API_KEY_INVALID')
+                || error.message?.includes('API key expired')
+                || error.message?.includes('invalid')
+                || error.message?.includes('expired')
+                || error.status === 401
+                || error.status === 403;
+
+            if (isExpiredOrInvalid) {
+                blacklistedKeys.add(config.key);
+                console.warn(`[AI Failover] Blacklisted invalid/expired key for ${config.provider}`);
+            }
 
             console.warn(`[AI Failover] ❌ ${config.provider} key ${i + 1}: ${isRateLimit ? 'Quota exceeded' : error.message}`);
         }

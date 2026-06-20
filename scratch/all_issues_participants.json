@@ -1,0 +1,601 @@
+[
+  {
+    "number": 175,
+    "title": "[Feature] Add Slack & Microsoft Teams Webhook Integration for Critical Ticket Alerts",
+    "state": "OPEN",
+    "users": [
+      "codeananyagupta"
+    ]
+  },
+  {
+    "number": 174,
+    "title": "[Feature] Add Ticket Export to PDF and CSV for Admin Dashboard",
+    "state": "OPEN",
+    "users": [
+      "codeananyagupta"
+    ]
+  },
+  {
+    "number": 168,
+    "title": "[BOUNTY] [level:advanced] Set up Prometheus and Grafana Service Monitoring Dashboard for AI Inference Latency",
+    "state": "OPEN",
+    "users": [
+      "rishab11250",
+      "saij3b"
+    ]
+  },
+  {
+    "number": 167,
+    "title": "[BOUNTY] [level:critical] Add WebSockets Heartbeat and Connection Pooling for Real-Time Ticket Dashboards",
+    "state": "OPEN",
+    "users": [
+      "rishab11250",
+      "saij3b"
+    ]
+  },
+  {
+    "number": 166,
+    "title": "[BOUNTY] [level:critical] Implement Secure Cryptographic AES-256 Encryption for PII fields in Ticket Database",
+    "state": "OPEN",
+    "users": [
+      "rishab11250",
+      "saij3b"
+    ]
+  },
+  {
+    "number": 161,
+    "title": "[Feature Request]: Add AI-powered Spam and Phishing Detection for Incoming Support Tickets",
+    "state": "OPEN",
+    "users": [
+      "Sweksha-Kakkar",
+      "saij3b"
+    ]
+  },
+  {
+    "number": 156,
+    "title": "[BUG] Backend CI smoke test fails — Python import of FastAPI app exits with code 1",
+    "state": "OPEN",
+    "users": [
+      "rishab11250",
+      "saurabhhhcodes"
+    ]
+  },
+  {
+    "number": 151,
+    "title": "Hardcoded Supabase anon key in MobileApp source enables programmatic DB access and prevents key rotation",
+    "state": "OPEN",
+    "users": [
+      "atul-upadhyay-7"
+    ]
+  },
+  {
+    "number": 150,
+    "title": "Authorization bypass via client-side persisted profile cache in authStore",
+    "state": "OPEN",
+    "users": [
+      "atul-upadhyay-7"
+    ]
+  },
+  {
+    "number": 133,
+    "title": "Compute and persist SLA fields when sla_breach_at is missing/empty on ticket save",
+    "state": "CLOSED",
+    "users": [
+      "namann5"
+    ]
+  },
+  {
+    "number": 132,
+    "title": "[BOUNTY] [level:advanced] Containerize Backend Services with Multi-Stage Docker Builds and Automate Kubernetes Deployment Manifests",
+    "state": "CLOSED",
+    "users": [
+      "Hobie1Kenobi",
+      "gitsofyash",
+      "saij3b"
+    ]
+  },
+  {
+    "number": 131,
+    "title": "[BOUNTY] [level:critical] Establish Distributed Redis Caching Layer for AI Categorization and Sentence Transformer Embeddings",
+    "state": "CLOSED",
+    "users": [
+      "Hobie1Kenobi",
+      "gitsofyash",
+      "saij3b"
+    ]
+  },
+  {
+    "number": 130,
+    "title": "[BOUNTY] [level:critical] Implement Secure HTTP-Only Cookie Session Storage for Supabase JWTs in Mobile and Web",
+    "state": "CLOSED",
+    "users": [
+      "Hobie1Kenobi",
+      "gitsofyash",
+      "saij3b"
+    ]
+  },
+  {
+    "number": 129,
+    "title": "[BOUNTY] [level:critical] Establish Distributed Redis Caching Layer for AI Categorization and Sentence Transformer Embeddings",
+    "state": "CLOSED",
+    "users": [
+      "Hobie1Kenobi",
+      "gitsofyash",
+      "palakjaiswal16"
+    ]
+  },
+  {
+    "number": 128,
+    "title": "[BOUNTY] [level:critical] Implement Secure HTTP-Only Cookie Session Storage for Supabase JWTs in Mobile and Web",
+    "state": "CLOSED",
+    "users": [
+      "Hobie1Kenobi",
+      "Niteshagarwal01",
+      "gitsofyash"
+    ]
+  },
+  {
+    "number": 125,
+    "title": "[BUG] Frontend lint still fails because Jest files use browser-only ESLint globals",
+    "state": "CLOSED",
+    "users": [
+      "Hobie1Kenobi",
+      "gitsofyash",
+      "harshitanagpal05",
+      "saij3b"
+    ]
+  },
+  {
+    "number": 123,
+    "title": "[BUG] lint-staged config in package.json is a string instead of a JSON object — pre-commit linting never runs",
+    "state": "CLOSED",
+    "users": [
+      "Hobie1Kenobi",
+      "gitsofyash",
+      "rishab11250",
+      "saij3b"
+    ]
+  },
+  {
+    "number": 122,
+    "title": "[BUG] Missing .dockerignore causes bloated Docker builds — entire repo sent as build context",
+    "state": "CLOSED",
+    "users": [
+      "Hobie1Kenobi",
+      "gitsofyash",
+      "rishab11250",
+      "saij3b"
+    ]
+  },
+  {
+    "number": 121,
+    "title": "[BUG] User approval emails are entirely stubbed out — Resend API call is commented out, users never get notified",
+    "state": "CLOSED",
+    "users": [
+      "Hobie1Kenobi",
+      "gitsofyash",
+      "rishab11250"
+    ]
+  },
+  {
+    "number": 120,
+    "title": "[BUG] AI-generated troubleshooting plan is parsed but never stored in state — users see a generic message instead of the actual plan",
+    "state": "CLOSED",
+    "users": [
+      "Hobie1Kenobi",
+      "gitsofyash",
+      "rishab11250"
+    ]
+  },
+  {
+    "number": 117,
+    "title": "[BUG]   [Critical] Unauthenticated ticket endpoints allow cross-tenant data access (IDOR)",
+    "state": "OPEN",
+    "users": [
+      "namann5"
+    ]
+  },
+  {
+    "number": 111,
+    "title": "[BOUNTY] [level:intermediate] Implement Row-Level Security (RLS) policies for SLA configs and policies tables",
+    "state": "CLOSED",
+    "users": [
+      "Hobie1Kenobi",
+      "SarthakKharche",
+      "anishachoudhary5",
+      "saij3b"
+    ]
+  },
+  {
+    "number": 110,
+    "title": "[BOUNTY] [level:advanced] Add Multi-Language Ticket Auto-Translation via Supabase AI Edge Functions",
+    "state": "CLOSED",
+    "users": [
+      "Hobie1Kenobi",
+      "SarthakKharche",
+      "priyanshi-coder-2"
+    ]
+  },
+  {
+    "number": 109,
+    "title": "[BOUNTY] [level:intermediate] Add Python Integration Tests for Semantic Duplicate Ticket Detection RPC",
+    "state": "CLOSED",
+    "users": [
+      "Hobie1Kenobi",
+      "anishachoudhary5",
+      "priyanshi-coder-2",
+      "saij3b"
+    ]
+  },
+  {
+    "number": 108,
+    "title": "[BOUNTY] [level:intermediate] Implement Automated Slack Notification Trigger for Critical SLA Breaches",
+    "state": "CLOSED",
+    "users": [
+      "Hobie1Kenobi",
+      "SarthakKharche",
+      "saij3b"
+    ]
+  },
+  {
+    "number": 107,
+    "title": "[BOUNTY] [level:beginner] Enhance Landing Page Call-to-Action Hover Animations & Scale Transforms",
+    "state": "CLOSED",
+    "users": [
+      "Hobie1Kenobi",
+      "SarthakKharche",
+      "priyanshi-coder-2"
+    ]
+  },
+  {
+    "number": 106,
+    "title": "[BOUNTY] [level:beginner] Add Mobile App Setup and Troubleshooting Documentation",
+    "state": "CLOSED",
+    "users": [
+      "Hobie1Kenobi",
+      "SarthakKharche",
+      "aglichandrap"
+    ]
+  },
+  {
+    "number": 102,
+    "title": "[BUG] Frontend production build ships a 2.19 MB initial JavaScript bundle",
+    "state": "OPEN",
+    "users": [
+      "gopuvarshini14-creator",
+      "harshitanagpal05",
+      "saranshjohri07"
+    ]
+  },
+  {
+    "number": 100,
+    "title": "fix: dark mode contrast issue on NER highlight in landing page email mockup",
+    "state": "OPEN",
+    "users": [
+      "anksingh1212121",
+      "gopuvarshini14-creator",
+      "saranshjohri07"
+    ]
+  },
+  {
+    "number": 98,
+    "title": "[BUG] USE_MOCK hardcoded to true — backend integration completely disabled",
+    "state": "CLOSED",
+    "users": [
+      "anishachoudhary5",
+      "rishab11250"
+    ]
+  },
+  {
+    "number": 97,
+    "title": "[BUG] Global console.error override in BugReportWidget causes re-render loops and breaks stack traces",
+    "state": "CLOSED",
+    "users": [
+      "rishab11250",
+      "rutul2006"
+    ]
+  },
+  {
+    "number": 96,
+    "title": "[BUG]  AI provider API keys are exposed in the frontend bundle through VITE_* environment variables",
+    "state": "CLOSED",
+    "users": [
+      "harshitanagpal05"
+    ]
+  },
+  {
+    "number": 85,
+    "title": "Docs: Add Local Backend Environment Setup & Schema Verification Guide",
+    "state": "OPEN",
+    "users": [
+      "YashKrTripathi",
+      "sumedhag28"
+    ]
+  },
+  {
+    "number": 75,
+    "title": "[BOUNTY] [level:critical] Implement Enterprise SLA Breach & Automated Multi-Channel Escalation Engine",
+    "state": "CLOSED",
+    "users": [
+      "TiagoAlmeidaS"
+    ]
+  },
+  {
+    "number": 74,
+    "title": "[BOUNTY] [level:critical] Build AI-Driven Semantic Duplicate Ticket Detection with Vector Embeddings & Cosine Similarity",
+    "state": "CLOSED",
+    "users": [
+      "TiagoAlmeidaS",
+      "harshitanagpal05",
+      "krushnanirmalkar"
+    ]
+  },
+  {
+    "number": 73,
+    "title": "[FEATURE] [level:advanced] Integrate Local Hugging Face SentenceTransformer Classifier Fallback with ONNX Runtime",
+    "state": "CLOSED",
+    "users": [
+      "diyamajee-spec"
+    ]
+  },
+  {
+    "number": 72,
+    "title": "[FEATURE] [level:advanced] Implement Secure Ticket Audit Logs and Automated Ticket Escalation Actions",
+    "state": "CLOSED",
+    "users": [
+      "harshitanagpal05",
+      "krushnanirmalkar"
+    ]
+  },
+  {
+    "number": 71,
+    "title": "[FEATURE] [level:advanced] Create Real-time Support Dashboard Updates Using Supabase Realtime Channels",
+    "state": "CLOSED",
+    "users": [
+      "Achiever199"
+    ]
+  },
+  {
+    "number": 70,
+    "title": "[FEATURE] [level:advanced] Add Supabase Multi-Tenant Database Indexing & Optimized Full-Text Search for Ticket Catalog",
+    "state": "CLOSED",
+    "users": []
+  },
+  {
+    "number": 69,
+    "title": "[FEATURE] [level:advanced] Implement Comprehensive Integration & End-to-End Tests for Ticketing Pipeline (Jest & PyTest)",
+    "state": "CLOSED",
+    "users": [
+      "tejinderpa",
+      "varshini-nandula"
+    ]
+  },
+  {
+    "number": 67,
+    "title": "Tenant orphaning bug: /tickets/save can persist tickets without company_id",
+    "state": "CLOSED",
+    "users": [
+      "namann5"
+    ]
+  },
+  {
+    "number": 63,
+    "title": "[BUG] Ticket finalization can fail because AI analysis response drops `sla_breach_at`",
+    "state": "CLOSED",
+    "users": [
+      "Xenon010101",
+      "dishamaurya081-create",
+      "harshitanagpal05"
+    ]
+  },
+  {
+    "number": 55,
+    "title": "[Bug] original_language and original_text dropped in AIProcessing — multilingual ticket descriptions lost on save",
+    "state": "CLOSED",
+    "users": [
+      "Xenon010101",
+      "kamalsharma001"
+    ]
+  },
+  {
+    "number": 54,
+    "title": "[BUG]  Backend readiness fails when SentenceTransformer model is unavailable offline",
+    "state": "CLOSED",
+    "users": [
+      "harshitanagpal05"
+    ]
+  },
+  {
+    "number": 52,
+    "title": "/ai/analyze_ticket defined twice causing route collision",
+    "state": "CLOSED",
+    "users": [
+      "Achiever199",
+      "Xenon010101",
+      "codeananyagupta",
+      "drb101005"
+    ]
+  },
+  {
+    "number": 51,
+    "title": "[BUG] Password change requires no current password verification — silent account takeover possible on shared/unlocked devices",
+    "state": "CLOSED",
+    "users": [
+      "ayushi2577"
+    ]
+  },
+  {
+    "number": 50,
+    "title": "[BUG] Stale user data (notifications, tickets, AI state) persists in localStorage across logout — leaks to next login session",
+    "state": "CLOSED",
+    "users": [
+      "ayushi2577"
+    ]
+  },
+  {
+    "number": 49,
+    "title": "[BUG] Voice visualizer freezes due to stale closure in recognition.onend — CreateTicket.jsx",
+    "state": "CLOSED",
+    "users": [
+      "Aryan1092raj",
+      "saurabhhhcodes"
+    ]
+  },
+  {
+    "number": 48,
+    "title": "[Bug] Voice visualizer freezes due to stale closure in recognition.onend — CreateTicket.jsx",
+    "state": "CLOSED",
+    "users": [
+      "Aryan1092raj",
+      "codeananyagupta"
+    ]
+  },
+  {
+    "number": 47,
+    "title": "[Feature] Add Timeline-based Changelog Component Page",
+    "state": "CLOSED",
+    "users": [
+      "Akshita-2307",
+      "Ranjit1401"
+    ]
+  },
+  {
+    "number": 46,
+    "title": "[FEATURE] Add Smart Ticket Templates for Faster & More Structured Issue Reporting",
+    "state": "CLOSED",
+    "users": [
+      "Achiever199",
+      "varshini-nandula"
+    ]
+  },
+  {
+    "number": 44,
+    "title": "[BUG]: Project health checks expose frontend lint failures and backend API contract drift",
+    "state": "CLOSED",
+    "users": [
+      "harshitanagpal05",
+      "saurabhhhcodes"
+    ]
+  },
+  {
+    "number": 41,
+    "title": "[FEATURE] Automated Ticket Auto-Close Cron and Notification Routing Logic",
+    "state": "CLOSED",
+    "users": [
+      "harshitanagpal05"
+    ]
+  },
+  {
+    "number": 40,
+    "title": "[FEATURE] Dynamic AI Thresholds and Duplicate Detection Logic",
+    "state": "CLOSED",
+    "users": [
+      "sanjayrk2007"
+    ]
+  },
+  {
+    "number": 39,
+    "title": "[FEATURE] Persist Admin Settings to Supabase Database",
+    "state": "CLOSED",
+    "users": [
+      "Deniwn22",
+      "Jiya3177"
+    ]
+  },
+  {
+    "number": 38,
+    "title": "[FEATURE] Implement Live Backend Persistence and Logic for System Settings Panel",
+    "state": "CLOSED",
+    "users": []
+  },
+  {
+    "number": 35,
+    "title": "Bug : Avatar Upload Fails with Cannot read property 'Images' of undefined",
+    "state": "CLOSED",
+    "users": [
+      "sriram687"
+    ]
+  },
+  {
+    "number": 32,
+    "title": "[CHORE] Fix Frontend ESLint warnings and unused variables",
+    "state": "CLOSED",
+    "users": [
+      "Ak-47klr",
+      "Rashmi2806525",
+      "kanchan-nath",
+      "pri265126-stack",
+      "srinithithirumaran",
+      "sriram687",
+      "vasheekhan"
+    ]
+  },
+  {
+    "number": 31,
+    "title": "Add Dark Mode Option ",
+    "state": "CLOSED",
+    "users": [
+      "Ishita-varshney",
+      "vasheekhan"
+    ]
+  },
+  {
+    "number": 30,
+    "title": "[Bug]:The password character sequence warning showed when pass is being made",
+    "state": "CLOSED",
+    "users": [
+      "coolss21",
+      "tejinderpa"
+    ]
+  },
+  {
+    "number": 28,
+    "title": "Steps section laggy transition",
+    "state": "CLOSED",
+    "users": [
+      "DHEVIKA",
+      "arpan7sarkar",
+      "namann5"
+    ]
+  },
+  {
+    "number": 27,
+    "title": "[BUG] Fix AI streaming response parsing when SSE chunks are split",
+    "state": "CLOSED",
+    "users": [
+      "DHEVIKA",
+      "Shrawani08",
+      "harshitanagpal05"
+    ]
+  },
+  {
+    "number": 26,
+    "title": "Fix AI streaming response parsing when SSE chunks are split",
+    "state": "CLOSED",
+    "users": [
+      "harshitanagpal05"
+    ]
+  },
+  {
+    "number": 25,
+    "title": "[FEATURE] Add Docker healthcheck and backend readiness validation",
+    "state": "CLOSED",
+    "users": [
+      "Anand-240",
+      "N-Haritha16",
+      "harshitanagpal05",
+      "namann5",
+      "saurabhhhcodes",
+      "tamannaa-rath"
+    ]
+  },
+  {
+    "number": 24,
+    "title": "joining ",
+    "state": "CLOSED",
+    "users": [
+      "Sanjay-J-148006",
+      "Sujal01go"
+    ]
+  }
+]

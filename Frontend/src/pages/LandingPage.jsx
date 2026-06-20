@@ -3,7 +3,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
-    Menu, X, Check, Activity, Moon, Sun,
+    Menu, X, Check, Activity,
     MapPin, AlertCircle, Folder, Zap, Bot, ArrowRight,
     Clock, CheckCircle,
     Star, Twitter, Linkedin, Github, Globe, MessageSquare,
@@ -273,7 +273,7 @@ export default function LandingPage() {
     };
 
     return (
-        <div className="min-h-screen bg-white dark:bg-gray-900 font-sans text-slate-800 dark:text-white">
+        <div className="min-h-screen bg-white font-sans text-slate-800">
             {showDemo && <DemoModal onClose={() => setShowDemo(false)} />}
 
             {/* ==================== NAV ==================== */}
@@ -285,19 +285,6 @@ export default function LandingPage() {
                             <img src="/favicon.png" alt="H" className="w-8 h-8 object-contain" />
                             <span className="font-black text-2xl tracking-tighter text-emerald-900 italic uppercase">HelpDesk.ai</span>
                         </div>
-
-                        {/* Dark Mode Toggle */}
-                        <button
-                            onClick={() => {
-                                const isDark = document.documentElement.classList.toggle('dark');
-                                localStorage.setItem('theme', isDark ? 'dark' : 'light');
-                            }}
-                            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                            aria-label="Toggle dark mode"
-                        >
-                            <Moon className="w-5 h-5 text-gray-600 dark:hidden" />
-                            <Sun className="w-5 h-5 text-yellow-400 hidden dark:block" />
-                        </button>
 
                         {/* Desktop Links */}
                         <div className="hidden md:flex items-center gap-8">
@@ -875,17 +862,17 @@ export default function LandingPage() {
                             {
                                 heading: 'Resources',
                                 links: [
-                                    { label: 'Documentation', href: '#' },
-                                    { label: 'API Reference', href: '#' },
+                                    { label: 'Documentation', href: '/docs' },
+                                    { label: 'API Reference', href: '/api-reference' },
                                     { label: 'Changelog', href: '/changelog' },
-                                    { label: 'Status Page', href: '#' },
+                                    { label: 'Status Page', href: '/status' },
                                 ]
                             },
                             {
                                 heading: 'Company',
                                 links: [
-                                    { label: 'About Us', href: '#' },
-                                    { label: 'Careers', href: '#' },
+                                    { label: 'About Us', href: '/about' },
+                                    { label: 'Careers', href: '/careers' },
                                     { label: 'Privacy Policy', href: '/privacy' },
                                     { label: 'Terms of Service', href: '/terms' },
                                 ]
@@ -896,7 +883,7 @@ export default function LandingPage() {
                                     { label: 'Security Overview', href: '/security' },
                                     { label: 'Privacy Policy', href: '/privacy' },
                                     { label: 'Terms of Service', href: '/terms' },
-                                    { label: 'Cookie Policy', href: '#' },
+                                    { label: 'Cookie Policy', href: '/cookie-policy' },
                                 ]
                             },
                         ].map(({ heading, links }) => (

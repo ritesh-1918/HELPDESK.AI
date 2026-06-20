@@ -103,6 +103,15 @@ function Signup() {
     e.preventDefault();
     setError("");
 
+    // Password complexity validator — mirrors Supabase's policy
+    const validatePassword = (pw) => {
+      if (pw.length < 8) return 'Password must be at least 8 characters long.';
+      if (!/[a-z]/.test(pw)) return 'Password must contain at least one lowercase letter (a-z).';
+      if (!/[A-Z]/.test(pw)) return 'Password must contain at least one uppercase letter (A-Z).';
+      if (!/[0-9]/.test(pw)) return 'Password must contain at least one number (0-9).';
+      return null;
+    };
+
     if (!email || !password || !confirmPassword || !fullName) {
       setError("All fields are required.");
       return;
@@ -113,8 +122,9 @@ function Signup() {
       return;
     }
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters long.");
+    const pwError = validatePassword(password);
+    if (pwError) {
+      setError(pwError);
       return;
     }
 
@@ -315,12 +325,29 @@ function Signup() {
               <div className="relative">
                 <label className="block mb-2" style={labelStyle}>Password</label>
                 <div className="relative">
-                  <input type={showPassword ? "text" : "password"} placeholder="Min 6 chars" style={{ ...inputStyle, paddingRight: '44px' }} onFocus={inputFocus} onBlur={inputBlur}
+                  <input type={showPassword ? "text" : "password"} placeholder="Min 8 chars" style={{ ...inputStyle, paddingRight: '44px' }} onFocus={inputFocus} onBlur={inputBlur}
                     value={password} onChange={(e) => { setPassword(e.target.value); setError(""); }} />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }}>
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+                {/* Live password requirement checklist */}
+                {password && (
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 mt-2">
+                    {[
+                      { label: '8+ characters', ok: password.length >= 8 },
+                      { label: 'Uppercase (A-Z)', ok: /[A-Z]/.test(password) },
+                      { label: 'Lowercase (a-z)', ok: /[a-z]/.test(password) },
+                      { label: 'Number (0-9)', ok: /[0-9]/.test(password) },
+                    ].map(({ label, ok }) => (
+                      <span key={label} className={`text-[10px] font-semibold flex items-center gap-1 transition-colors ${
+                        ok ? 'text-emerald-600' : 'text-red-400'
+                      }`}>
+                        <span>{ok ? '✓' : '○'}</span> {label}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="relative">
                 <label className="block mb-2" style={labelStyle}>Confirm</label>

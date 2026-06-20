@@ -199,6 +199,7 @@ class TicketResponse(BaseModel):
     decision_factors: list[str] = []
     image_description: str = ""
     ocr_text: str = ""
+    image_url: str | None = None
     highlights: list[str] = []
     timeline: dict = {} # Map of step_name: timestamp
     env_metadata: dict = {} # IP, Hostname, Browser/OS
@@ -1143,6 +1144,7 @@ async def analyze_only(request_body: TicketRequest):
         decision_factors=decision_factors,
         image_description=gemini_analysis["image_description"],
         ocr_text=gemini_analysis["ocr_text"],
+        image_url=request_body.image_url,
         highlights=entities, # Use entities as highlights for now
         timeline=timeline,
         env_metadata=env_metadata,
@@ -1301,6 +1303,7 @@ async def analyze_stream(request_body: TicketRequest):
             "decision_factors": decision_factors,
             "image_description": gemini_analysis["image_description"],
             "ocr_text": gemini_analysis["ocr_text"],
+            "image_url": request_body.image_url,
             "highlights": entities,
             "timeline": timeline,
             "env_metadata": env_metadata,
@@ -1338,3 +1341,145 @@ async def analyze_ticket_v2(request: TicketRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# ---------------------------------------------------------------------------
+# Clean cookie-based Supabase Auth endpoints for /auth/me backward-compatibility
+# ---------------------------------------------------------------------------
+ACCESS_COOKIE = "access_token"
+REFRESH_COOKIE = "refresh_token"
+ACCESS_MAX_AGE = 60 * 60
+REFRESH_MAX_AGE = 60 * 60 * 24 * 7
+
+def _cookie_kwargs() -> dict:
+    secure = os.getenv("ENV", "production").lower() != "development"
+    return {
+        "httponly": True,
+        "secure": secure,
+        "samesite": "strict",
+        "path": "/",
+    }
+
+def extract_token(request: Request) -> str | None:
+    cookie_token = request.cookies.get(ACCESS_COOKIE)
+    if cookie_token:
+        return cookie_token
+    auth = request.headers.get("authorization") or request.headers.get("Authorization")
+    if auth and auth.lower().startswith("bearer "):
+        return auth.split(" ", 1)[1].strip() or None
+    return None
+
+def _set_session_cookies(response: Response, session) -> None:
+    if not session or not getattr(session, "access_token", None):
+        return
+    response.set_cookie(
+        ACCESS_COOKIE,
+        session.access_token,
+        max_age=ACCESS_MAX_AGE,
+        **_cookie_kwargs(),
+    )
+    refresh = getattr(session, "refresh_token", None)
+    if refresh:
+        response.set_cookie(
+            REFRESH_COOKIE,
+            refresh,
+            max_age=REFRESH_MAX_AGE,
+            **_cookie_kwargs(),
+        )
+
+def _clear_session_cookies(response: Response) -> None:
+    kwargs = _cookie_kwargs()
+    response.delete_cookie(ACCESS_COOKIE, path=kwargs["path"])
+    response.delete_cookie(REFRESH_COOKIE, path=kwargs["path"])
+
+async def get_current_user(request: Request) -> dict:
+    token = extract_token(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database connection offline")
+    try:
+        result = supabase.auth.get_user(token)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=401,
+            detail=f"Invalid session: {exc}",
+        ) from exc
+    user = getattr(result, "user", None) or (result.get("user") if isinstance(result, dict) else None)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid session")
+    if hasattr(user, "model_dump"):
+        return user.model_dump()
+    if hasattr(user, "dict"):
+        return user.dict()
+    return dict(user)
+
+class LoginBody(BaseModel):
+    email: str
+    password: str
+
+class SignupBody(BaseModel):
+    email: str
+    password: str
+    full_name: str | None = None
+    role: str | None = "user"
+    company: str | None = None
+
+@app.post("/auth/login")
+async def auth_login(body: LoginBody, response: Response):
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database connection offline")
+    try:
+        result = supabase.auth.sign_in_with_password(
+            {"email": body.email, "password": body.password}
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+    session = getattr(result, "session", None)
+    user = getattr(result, "user", None)
+    if not session or not user:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    _set_session_cookies(response, session)
+    user_payload = user.model_dump() if hasattr(user, "model_dump") else dict(user)
+    return {"user": user_payload, "message": "Session cookies set"}
+
+@app.post("/auth/signup")
+async def auth_signup(body: SignupBody, response: Response):
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database connection offline")
+    metadata = {}
+    if body.full_name:
+        metadata["full_name"] = body.full_name
+    if body.role:
+        metadata["role"] = body.role
+    if body.company:
+        metadata["company"] = body.company
+
+    try:
+        result = supabase.auth.sign_up(
+            {
+                "email": body.email,
+                "password": body.password,
+                "options": {"data": metadata} if metadata else {},
+            }
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    session = getattr(result, "session", None)
+    user = getattr(result, "user", None)
+    if session:
+        _set_session_cookies(response, session)
+    user_payload = user.model_dump() if user and hasattr(user, "model_dump") else None
+    return {"user": user_payload, "message": "Signup complete"}
+
+@app.post("/auth/logout")
+async def auth_logout(response: Response):
+    _clear_session_cookies(response)
+    return {"ok": True}
+
+@app.get("/auth/me")
+async def auth_me(user: dict = Depends(get_current_user)):
+    return {"user": user}
+
