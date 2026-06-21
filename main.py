@@ -8,6 +8,7 @@ from supabase import create_client
 
 from backend.csrf import CSRFTokenMiddleware, set_csrf_cookie, CSRF_COOKIE_NAME
 from backend.swagger_config import SWAGGER_UI_CUSTOM_CSS, SWAGGER_UI_CUSTOM_JS
+from backend.routers import metrics as metrics_router
 
 from backend.routers import tickets, ai, admin, health, auth
 from backend.routes import translation, estimator, voice, privacy, active_learning, weekly_digest
@@ -18,6 +19,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 
 app.add_middleware(CSRFTokenMiddleware)
+app.include_router(metrics_router.router)
 
 # Initialize Supabase client
 SUPABASE_URL = os.getenv("SUPABASE_URL")
