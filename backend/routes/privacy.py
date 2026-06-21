@@ -69,6 +69,7 @@ async def get_privacy_preferences_route(
     user: dict = Depends(get_current_user),
     service = Depends(get_gdpr_service)
 ):
+    """Return the caller's privacy and consent preferences."""
     uid = user.get("id") or user.get("sub")
     if not uid and user_id:
         uid = user_id
@@ -98,6 +99,7 @@ async def update_privacy_preferences_route(
     user: dict = Depends(get_current_user),
     service = Depends(get_gdpr_service)
 ):
+    """Update the caller's privacy and consent preferences."""
     body_data = {}
     try:
         body_data = await request.json()
@@ -140,6 +142,7 @@ async def get_privacy_requests_route(
     user: dict = Depends(get_current_user),
     service = Depends(get_gdpr_service)
 ):
+    """Return the caller's privacy request history."""
     uid = user.get("id") or user.get("sub")
     if not uid and user_id:
         uid = user_id
@@ -158,6 +161,7 @@ async def request_deletion_route(
     user: dict = Depends(get_current_user),
     service = Depends(get_gdpr_service)
 ):
+    """Submit a privacy deletion request for the current user."""
     uid = user.get("id") or user.get("sub")
     if not uid:
         raise HTTPException(status_code=401, detail="Authentication required")
@@ -172,6 +176,7 @@ async def cancel_deletion_route(
     user: dict = Depends(get_current_user),
     service = Depends(get_gdpr_service)
 ):
+    """Cancel any pending privacy deletion requests for the current user."""
     uid = user.get("id") or user.get("sub")
     if not uid:
         raise HTTPException(status_code=401, detail="Authentication required")
@@ -193,6 +198,7 @@ async def update_request_status_route(
     user: dict = Depends(get_current_user),
     service = Depends(get_gdpr_service)
 ):
+    """Approve or complete a privacy request when the caller is allowed to do so."""
     uid = user.get("id") or user.get("sub")
     if not uid:
         raise HTTPException(status_code=401, detail="Authentication required")
@@ -234,6 +240,7 @@ async def export_data_route(
     user: dict = Depends(get_current_user),
     service = Depends(get_gdpr_service)
 ):
+    """Export a user's data as JSON or CSV."""
     uid = user.get("id") or user.get("sub")
     if not uid and user_id:
         uid = user_id

@@ -516,6 +516,7 @@ async def legacy_analyze_and_save(request_body: TicketRequest, user: dict = Depe
 
 @router.post("/analyze-v2")
 async def analyze_ticket_v2(request: TicketRequest, user: dict = Depends(get_current_user)):
+    """Run the legacy V2 classifier and return its prediction payload."""
     text = request.text
     try:
         prediction = classifier_v2.predict(text)

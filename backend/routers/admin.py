@@ -12,6 +12,7 @@ async def api_get_profiles(
     offset: int = 0,
     current_user: dict = Depends(get_current_user),
 ):
+    """List admin-visible profiles with optional role and status filters."""
     if not supabase: return []
     query = supabase.table("profiles").select("*")
     if role: query = query.eq("role", role)
@@ -25,6 +26,7 @@ async def api_update_profile(
     updates: dict,
     current_user: dict = Depends(get_current_user),
 ):
+    """Apply an admin edit to a user profile."""
     if not supabase: return {}
     res = supabase.table("profiles").update(updates).eq("id", user_id).execute()
     return res.data[0] if res.data else {}
@@ -34,6 +36,7 @@ async def api_delete_profile(
     user_id: str,
     current_user: dict = Depends(get_current_user),
 ):
+    """Delete a user profile and cascade auth cleanup when possible."""
     if not supabase: return {"success": False}
     supabase.table("profiles").delete().eq("id", user_id).execute()
     try:
@@ -45,6 +48,7 @@ async def api_delete_profile(
 async def api_get_companies(
     current_user: dict = Depends(get_current_user),
 ):
+    """Return the company list visible to the current admin."""
     if not supabase: return []
     res = supabase.table("companies").select("*").execute()
     return res.data
@@ -56,6 +60,7 @@ async def api_get_admin_requests(
     offset: int = 0,
     current_user: dict = Depends(get_current_user),
 ):
+    """List admin requests with optional status filtering."""
     if not supabase: return []
     query = supabase.table("admin_requests").select("*")
     if status: query = query.eq("status", status)
