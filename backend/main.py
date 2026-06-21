@@ -310,10 +310,16 @@ async def lifespan(app: FastAPI):
     classifier_loaded_flag = getattr(classifier_service, "_loaded", False)
     ner_loaded_flag = getattr(ner_service, "_loaded", False)
 
-    if strict_mode and not classifier_loaded_flag:
+    # Avoid hard-failing startup if the classifier fell back to regex mode.
+    # ClassifierService marks `_fallback_mode=True` when model assets are missing but
+    # regex fallback is available.
+    classifier_fallback_mode = getattr(classifier_service, "_fallback_mode", False)
+
+    if strict_mode and not (classifier_loaded_flag and (classifier_fallback_mode or classifier_loaded_flag)):
         raise RuntimeError(
-            "[Startup-FATAL] Classifier assets not loaded. Set ALLOW_DEGRADED_STARTUP=1 to bypass."
+            "[Startup-FATAL] Classifier assets not loaded and no fallback available. Set ALLOW_DEGRADED_STARTUP=1 to bypass."
         )
+
     yield
     print("[Shutdown] Cleaning up ...")
 
