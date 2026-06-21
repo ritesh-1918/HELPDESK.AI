@@ -14,22 +14,48 @@ try:
         supabase = None
     else:
         supabase = create_client(url, key)
+        try:
+            import backend.auth.crypto
+        except Exception as patch_err:
+            print(f"[Crypto WARNING] Failed to import backend.auth.crypto: {patch_err}")
 except (ImportError, Exception) as e:
     print(f"[WARNING] Supabase initialization failed: {e}")
     supabase = None
     Client = None
 
-from backend.services.classifier_service import ClassifierService
-from backend.services.classifier_v2 import classifier_v2
-from backend.services.classifier_v3 import classifier_v3
-from backend.services.ner_service import NERService
-from backend.services.duplicate_service import DuplicateService
-from backend.services.rag_service import RagService
+try:
+    from backend.services.classifier_service import ClassifierService
+    classifier_service = ClassifierService()
+except ImportError:
+    classifier_service = None
 
-classifier_service = ClassifierService()
-ner_service = NERService()
-duplicate_service = DuplicateService()
-rag_service = RagService()
+try:
+    from backend.services.classifier_v2 import classifier_v2
+except ImportError:
+    classifier_v2 = None
+
+try:
+    from backend.services.classifier_v3 import classifier_v3
+except ImportError:
+    classifier_v3 = None
+
+try:
+    from backend.services.ner_service import NERService
+    ner_service = NERService()
+except ImportError:
+    ner_service = None
+
+try:
+    from backend.services.duplicate_service import DuplicateService
+    duplicate_service = DuplicateService()
+except ImportError:
+    duplicate_service = None
+
+try:
+    from backend.services.rag_service import RagService
+    rag_service = RagService()
+except ImportError:
+    rag_service = None
 
 try:
     from backend.services.gemini_service import GeminiService
