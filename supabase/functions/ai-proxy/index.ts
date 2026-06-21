@@ -5,6 +5,7 @@
 //
 // Deploy:  supabase functions deploy ai-proxy
 // Secrets: supabase secrets set GEMINI_API_KEY_1=... OPENROUTER_API_KEY_1=... etc.
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.42.0";
 
 import { corsHeaders, handleCors } from "../_shared/cors.ts";
 
@@ -55,6 +56,26 @@ Deno.serve(async (req) => {
   const headers = { ...corsHeaders(), "Content-Type": "application/json" };
 
   try {
+    const authorization = req.headers.get("Authorization");
+    if (!authorization) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    );
+    const token = authorization.replace(/^Bearer\s+/i, "");
+    const { data: caller, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !caller.user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
+
     const body = await req.json();
     const { provider, model, messages, prompt } = body;
     const defaultModel = {
