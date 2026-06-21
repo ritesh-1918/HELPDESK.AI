@@ -69,6 +69,8 @@ class TicketResponse(BaseModel):
     env_metadata: dict = {} # IP, Hostname, Browser/OS
     sla_breach_at: str | None = None
     version: str = "2.1.0-Neural-Diagnostic"
+    rag_suggestions: list = []
+    rag_recommendations: list = []
 
 
 # ─── Profile update schema (closes #2894) ──────────────────────────────────
