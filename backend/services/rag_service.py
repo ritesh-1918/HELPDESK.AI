@@ -237,11 +237,18 @@ class RagService:
 
             if response.data and len(response.data) > 0:
                 best_match = response.data[0]
+                required = {"id", "title", "content", "similarity"}
+                if not isinstance(best_match, dict) or not required.issubset(best_match):
+                    print("[RAG ERROR] Ignoring malformed knowledge-base result")
+                    return None
+                similarity = float(best_match["similarity"])
+                if not 0.0 <= similarity <= 1.0 or similarity < threshold:
+                    return None
                 return {
                     "id": best_match["id"],
-                    "title": best_match["title"],
-                    "content": best_match["content"],
-                    "similarity": best_match["similarity"]
+                    "title": str(best_match["title"])[:500],
+                    "content": str(best_match["content"])[:20000],
+                    "similarity": similarity
                 }
             return None
         except Exception as e:
