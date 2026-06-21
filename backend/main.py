@@ -575,8 +575,10 @@ import threading
 _corrections_lock = threading.Lock()
 
 
+# NOTE: get_current_user must be defined before this endpoint is declared.
 @app.post("/ai/log_correction")
 async def log_correction(raw_request: Request, user: dict = Depends(get_current_user)):
+
     """Log an admin correction when the AI prediction differs from the human decision.
     
     Requires authentication. Only admin users can log corrections.
