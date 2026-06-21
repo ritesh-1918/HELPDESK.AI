@@ -46,7 +46,7 @@ def _anon_supabase():
     if not url or not key:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Auth backend not configured (SUPABASE_URL / SUPABASE_ANON_KEY missing)",
+            detail={"error": "service_unavailable", "message": "Auth backend not configured (SUPABASE_URL / SUPABASE_ANON_KEY missing)"},
         )
     return create_client(url, key)
 
@@ -162,13 +162,13 @@ AGENT_ROLES = frozenset(
 async def get_current_user(request: Request) -> dict:
     token = extract_token(request)
     if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail={"error": "unauthorized", "message": "Not authenticated"})
 
     # Reject tokens that were explicitly revoked via logout
     if _is_token_revoked(token):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Session has been revoked. Please log in again.",
+            detail={"error": "unauthorized", "message": "Session has been revoked. Please log in again."},
         )
 
     try:
@@ -177,11 +177,11 @@ async def get_current_user(request: Request) -> dict:
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid session",
+            detail={"error": "unauthorized", "message": "Invalid session"},
         ) from exc
     user = getattr(result, "user", None) or (result.get("user") if isinstance(result, dict) else None)
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail={"error": "unauthorized", "message": "Invalid session"})
     if hasattr(user, "model_dump"):
         return user.model_dump()
     if hasattr(user, "dict"):
@@ -200,7 +200,7 @@ def require_roles(*allowed_roles: str):
         if role not in normalized_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Insufficient role permissions",
+                detail={"error": "forbidden", "message": "Insufficient role permissions"},
             )
         return user
 
@@ -250,12 +250,12 @@ async def auth_login(request: Request, body: LoginBody, response: Response):
             {"email": str(body.email), "password": body.password}
         )
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password") from exc
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail={"error": "unauthorized", "message": "Invalid email or password"}) from exc
 
     session = getattr(result, "session", None)
     user = getattr(result, "user", None)
     if not session or not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail={"error": "unauthorized", "message": "Invalid email or password"})
 
     _set_session_cookies(response, session)
     user_payload = user.model_dump() if hasattr(user, "model_dump") else dict(user)
@@ -284,7 +284,7 @@ async def auth_signup(request: Request, body: SignupBody, response: Response):
             }
         )
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Signup failed. Please try again.") from exc
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"error": "bad_request", "message": "Signup failed. Please try again."}) from exc
 
     session = getattr(result, "session", None)
     user = getattr(result, "user", None)
@@ -349,11 +349,11 @@ async def auth_me_role(user: dict = Depends(get_current_user)):
     url = os.environ.get("SUPABASE_URL")
     key = os.environ.get("SUPABASE_SERVICE_KEY") or os.environ.get("SUPABASE_ANON_KEY")
     if not url or not key:
-        raise HTTPException(status_code=503, detail="Auth backend not configured")
+        raise HTTPException(status_code=503, detail={"error": "service_unavailable", "message": "Auth backend not configured"})
 
     user_id = user.get("id")
     if not user_id:
-        raise HTTPException(status_code=401, detail="Invalid user session")
+        raise HTTPException(status_code=401, detail={"error": "unauthorized", "message": "Invalid user session"})
 
     try:
         client = _create_client(url, key)
@@ -361,7 +361,7 @@ async def auth_me_role(user: dict = Depends(get_current_user)):
         data = getattr(result, "data", None) or {}
     except Exception as exc:
         logger.error("Profile lookup failed for user_id=%s", user_id, exc_info=exc)
-        raise HTTPException(status_code=500, detail="Profile lookup failed.") from exc
+        raise HTTPException(status_code=500, detail={"error": "internal_error", "message": "Profile lookup failed."}) from exc
 
     return {
         "role": data.get("role", "user"),
