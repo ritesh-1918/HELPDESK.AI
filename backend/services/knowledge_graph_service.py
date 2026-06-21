@@ -256,3 +256,89 @@ class KnowledgeGraphService:
             return {"query": f"Root causes of {parameter}", "results": unique_roots}
 
         return {"query": "Unknown query type", "results": []}
+
+    def analyze_failure_propagation(self, start_node_id: str) -> Dict[str, Any]:
+        """
+        Traverses the graph downstream to find affected services and construct a timeline.
+        """
+        import datetime
+        graph = self._get_graph_data()
+        nodes = graph["nodes"]
+        edges = graph["edges"]
+        
+        node_map = {n["id"]: n for n in nodes}
+        if start_node_id not in node_map:
+            return {
+                "root_cause_node": start_node_id,
+                "propagation_chain": [start_node_id],
+                "affected_services": [],
+                "timeline": []
+            }
+
+        affected_nodes = []
+        queue = [start_node_id]
+        visited = set()
+        parent_map = {}
+
+        while queue:
+            current = queue.pop(0)
+            if current in visited:
+                continue
+            visited.add(current)
+            
+            if current != start_node_id:
+                affected_nodes.append(current)
+
+            for edge in edges:
+                s = edge.get("source_id")
+                t = edge.get("target_id")
+                rel = edge.get("relationship_type")
+                
+                if t == current and rel in ["depends_on", "runs_on", "connected_to"]:
+                    if s not in visited:
+                        queue.append(s)
+                        parent_map[s] = current
+
+        affected_services = [node_map[nid]["name"] for nid in affected_nodes if nid in node_map and node_map[nid]["type"] in ["SERVICE", "APPLICATION", "API"]]
+
+        propagation_chain = [start_node_id]
+        def get_depth(node_id):
+            depth = 0
+            curr = node_id
+            while curr in parent_map and depth < 10:
+                curr = parent_map[curr]
+                depth += 1
+            return depth
+            
+        sorted_affected = sorted(affected_nodes, key=get_depth)
+        propagation_chain.extend(sorted_affected)
+
+        base_time = datetime.datetime.utcnow() - datetime.timedelta(minutes=15)
+        timeline = []
+        
+        for idx, nid in enumerate(propagation_chain):
+            if nid not in node_map:
+                continue
+            node = node_map[nid]
+            time_offset = idx * 3
+            event_time = (base_time + datetime.timedelta(minutes=time_offset)).strftime("%H:%M")
+            
+            event_msg = f"{node['name']} ({node['type']}) anomaly detected"
+            if idx == 0:
+                event_msg = f"Root Incident: {node['name']} ({node['type']}) failure"
+            elif node['type'] in ["SERVICE", "APPLICATION", "API"]:
+                event_msg = f"Downstream outage: {node['name']} degraded"
+                
+            timeline.append({
+                "time": event_time,
+                "event": event_msg,
+                "node": nid
+            })
+
+        return {
+            "root_cause_node": start_node_id,
+            "propagation_chain": propagation_chain,
+            "affected_services": affected_services,
+            "timeline": timeline
+        }
+
