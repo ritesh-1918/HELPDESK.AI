@@ -42,8 +42,8 @@
     --radius: 0.5rem;
   }
 
-  body {
-    @apply bg-[#f6f8f7] text-slate-900;
+  html, body, #root{
+    height: 100%;
   }
 
   .dark {
