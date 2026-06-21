@@ -58,7 +58,7 @@ function MasterAdminLayout() {
     ];
 
     return (
-        <div className="min-h-screen bg-[#050508] flex font-sans overflow-hidden text-slate-300">
+        <div className="min-h-screen bg-[#050508] dark:bg-[#050508] flex font-sans overflow-hidden text-slate-300">
             {/* Ambient Background Glows */}
             <div className="fixed inset-0 pointer-events-none z-0">
                 <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-600/5 rounded-full blur-[150px] mix-blend-screen" />

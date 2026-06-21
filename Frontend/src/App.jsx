@@ -12,6 +12,8 @@ import useTicketStore from "./store/ticketStore";
 import Toaster from "./components/shared/Toaster";
 import BugReportWidget from "./components/shared/BugReportWidget";
 import useRealtimeNotifications from "./hooks/useRealtimeNotifications";
+import useThemePreference from "./hooks/useThemePreference";
+
 
 // Auth Components
 import Login from "./pages/Login";
@@ -217,6 +219,7 @@ function AppLayout() {
 
 
 function App() {
+  useThemePreference();
   const { initialize } = useAuthStore();
 
   useEffect(() => {

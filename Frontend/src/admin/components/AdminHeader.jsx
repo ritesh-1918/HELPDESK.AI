@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import NotificationPopover from '../../user/components/NotificationPopover';
 import useAuthStore from '../../store/authStore';
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
+import useThemePreference from "../../hooks/useThemePreference";
+import ThemeToggle from "../../components/shared/ThemeToggle";
 
 /**
  * AdminHeader Component
@@ -14,6 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar"
 const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar }) => {
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const { theme, toggle } = useThemePreference();
     const dropdownRef = useRef(null);
     const searchRef = useRef(null);
     const navigate = useNavigate();
@@ -52,7 +55,7 @@ const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar })
     };
 
     return (
-        <header className="h-16 bg-white border-b border-slate-200 sticky top-0 z-30 px-6 md:px-10 flex items-center justify-between">
+        <header className="h-16 bg-white border-b border-slate-200 dark:bg-[#1a2e24] dark:border-white/10 sticky top-0 z-30 px-6 md:px-10 flex items-center justify-between transition-colors duration-200">
             <div className="flex items-center gap-4 flex-1">
                 {/* Mobile Menu Toggle */}
                 <button
@@ -99,8 +102,12 @@ const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar })
 
             {/* Header Operations */}
             <div className="flex items-center gap-4 lg:gap-6">
+                <div className="hidden sm:block">
+                    <ThemeToggle theme={theme} onToggle={toggle} />
+                </div>
+
                 {/* Communications Hub */}
-                <div className="relative border-r border-slate-200 pr-4 lg:pr-6 hidden sm:block">
+                <div className="relative border-r border-slate-200 dark:border-white/10 pr-4 lg:pr-6 hidden sm:block">
                     <NotificationPopover isAdmin={true} />
                 </div>
 

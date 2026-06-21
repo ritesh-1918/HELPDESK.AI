@@ -10,13 +10,15 @@ import useTicketStore from "../../store/ticketStore";
 import NotificationPopover from "./NotificationPopover";
 
 import useAuthStore from "../../store/authStore";
+import useThemePreference from "../../hooks/useThemePreference";
+import ThemeToggle from "../../components/shared/ThemeToggle";
 
 const TopNav = () => {
     const navigate = useNavigate();
-    
- 
+
     const { profile, logout } = useAuthStore();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const { theme, toggle } = useThemePreference();
 
     const initials = profile?.full_name ? profile.full_name[0].toUpperCase() : (profile?.email ? profile.email[0].toUpperCase() : 'U');
 
@@ -27,8 +29,8 @@ const TopNav = () => {
 
 
 
-    return (
-        <header className="w-full bg-white border-b border-gray-200 sticky top-0 z-50">
+return (
+        <header className="w-full bg-white border-b border-gray-200 dark:bg-[#1a2e24] dark:border-white/10 sticky top-0 z-50 transition-colors duration-200">
             <div className="max-w-[1100px] mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
                 {/* Left: Logo */}
                 <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/dashboard')}>
@@ -48,6 +50,9 @@ const TopNav = () => {
 
                 {/* Right: Profile */}
                 <div className="flex items-center gap-3">
+                    <div className="hidden sm:block">
+                        <ThemeToggle theme={theme} onToggle={toggle} />
+                    </div>
                     <NotificationPopover />
                     <div className="hidden md:block">
                         <Avatar
