@@ -42,9 +42,9 @@
     --radius: 0.5rem;
   }
 
-html, body, #root {
-  height: 100%;
-}
+  body {
+    @apply bg-[#f6f8f7] text-slate-900;
+  }
 
   .dark {
     --background: 224 71.4% 4.1%;

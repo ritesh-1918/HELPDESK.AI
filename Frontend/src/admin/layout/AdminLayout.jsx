@@ -14,7 +14,7 @@ const AdminLayout = () => {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
     return (
-        <div className="flex min-h-screen bg-[#f8faf9] font-sans">
+        <div className="flex h-screen bg-[#f8faf9] overflow-hidden font-sans">
             {/* Master Navigation Column (Responsive) */}
             <div 
                 className={`hidden md:block flex-shrink-0 relative z-40 transition-all duration-300`}
@@ -33,7 +33,7 @@ const AdminLayout = () => {
                 />
 
                 {/* Operational Workspace */}
-                <main className="flex-1 overflow-y-auto custom-scrollbar relative">
+                <main className="flex-1 overflow-x-hidden overflow-y-auto custom-scrollbar relative">
                     {/* Centered Payload Container */}
                     <div className="max-w-[1280px] w-full mx-auto px-6 md:px-10 py-8 md:py-12 animate-in fade-in slide-in-from-bottom-6 duration-1000">
                         <Outlet />
