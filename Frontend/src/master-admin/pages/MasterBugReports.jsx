@@ -442,13 +442,12 @@ const MasterBugReports = () => {
                 )}
             </AnimatePresence>
 
-            <style dangerouslySetInnerHTML={{
-                __html: `
+            <style>{`
                 .customize-scrollbar::-webkit-scrollbar { width: 8px; }
                 .customize-scrollbar::-webkit-scrollbar-track { background: transparent; }
                 .customize-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
                 .customize-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.1); }
-            `}} />
+            `}</style>
         </div>
     );
 };

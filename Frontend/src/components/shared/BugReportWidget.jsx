@@ -716,13 +716,12 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
             </AnimatePresence>
 
             {/* Global style overrides just for scrollbar inside modal if needed */}
-            <style dangerouslySetInnerHTML={{
-                __html: `
+            <style>{`
                 .customize-scrollbar::-webkit-scrollbar { width: 6px; }
                 .customize-scrollbar::-webkit-scrollbar-track { background: transparent; }
                 .customize-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
                 .customize-scrollbar::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
-            `}} />
+            `}</style>
         </>
     );
 };
