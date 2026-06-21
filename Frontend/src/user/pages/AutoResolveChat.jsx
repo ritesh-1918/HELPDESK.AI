@@ -15,6 +15,40 @@ import { Card, CardContent } from "../../components/ui/card";
 import { askAI } from '../../services/aiAssistant';
 import useToastStore from '../../store/toastStore';
 
+const CONNECTION_TIMEOUT_MS = 15000;
+
+const ConnectionStatus = ({ connected, onRetry }) => {
+    if (connected) return null;
+    return (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4">
+            <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-red-50 border border-red-200 rounded-2xl px-6 py-4 shadow-lg shadow-red-500/10"
+            >
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                        <XCircle size={16} className="text-red-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-red-800">Connection Lost</p>
+                        <p className="text-xs font-medium text-red-600 mt-0.5">
+                            Unable to reach the AI backend. Messages may not send.
+                        </p>
+                    </div>
+                    <button
+                        onClick={onRetry}
+                        className="shrink-0 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition-all active:scale-95 flex items-center gap-1.5"
+                    >
+                        <RefreshCcw size={12} />
+                        Retry
+                    </button>
+                </div>
+            </motion.div>
+        </div>
+    );
+};
+
 const AutoResolveChat = () => {
     const { aiTicket } = useTicketStore();
     const navigate = useNavigate();
@@ -23,9 +57,13 @@ const AutoResolveChat = () => {
     const [isFinal, setIsFinal] = useState(false);
     const [inputText, setInputText] = useState('');
     const [isListening, setIsListening] = useState(false);
+    const [connectionError, setConnectionError] = useState(false);
+    const [isInitialLoading, setIsInitialLoading] = useState(false);
     const { showToast } = useToastStore();
     const scrollRef = useRef(null);
     const fileInputRef = useRef(null);
+    const retryCountRef = useRef(0);
+    const MAX_RETRIES = 3;
 
     // Initial Plan Generation
     useEffect(() => {
@@ -41,11 +79,20 @@ const AutoResolveChat = () => {
 
         const generateInitialPlan = async () => {
             setIsThinking(true);
+            setIsInitialLoading(true);
+            setConnectionError(false);
+
+            const timeoutId = setTimeout(() => {
+                setConnectionError(true);
+            }, CONNECTION_TIMEOUT_MS);
+
             try {
                 const prompt = `Based on the incident report, generate a 4-step troubleshooting plan. 
                 Focus on high-level actions. Format clearly with numbered steps 1-4.`;
 
                 const response = await askAI(prompt, aiTicket, []);
+                clearTimeout(timeoutId);
+                setConnectionError(false);
 
                 const lines = response.split('\n');
                 const newSteps = [];
@@ -102,15 +149,34 @@ const AutoResolveChat = () => {
 
             } catch (error) {
                 console.error("AI Plan Generation Failed:", error);
+                clearTimeout(timeoutId);
 
-                const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                setMessages([{
-                    role: 'bot',
-                    text: `I've analyzed your request. I've prepared a standard troubleshooting plan for "${aiTicket.summary}". Let's start with the first step.`,
-                    timestamp: now
-                }]);
+                const isNetworkError = error.message === 'TypeError: Failed to fetch'
+                    || error.message?.includes('NetworkError')
+                    || error.message?.includes('network')
+                    || error.message?.includes('Network')
+                    || error.message?.includes('aborted')
+                    || error.name === 'AbortError';
+
+                if (isNetworkError) {
+                    setConnectionError(true);
+                    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    setMessages([{
+                        role: 'bot',
+                        text: `I'm having trouble reaching the AI service. Please check your internet connection and try again.`,
+                        timestamp: now
+                    }]);
+                } else {
+                    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    setMessages([{
+                        role: 'bot',
+                        text: `I've analyzed your request. I've prepared a standard troubleshooting plan for "${aiTicket.summary}". Let's start with the first step.`,
+                        timestamp: now
+                    }]);
+                }
             } finally {
                 setIsThinking(false);
+                setIsInitialLoading(false);
             }
         };
 
@@ -124,6 +190,46 @@ const AutoResolveChat = () => {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
     }, [messages, isThinking]);
+
+    const handleRetryConnection = () => {
+        retryCountRef.current += 1;
+        if (retryCountRef.current > MAX_RETRIES) {
+            showToast('Maximum retry attempts reached. Please check your network and try again.', 'error');
+            retryCountRef.current = 0;
+            return;
+        }
+        setConnectionError(false);
+        setMessages([]);
+        setIsInitialLoading(true);
+
+        const timeoutId = setTimeout(() => {
+            setConnectionError(true);
+            setIsInitialLoading(false);
+        }, CONNECTION_TIMEOUT_MS);
+
+        const prompt = `Based on the incident report, generate a 4-step troubleshooting plan.
+        Focus on high-level actions. Format clearly with numbered steps 1-4.`;
+
+        askAI(prompt, aiTicket, [])
+            .then((response) => {
+                clearTimeout(timeoutId);
+                setConnectionError(false);
+                retryCountRef.current = 0;
+                const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                setMessages([{
+                    role: 'bot',
+                    text: `Hello! I've analyzed your request: "${aiTicket.summary}". I've put together a 4-step troubleshooting plan to resolve this. How would you like to start?`,
+                    timestamp: now
+                }]);
+            })
+            .catch(() => {
+                clearTimeout(timeoutId);
+                setConnectionError(true);
+            })
+            .finally(() => {
+                setIsInitialLoading(false);
+            });
+    };
 
     const handleSendMessage = async (textOverride, imageOverride = null) => {
         const text = textOverride || inputText;
@@ -141,8 +247,14 @@ const AutoResolveChat = () => {
         setInputText('');
         setIsThinking(true);
 
+        const timeoutId = setTimeout(() => {
+            setConnectionError(true);
+        }, CONNECTION_TIMEOUT_MS);
+
         try {
             const aiResponse = await askAI(text || "Sent an image for analysis", aiTicket, messages, imageOverride);
+            clearTimeout(timeoutId);
+            setConnectionError(false);
             const botNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
             setMessages(prev => [...prev, { role: 'bot', text: aiResponse, timestamp: botNow }]);
@@ -153,11 +265,26 @@ const AutoResolveChat = () => {
             }
 
         } catch (error) {
+            clearTimeout(timeoutId);
             console.error("Troubleshooting Error:", error);
+
+            const isNetworkError = error.message === 'TypeError: Failed to fetch'
+                || error.message?.includes('NetworkError')
+                || error.message?.includes('network')
+                || error.message?.includes('Network')
+                || error.message?.includes('aborted')
+                || error.name === 'AbortError';
+
+            if (isNetworkError) {
+                setConnectionError(true);
+            }
+
             const botNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             setMessages(prev => [...prev, {
                 role: 'bot',
-                text: "I'm having a bit of trouble concentrating. Could you try sending that again?",
+                text: isNetworkError
+                    ? "I'm having trouble reaching the AI service. Please check your connection and try again, or use the Retry button above."
+                    : "I'm having a bit of trouble concentrating. Could you try sending that again?",
                 timestamp: botNow
             }]);
         } finally {
@@ -208,7 +335,31 @@ const AutoResolveChat = () => {
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[30%] h-[30%] bg-indigo-50/30 rounded-full blur-[100px] [animation-delay:4s] animate-pulse"></div>
             </div>
 
-            <div className="max-w-4xl mx-auto relative">
+            <ConnectionStatus connected={!connectionError} onRetry={handleRetryConnection} />
+
+            {isInitialLoading && connectionError && messages.length === 0 ? (
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex flex-col items-center justify-center min-h-[400px] gap-4"
+                >
+                    <div className="w-16 h-16 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center">
+                        <XCircle size={32} className="text-red-400" />
+                    </div>
+                    <h3 className="text-lg font-black text-slate-800">Service Unavailable</h3>
+                    <p className="text-sm font-medium text-slate-500 max-w-md text-center">
+                        The AI backend is currently unreachable. Please check your network connection and try again.
+                    </p>
+                    <button
+                        onClick={handleRetryConnection}
+                        className="px-6 py-3 bg-emerald-600 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:bg-emerald-700 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/20"
+                    >
+                        <RefreshCcw size={14} />
+                        Try Again
+                    </button>
+                </motion.div>
+            ) : (
+                <div className="max-w-4xl mx-auto relative">
                 {/* ─── Glassmorphic Chat Container ─── */}
                 <Card className="rounded-[2.5rem] border border-white/20 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)] bg-white/70 backdrop-blur-3xl flex flex-col h-[820px] overflow-hidden transition-all duration-500 hover:shadow-[0_48px_80px_-20px_rgba(0,0,0,0.12)]">
 
@@ -417,6 +568,7 @@ const AutoResolveChat = () => {
                     </div>
                 </Card>
             </div>
+            )}
         </div>
     );
 };
