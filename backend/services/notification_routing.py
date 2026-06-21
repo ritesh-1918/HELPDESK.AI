@@ -15,7 +15,7 @@ Features:
 
 import os
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict
 from enum import Enum
 
@@ -56,6 +56,10 @@ class NotificationRoutingMiddleware:
             os.getenv("SUPABASE_SERVICE_ROLE_KEY")
         )
         self._settings_cache: Dict[str, Dict] = {}
+        self._settings_cached_at: Dict[str, datetime] = {}
+        self.cache_ttl = timedelta(
+            seconds=max(1, int(os.getenv("NOTIFICATION_SETTINGS_CACHE_TTL", "300")))
+        )
         self.log_level = os.getenv("NOTIFICATION_ROUTING_LOG_LEVEL", "info").lower()
 
     def _fetch_system_settings(self, company_id: str) -> Dict:
@@ -99,8 +103,11 @@ class NotificationRoutingMiddleware:
         Returns:
             Dict with company notification preferences
         """
-        if company_id not in self._settings_cache:
+        cached_at = self._settings_cached_at.get(company_id)
+        cache_expired = not cached_at or datetime.now(timezone.utc) - cached_at >= self.cache_ttl
+        if company_id not in self._settings_cache or cache_expired:
             self._settings_cache[company_id] = self._fetch_system_settings(company_id)
+            self._settings_cached_at[company_id] = datetime.now(timezone.utc)
         return self._settings_cache[company_id]
 
     def should_send_email_notification(self, company_id: str, notification_type: NotificationType) -> bool:
@@ -222,6 +229,7 @@ class NotificationRoutingMiddleware:
         """
         if company_id in self._settings_cache:
             del self._settings_cache[company_id]
+            self._settings_cached_at.pop(company_id, None)
             logger.info(f"Invalidated settings cache for company {company_id}")
 
 
