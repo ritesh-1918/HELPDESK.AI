@@ -260,7 +260,9 @@ function Signup() {
           <form onSubmit={handleSignup} className="space-y-5">
             {/* Company Dropdown */}
             <div className="relative" ref={dropdownRef}>
-              <label className="block mb-2" style={labelStyle}>Company</label>
+              <label htmlFor="organization" className="block mb-2" style={labelStyle}>Company</label>
+              <input type="hidden" id="company_id" name="company_id" value={selectedCompany ? selectedCompany.id : ''} />
+              <input type="text" id="organization" name="organization" autoComplete="organization" value={selectedCompany ? selectedCompany.name : ''} readOnly aria-hidden="true" style={{position: 'absolute', left: '-9999px', width: '1px', height: '1px', overflow: 'hidden'}} />
               <div onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 style={{ ...inputStyle, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderColor: isDropdownOpen ? '#22c55e' : '#e5e7eb', boxShadow: isDropdownOpen ? '0 0 0 3px rgba(34,160,69,0.1)' : 'none' }}>
                 {selectedCompany ? (
@@ -308,24 +310,24 @@ function Signup() {
 
             {/* Full Name */}
             <div>
-              <label className="block mb-2" style={labelStyle}>Full Name</label>
-              <input type="text" placeholder="Enter your name" style={inputStyle} onFocus={inputFocus} onBlur={inputBlur}
+              <label htmlFor="fullName" className="block mb-2" style={labelStyle}>Full Name</label>
+              <input id="fullName" name="fullName" autoComplete="name" type="text" placeholder="Enter your name" style={inputStyle} onFocus={inputFocus} onBlur={inputBlur}
                 value={fullName} onChange={(e) => { setFullName(e.target.value); setError(""); }} />
             </div>
 
             {/* Email */}
             <div>
-              <label className="block mb-2" style={labelStyle}>Email Address</label>
-              <input type="email" placeholder="Enter your system email" style={inputStyle} onFocus={inputFocus} onBlur={inputBlur}
+              <label htmlFor="email" className="block mb-2" style={labelStyle}>Email Address</label>
+              <input id="email" name="email" autoComplete="email" type="email" placeholder="Enter your system email" style={inputStyle} onFocus={inputFocus} onBlur={inputBlur}
                 value={email} onChange={(e) => { setEmail(e.target.value); setError(""); }} />
             </div>
 
             {/* Passwords */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="relative">
-                <label className="block mb-2" style={labelStyle}>Password</label>
+                <label htmlFor="password" className="block mb-2" style={labelStyle}>Password</label>
                 <div className="relative">
-                  <input type={showPassword ? "text" : "password"} placeholder="Min 8 chars" style={{ ...inputStyle, paddingRight: '44px' }} onFocus={inputFocus} onBlur={inputBlur}
+                  <input id="password" name="password" autoComplete="new-password" type={showPassword ? "text" : "password"} placeholder="Min 8 chars" style={{ ...inputStyle, paddingRight: '44px' }} onFocus={inputFocus} onBlur={inputBlur}
                     value={password} onChange={(e) => { setPassword(e.target.value); setError(""); }} />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }}>
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -350,9 +352,9 @@ function Signup() {
                 )}
               </div>
               <div className="relative">
-                <label className="block mb-2" style={labelStyle}>Confirm</label>
+                <label htmlFor="confirmPassword" className="block mb-2" style={labelStyle}>Confirm</label>
                 <div className="relative">
-                  <input type={showConfirmPassword ? "text" : "password"} placeholder="Repeat" style={{ ...inputStyle, paddingRight: '44px' }} onFocus={inputFocus} onBlur={inputBlur}
+                  <input id="confirmPassword" name="confirmPassword" autoComplete="new-password" type={showConfirmPassword ? "text" : "password"} placeholder="Repeat" style={{ ...inputStyle, paddingRight: '44px' }} onFocus={inputFocus} onBlur={inputBlur}
                     value={confirmPassword} onChange={(e) => { setConfirmPassword(e.target.value); setError(""); }} />
                   <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }}>
                     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
