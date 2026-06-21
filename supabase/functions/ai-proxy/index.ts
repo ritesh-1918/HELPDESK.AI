@@ -35,7 +35,7 @@ async function tryWithFailover(keys, buildRequest) {
   let lastError = null;
   for (const key of keys) {
     try {
-      const resp = await fetch(buildRequest(key));
+      const resp = await fetch(buildRequest(key), { signal: AbortSignal.timeout(30000) });
       if (resp.ok) return resp;
       if (resp.status === 429) {
         lastError = new Error("Rate limited — trying next key");
