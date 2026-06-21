@@ -57,6 +57,17 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     const { provider, model, messages, prompt } = body;
+    const defaultModel = {
+      gemini: "gemma-3-27b-it",
+      openrouter: "google/gemma-3-27b-it:free",
+      groq: "llama3-8b-8192",
+    }[provider];
+    if (!defaultModel || !ALLOWED_MODELS[provider].has(model || defaultModel)) {
+      return new Response(JSON.stringify({ error: "Model is not allowed" }), {
+        status: 400,
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
 
     let upstreamResponse;
 
