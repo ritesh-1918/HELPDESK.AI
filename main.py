@@ -12,7 +12,8 @@ from backend.swagger_config import SWAGGER_UI_CUSTOM_CSS, SWAGGER_UI_CUSTOM_JS
 from backend.routers import tickets, ai, admin, health, auth
 from backend.routes import translation, estimator, voice, privacy, active_learning, weekly_digest
 
-logging.basicConfig(level=logging.INFO)
+from backend.logger import configure_logging
+configure_logging()
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
