@@ -260,10 +260,15 @@ function Signup() {
           <form onSubmit={handleSignup} className="space-y-5">
             {/* Company Dropdown */}
             <div className="relative" ref={dropdownRef}>
-              <label htmlFor="organization" className="block mb-2" style={labelStyle}>Company</label>
+              <label htmlFor="company-select" className="block mb-2" style={labelStyle}>Company</label>
               <input type="hidden" id="company_id" name="company_id" value={selectedCompany ? selectedCompany.id : ''} />
-              <input type="text" id="organization" name="organization" autoComplete="organization" value={selectedCompany ? selectedCompany.name : ''} readOnly aria-hidden="true" style={{position: 'absolute', left: '-9999px', width: '1px', height: '1px', overflow: 'hidden'}} />
-              <div onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              <input type="text" id="company-hidden" name="organization" autoComplete="organization" value={selectedCompany ? selectedCompany.name : ''} readOnly aria-hidden="true" style={{position: 'absolute', left: '-9999px', width: '1px', height: '1px', overflow: 'hidden'}} />
+              <div 
+                id="company-select"
+                role="combobox"
+                aria-expanded={isDropdownOpen}
+                aria-haspopup="listbox"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 style={{ ...inputStyle, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderColor: isDropdownOpen ? '#22c55e' : '#e5e7eb', boxShadow: isDropdownOpen ? '0 0 0 3px rgba(34,160,69,0.1)' : 'none' }}>
                 {selectedCompany ? (
                   <div className="flex items-center gap-2">
@@ -275,11 +280,18 @@ function Signup() {
               </div>
 
               {isDropdownOpen && (
-                <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-white overflow-hidden" style={{ borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 8px 30px rgba(0,0,0,0.1)' }}>
+                <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-white overflow-hidden" style={{ borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 8px 30px rgba(0,0,0,0.1)' }} role="listbox">
                   <div className="p-2 flex items-center gap-2" style={{ borderBottom: '1px solid #f3f4f6', background: '#f9fafb' }}>
                     <Search className="w-4 h-4 ml-2" style={{ color: '#9ca3af' }} />
-                    <input type="text" placeholder="Search companies..." style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontSize: '14px', padding: '4px 0', color: '#111827' }}
-                      value={companySearch} onChange={(e) => setCompanySearch(e.target.value)} onClick={(e) => e.stopPropagation()} />
+                    <input 
+                      id="company-search" 
+                      type="text" 
+                      placeholder="Search companies..." 
+                      aria-label="Search companies"
+                      style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontSize: '14px', padding: '4px 0', color: '#111827' }}
+                      value={companySearch} 
+                      onChange={(e) => setCompanySearch(e.target.value)} 
+                      onClick={(e) => e.stopPropagation()} />
                   </div>
                   <div className="max-h-60 overflow-y-auto p-1">
                     {isLoadingCompanies ? (
@@ -289,7 +301,11 @@ function Signup() {
                       </div>
                     ) : filteredCompanies.length > 0 ? (
                       filteredCompanies.map((c) => (
-                        <div key={c.id} onClick={() => { setSelectedCompany(c); setIsDropdownOpen(false); setCompanySearch(""); }}
+                        <div 
+                          key={c.id} 
+                          onClick={() => { setSelectedCompany(c); setIsDropdownOpen(false); setCompanySearch(""); }}
+                          role="option"
+                          aria-selected={selectedCompany?.id === c.id}
                           className="px-3 py-2.5 rounded-lg cursor-pointer flex items-center gap-3 transition-colors hover:bg-green-50 group">
                           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ border: '1px solid #e5e7eb', background: '#fff' }}>
                             <Building2 className="w-4 h-4 transition-colors" style={{ color: '#9ca3af' }} />
@@ -311,15 +327,37 @@ function Signup() {
             {/* Full Name */}
             <div>
               <label htmlFor="fullName" className="block mb-2" style={labelStyle}>Full Name</label>
-              <input id="fullName" name="fullName" autoComplete="name" type="text" placeholder="Enter your name" style={inputStyle} onFocus={inputFocus} onBlur={inputBlur}
-                value={fullName} onChange={(e) => { setFullName(e.target.value); setError(""); }} />
+              <input 
+                id="fullName" 
+                name="fullName" 
+                autoComplete="name" 
+                type="text" 
+                placeholder="Enter your name" 
+                style={inputStyle} 
+                onFocus={inputFocus} 
+                onBlur={inputBlur}
+                value={fullName} 
+                onChange={(e) => { setFullName(e.target.value); setError(""); }} 
+                required
+                aria-required="true" />
             </div>
 
             {/* Email */}
             <div>
               <label htmlFor="email" className="block mb-2" style={labelStyle}>Email Address</label>
-              <input id="email" name="email" autoComplete="email" type="email" placeholder="Enter your system email" style={inputStyle} onFocus={inputFocus} onBlur={inputBlur}
-                value={email} onChange={(e) => { setEmail(e.target.value); setError(""); }} />
+              <input 
+                id="email" 
+                name="email" 
+                autoComplete="email" 
+                type="email" 
+                placeholder="Enter your system email" 
+                style={inputStyle} 
+                onFocus={inputFocus} 
+                onBlur={inputBlur}
+                value={email} 
+                onChange={(e) => { setEmail(e.target.value); setError(""); }} 
+                required
+                aria-required="true" />
             </div>
 
             {/* Passwords */}
@@ -327,15 +365,32 @@ function Signup() {
               <div className="relative">
                 <label htmlFor="password" className="block mb-2" style={labelStyle}>Password</label>
                 <div className="relative">
-                  <input id="password" name="password" autoComplete="new-password" type={showPassword ? "text" : "password"} placeholder="Min 8 chars" style={{ ...inputStyle, paddingRight: '44px' }} onFocus={inputFocus} onBlur={inputBlur}
-                    value={password} onChange={(e) => { setPassword(e.target.value); setError(""); }} />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }}>
+                  <input 
+                    id="password" 
+                    name="password" 
+                    autoComplete="new-password" 
+                    type={showPassword ? "text" : "password"} 
+                    placeholder="Min 8 chars" 
+                    style={{ ...inputStyle, paddingRight: '44px' }} 
+                    onFocus={inputFocus} 
+                    onBlur={inputBlur}
+                    value={password} 
+                    onChange={(e) => { setPassword(e.target.value); setError(""); }} 
+                    required
+                    aria-required="true"
+                    aria-describedby="password-requirements" />
+                  <button 
+                    type="button" 
+                    onClick={() => setShowPassword(!showPassword)} 
+                    className="absolute right-3 top-1/2 -translate-y-1/2" 
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    style={{ color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }}>
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
                 {/* Live password requirement checklist */}
                 {password && (
-                  <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 mt-2">
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 mt-2" id="password-requirements">
                     {[
                       { label: '8+ characters', ok: password.length >= 8 },
                       { label: 'Uppercase (A-Z)', ok: /[A-Z]/.test(password) },
@@ -354,9 +409,25 @@ function Signup() {
               <div className="relative">
                 <label htmlFor="confirmPassword" className="block mb-2" style={labelStyle}>Confirm</label>
                 <div className="relative">
-                  <input id="confirmPassword" name="confirmPassword" autoComplete="new-password" type={showConfirmPassword ? "text" : "password"} placeholder="Repeat" style={{ ...inputStyle, paddingRight: '44px' }} onFocus={inputFocus} onBlur={inputBlur}
-                    value={confirmPassword} onChange={(e) => { setConfirmPassword(e.target.value); setError(""); }} />
-                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }}>
+                  <input 
+                    id="confirmPassword" 
+                    name="confirmPassword" 
+                    autoComplete="new-password" 
+                    type={showConfirmPassword ? "text" : "password"} 
+                    placeholder="Repeat" 
+                    style={{ ...inputStyle, paddingRight: '44px' }} 
+                    onFocus={inputFocus} 
+                    onBlur={inputBlur}
+                    value={confirmPassword} 
+                    onChange={(e) => { setConfirmPassword(e.target.value); setError(""); }} 
+                    required
+                    aria-required="true" />
+                  <button 
+                    type="button" 
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)} 
+                    className="absolute right-3 top-1/2 -translate-y-1/2" 
+                    aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                    style={{ color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }}>
                     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>

@@ -350,13 +350,16 @@ function AdminSignup() {
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div className="space-y-2">
-                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                                            <label htmlFor="fullName" className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
                                                 <User className="w-3 h-3" /> Full Name
                                             </label>
                                             <input
+                                                id="fullName"
                                                 type="text"
                                                 name="fullName"
+                                                autoComplete="name"
                                                 required
+                                                aria-required="true"
                                                 placeholder="Alex Mercer"
                                                 value={formData.fullName}
                                                 onChange={handleChange}
@@ -364,13 +367,16 @@ function AdminSignup() {
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                                            <label htmlFor="email" className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
                                                 <Mail className="w-3 h-3" /> Work Email
                                             </label>
                                             <input
+                                                id="email"
                                                 type="email"
                                                 name="email"
+                                                autoComplete="email"
                                                 required
+                                                aria-required="true"
                                                 placeholder="alex.mercer@acmecorp.com"
                                                 value={formData.email}
                                                 onChange={handleChange}
@@ -378,12 +384,14 @@ function AdminSignup() {
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                                            <label htmlFor="phone" className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
                                                 <Phone className="w-3 h-3" /> Phone Number
                                             </label>
                                             <input
+                                                id="phone"
                                                 type="tel"
                                                 name="phone"
+                                                autoComplete="tel"
                                                 placeholder="+1 (415) 555-0198"
                                                 value={formData.phone}
                                                 onChange={handleChange}
@@ -391,12 +399,14 @@ function AdminSignup() {
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                                            <label htmlFor="jobTitle" className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
                                                 <Briefcase className="w-3 h-3" /> Job Title
                                             </label>
                                             <input
+                                                id="jobTitle"
                                                 type="text"
                                                 name="jobTitle"
+                                                autoComplete="job-title"
                                                 placeholder="Director of Operations"
                                                 value={formData.jobTitle}
                                                 onChange={handleChange}
@@ -407,14 +417,18 @@ function AdminSignup() {
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-100">
                                         <div className="space-y-2 text-left">
-                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                                            <label htmlFor="password" className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
                                                 <Lock className="w-3 h-3" /> Create Password
                                             </label>
                                             <div className="relative">
                                                 <input
+                                                    id="password"
                                                     type={showPassword ? "text" : "password"}
                                                     name="password"
+                                                    autoComplete="new-password"
                                                     required
+                                                    aria-required="true"
+                                                    aria-describedby="password-requirements"
                                                     placeholder="••••••••••"
                                                     value={formData.password}
                                                     onChange={handleChange}
@@ -423,13 +437,14 @@ function AdminSignup() {
                                                 <button
                                                     type="button"
                                                     onClick={() => setShowPassword(!showPassword)}
+                                                    aria-label={showPassword ? "Hide password" : "Show password"}
                                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                                                 >
                                                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                                 </button>
                                             </div>
                                             {/* Password Requirements */}
-                                            <div className="mt-2 space-y-1">
+                                            <div className="mt-2 space-y-1" id="password-requirements">
                                                 {formData.password && (
                                                     <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-gray-400">
                                                         <span>Strength: {getStrengthText()}</span>
@@ -448,6 +463,47 @@ function AdminSignup() {
                                                 <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-2">
                                                     {[
                                                         { label: '8+ characters', ok: formData.password.length >= 8 },
+                                                        { label: 'Uppercase (A-Z)', ok: /[A-Z]/.test(formData.password) },
+                                                        { label: 'Lowercase (a-z)', ok: /[a-z]/.test(formData.password) },
+                                                        { label: 'Number (0-9)', ok: /[0-9]/.test(formData.password) },
+                                                    ].map(({ label, ok }) => (
+                                                        <span key={label} className={`text-[10px] font-semibold flex items-center gap-1 transition-colors ${
+                                                            formData.password ? (ok ? 'text-emerald-600' : 'text-red-400') : 'text-gray-300'
+                                                        }`}>
+                                                            <span>{ok ? '✓' : '○'}</span> {label}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label htmlFor="confirmPassword" className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                                                <Lock className="w-3 h-3" /> Confirm Password
+                                            </label>
+                                            <div className="relative">
+                                                <input
+                                                    id="confirmPassword"
+                                                    type={showConfirmPassword ? "text" : "password"}
+                                                    name="confirmPassword"
+                                                    autoComplete="new-password"
+                                                    required
+                                                    aria-required="true"
+                                                    placeholder="••••••••••"
+                                                    value={formData.confirmPassword}
+                                                    onChange={handleChange}
+                                                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white outline-none transition-all pr-11"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                    aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                                >
+                                                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                                </button>
+                                            </div>
+                                        </div>
+                                     </div>
                                                         { label: 'Uppercase (A-Z)', ok: /[A-Z]/.test(formData.password) },
                                                         { label: 'Lowercase (a-z)', ok: /[a-z]/.test(formData.password) },
                                                         { label: 'Number (0-9)', ok: /[0-9]/.test(formData.password) },
@@ -514,13 +570,16 @@ function AdminSignup() {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                                        <label htmlFor="companyName" className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
                                             <Building2 className="w-3 h-3" /> Company Name
                                         </label>
                                         <input
+                                            id="companyName"
                                             type="text"
                                             name="companyName"
+                                            autoComplete="organization"
                                             required
+                                            aria-required="true"
                                             placeholder="Acme Global Inc."
                                             value={formData.companyName}
                                             onChange={handleChange}
@@ -530,10 +589,11 @@ function AdminSignup() {
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div className="space-y-2">
-                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                                            <label htmlFor="companySize" className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
                                                 <User className="w-3 h-3" /> Company Size
                                             </label>
                                             <Select
+                                                id="companySize"
                                                 name="companySize"
                                                 value={formData.companySize}
                                                 onChange={handleChange}
@@ -545,13 +605,16 @@ function AdminSignup() {
                                                     { value: "201-1000", label: "201-1,000 Employees" },
                                                     { value: "1000+", label: "1,000+ Employees" }
                                                 ]}
+                                                required
+                                                aria-required="true"
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                                            <label htmlFor="industry" className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
                                                 <Briefcase className="w-3 h-3" /> Industry
                                             </label>
                                             <Select
+                                                id="industry"
                                                 name="industry"
                                                 value={formData.industry}
                                                 onChange={handleChange}
@@ -565,18 +628,22 @@ function AdminSignup() {
                                                     { value: "Manufacturing", label: "Manufacturing" },
                                                     { value: "Other", label: "Other" }
                                                 ]}
+                                                required
+                                                aria-required="true"
                                             />
                                         </div>
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div className="space-y-2">
-                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                                            <label htmlFor="website" className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
                                                 <Globe className="w-3 h-3" /> Company Website
                                             </label>
                                             <input
+                                                id="website"
                                                 type="url"
                                                 name="website"
+                                                autoComplete="url"
                                                 placeholder="https://acme.com"
                                                 value={formData.website}
                                                 onChange={handleChange}
@@ -584,13 +651,16 @@ function AdminSignup() {
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                                            <label htmlFor="country" className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
                                                 <Globe className="w-3 h-3" /> Country
                                             </label>
                                             <input
+                                                id="country"
                                                 type="text"
                                                 name="country"
+                                                autoComplete="country-name"
                                                 required
+                                                aria-required="true"
                                                 placeholder="United States"
                                                 value={formData.country}
                                                 onChange={handleChange}
@@ -635,24 +705,30 @@ function AdminSignup() {
                                     </div>
 
                                     <div className="bg-gray-50 border border-gray-100 rounded-2xl p-6 space-y-4">
-                                        <label className="flex items-start gap-4 cursor-pointer group">
+                                        <label htmlFor="agreedToTerms" className="flex items-start gap-4 cursor-pointer group">
                                             <input
+                                                id="agreedToTerms"
                                                 type="checkbox"
                                                 name="agreedToTerms"
                                                 checked={formData.agreedToTerms}
                                                 onChange={handleChange}
+                                                required
+                                                aria-required="true"
                                                 className="mt-1 w-5 h-5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 transition-all"
                                             />
                                             <span className="text-sm text-gray-600 leading-relaxed group-hover:text-gray-900 transition-colors">
                                                 I agree to the <Link to="/terms" className="text-emerald-700 font-bold hover:underline">Terms of Service</Link> and <Link to="/privacy" className="text-emerald-700 font-bold hover:underline">Privacy Policy</Link>. I understand that my data will be stored securely.
                                             </span>
                                         </label>
-                                        <label className="flex items-start gap-4 cursor-pointer group pt-4 border-t border-gray-200/50">
+                                        <label htmlFor="isAuthorized" className="flex items-start gap-4 cursor-pointer group pt-4 border-t border-gray-200/50">
                                             <input
+                                                id="isAuthorized"
                                                 type="checkbox"
                                                 name="isAuthorized"
                                                 checked={formData.isAuthorized}
                                                 onChange={handleChange}
+                                                required
+                                                aria-required="true"
                                                 className="mt-1 w-5 h-5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 transition-all"
                                             />
                                             <span className="text-sm text-gray-600 leading-relaxed group-hover:text-gray-900 transition-colors">
