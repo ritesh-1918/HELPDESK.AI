@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from backend.database import supabase
 from backend.auth_cookie import get_current_user
+from backend.schemas import ProfileUpdate
 
 router = APIRouter(prefix="/api", tags=["Admin"])
 
@@ -23,12 +24,18 @@ async def api_get_profiles(
 @router.patch("/profiles/{user_id}")
 async def api_update_profile(
     user_id: str,
-    updates: dict,
+    updates: ProfileUpdate,
     current_user: dict = Depends(get_current_user),
 ):
     """Apply an admin edit to a user profile."""
     if not supabase: return {}
-    res = supabase.table("profiles").update(updates).eq("id", user_id).execute()
+    # Schema validation in ProfileUpdate (extra="forbid") already blocks
+    # any field outside the allowlist, so a Pydantic .model_dump() with
+    # exclude_unset=True gives us only what the client actually sent.
+    payload = updates.model_dump(exclude_unset=True)
+    if not payload:
+        return {}
+    res = supabase.table("profiles").update(payload).eq("id", user_id).execute()
     return res.data[0] if res.data else {}
 
 @router.delete("/profiles/{user_id}")
