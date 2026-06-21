@@ -336,7 +336,8 @@ app = FastAPI(
 
 # Unified middleware: enforce request size limits + add X-Request-ID tracking
 @app.middleware("http")
-async def limit_request_size_and_add_request_id(request: Request, call_next):
+async def unified_request_middleware(request: Request, call_next):
+
     """Enforce maximum request body size and attach request IDs for tracing."""
 
     # Add request ID tracking for distributed tracing and logging.
