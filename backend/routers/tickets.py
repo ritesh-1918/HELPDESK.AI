@@ -141,7 +141,7 @@ async def get_ticket_by_id(ticket_id: str, user: dict = Depends(get_current_user
 
 
 @router.post("", response_model=TicketRecord)
-async def create_ticket(ticket: TicketRecord):
+async def create_ticket(ticket: TicketRecord, user: dict = Depends(get_current_user)):
     """Save a new ticket into the system."""
     ticket_dict = sanitize_ticket_data(ticket.dict())
     ticket = TicketRecord(**ticket_dict)
@@ -156,7 +156,7 @@ async def create_ticket(ticket: TicketRecord):
 
 
 @router.patch("/{ticket_id}", response_model=TicketRecord)
-async def update_ticket(ticket_id: str, updates: dict):
+async def update_ticket(ticket_id: str, updates: dict, user: dict = Depends(get_current_user)):
     """Partially update a ticket's fields (e.g., status, viewed_at)."""
     sanitized_updates = sanitize_ticket_data(updates)
     for i, ticket in enumerate(TICKETS_DB):
