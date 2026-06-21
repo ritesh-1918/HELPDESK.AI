@@ -313,3 +313,22 @@ class TestNotificationType:
 
     def test_enum_is_string_subclass(self):
         assert isinstance(NotificationType.DAILY_DIGEST, str)
+
+
+class TestGetRoute:
+    def test_get_route_high(self):
+        from services.notification_routing import get_route
+        assert get_route('HIGH') == 'SMS'
+
+    def test_get_route_medium(self):
+        from services.notification_routing import get_route
+        assert get_route('MEDIUM') == 'Slack'
+
+    def test_get_route_low(self):
+        from services.notification_routing import get_route
+        assert get_route('LOW') == 'Email'
+
+    def test_get_route_none(self):
+        from services.notification_routing import get_route
+        assert get_route(None) == 'Email'
+
