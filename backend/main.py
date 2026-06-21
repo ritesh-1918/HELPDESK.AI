@@ -989,8 +989,11 @@ async def analyze_only(request_body: TicketRequest):
     # --- Duplicate detection ---
     try:
         dup_result = duplicate_service.check_duplicate(text, threshold=duplicate_sensitivity)
+        if not isinstance(dup_result, dict) or "is_duplicate" not in dup_result:
+            raise ValueError("Invalid dup_result shape")
     except Exception:
         dup_result = {"is_duplicate": False, "duplicate_ticket_id": None, "similarity": 0.0}
+
 
     # --- RAG Knowledge Base Check ---
     rag_match = None
