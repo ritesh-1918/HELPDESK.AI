@@ -1,10 +1,8 @@
-# TODO
+# TODO - Fix critical issues (5 PRs)
 
-- [x] Audit backend/main.py for runtime/critical bugs affecting prod stability.
-- [x] Identify at least one critical bug with clear reproduction path (malformed base64 to OCR, request context leakage risk).
-- [x] Patch the bug with minimal, safe changes (base64 validation + request-scoped context var).
-- [ ] Add/adjust lightweight tests or a quick runtime check.
-- [ ] Run backend lint/format or unit tests (if available).
-- [ ] Create a PR with a descriptive title and summary.
-
+- [ ] PR 1: fix-issue-1 — merge duplicate HTTP middlewares (limit_request_size + request id tracking)
+- [ ] PR 2: fix-issue-2 — reorder auth helpers so `get_current_user` exists before `/ai/log_correction`
+- [ ] PR 3: fix-issue-3 — make strict startup gate respect classifier fallback/availability
+- [ ] PR 4: fix-issue-4 — bound DuplicateService in-memory index + prune old entries
+- [ ] PR 5: fix-issue-5 — improve auth/session revocation on logout + unify verification logic
 

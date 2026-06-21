@@ -328,47 +328,37 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Add middleware to enforce request size limits
+# Unified middleware: enforce request size limits + add X-Request-ID tracking
 @app.middleware("http")
-async def limit_request_size(request: Request, call_next):
-    """Enforce maximum request body size to prevent DoS attacks."""
-    if request.method not in ["POST", "PATCH", "PUT"]:
-        return await call_next(request)
-    
-    content_length = request.headers.get("content-length")
-    if content_length:
-        try:
-            size = int(content_length)
-            if size > MAX_JSON_SIZE:
-                return JSONResponse(
-                    status_code=413,
-                    content={"detail": f"Request body too large (max: {MAX_JSON_SIZE} bytes)"}
-                )
-        except ValueError:
-            pass
-    
-    return await call_next(request)
+async def limit_request_size_and_add_request_id(request: Request, call_next):
+    """Enforce maximum request body size and attach request IDs for tracing."""
 
-# Add request ID tracking middleware
-@app.middleware("http")
-async def add_request_id_tracking(request: Request, call_next):
-    """Add X-Request-ID header for distributed tracing and logging."""
-    # Use request ID from header if provided, otherwise generate one
+    # Add request ID tracking for distributed tracing and logging.
     request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
     request.state.request_id = request_id
-    
-    # Store request id in request scope for potential downstream usage.
-    # (We no longer write to a global dict.)
     _request_id_ctx.set(request_id)
 
-    
     try:
+        # Enforce maximum request body size to prevent DoS attacks.
+        if request.method in ["POST", "PATCH", "PUT"]:
+            content_length = request.headers.get("content-length")
+            if content_length:
+                try:
+                    size = int(content_length)
+                    if size > MAX_JSON_SIZE:
+                        return JSONResponse(
+                            status_code=413,
+                            content={"detail": f"Request body too large (max: {MAX_JSON_SIZE} bytes)"},
+                        )
+                except ValueError:
+                    pass
+
         response = await call_next(request)
         response.headers["X-Request-ID"] = request_id
         return response
     finally:
-        # Clear request-scoped context
         _request_id_ctx.set(None)
+
 
 
 # Rate limiter — 10 AI requests per minute per IP (free tier protection)
