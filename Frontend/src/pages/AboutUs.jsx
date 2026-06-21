@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Heart, Sparkles, ArrowLeft, Target, Award } from 'lucide-react';
+import { Heart, ArrowLeft, Target, Award } from 'lucide-react';
 import { Card } from '../components/ui/card';
 
 export default function AboutUs() {

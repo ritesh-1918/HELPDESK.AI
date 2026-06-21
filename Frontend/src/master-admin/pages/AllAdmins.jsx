@@ -4,9 +4,8 @@ import useToastStore from "../../store/toastStore";
 // eslint-disable-next-line no-unused-vars
 import { format } from "date-fns";
 import {
-    Users, Search, UserCheck, Shield,
-    Mail, Briefcase, Building2, MoreHorizontal,
-    ArrowUpRight, MailQuestion, Trash2
+    Users, Search, Shield,
+    Mail, Building2, Trash2
 } from "lucide-react";
 
 function AllAdmins() {

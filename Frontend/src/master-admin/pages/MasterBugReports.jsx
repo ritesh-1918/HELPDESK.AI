@@ -4,12 +4,8 @@ import useToastStore from "../../store/toastStore";
 import {
     Bug,
     Search,
-    Filter,
     Clock,
-    User,
-    ChevronRight,
     ExternalLink,
-    AlertCircle,
     CheckCircle2,
     Loader2,
     Eye,

@@ -8,7 +8,6 @@ import {
     UserCircle,
     Settings,
     LogOut,
-    Activity,
     ChevronLeft,
     ChevronRight
 } from 'lucide-react';

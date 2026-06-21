@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, Box, CheckCircle2, MessageSquare, Menu, X, LogOut, User as UserIcon, Moon, Sun, BookOpen } from 'lucide-react';
+import { Box, MessageSquare, Menu, X, LogOut, User as UserIcon, Moon, Sun, BookOpen } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
 import { Button } from "../../components/ui/button";

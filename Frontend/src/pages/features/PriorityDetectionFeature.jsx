@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, AlertCircle } from 'lucide-react';
 
 const priorities = [
     { level: 'Critical', color: 'bg-red-500', text: 'text-red-700', bg: 'bg-red-50 border-red-200', desc: 'System outages, data breaches, total blockers. Responded to immediately.', examples: ['Server completely down', 'Security breach detected', 'All users locked out'] },

@@ -3,16 +3,12 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Upload,
     X,
-    ImageIcon,
     ArrowRight,
     Sparkles,
     BrainCircuit,
     AlertCircle,
     CheckCircle2,
-    Clock,
     Mic,
-    MicOff,
-    Loader2,
     Volume2,
     Globe,
     ChevronDown

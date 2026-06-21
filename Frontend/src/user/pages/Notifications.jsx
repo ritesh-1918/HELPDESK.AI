@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Bell, CheckCircle2, MessageSquare, Ticket, Trash2 } from 'lucide-react';
+import { ArrowLeft, Bell, CheckCircle2, MessageSquare, Ticket } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useTicketStore from "../../store/ticketStore";
 import { Card } from "../../components/ui/card";

@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-    User, Mail, Shield, Bell, Lock, Globe, Camera, ShieldCheck, Key,
-    Smartphone, History, Activity, CheckCircle2, AlertCircle, Copy,
-    LogOut, Eye, Save, X, Edit2, Download
+    Shield, Lock, Camera, ShieldCheck, Key,
+    Smartphone, History, CheckCircle2, AlertCircle,
+    LogOut, Save, X, Edit2, Download
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import useToastStore from '../../store/toastStore';

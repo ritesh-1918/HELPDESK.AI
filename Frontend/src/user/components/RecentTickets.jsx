@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, ChevronRight, Inbox, Loader2, AlertCircle } from 'lucide-react';
+import { Clock, Inbox, AlertCircle } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import { supabase } from '../../lib/supabaseClient';
 import { formatTimelineDate } from '../../utils/dateUtils';

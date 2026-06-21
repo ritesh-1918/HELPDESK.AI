@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, CheckCircle2, MessageSquare, Ticket, Trash2 } from 'lucide-react';
+import { Bell, CheckCircle2, MessageSquare, Ticket } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/popover";
 import { Button } from "../../components/ui/button";

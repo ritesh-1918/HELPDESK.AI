@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import {
     User,
     Mail,
-    Building2,
     ShieldCheck,
     Calendar,
     Ticket,
@@ -14,7 +13,6 @@ import {
     ChevronRight,
     Fingerprint,
     Camera,
-    UploadCloud,
     X,
     Check,
     Pencil,

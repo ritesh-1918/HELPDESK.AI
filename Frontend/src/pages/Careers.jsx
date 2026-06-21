@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Briefcase, ArrowLeft, ArrowRight, Star } from 'lucide-react';
+import { Briefcase, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Card } from '../components/ui/card';
 
 export default function Careers() {

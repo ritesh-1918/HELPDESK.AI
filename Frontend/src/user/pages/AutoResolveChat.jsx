@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    Bot, User, CheckCircle2, XCircle, Send, RefreshCcw,
-    ShieldCheck, FileText, BotIcon, Zap, ImageIcon,
-    ChevronRight, ArrowLeft, Mic, MicOff, Paperclip,
-    Plus, Search, ListChecks, ArrowUpRight, Loader2,
+    User, CheckCircle2, Send,
+    ShieldCheck, BotIcon,
+    Mic, Paperclip,
     LifeBuoy
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';

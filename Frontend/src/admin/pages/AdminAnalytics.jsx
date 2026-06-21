@@ -4,9 +4,8 @@ import {
     PieChart, Pie, Cell, LineChart, Line, AreaChart, Area, RadialBarChart, RadialBar
 } from 'recharts';
 import {
-    BarChart3, PieChart as PieChartIcon, LineChart as LineChartIcon,
-    TrendingUp, Users, ShieldCheck, Zap, AlertCircle, Clock, Activity,
-    Layers, Inbox, User, Loader2, Bot, Star, Target
+    BarChart3, TrendingUp, ShieldCheck, AlertCircle, Activity,
+    Layers, Inbox, Loader2, Bot, Star, Target
 } from 'lucide-react';
 import { supabase } from "../../lib/supabaseClient";
 import StatCard from '../components/StatCard';

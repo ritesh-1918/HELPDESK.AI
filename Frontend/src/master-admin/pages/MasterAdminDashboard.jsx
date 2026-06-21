@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import {
     Users, Building2, Bell, ShieldCheck,
-    Activity, Database, Zap
+    Database, Zap
 } from "lucide-react";
 import useToastStore from "../../store/toastStore";
  

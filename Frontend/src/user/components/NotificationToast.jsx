@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
  
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, CheckCircle2, MessageSquare, X } from 'lucide-react';
+import { CheckCircle2, MessageSquare, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useTicketStore from "../../store/ticketStore";
 

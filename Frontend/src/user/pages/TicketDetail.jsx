@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     ArrowLeft, Clock, Bot, UserCog,
-    ShieldCheck, Calendar, Zap, Image as ImageIcon, MessageSquare,
+    ShieldCheck, Zap, Image as ImageIcon,
     RotateCcw, Loader2, CheckCircle2, History
 } from 'lucide-react';
 import { formatFullTimestamp } from '../../utils/dateUtils';

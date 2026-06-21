@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Folder, Network, Cpu, HardDrive, Wifi, Lock, CheckCircle, Zap, Bot } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Folder, Network, Cpu, HardDrive, Wifi, Lock } from 'lucide-react';
 
 const categories = [
     { icon: Wifi, name: 'Network', color: 'bg-blue-100 text-blue-600', desc: 'VPN, internet, DNS, routing issues' },

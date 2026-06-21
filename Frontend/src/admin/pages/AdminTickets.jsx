@@ -5,21 +5,12 @@ import useToastStore from "../../store/toastStore";
 import { supabase } from "../../lib/supabaseClient";
 import {
     Search,
-    Filter,
     Inbox,
     Activity,
     ShieldAlert,
-    Clock,
-    ChevronRight,
-    BarChart3,
-    User,
     ArrowUpRight,
-    ExternalLink,
     AlertCircle,
-    CheckCircle2,
     Loader2,
-    Save,
-    RotateCcw,
 } from 'lucide-react';
 import { Select } from "../../components/ui/select";
 import { formatTicketId } from "../../utils/format";

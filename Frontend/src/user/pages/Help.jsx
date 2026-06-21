@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { HelpCircle, Mail, MessageSquare, Book, ChevronRight, ChevronDown, Video, PlayCircle, Filter, Search, LifeBuoy } from 'lucide-react';
+import { Mail, Book, ChevronRight, ChevronDown, Video, PlayCircle, Search, LifeBuoy } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
 import { YOUTUBE_RESOURCES, VIDEO_CATEGORIES } from '../../data/youtubeResources';
 

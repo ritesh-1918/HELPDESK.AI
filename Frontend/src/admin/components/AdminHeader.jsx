@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Bell, Menu, User, ChevronDown, Settings, LogOut, UserCircle, X, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Search, Menu, ChevronDown, Settings, LogOut, UserCircle, X, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import NotificationPopover from '../../user/components/NotificationPopover';
 import useAuthStore from '../../store/authStore';

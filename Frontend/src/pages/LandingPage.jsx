@@ -3,13 +3,11 @@ import React, { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
-    Menu, X, Check, Activity,
+    Menu, X, Activity,
     MapPin, AlertCircle, Folder, Zap, Bot, ArrowRight,
     Clock, CheckCircle,
-    Star, Twitter, Linkedin, Github, Globe, MessageSquare,
-    Mail, Search, Bell, Play, ChevronRight,
-    Shield, Lock, Network, HardDrive, Cpu, Copy,
-    Users, BarChart3, Inbox, Building2, BrainCircuit
+    Twitter, Linkedin, Github, Globe,
+    Mail, Search, Bell, Play, ChevronRight
 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import TeamSection from '../components/landing/TeamSection';

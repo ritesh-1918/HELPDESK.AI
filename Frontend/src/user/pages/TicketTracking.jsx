@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-    Activity, CheckCircle2, ShieldCheck, User,
-    Clock, ArrowRight, Loader2, FileText, Zap
+    Activity, CheckCircle2,
+    Clock, Loader2
 } from 'lucide-react';
 import useTicketStore from "../../store/ticketStore";
 import useAuthStore from "../../store/authStore";

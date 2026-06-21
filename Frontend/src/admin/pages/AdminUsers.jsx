@@ -2,8 +2,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useToastStore from '../../store/toastStore';
 import {
-    Users, Search, ShieldCheck, Zap, Activity, MoreVertical, Eye, Trash2,
-    UserX, UserCheck, AlertTriangle, Clock, Mail, Hash, X, User as UserIcon, Loader2
+    Users, Search, ShieldCheck, Zap, Eye, Trash2,
+    UserCheck, AlertTriangle, Clock, Mail, Hash, X, User as UserIcon, Loader2
 } from 'lucide-react';
 import { supabase } from "../../lib/supabaseClient";
 import useAuthStore from "../../store/authStore";

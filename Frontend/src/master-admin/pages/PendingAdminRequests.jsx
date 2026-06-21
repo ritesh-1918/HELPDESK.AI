@@ -4,8 +4,8 @@ import useAuthStore from "../../store/authStore";
 import useToastStore from "../../store/toastStore";
 import { format } from "date-fns";
 import {
-    User, Mail, Phone, Briefcase, Building2, Globe, Users, Check, X,
-    MoreVertical, ExternalLink, Calendar, Loader2, Info
+    Mail, Phone, Briefcase, Building2, Globe, Users, Check, X,
+    ExternalLink, Calendar, Loader2
 } from "lucide-react";
  
  

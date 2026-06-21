@@ -9,12 +9,9 @@ import {
     Building2,
     Bell,
     LogOut,
-    ExternalLink,
     Search,
     UserCircle,
-    Bug,
-    Settings,
-    Activity
+    Bug
 } from "lucide-react";
 
 /**

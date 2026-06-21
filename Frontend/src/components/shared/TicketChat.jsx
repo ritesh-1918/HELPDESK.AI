@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
-    Send, User, ShieldCheck, Bot, MessageSquare, Circle, Loader2, 
-    Phone, Video, Mic, Smile, Paperclip, Play, Pause, X, Check, CheckCheck, MicOff, Volume2, Shield 
+    Send, User, ShieldCheck, Bot, Loader2, 
+    Phone, Video, Mic, Play, Pause, Check, CheckCheck, MicOff, Volume2, Shield 
 } from 'lucide-react';
 import { supabase } from "../../lib/supabaseClient";
 import useAuthStore from "../../store/authStore";

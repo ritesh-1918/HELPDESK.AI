@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     FileText, Database, Zap,
     CheckCircle2, AlertTriangle, ArrowRight,
-    Lightbulb, SearchX, TicketCheck, Search, Bell, Link2
+    Lightbulb, SearchX, TicketCheck, Bell, Link2
 } from 'lucide-react';
 import useTicketStore from "../../store/ticketStore";
 import { API_CONFIG } from "../../config";

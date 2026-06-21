@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, GitCommit, ArrowLeft, Heart, Zap, Sparkles } from 'lucide-react';
+import { Calendar, GitCommit, ArrowLeft, Zap, Sparkles } from 'lucide-react';
 import { Card } from '../components/ui/card';
 
 export default function Changelog() {

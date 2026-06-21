@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-    CheckCircle2, Clock, AlertCircle, User,
-    Activity, ShieldCheck, Briefcase, Globe, BarChart3,
+    CheckCircle2, Clock, AlertCircle,
+    Activity, ShieldCheck,
     ImageIcon, CornerUpLeft, CheckSquare, XCircle,
-    Cpu, Eye, MessageSquare, MoveRight, Loader2, Star, Eraser, ShieldAlert
+    Cpu, MessageSquare, MoveRight, Loader2, Star, Eraser, ShieldAlert
 } from 'lucide-react';
 import { supabase } from "../../lib/supabaseClient";
 import useAuthStore from "../../store/authStore";

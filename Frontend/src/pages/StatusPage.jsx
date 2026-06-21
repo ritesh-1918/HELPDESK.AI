@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, CheckCircle, AlertTriangle, ArrowLeft, RefreshCw } from 'lucide-react';
+import { CheckCircle, ArrowLeft, RefreshCw } from 'lucide-react';
 import { Card } from '../components/ui/card';
 
 export default function StatusPage() {

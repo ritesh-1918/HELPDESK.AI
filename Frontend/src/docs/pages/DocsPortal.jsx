@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { 
     Rocket, Cpu, Sliders, AlertTriangle, BookOpen, 
-    Search, Copy, Check, Terminal, ExternalLink, ArrowRight, ChevronRight, ArrowLeft
+    Search, Copy, Check, Terminal, ArrowRight, ChevronRight, ArrowLeft
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';

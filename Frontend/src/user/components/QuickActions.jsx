@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Network, Laptop, ShieldCheck, ArrowRight } from 'lucide-react';
+import { Network, Laptop, ShieldCheck } from 'lucide-react';
 
 const actions = [
     {

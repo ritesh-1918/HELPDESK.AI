@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Terminal, Shield, Cpu, Key, ArrowLeft, Check, Copy } from 'lucide-react';
+import { Terminal, Key, ArrowLeft, Check, Copy } from 'lucide-react';
 import { Card } from '../components/ui/card';
 
 export default function ApiReference() {

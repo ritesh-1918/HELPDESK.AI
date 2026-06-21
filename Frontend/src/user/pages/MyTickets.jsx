@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Ticket, Inbox, Search, Filter,
-    ChevronDown, ShieldCheck, Clock, Loader2, AlertCircle
+    ShieldCheck, AlertCircle
 } from 'lucide-react';
 import useAuthStore from "../../store/authStore";
 import { supabase } from "../../lib/supabaseClient";

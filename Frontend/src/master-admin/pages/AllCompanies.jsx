@@ -3,9 +3,8 @@ import { supabase } from "../../lib/supabaseClient";
 import useToastStore from "../../store/toastStore";
 import { format } from "date-fns";
 import {
-    Building2, Search, ExternalLink, Calendar,
-    Filter, MoreHorizontal, User, ShieldCheck,
-    ArrowUpRight, CheckCircle2, XCircle
+    Building2, Search, ExternalLink,
+    Filter, CheckCircle2, XCircle
 } from "lucide-react";
 
 function AllCompanies() {

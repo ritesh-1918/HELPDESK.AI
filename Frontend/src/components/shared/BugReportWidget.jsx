@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
  
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bug, X, Info, Send, AlertTriangle, ScreenShare, ShieldAlert, Camera, Trash2, Crop, MousePointer2, ChevronDown, Check } from 'lucide-react';
+import { Bug, X, Info, Send, ShieldAlert, Camera, Trash2, Crop, MousePointer2, ChevronDown, Check } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { supabase } from '../../lib/supabaseClient';
 import useAuthStore from '../../store/authStore';
