@@ -4,16 +4,18 @@ Logs every encrypt/decrypt operation to encryption_audit_logs table.
 """
 
 import logging
+from datetime import datetime
 from backend.models.encryption import encrypt_pii, decrypt_pii
 from backend.models.encryption_key_lo import EncryptionAuditLog
 
 logger = logging.getLogger(__name__)
 
 SENSITIVE_FIELDS = ("phone_number", "address", "employee_id", "department")
-KEY_VERSION = 1
+KEY_VERSION = 1  # increment on key rotation
 
 
 def _log_audit(supabase, operation: str, field: str, user_id: str, org_id: str, status: str, error: str = None):
+    """Write an audit log entry to encryption_audit_logs table."""
     try:
         entry = EncryptionAuditLog(
             user_id=user_id,
@@ -32,6 +34,7 @@ def _log_audit(supabase, operation: str, field: str, user_id: str, org_id: str, 
 
 
 def encrypt_profile(profile: dict, supabase=None, actor_id: str = None) -> dict:
+    """Encrypt sensitive fields before writing to Supabase profiles table."""
     result = profile.copy()
     org_id = profile.get("company_id", "unknown")
     for field in SENSITIVE_FIELDS:
@@ -46,6 +49,7 @@ def encrypt_profile(profile: dict, supabase=None, actor_id: str = None) -> dict:
 
 
 def decrypt_profile(profile: dict, supabase=None, actor_id: str = None) -> dict:
+    """Decrypt sensitive fields after reading from Supabase profiles table."""
     result = profile.copy()
     org_id = profile.get("company_id", "unknown")
     for field in SENSITIVE_FIELDS:
@@ -55,4 +59,5 @@ def decrypt_profile(profile: dict, supabase=None, actor_id: str = None) -> dict:
                 _log_audit(supabase, "DECRYPT", field, actor_id, org_id, "SUCCESS")
             except Exception as e:
                 _log_audit(supabase, "DECRYPT", field, actor_id, org_id, "FAILED", str(e))
+                result[field] = result[field]  # keep encrypted value on failure
     return result
