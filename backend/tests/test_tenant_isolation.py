@@ -171,7 +171,7 @@ if "supabase" not in sys.modules: sys.modules["supabase"] = mock_supabase_lib
 for module_name in [
     "torch", "torch.nn", "torch.nn.functional", "torch.optim", "transformers", "sentence_transformers", 
     "easyocr", "datasets", "sklearn", "sklearn.metrics", "pandas", "openpyxl",
-    "prometheus_client"
+    "prometheus_client", "starlette", "starlette.testclient"
 ]:
     if module_name not in sys.modules: sys.modules[module_name] = MagicMock()
 
