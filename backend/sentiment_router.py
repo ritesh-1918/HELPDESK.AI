@@ -8,6 +8,7 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Header
+from fastapi import status as http_status
 from pydantic import BaseModel
 from supabase import create_client
 
@@ -30,7 +31,7 @@ def _get_sb():
     return _sb
 
 
-def _require_auth(authorization: Optional[str]) -> None:
+def _require_auth(authorization: Optional[str]) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Unauthorized")
     token = authorization[7:]
@@ -40,6 +41,26 @@ def _require_auth(authorization: Optional[str]) -> None:
             sb.auth.get_user(token)
         except Exception:
             raise HTTPException(status_code=401, detail="Invalid or expired token")
+    return token
+
+
+def _require_tenant(company_id: str, authorization: Optional[str]) -> None:
+    token = _require_auth(authorization)
+    sb = _get_sb()
+    if not sb:
+        raise HTTPException(status_code=http_status.HTTP_503_SERVICE_UNAVAILABLE, detail="Database unavailable")
+    try:
+        user = sb.auth.get_user(token)
+        uid = user.user.id
+        profile = sb.table("profiles").select("company_id").eq("id", uid).single().execute()
+        data = getattr(profile, "data", None) or {}
+        user_company = data.get("company_id")
+        if user_company and user_company != company_id:
+            raise HTTPException(status_code=http_status.HTTP_403_FORBIDDEN, detail="Tenant mismatch — you can only access your own company's data")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Tenant verification failed") from exc
 
 
 class AnalyzeRequest(BaseModel):
@@ -85,7 +106,7 @@ async def get_ticket_sentiment(ticket_id: str, authorization: Optional[str] = He
 @router.get("/heatmap/{company_id}")
 async def frustration_heatmap(company_id: str, authorization: Optional[str] = Header(None)):
     """Generate a CSAT frustration heatmap for a company's support tickets."""
-    _require_auth(authorization)
+    _require_tenant(company_id, authorization)
     if not company_id or len(company_id) > 100:
         raise HTTPException(status_code=400, detail="Invalid company_id")
     data = get_frustration_heatmap(company_id)
