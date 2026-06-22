@@ -4,8 +4,6 @@
 
 @layer base {
   :root {
-    --brand-primary: #0d6efd;
-    --brand-accent: #ff5722;
     --stitch-primary: #13ec80;
     --stitch-primary-hover: #0fd472;
     --stitch-background-light: #f6f8f7;
