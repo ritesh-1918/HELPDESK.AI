@@ -5,6 +5,7 @@ from typing import Dict, Optional
 from fastapi import Request, HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from postgrest.exceptions import APIError
+from backend.models.user_profile import decrypt_profile
 
 logger = logging.getLogger(__name__)
 
@@ -48,21 +49,23 @@ class TenantSecurityManager:
             return {"company_id": None, "role": "user", "id": user_id}
 
         try:
-            res = (
-                self.supabase.table("profiles")
-                .select("id, company_id, role")
-                .eq("id", user_id)
-                .single()
-                .execute()
-            )
-            profile_data = res.data or {}
-            
-            # Cache the result
-            _profile_cache[user_id] = {
-                "profile": profile_data,
-                "cached_at": now
-            }
-            return profile_data
+            # AFTER
+res = (
+    self.supabase.table("profiles")
+    .select("id, company_id, role, phone_number, address, employee_id, department")
+    .eq("id", user_id)
+    .single()
+    .execute()
+)
+profile_data = decrypt_profile(res.data or {})
+
+# Cache the decrypted result
+_profile_cache[user_id] = {
+    "profile": profile_data,
+    "cached_at": now
+}
+return profile_data
+
         except Exception as e:
             logger.error(f"Error fetching user profile for {user_id}: {e}")
             # Fallback to no company_id (safe default)
