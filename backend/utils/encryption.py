@@ -2,54 +2,43 @@
 PII Encryption Utilities -- AES-256-GCM via pycryptodome.
 
 Stores ciphertext as:  base64( nonce(12B) || ciphertext || tag(16B) )
-Decoded and split on read; authentication tag is verified by AES-GCM internally.
 
-Environment variable ENCRYPTION_KEY must contain a 64-char hex string
-(32 raw bytes = 256-bit key).  Generate one with:
-    python -c \"import os; print(os.urandom(32).hex())\"
+Environment variables required:
+    ENCRYPTION_PASSWORD  -- passphrase to derive key from
+    ENCRYPTION_SALT      -- optional fixed salt (hex string); random if omitted
 """
 
 import os
 import base64
-from typing import Optional
+import hashlib
 
 from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
 
 
-def get_encryption_key(password: str | None = None, salt: bytes | None = None) -> bytes:
-    """Derive a 256-bit encryption key from password using PBKDF2."""
-    if password is None:
-        password = os.getenv("ENCRYPTION_PASSWORD")
-    if password is None:
+def _get_key() -> bytes:
+    """Derive a 256-bit AES key from ENCRYPTION_PASSWORD env var using PBKDF2-SHA256."""
+    password = os.getenv("ENCRYPTION_PASSWORD")
+    if not password:
         raise ValueError(
-            "ENCRYPTION_PASSWORD environment variable must be set. "
-            "Encryption is disabled without a configured password."
+            "ENCRYPTION_PASSWORD environment variable must be set."
         )
-    if salt is None:
-        salt_env = os.getenv("ENCRYPTION_SALT")
-        if salt_env:
-            salt = salt_env.encode()
-        else:
-            salt = os.urandom(16)
-    elif isinstance(salt, str):
-        salt = salt.encode()
+    salt_env = os.getenv("ENCRYPTION_SALT", "helpdesk-ai-default-salt")
+    salt = salt_env.encode("utf-8")
 
-    kdf = PBKDF2HMAC(
-        algorithm=hashes.SHA256(),
-        length=32,
+    return hashlib.pbkdf2_hmac(
+        hash_name="sha256",
+        password=password.encode("utf-8"),
         salt=salt,
         iterations=480000,
+        dklen=32,
     )
-    return kdf.derive(password.encode())
 
 
 def encrypt_pii(plaintext: str) -> str:
     """
-    Encrypt *plaintext* with AES-256-GCM via pycryptodome.
-
-    Returns base64-encoded bundle:  nonce(12B) || ciphertext || tag(16B)
-    Raises ValueError on None input.  Empty string stored as-is.
+    Encrypt plaintext with AES-256-GCM.
+    Returns base64-encoded bundle: nonce(12B) || ciphertext || tag(16B)
     """
     if plaintext is None:
         raise ValueError("encrypt_pii: plaintext must not be None")
@@ -57,7 +46,7 @@ def encrypt_pii(plaintext: str) -> str:
         return ""
 
     key = _get_key()
-    nonce = get_random_bytes(12)  # GCM standard nonce size
+    nonce = get_random_bytes(12)
 
     cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
     ciphertext, tag = cipher.encrypt_and_digest(plaintext.encode("utf-8"))
@@ -69,26 +58,18 @@ def encrypt_pii(plaintext: str) -> str:
 def decrypt_pii(cipher_b64: str) -> str:
     """
     Decrypt AES-256-GCM bundle back to plaintext.
-
-    Accepts:
-      - base64-encoded bundle (nonce || ciphertext || tag)  -> decrypts normally
-      - empty string                                        -> returns \"\"
-      - legacy plaintext (not valid GCM bundle)              -> returns as-is (backward compat)
-
-    Raises ValueError only on unrecoverable corruption (tag mismatch).
+    Handles empty strings and legacy plaintext gracefully.
     """
     if cipher_b64 == "":
         return ""
 
-    # Try base64 decode
     try:
         bundle = base64.b64decode(cipher_b64, validate=True)
     except Exception:
-        return cipher_b64  # not base64 -> legacy plaintext
+        return cipher_b64  # legacy plaintext
 
-    # Minimum: nonce(12) + 1 byte ciphertext + tag(16) = 29 bytes
-    if len(bundle) < 29:
-        return cipher_b64  # too short -> legacy plaintext
+    if len(bundle) < 29:  # nonce(12) + min 1 byte + tag(16)
+        return cipher_b64  # too short, legacy plaintext
 
     nonce = bundle[:12]
     tag = bundle[-16:]
@@ -97,7 +78,6 @@ def decrypt_pii(cipher_b64: str) -> str:
     try:
         key = _get_key()
         cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
-        plaintext_bytes = cipher.decrypt_and_verify(ciphertext, tag)
-        return plaintext_bytes.decode("utf-8")
-    except (ValueError, KeyError, Exception):
-        return cipher_b64  # corrupt or legacy -> plaintext
+        return cipher.decrypt_and_verify(ciphertext, tag).decode("utf-8")
+    except Exception:
+        return cipher_b64  # corrupt or legacy
