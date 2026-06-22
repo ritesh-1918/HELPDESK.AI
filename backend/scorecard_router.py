@@ -25,7 +25,7 @@ def _get_sb():
     return _sb
 
 
-def _require_auth(authorization: Optional[str]) -> None:
+def _require_auth(authorization: Optional[str]) -> str:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Unauthorized")
     token = authorization[7:]
@@ -35,6 +35,26 @@ def _require_auth(authorization: Optional[str]) -> None:
             sb.auth.get_user(token)
         except Exception:
             raise HTTPException(status_code=401, detail="Invalid or expired token")
+    return token
+
+
+def _require_tenant(authorization: Optional[str], company_id: str) -> None:
+    token = _require_auth(authorization)
+    sb = _get_sb()
+    if not sb:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+    try:
+        user = sb.auth.get_user(token)
+        uid = user.user.id
+        profile = sb.table("profiles").select("company_id").eq("id", uid).single().execute()
+        data = getattr(profile, "data", None) or {}
+        user_company = data.get("company_id")
+        if user_company and user_company != company_id:
+            raise HTTPException(status_code=403, detail="Tenant mismatch — scorecard belongs to a different company")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Tenant verification failed") from exc
 
 
 @router.get("/company/{company_id}")
@@ -44,7 +64,7 @@ async def company_scorecard(
     authorization: Optional[str] = Header(None),
 ):
     """Get ranked performance scorecard for all agents in a company."""
-    _require_auth(authorization)
+    _require_tenant(authorization, company_id)
     if not company_id or len(company_id) > 100:
         raise HTTPException(status_code=400, detail="Invalid company_id")
     data = get_company_scorecard(company_id, days=days)
@@ -59,7 +79,7 @@ async def agent_scorecard(
     authorization: Optional[str] = Header(None),
 ):
     """Get individual agent scorecard with metrics + score + AI coaching tip."""
-    _require_auth(authorization)
+    _require_tenant(authorization, company_id)
     data = refresh_agent_scorecard(agent_id, company_id, days=days)
     if not data["metrics"]["has_data"]:
         return {
@@ -80,6 +100,6 @@ async def refresh_scorecard(
     authorization: Optional[str] = Header(None),
 ):
     """Force-refresh an agent's scorecard (recomputes from latest Supabase data)."""
-    _require_auth(authorization)
+    _require_tenant(authorization, company_id)
     data = refresh_agent_scorecard(agent_id, company_id, agent_name, days=days)
     return {"success": True, **data}
