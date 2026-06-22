@@ -1,20 +1,20 @@
-# Contributing to HELPDESK.AI 🚀
+﻿# Contributing to HELPDESK.AI 馃殌
 
-First off, thank you for considering contributing to **HELPDESK.AI**! It’s contributors like you who help transform IT support from "Chaos to Clarity."
+First off, thank you for considering contributing to **HELPDESK.AI**! It鈥檚 contributors like you who help transform IT support from "Chaos to Clarity."
 
 This guide outlines the professional standards and workflows required to maintain the integrity of our AI-powered ecosystem.
 
 ---
 
-## 🏗️ Founding Team (Infosys Springboard - Group 2)
+## 馃彈锔?Founding Team (Infosys Springboard - Group 2)
 
 HELPDESK.AI was conceived and built during the **Infosys Springboard Virtual Internship 6.0**. We acknowledge the foundational work of the following team members:
 
-### 👑 Leadership & Coordination
+### 馃憫 Leadership & Coordination
 *   **Duniya Vasa** (Group Lead)
 *   **Sowjanya N**
 
-### 🧠 AI & Modeling
+### 馃 AI & Modeling
 *   **Pragati Tiwari** (Lead)
 *   **Shaik Eshak**
 *   **Ippili Raju**
@@ -22,19 +22,19 @@ HELPDESK.AI was conceived and built during the **Infosys Springboard Virtual Int
 *   **Asna Abdul Kareem**
 *   **Ritesh Bonthalakoti**
 
-### ⚙️ Backend Engineering
+### 鈿欙笍 Backend Engineering
 *   **Asmeet Kaur Makkad** (Lead)
 *   **Vijayalakshmi S R**
 *   **Dinesh Reddy Vasampelli**
 *   **Manya Sahasra**
 
-### 🎨 Frontend Engineering
+### 馃帹 Frontend Engineering
 *   **Satla Prayukthika** (Lead)
 *   **Bandi Keerthi Krishna**
 *   **Shubha G D**
 *   **Phani Kotha**
 
-### 📊 Data Engineering
+### 馃搳 Data Engineering
 *   **Praneetha Baru** (Lead)
 *   **Kavin Sarvesh**
 *   **Utukuri Naga Sri Hari Chandana**
@@ -43,7 +43,7 @@ HELPDESK.AI was conceived and built during the **Infosys Springboard Virtual Int
 
 ---
 
-## 📝 How to Contribute
+## 馃摑 How to Contribute
 
 ### 1. Reporting Issues
 Before opening a new issue, please search the [Existing Issues](https://github.com/ritesh-1918/HELPDESK.AI/issues) to ensure it hasn't been reported.
@@ -62,10 +62,10 @@ We welcome ideas that improve the AI's precision or user experience.
 
 ---
 
-## 🌟 GirlScript Summer of Code (GSSoC 2026)
+## 馃専 GirlScript Summer of Code (GSSoC 2026)
 
 We are proudly participating in **GSSoC 2026**! If you are a contributor from GSSoC, please ensure you follow these steps so that your PR is scored correctly:
-1. **Target Branch Requirement (CRITICAL) 🚨**: You MUST target and submit all of your Pull Requests to the `gssoc` branch, **NOT** to the `main` branch. The `main` branch is our production-ready release branch and is strictly protected. Any Pull Request opened directly against `main` will be automatically rejected.
+1. **Target Branch Requirement (CRITICAL) 馃毃**: You MUST target and submit all of your Pull Requests to the `gssoc` branch, **NOT** to the `main` branch. The `main` branch is our production-ready release branch and is strictly protected. Any Pull Request opened directly against `main` will be automatically rejected.
 2. **Approval Label**: Once your PR is reviewed and approved, we will add the `gssoc:approved` label. 
 3. **Difficulty Level**: We will assign a difficulty label (`level:beginner`, `level:intermediate`, `level:advanced`, `level:critical`).
 4. **Mentor Assignment**: We will add the `mentor:ritesh-1918` label to track review points.
@@ -73,17 +73,17 @@ We are proudly participating in **GSSoC 2026**! If you are a contributor from GS
 
 ---
 
-## 💻 Pull Request Process
+## 馃捇 Pull Request Process
 
 We follow a strict "Production Ready" workflow. All PRs must meet the following criteria:
 
 1.  **Branching Strategy (CRITICAL):**
     *   **All Pull Requests MUST target the `gssoc` branch.** Do not submit PRs directly to the `main` branch.
     *   For your local work, branch from `gssoc` using these naming conventions:
-        *   `feature/` — New features or logic.
-        *   `fix/` — Bug fixes.
-        *   `docs/` — Documentation updates.
-        *   `refactor/` — Code cleanup without functional changes.
+        *   `feature/` 鈥?New features or logic.
+        *   `fix/` 鈥?Bug fixes.
+        *   `docs/` 鈥?Documentation updates.
+        *   `refactor/` 鈥?Code cleanup without functional changes.
 2.  **Atomic Commits:** Each commit should be a small, logical unit of work with a descriptive message.
 3.  **Performance Check:** Any changes to the backend must be tested to ensure inference times remain **strictly under 500ms**.
 4.  **UI Consistency:** Frontend changes must strictly adhere to our "Chaos to Clarity" design system (Tailwind CSS + Framer Motion).
@@ -91,7 +91,7 @@ We follow a strict "Production Ready" workflow. All PRs must meet the following 
 
 ---
 
-## 🛠️ Technical Standards
+## 馃洜锔?Technical Standards
 
 ### Python (Backend)
 *   Follow **PEP 8** style guidelines.
@@ -109,8 +109,9 @@ We follow a strict "Production Ready" workflow. All PRs must meet the following 
 
 ---
 
-## ⚖️ Code of Conduct
+## 鈿栵笍 Code of Conduct
 By participating in this project, you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md). We expect a professional, inclusive, and collaborative environment.
 
 ---
-*Happy coding, and let’s drive the future of Intelligent Enterprise Support together!*
+*Happy coding, and let鈥檚 drive the future of Intelligent Enterprise Support together!*
+
