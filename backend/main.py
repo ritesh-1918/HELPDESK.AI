@@ -3257,9 +3257,10 @@ async def analyze_only(request_body: TicketRequest, request: Request, current_us
 
 @app.post("/ai/analyze_stream")
 @limiter.limit("10/minute")
-async def analyze_stream(request: Request, request_body: TicketRequest):
+async def analyze_stream(request: Request, request_body: TicketRequest, current_user: dict = Depends(get_current_user)):
     """
     REAL-TIME SSE ENDPOINT: Streams the AI progress to the frontend dynamically.
+    Requires authentication.
     """
     import datetime
     def get_now_ist():
