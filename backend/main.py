@@ -1690,7 +1690,10 @@ async def analyze_bug(request: Request, request_body: BugReportAnalysisRequest):
 # ---------------------------------------------------------------------------
 
 @app.get("/ai/agent_scorecard")
-async def agent_scorecard(company_id: str | None = None):
+async def agent_scorecard(
+    company_id: str | None = None,
+    current_user: dict = Depends(get_current_user),
+):
     """
     Build a real-time performance scorecard for every support agent
     (grouped by assigned_team) within a company, then request personalised
@@ -1700,9 +1703,13 @@ async def agent_scorecard(company_id: str | None = None):
         company_id: filter tickets to a specific tenant (optional)
 
     Returns a list of agent scorecard objects sorted by performance score.
+    Requires authentication.
     """
     if not supabase:
         raise HTTPException(status_code=503, detail="Database connection not initialised")
+
+    profile = _require_tenant_admin_profile(current_user)
+    company_scope = _ticket_company_scope(profile, company_id)
 
     try:
         query = supabase.table("tickets").select(
@@ -1710,8 +1717,7 @@ async def agent_scorecard(company_id: str | None = None):
             "sla_breach_at, auto_resolve, category, subcategory"
         ).order("created_at", desc=False)
 
-        if company_id:
-            query = query.eq("company_id", company_id)
+        query = query.eq("company_id", company_scope)
 
         res = query.execute()
         tickets = res.data or []
