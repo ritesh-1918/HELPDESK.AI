@@ -3428,7 +3428,7 @@ async def analyze_stream(request: Request, request_body: TicketRequest):
 
 # Refactored: Renamed duplicate /ai/analyze_ticket route to /ai/analyze_ticket/legacy (Issue #1427)
 @app.post("/ai/analyze_ticket/legacy", deprecated=True)
-async def legacy_analyze_and_save(request_body: TicketRequest):
+async def legacy_analyze_and_save(request_body: TicketRequest, current_user: dict = Depends(get_current_user)):
     """
     BACKWARD COMPATIBILITY: Strictly performs analysis only.
     Does NOT persist to DB to avoid foreign key violations.
@@ -3454,7 +3454,7 @@ async def legacy_analyze_and_save(request_body: TicketRequest):
 
 @app.post("/ai/analyze-v2")
 @limiter.limit("10/minute")
-async def analyze_ticket_v2(request: Request, body: TicketRequest):
+async def analyze_ticket_v2(request: Request, body: TicketRequest, current_user: dict = Depends(get_current_user)):
     """V2 AI analysis with improved classifier. Returns category, subcategory, priority, and auto-resolve flag."""
     text = sanitize_text(body.text) or ""
     try:
