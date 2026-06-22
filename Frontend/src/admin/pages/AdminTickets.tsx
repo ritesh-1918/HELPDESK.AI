@@ -275,6 +275,11 @@ const AdminTickets = () => {
     const location = useLocation();
     const { user, profile } = useAuthStore();
     const { showToast } = useToastStore();
+    const getSearchQueryFromLocation = useCallback(() => {
+        const params = new URLSearchParams(location.search);
+        const query = params.get('q') || '';
+        return sanitizeSearchQuery(decodeURIComponent(query));
+    }, [location.search]);
 
     // ── Data State ──────────────────────────────────
     const [tickets, setTickets] = useState([]);
@@ -285,15 +290,14 @@ const AdminTickets = () => {
     const [agents, setAgents] = useState([]);
 
     // ── Filter State ────────────────────────────────
-    const [searchQuery, setSearchQuery] = useState('');
-    const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [searchQuery, setSearchQuery] = useState(getSearchQueryFromLocation);
+    const [debouncedSearch, setDebouncedSearch] = useState(getSearchQueryFromLocation);
     const [statusFilter, setStatusFilter] = useState('All');
     const [categoryFilter, setCategoryFilter] = useState('All');
     const [priorityFilter, setPriorityFilter] = useState('All');
     const [teamFilter, setTeamFilter] = useState('All');
     const [languageFilter, setLanguageFilter] = useState('All');
     const [slaAtRisk, setSlaAtRisk] = useState(false);
-    const [agents, setAgents] = useState([]);
     const [tagFilters, setTagFilters] = useState([]);
 
     // ── Bulk Action State ───────────────────────────
@@ -341,29 +345,8 @@ const AdminTickets = () => {
     });
 
     // ── Data Fetching ───────────────────────────────
-    const fetchInitialData = async () => {
-        setLoading(true);
-        try {
-            const { profile } = useAuthStore.getState();
-
-            if (profile?.company) {
-                const { data: agentData } = await supabase
-                    .from('profiles')
-                    .select('id, full_name, role')
-                    .eq('company', profile.company)
-                    .in('role', ['admin', 'super_admin', 'agent']);
-                setAgents(agentData || []);
-            }
-
-            fetchTickets();
-        } catch (err) {
-            console.error("Initialization error:", err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const fetchTickets = useCallback(async () => {
+        setLoading(true);
         setError(null);
         try {
             const { profile } = useAuthStore.getState();
@@ -414,7 +397,7 @@ const AdminTickets = () => {
         }
     }, [debouncedSearch, statusFilter, categoryFilter, priorityFilter, teamFilter]);
 
-    const fetchInitialData = useCallback(async () => {
+    const fetchAgents = useCallback(async () => {
         const { profile } = useAuthStore.getState();
         if (profile?.company) {
             const { data: agentData } = await supabase
@@ -424,13 +407,17 @@ const AdminTickets = () => {
                 .in('role', ['admin', 'super_admin', 'agent']);
             setAgents(agentData || []);
         }
-        fetchTickets();
-    }, [fetchTickets]);
+    }, []);
 
     useEffect(() => {
         if (!user) return;
-        fetchInitialData();
-    }, [user, fetchInitialData]);
+        fetchAgents();
+    }, [user, profile?.company, fetchAgents]);
+
+    useEffect(() => {
+        if (!user) return;
+        fetchTickets();
+    }, [user, fetchTickets]);
 
     // SLA breach realtime listener
     useEffect(() => {
@@ -473,10 +460,10 @@ const AdminTickets = () => {
 
     // Seed search from URL
     useEffect(() => {
-        const params = new URLSearchParams(location.search);
-        const q = params.get('q');
-        if (q) setSearchQuery(decodeURIComponent(q));
-    }, [location.search]);
+        const urlQuery = getSearchQueryFromLocation();
+        setSearchQuery((current) => (current === urlQuery ? current : urlQuery));
+        setDebouncedSearch((current) => (current === urlQuery ? current : urlQuery));
+    }, [getSearchQueryFromLocation]);
 
     // ── Single-ticket update ────────────────────────
     const handleUpdateTicket = async (id, updates) => {
