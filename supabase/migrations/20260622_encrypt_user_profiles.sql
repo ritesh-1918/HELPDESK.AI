@@ -10,6 +10,7 @@ COMMENT ON COLUMN profiles.address      IS 'AES-256 GCM encrypted PII';
 COMMENT ON COLUMN profiles.employee_id  IS 'AES-256 GCM encrypted PII';
 COMMENT ON COLUMN profiles.department   IS 'AES-256 GCM encrypted PII';
 
+-- Audit log table for encryption operations
 CREATE TABLE IF NOT EXISTS encryption_audit_logs (
   id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id          TEXT,
@@ -23,6 +24,7 @@ CREATE TABLE IF NOT EXISTS encryption_audit_logs (
   error_message    TEXT
 );
 
+-- Key rotation history table
 CREATE TABLE IF NOT EXISTS encryption_key_rotation_history (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id    TEXT NOT NULL,
