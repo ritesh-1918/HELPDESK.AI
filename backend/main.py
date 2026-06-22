@@ -3957,14 +3957,20 @@ async def metrics(request: Request):
 # Admin settings endpoints (Issue #913)
 # ---------------------------------------------------------------------------
 @app.get("/admin/settings/auto-resolve")
-async def get_auto_resolve_setting(company_id: str):
+async def get_auto_resolve_setting(
+    company_id: str,
+    current_user: dict = Depends(get_current_user),
+):
     """
     Return the current auto-resolve / auto-close enabled setting for a company.
     Reads live from DB so it reflects the latest toggle state.
+    Requires admin authentication.
     """
-    settings = get_system_settings(company_id)
+    profile = _require_tenant_admin_profile(current_user)
+    company_scope = _ticket_company_scope(profile, company_id)
+    settings = get_system_settings(company_scope)
     return {
-        "company_id": company_id,
+        "company_id": company_scope,
         "enable_auto_resolve": settings.get("enable_auto_resolve", False),
         "auto_close_enabled": settings.get("auto_close_enabled", False),
         "auto_close_days": settings.get("auto_close_days", 7),
