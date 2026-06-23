@@ -1,4 +1,3 @@
-import os
 import time
 import logging
 from typing import Dict, Optional
@@ -79,19 +78,6 @@ class TenantSecurityManager:
             )
         
         token = credentials.credentials
-
-        mock_enabled = os.getenv("MOCK_AUTH_ENABLED", "false").lower() == "true"
-        if mock_enabled and token.startswith("mock-token-"):
-            parts = token.split("-")
-            company_id = parts[2] if len(parts) > 2 else "company-mock-default"
-            role = parts[3] if len(parts) > 3 else "user"
-            user_id = parts[4] if len(parts) > 4 else f"user-{company_id}-{role}"
-
-            if company_id == "master":
-                return {"id": "master-admin-id", "company_id": None, "role": "master_admin"}
-
-            logger.warning(f"Mock auth used — user={user_id} company={company_id} role={role}")
-            return {"id": user_id, "company_id": company_id, "role": role}
 
         if not self.supabase:
             raise HTTPException(
