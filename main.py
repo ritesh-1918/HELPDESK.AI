@@ -1,4 +1,3 @@
-import logging
 import os
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.openapi.docs import get_swagger_ui_html
@@ -7,13 +6,13 @@ from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Res
 from supabase import create_client
 
 from backend.csrf import CSRFTokenMiddleware, set_csrf_cookie, CSRF_COOKIE_NAME
+from backend.logger import get_logger
 from backend.swagger_config import SWAGGER_UI_CUSTOM_CSS, SWAGGER_UI_CUSTOM_JS
 
 from backend.routers import tickets, ai, admin, health, auth
 from backend.routes import translation, estimator, voice, privacy, active_learning, weekly_digest
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 app = FastAPI()
 
@@ -334,3 +333,4 @@ async def get_open_api():
         description="API Documentation for HelpDesk AI Backend",
         routes=app.routes,
     )
+
