@@ -7,17 +7,43 @@ from backend.auth_cookie import get_current_user
 from backend.dependencies import supabase, duplicate_service
 from backend.models import TicketSaveRequest, TicketRecord, TICKETS_DB
 from backend.sanitization import sanitize_ticket_data
+from pydantic import BaseModel
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
+
+
+async def _resolve_company(user: dict) -> str:
+    """Resolve the company_id for the current user from their profile."""
+    user_id = user.get("id") or user.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not connected")
+    try:
+        res = supabase.table("profiles").select("company_id").eq("id", user_id).single().execute()
+        profile = res.data or {}
+        company_id = profile.get("company_id")
+        if not company_id:
+            raise HTTPException(status_code=403, detail="User has no tenant assignment")
+        return company_id
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=503, detail="Failed to resolve tenant")
+
+
 @router.get("")
 async def get_tickets(company_id: str | None = None, user: dict = Depends(get_current_user)):
-    """Fetch persistent tickets from Supabase."""
+    """Fetch persistent tickets from Supabase for the current user's tenant."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
     
+    caller_company = await _resolve_company(user)
     query = supabase.table("tickets").select("*").order("created_at", desc=True)
+    query = query.eq("company_id", caller_company)
     if company_id:
         query = query.eq("company_id", company_id)
         
@@ -130,22 +156,26 @@ async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_
 
 @router.get("/{ticket_id}")
 async def get_ticket_by_id(ticket_id: str, user: dict = Depends(get_current_user)):
-    """Fetch single persistent ticket."""
+    """Fetch single persistent ticket with tenant ownership check."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
     
+    caller_company = await _resolve_company(user)
     res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
     if not res.data:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    if str(res.data.get("company_id", "")) != caller_company:
         raise HTTPException(status_code=404, detail="Ticket not found")
     return res.data
 
 
 @router.post("", response_model=TicketRecord)
 async def create_ticket(ticket: TicketRecord, user: dict = Depends(get_current_user)):
-    """Save a new ticket into the system."""
+    """Save a new ticket into the system with ownership override."""
+    user_id = user.get("id") or user.get("sub")
     ticket_dict = sanitize_ticket_data(ticket.dict())
+    ticket_dict["owner_id"] = user_id
     ticket = TicketRecord(**ticket_dict)
-    # Check for duplicates before adding
     existing = next((t for t in TICKETS_DB if t.ticket_id == ticket.ticket_id), None)
     if existing:
         return existing
@@ -155,13 +185,21 @@ async def create_ticket(ticket: TicketRecord, user: dict = Depends(get_current_u
     return ticket
 
 
+class TicketUpdate(BaseModel):
+    status: Optional[str] = None
+    viewed_at: Optional[str] = None
+    priority: Optional[str] = None
+
+
 @router.patch("/{ticket_id}", response_model=TicketRecord)
-async def update_ticket(ticket_id: str, updates: dict, user: dict = Depends(get_current_user)):
-    """Partially update a ticket's fields (e.g., status, viewed_at)."""
-    sanitized_updates = sanitize_ticket_data(updates)
+async def update_ticket(ticket_id: str, updates: TicketUpdate, user: dict = Depends(get_current_user)):
+    """Partially update a ticket's fields (e.g., status, viewed_at) with ownership check."""
+    caller_company = await _resolve_company(user)
+    sanitized_updates = sanitize_ticket_data(updates.model_dump(exclude_unset=True))
     for i, ticket in enumerate(TICKETS_DB):
         if str(ticket.ticket_id) == str(ticket_id):
-            # Convert to dict, update, then back to model
+            if str(getattr(ticket, "company_id", "")) != caller_company:
+                raise HTTPException(status_code=404, detail="Ticket not found")
             ticket_dict = ticket.dict()
             ticket_dict.update(sanitized_updates)
             updated_ticket = TicketRecord(**ticket_dict)
