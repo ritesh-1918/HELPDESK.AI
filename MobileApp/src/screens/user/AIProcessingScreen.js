@@ -114,24 +114,52 @@ const AIProcessingScreen = () => {
       
       if (!user) throw new Error('User session expired. Please log in again.');
 
-      // Save to Supabase
-      const ticketData = {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('company')
+        .eq('id', user.id)
+        .single();
+
+      // Determine the correct status based on AI auto-resolve flag
+      const isAutoResolved = result.auto_resolve || false;
+      const status = isAutoResolved ? 'auto_resolved' : 'pending_human';
+
+      // Build the payload matching the backend's TicketSaveRequest schema,
+      // consistent with the web frontend's TicketTracking.jsx
+      const savePayload = {
         user_id: user.id,
         subject: result.summary || "New Support Request",
         description: text,
         category: result.category,
+        subcategory: result.subcategory || "General",
         priority: result.priority,
-        status: 'pending',
-        created_at: new Date().toISOString()
+        assigned_team: result.assigned_team || "General Support",
+        status: status,
+        auto_resolve: isAutoResolved,
+        is_duplicate: result.duplicate_ticket?.is_duplicate || false,
+        confidence: result.confidence || 0,
+        image_url: null,
+        company: profile?.company || "Default",
+        sla_breach_at: result.sla_breach_at || new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
+        metadata: {
+          confidence: result.confidence,
+          entities: result.entities || [],
+          decision_factors: result.decision_factors || [],
+          ocr_text: result.ocr_text || "",
+          image_description: result.image_description || ""
+        },
+        entities: result.entities || [],
+        solution_steps: [],
+        ocr_text: result.ocr_text || "",
+        needs_review: result.needs_review || false,
+        routing_confidence: result.confidence || 0
       };
 
-      const { data, error: saveError } = await supabase
-        .from('tickets')
-        .insert(ticketData)
-        .select()
-        .single();
+      const res = await axios.post(`${BACKEND_URL}/tickets/save`, savePayload);
 
-      if (saveError) throw saveError;
+      if (!res.data?.ticket_id) {
+        throw new Error('Failed to retrieve ticket ID from backend.');
+      }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       
@@ -139,12 +167,12 @@ const AIProcessingScreen = () => {
         index: 0,
         routes: [
           { name: 'MainTabs' },
-          { name: 'TicketTracking', params: { ticketId: data.id } }
+          { name: 'TicketTracking', params: { ticketId: res.data.ticket_id } }
         ],
       });
     } catch (err) {
       console.error('Final Submission Error:', err);
-      setError('Failed to create ticket: ' + (err.message || 'Unknown error'));
+      setError('Failed to create ticket: ' + (err.response?.data?.detail || err.message || 'Unknown error'));
       setLoading(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
