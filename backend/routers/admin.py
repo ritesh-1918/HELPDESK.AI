@@ -5,13 +5,36 @@ from backend.schemas import ProfileUpdate
 
 router = APIRouter(prefix="/api", tags=["Admin"])
 
+
+async def _require_admin(current_user: dict = Depends(get_current_user)) -> dict:
+    """Verify the caller has an admin-level role before allowing access."""
+    user_id = current_user.get("id") or current_user.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not connected")
+
+    try:
+        res = supabase.table("profiles").select("role").eq("id", user_id).single().execute()
+        profile = res.data or {}
+    except Exception:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    role = str(profile.get("role", "")).lower()
+    if role not in ("admin", "company_admin", "master_admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    return current_user
+
+
 @router.get("/profiles")
 async def api_get_profiles(
     role: str = None,
     status: str = None,
     limit: int = 50,
     offset: int = 0,
-    current_user: dict = Depends(get_current_user),
+    _: dict = Depends(_require_admin),
 ):
     """List admin-visible profiles with optional role and status filters."""
     if not supabase: return []
@@ -25,13 +48,10 @@ async def api_get_profiles(
 async def api_update_profile(
     user_id: str,
     updates: ProfileUpdate,
-    current_user: dict = Depends(get_current_user),
+    _: dict = Depends(_require_admin),
 ):
     """Apply an admin edit to a user profile."""
     if not supabase: return {}
-    # Schema validation in ProfileUpdate (extra="forbid") already blocks
-    # any field outside the allowlist, so a Pydantic .model_dump() with
-    # exclude_unset=True gives us only what the client actually sent.
     payload = updates.model_dump(exclude_unset=True)
     if not payload:
         return {}
@@ -41,19 +61,20 @@ async def api_update_profile(
 @router.delete("/profiles/{user_id}")
 async def api_delete_profile(
     user_id: str,
-    current_user: dict = Depends(get_current_user),
+    _: dict = Depends(_require_admin),
 ):
     """Delete a user profile and cascade auth cleanup when possible."""
     if not supabase: return {"success": False}
     supabase.table("profiles").delete().eq("id", user_id).execute()
     try:
         supabase.rpc('delete_user').execute()
-    except: pass
+    except:
+        pass
     return {"success": True}
 
 @router.get("/companies")
 async def api_get_companies(
-    current_user: dict = Depends(get_current_user),
+    _: dict = Depends(_require_admin),
 ):
     """Return the company list visible to the current admin."""
     if not supabase: return []
@@ -65,7 +86,7 @@ async def api_get_admin_requests(
     status: str = None,
     limit: int = 50,
     offset: int = 0,
-    current_user: dict = Depends(get_current_user),
+    _: dict = Depends(_require_admin),
 ):
     """List admin requests with optional status filtering."""
     if not supabase: return []
