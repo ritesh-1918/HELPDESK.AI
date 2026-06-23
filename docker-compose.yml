@@ -82,10 +82,36 @@ services:
     networks:
       - helpdesk_net
 
+  # ── PostgreSQL Database (local sandbox) ──────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: helpdesk_postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-helpdesk}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-helpdesk_local_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-helpdesk}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-helpdesk}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    profiles:
+      - local
+    networks:
+      - helpdesk_net
+
 volumes:
   model_cache:
   ticket_data:
   redis_data:
+  postgres_data:
 
 networks:
   helpdesk_net:
