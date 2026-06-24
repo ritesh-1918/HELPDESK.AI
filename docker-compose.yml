@@ -1,0 +1,143 @@
+version: "3.9"
+
+# HELPDESK.AI — Local Development Environment
+# ============================================
+# Runs: backend (FastAPI), frontend (Vite/React),
+#       PostgreSQL (local Supabase alternative), Redis (rate limiting)
+#
+# Usage:
+#   docker compose up -d              # Start all services
+#   docker compose up backend         # Start backend only
+#   docker compose down               # Stop and remove
+#   docker compose logs -f backend    # Tail backend logs
+
+services:
+  # ─── PostgreSQL (local DB) ──────────────────────────
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: helpdesk-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: helpdesk
+      POSTGRES_PASSWORD: helpdesk_dev
+      POSTGRES_DB: helpdesk
+    ports:
+      - "54322:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./supabase/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U helpdesk -d helpdesk"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - helpdesk-net
+
+  # ─── Redis (rate limiting + caching) ────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: helpdesk-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - helpdesk-net
+
+  # ─── Backend (FastAPI + AI models) ──────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: helpdesk-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # Database
+      DATABASE_URL: postgresql://helpdesk:helpdesk_dev@postgres:5432/helpdesk
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      # Supabase (optional — set via .env for production)
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY:-}
+      # AI / API keys
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # App config
+      ENVIRONMENT: development
+      LOG_LEVEL: DEBUG
+    volumes:
+      - ./backend:/app
+      - model_cache:/root/.cache
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      uvicorn main:app
+      --host 0.0.0.0
+      --port 8000
+      --reload
+      --log-level debug
+    networks:
+      - helpdesk-net
+
+  # ─── Frontend (Vite + React) ────────────────────────
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile 2>/dev/null || true
+    # Fallback: use Node image + mount for dev
+    image: node:20-alpine
+    container_name: helpdesk-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      VITE_API_URL: http://localhost:8000
+      VITE_SUPABASE_URL: ${SUPABASE_URL:-}
+      VITE_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
+    volumes:
+      - ./Frontend:/app
+      - /app/node_modules
+    working_dir: /app
+    command: >
+      sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 3000"
+    depends_on:
+      - backend
+    networks:
+      - helpdesk-net
+
+  # ─── pgAdmin (optional DB GUI) ──────────────────────
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: helpdesk-pgadmin
+    restart: unless-stopped
+    profiles: ["tools"]
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@helpdesk.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - helpdesk-net
+
+networks:
+  helpdesk-net:
+    driver: bridge
+
+volumes:
+  pgdata:
+  model_cache:
