@@ -44,6 +44,8 @@ AUTO_RESOLVE_SUBS = {
 }
 
 
+import threading
+
 class ClassifierService:
     def __init__(self):
         self.model = None
@@ -51,13 +53,19 @@ class ClassifierService:
         self.id2label = None
         self.label2id = None
         self._loaded = False
+        self._lock = threading.Lock()  # Prevent concurrent model loading race conditions
 
     def load(self):
-        """Load model, tokenizer, and label mappings from disk."""
+        """Load model, tokenizer, and label mappings from disk safely."""
         if self._loaded:
             return
 
-        abs_dir = os.path.abspath(SAVE_DIR)
+        with self._lock:
+            # Double-checked lock check
+            if self._loaded:
+                return
+
+            abs_dir = os.path.abspath(SAVE_DIR)
 
         if not os.path.exists(os.path.join(abs_dir, "model.safetensors")):
             raise FileNotFoundError(
@@ -107,22 +115,13 @@ class ClassifierService:
         pred_idx = pred_idx.item()
         confidence = round(confidence.item(), 4)
 
-        # Decode the combined label "Category | SubCategory"
+       # Decode the combined label "Category | SubCategory"
         combined_label = self.id2label.get(str(pred_idx), "Unknown | Unknown")
         parts = combined_label.split(" | ", 1)
         category = parts[0].strip() if len(parts) > 0 else "Unknown"
         subcategory = parts[1].strip() if len(parts) > 1 else "Unknown"
 
-        # Derive priority
-        priority = PRIORITY_MAP.get(subcategory, "Medium")
-
-        # Derive assigned team
-        assigned_team = TEAM_MAP.get(category, "General Support")
-
-        # Derive auto_resolve
-        auto_resolve = subcategory in AUTO_RESOLVE_SUBS
-
-        # --- Regex Override Layer (Boost for Technical Keywords) ---
+        # --- Regex Override Layer (Scoring Matrix & Order-Independent) ---
         tech_keywords = {
             "Network": ["IP address", "hostname", "connection", "network", "bandwidth", "DNS", "firewall", "VPN", "Connectivity", "Latency", "Routing", "Spikes"],
             "Software": ["crash", "load", "website", "application", "error", "bug", "failing", "software", "SQL", "Cluster", "Database", "Production", "Latency"],
@@ -131,15 +130,30 @@ class ClassifierService:
         }
         
         lower_text = text.lower()
+        best_cat = None
+        max_matches = 0
+
+        # Matrix evaluation: Find the category with the highest density of matching keywords
         for cat, keywords in tech_keywords.items():
-            if any(k.lower() in lower_text for k in keywords):
-                # If current prediction is generic, or we have a high-value technical keyword
-                if category == "General" or confidence < 0.9:
-                    category = cat
-                    assigned_team = TEAM_MAP.get(cat, "General Support")
-                    # Boost confidence significantly for verified technical signals
-                    confidence = max(confidence, 0.92) 
-                    break
+            match_count = sum(1 for k in keywords if k.lower() in lower_text)
+            if match_count > max_matches:
+                max_matches = match_count
+                best_cat = cat
+
+        # Apply category override if high-value keywords are found and confidence is low
+        if best_cat and (category == "General" or confidence < 0.9):
+            category = best_cat
+            confidence = max(confidence, 0.92)
+            
+            # Align conflicting subcategories to prevent structural data mismatches
+            valid_hardware_subs = ["Keyboard/Mouse", "Monitor Problem", "Printer Error", "Battery Issue", "Laptop Issue", "Hardware Failure"]
+            if category == "Hardware" and subcategory not in valid_hardware_subs:
+                subcategory = "Hardware Failure"
+
+        # --- Downstream Structural Field Derivations ---
+        priority = PRIORITY_MAP.get(subcategory, "Medium")
+        assigned_team = TEAM_MAP.get(category, "General Support")
+        auto_resolve = subcategory in AUTO_RESOLVE_SUBS
 
         return {
             "category": category,
