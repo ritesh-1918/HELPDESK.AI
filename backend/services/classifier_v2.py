@@ -30,37 +30,53 @@ class MultiOutputClassifierV2(nn.Module):
 class ClassifierServiceV2:
     def __init__(self):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        
-        # 1. Load Config
-        config_path = os.path.join(MODEL_DIR, "model_config.json")
-        if not os.path.exists(config_path):
-            self.model = None
-            print(f"[WARN] V2 Model config not found at {config_path}")
+        self.model = None
+        self.tokenizer = None
+        self.label_encoders = {}
+        self.num_labels = {}
+        self._loaded = False
+        self._lock = threading.Lock()  # Ensure thread safety for lazy loading
+
+    def load(self):
+        """Deferred lazy loading hook to prevent application startup blockages."""
+        if self._loaded:
             return
 
-        with open(config_path, "r") as f:
-            self.num_labels = json.load(f)
+        with self._lock:
+            if self._loaded:
+                return
 
-        # 2. Load Encoders safely via JSON
-        encoder_path = os.path.join(MODEL_DIR, "label_encoders.json")
-        if not os.path.exists(encoder_path):
-            self.label_encoders = {}
-            print(f"[WARN] V2 Label encoders not found at {encoder_path}")
-        else:
-            with open(encoder_path, "r") as f:
-                self.label_encoders = json.load(f)
+            # 1. Load Config
+            config_path = os.path.join(MODEL_DIR, "model_config.json")
+            if not os.path.exists(config_path):
+                print(f"[WARN] V2 Model config not found at {config_path}")
+                return
 
-        # 3. Load Model
-        self.model = MultiOutputClassifierV2(self.num_labels).to(self.device)
-        model_path = os.path.join(MODEL_DIR, "model.pt")
-        self.model.load_state_dict(torch.load(model_path, map_location=self.device))
-        self.model.eval()
+            with open(config_path, "r") as f:
+                self.num_labels = json.load(f)
 
-        # 4. Load Tokenizer
-        self.tokenizer = DistilBertTokenizerFast.from_pretrained(MODEL_DIR)
-        print("[SUCCESS] Classifier Service V2 (Shadow) Loaded Successfully.")
+            # 2. Load Encoders safely via JSON
+            encoder_path = os.path.join(MODEL_DIR, "label_encoders.json")
+            if not os.path.exists(encoder_path):
+                print(f"[WARN] V2 Label encoders not found at {encoder_path}")
+            else:
+                with open(encoder_path, "r") as f:
+                    self.label_encoders = json.load(f)
+
+            # 3. Load Model
+            self.model = MultiOutputClassifierV2(self.num_labels).to(self.device)
+            model_path = os.path.join(MODEL_DIR, "model.pt")
+            self.model.load_state_dict(torch.load(model_path, map_location=self.device))
+            self.model.eval()
+
+            # 4. Load Tokenizer
+            self.tokenizer = DistilBertTokenizerFast.from_pretrained(MODEL_DIR)
+            
+            self._loaded = True
+            print("[SUCCESS] Classifier Service V2 (Shadow) Loaded Successfully.")
 
     def predict(self, text: str):
+        self.load()  # Safely triggers lazy-loading if not initialized during lifecycle startup
         if self.model is None:
             return {"error": "V2 Model not initialized"}
 
