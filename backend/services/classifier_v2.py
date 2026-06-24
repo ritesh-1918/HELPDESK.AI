@@ -11,20 +11,46 @@ MODEL_DIR = os.path.join(BASE_DIR, "models", "classifier-v2")
 
 # We must use the exact same class definition as trainer_v2
 class MultiOutputClassifierV2(nn.Module):
-    def __init__(self, num_labels_per_output: dict):
+    def __init__(self, num_labels_per_output: dict, class_weights: dict = None):
         super().__init__()
         self.bert = DistilBertModel.from_pretrained("distilbert-base-uncased")
         hidden = self.bert.config.hidden_size 
         self.dropout = nn.Dropout(0.2)
         self.heads = nn.ModuleDict()
+        
         for name, n_labels in num_labels_per_output.items():
             self.heads[name] = nn.Linear(hidden, n_labels)
+            
+        # Register loss weighting buffers if provided for handling imbalanced datasets
+        self.loss_criteria = nn.ModuleDict()
+        class_weights = class_weights or {}
+        
+        for name, n_labels in num_labels_per_output.items():
+            if name in class_weights:
+                # Convert weights list to a float tensor
+                weight_tensor = torch.tensor(class_weights[name], dtype=torch.float)
+                self.loss_criteria[name] = nn.CrossEntropyLoss(weight=weight_tensor)
+            else:
+                self.loss_criteria[name] = nn.CrossEntropyLoss()
 
-    def forward(self, input_ids, attention_mask):
+    def forward(self, input_ids, attention_mask, labels=None):
         outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask)
         cls_output = outputs.last_hidden_state[:, 0] 
         cls_output = self.dropout(cls_output)
+        
         logits = {name: head(cls_output) for name, head in self.heads.items()}
+        
+        # If labels are provided (during training/evaluation), calculate the loss
+        if labels is not None:
+            total_loss = 0
+            losses = {}
+            for name in self.heads.keys():
+                if name in labels:
+                    head_loss = self.loss_criteria[name](logits[name], labels[name])
+                    losses[name] = head_loss
+                    total_loss += head_loss
+            return logits, total_loss, losses
+            
         return logits
 
 class ClassifierServiceV2:
