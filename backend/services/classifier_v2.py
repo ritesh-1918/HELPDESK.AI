@@ -41,9 +41,14 @@ class ClassifierServiceV2:
         with open(config_path, "r") as f:
             self.num_labels = json.load(f)
 
-        # 2. Load Encoders
-        with open(os.path.join(MODEL_DIR, "label_encoders.pkl"), "rb") as f:
-            self.label_encoders = pickle.load(f)
+        # 2. Load Encoders safely via JSON
+        encoder_path = os.path.join(MODEL_DIR, "label_encoders.json")
+        if not os.path.exists(encoder_path):
+            self.label_encoders = {}
+            print(f"[WARN] V2 Label encoders not found at {encoder_path}")
+        else:
+            with open(encoder_path, "r") as f:
+                self.label_encoders = json.load(f)
 
         # 3. Load Model
         self.model = MultiOutputClassifierV2(self.num_labels).to(self.device)
@@ -71,11 +76,16 @@ class ClassifierServiceV2:
             logits = self.model(inputs["input_ids"], inputs["attention_mask"])
             
         results = {}
-        for col, le in self.label_encoders.items():
+        for col, labels_list in self.label_encoders.items():
             probs = torch.softmax(logits[col], dim=1)
             conf, pred_idx = torch.max(probs, dim=1)
+            
+            # Use direct list indexing from the JSON array instead of inverse_transform
+            idx = pred_idx.item()
+            prediction = labels_list[idx] if idx < len(labels_list) else "Unknown"
+            
             results[col] = {
-                "prediction": le.inverse_transform([pred_idx.item()])[0],
+                "prediction": prediction,
                 "confidence": float(conf.item())
             }
         
