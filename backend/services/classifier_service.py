@@ -126,7 +126,8 @@ class ClassifierService:
         tech_keywords = {
             "Network": ["IP address", "hostname", "connection", "network", "bandwidth", "DNS", "firewall", "VPN", "Connectivity", "Latency", "Routing", "Spikes"],
             "Software": ["crash", "load", "website", "application", "error", "bug", "failing", "software", "SQL", "Cluster", "Database", "Production", "Latency"],
-            "Access": ["login", "password", "access", "authentication", "account", "permission", "MFA", "OAuth"]
+            "Access": ["login", "password", "access", "authentication", "account", "permission", "MFA", "OAuth"],
+            "Hardware": ["laptop", "hardware", "keyboard", "monitor", "mouse", "printer", "battery", "screen", "broken"]
         }
         
         lower_text = text.lower()
