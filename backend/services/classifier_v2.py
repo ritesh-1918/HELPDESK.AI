@@ -100,14 +100,13 @@ class ClassifierServiceV2:
             idx = pred_idx.item()
             prediction = labels_list[idx] if idx < len(labels_list) else "Unknown"
             
-            results[col] = {
+            # Enforce uniform lowercased key normalization to prevent brittle mutation pop patterns
+            normalized_key = col.lower().strip().replace(" ", "_")
+            
+            results[normalized_key] = {
                 "prediction": prediction,
                 "confidence": float(conf.item())
             }
-        
-        # Map V2 'Priority' (capitalized) to generic response
-        if "Priority" in results:
-            results["priority"] = results.pop("Priority")
 
         return results
 
