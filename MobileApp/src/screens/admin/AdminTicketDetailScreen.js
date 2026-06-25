@@ -15,7 +15,7 @@ import {
   ShieldCheck, X
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-
+import { compressAndUpload, QUALITY_PRESETS } from '../../utils/imageCompressor';
 const TEAMS = ['Software Team', 'Hardware Support', 'Network Ops', 'Security Unit', 'General Support'];
 const STATUSES = ['pending', 'in_progress', 'resolved', 'closed'];
 
