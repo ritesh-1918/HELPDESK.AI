@@ -1,7 +1,7 @@
 import logging
 import os
 from fastapi import FastAPI, Request, HTTPException, Depends
-from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
 from supabase import create_client
@@ -13,7 +13,8 @@ from backend.routers import metrics as metrics_router
 from backend.routers import tickets, ai, admin, health, auth
 from backend.routes import translation, estimator, voice, privacy, active_learning, weekly_digest
 
-logging.basicConfig(level=logging.INFO)
+from backend.logger import configure_logging
+configure_logging()
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
@@ -182,7 +183,7 @@ async def security_report(
 # ---------------------------------------------------------------------------
 
 @app.get("/auth/csrf-token", tags=["Auth"])
-async def get_csrf_token(response: Response):
+async def get_csrf_token(response: JSONResponse):
     """Issue a CSRF token cookie for authenticated browser sessions."""
     token = set_csrf_cookie(response)
     return {"csrf_token": token}
