@@ -1,0 +1,17 @@
+node_modules/
+.npm-cache/
+dist/
+build/
+.git/
+.gitignore
+.github/
+*.md
+.env
+.env.local
+.env.*.local
+.DS_Store
+Thumbs.db
+desktop.ini
+**/__pycache__/
+**/*.pyc
+**/*.pyo

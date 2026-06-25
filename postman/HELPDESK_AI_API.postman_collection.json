@@ -1,0 +1,391 @@
+{
+  "info": {
+    "name": "HELPDESK.AI API",
+    "description": "Postman collection for HELPDESK.AI backend API. Covers ticket management, AI analysis, authentication, translation, and system endpoints. Target branch: gssoc",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "metricsToken",
+      "value": "your-metrics-token-here",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "POST /auth/login",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Login with email and password. Returns authentication cookie for subsequent requests.",
+            "body": {
+              "mode": "json",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"secret\"\n}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/logout",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            },
+            "description": "Invalidate server-side session and clear auth cookie."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tickets",
+      "item": [
+        {
+          "name": "GET /tickets",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/tickets",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets"]
+            },
+            "description": "List tickets with optional filters. Supports query params: status, category, priority, company_id.",
+            "header": [
+              {"key": "Cookie", "value": "session={{session_cookie}}", "disabled": false}
+            ]
+          }
+        },
+        {
+          "name": "POST /tickets",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/tickets",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets"]
+            },
+            "description": "Create a new support ticket. Triggers AI triage and categorization.",
+            "body": {
+              "mode": "json",
+              "raw": "{\n  \"text\": \"Cannot login to the portal after password reset\",\n  \"company_id\": \"comp_123\",\n  \"user_id\": \"user_456\"\n}"
+            }
+          }
+        },
+        {
+          "name": "GET /tickets/{ticket_id}",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/tickets/{ticket_id}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "{ticket_id}"]
+            },
+            "description": "Get full ticket details including timeline, messages, and metadata."
+          }
+        },
+        {
+          "name": "PATCH /tickets/{ticket_id}",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/tickets/{ticket_id}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "{ticket_id}"]
+            },
+            "description": "Update ticket fields. Common fields: status, priority, assigned_team, category.",
+            "body": {
+              "mode": "json",
+              "raw": "{\n  \"status\": \"resolved\",\n  \"priority\": \"high\",\n  \"assigned_team\": \"Tier-2 Support\"\n}"
+            }
+          }
+        },
+        {
+          "name": "POST /tickets/save",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/tickets/save",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "save"]
+            },
+            "description": "Save/edit a ticket draft with full field support.",
+            "body": {
+              "mode": "json",
+              "raw": "{\n  \"user_id\": \"user_456\",\n  \"subject\": \"Login issue\",\n  \"description\": \"Detailed description\",\n  \"category\": \"Authentication\",\n  \"priority\": \"Medium\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI Analysis",
+      "item": [
+        {
+          "name": "POST /analyze",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/analyze",
+              "host": ["{{baseUrl}}"],
+              "path": ["analyze"]
+            },
+            "description": "AI triage and categorization of ticket text. Returns category, subcategory, priority, and confidence score.",
+            "body": {
+              "mode": "json",
+              "raw": "{\n  \"text\": \"Cannot login to the portal after password reset\"\n}"
+            }
+          }
+        },
+        {
+          "name": "POST /similar",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/similar",
+              "host": ["{{baseUrl}}"],
+              "path": ["similar"]
+            },
+            "description": "Find similar resolved tickets using sentence-transformers cosine similarity. Returns top 5 matches with similarity scores.",
+            "body": {
+              "mode": "json",
+              "raw": "{\n  \"text\": \"Issue description\"\n}"
+            }
+          }
+        },
+        {
+          "name": "POST /ai/troubleshoot",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/ai/troubleshoot",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "troubleshoot"]
+            },
+            "description": "Get AI-powered troubleshooting steps based on ticket text, category, and conversation history.",
+            "body": {
+              "mode": "json",
+              "raw": "{\n  \"ticket_text\": \"Cannot login to the portal\",\n  \"category\": \"Authentication\",\n  \"history\": [\n    {\"role\": \"user\", \"text\": \"I forgot my password\"},\n    {\"role\": \"ai\", \"text\": \"Please reset your password via the reset link\"}\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "POST /ai/analyze_bug",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/ai/analyze_bug",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "analyze_bug"]
+            },
+            "description": "Analyze bug report and captured errors to generate probable root cause.",
+            "body": {
+              "mode": "json",
+              "raw": "{\n  \"bug_title\": \"Login fails on Safari\",\n  \"description\": \"Users cannot log in when using Safari browser\",\n  \"steps\": \"1. Open portal\\n2. Enter credentials\\n3. Click login\\n4. Page refreshes to blank\",\n  \"errors\": [\"TypeError: Cannot read property 'token' of null\", \"CORS policy: Origin not allowed\"]\n}"
+            }
+          }
+        },
+        {
+          "name": "GET /ai/agent_scorecard",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/ai/agent_scorecard",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "agent_scorecard"]
+            },
+            "description": "Get AI-generated performance scorecard with strengths, improvement areas, and coaching tips."
+          }
+        },
+        {
+          "name": "POST /ai/log_correction",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/ai/log_correction",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "log_correction"]
+            },
+            "description": "Log AI classification corrections for continuous learning.",
+            "body": {
+              "mode": "json",
+              "raw": "{\n  \"ticket_id\": 123,\n  \"corrected_category\": \"Network\",\n  \"corrected_priority\": \"High\",\n  \"reason\": \"Network-related issue, not authentication\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Translation",
+      "item": [
+        {
+          "name": "POST /api/translation/detect-and-translate",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/translation/detect-and-translate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "translation", "detect-and-translate"]
+            },
+            "description": "Detect language and translate non-English ticket text to English using Helsinki-NLP MarianMT models.",
+            "body": {
+              "mode": "json",
+              "raw": "{\n  \"text\": \"No puedo iniciar sesión en el portal\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sentiment",
+      "item": [
+        {
+          "name": "POST /api/sentiment/analyze",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/sentiment/analyze",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sentiment", "analyze"]
+            },
+            "description": "Analyze sentiment of ticket text. Returns sentiment label (positive/negative/neutral) and confidence score.",
+            "body": {
+              "mode": "json",
+              "raw": "{\n  \"text\": \"This is great, thank you for the quick support!\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "System",
+      "item": [
+        {
+          "name": "GET /",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": ["{{baseUrl}}"],
+              "path": []
+            },
+            "description": "API root - returns welcome message, version, and available endpoint categories."
+          }
+        },
+        {
+          "name": "GET /health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Basic health check. Returns 200 if the service is running."
+          }
+        },
+        {
+          "name": "GET /ready",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/ready",
+              "host": ["{{baseUrl}}"],
+              "path": ["ready"]
+            },
+            "description": "Readiness check - verifies database, Redis, and external AI service connections. Returns detailed status."
+          }
+        },
+        {
+          "name": "GET /cache/health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/cache/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["cache", "health"]
+            },
+            "description": "Check Redis cache health and connectivity."
+          }
+        },
+        {
+          "name": "GET /metrics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/metrics",
+              "host": ["{{baseUrl}}"],
+              "path": ["metrics"]
+            },
+            "description": "Prometheus-format metrics endpoint. Requires X-Metrics-Token header.",
+            "header": [
+              {"key": "X-Metrics-Token", "value": "{{metricsToken}}"}
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "WebSocket",
+      "item": [
+        {
+          "name": "WS /ws/{company_id}",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "ws://{{baseUrl}}/ws/{company_id}",
+              "host": ["{{baseUrl}}"],
+              "path": ["ws", "{company_id}"]
+            },
+            "description": "WebSocket connection for real-time ticket updates, notifications, and AI responses for a company. Send message type: subscribe/unsubscribe."
+          }
+        },
+        {
+          "name": "GET /ws/stats",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/ws/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["ws", "stats"]
+            },
+            "description": "Get WebSocket connection statistics and active session counts."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Digest",
+      "item": [
+        {
+          "name": "POST /api/digest/send-now",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/digest/send-now",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "digest", "send-now"]
+            },
+            "description": "Trigger immediate sending of weekly digest email to all active agents.",
+            "body": {
+              "mode": "json",
+              "raw": "{\n  \"company_id\": \"comp_123\"\n}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

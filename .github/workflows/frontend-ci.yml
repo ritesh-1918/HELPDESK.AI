@@ -1,0 +1,77 @@
+name: Frontend CI
+
+on:
+  push:
+    branches:
+      - main
+      - gssoc
+      - "fix/**"
+      - "feat/**"
+      - "test/**"
+      - "perf/**"
+      - "security/**"
+      - "docs/**"
+      - "devops/**"
+  pull_request:
+    branches:
+      - main
+      - gssoc
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend-lint:
+    name: Frontend Lint (ESLint)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: Frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npx eslint src/ --max-warnings=0
+
+  frontend-test:
+    name: Frontend Unit Tests (Vitest)
+    runs-on: ubuntu-latest
+    needs: frontend-lint
+    defaults:
+      run:
+        working-directory: Frontend
+    env:
+      VITE_SUPABASE_URL: "https://placeholder.supabase.co"
+      VITE_SUPABASE_ANON_KEY: "placeholder_key"
+      VITE_API_URL: "http://localhost:7860"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: Frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Vitest
+        run: npx vitest run --reporter=verbose
+
+      - name: Build check (ensure production build succeeds)
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: "https://placeholder.supabase.co"
+          VITE_SUPABASE_ANON_KEY: "placeholder_key"
+          VITE_API_URL: "http://localhost:7860"

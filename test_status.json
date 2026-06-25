@@ -1,0 +1,4 @@
+{
+  "passed": true,
+  "output": "\n\u001b[1m\u001b[30m\u001b[46m RUN \u001b[49m\u001b[39m\u001b[22m \u001b[36mv4.1.7 \u001b[39m\u001b[90m/Users/macminim1/Documents/efe/bounty-hunter/temp/HELPDESK.AI/Frontend\u001b[39m\n\n \u001b[32m✓\u001b[39m src/utils/dateUtils.test.js \u001b[2m(\u001b[22m\u001b[2m27 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 19\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m27 passed\u001b[39m\u001b[22m\u001b[90m (27)\u001b[39m\n\u001b[2m   Start at \u001b[22m 18:30:29\n\u001b[2m   Duration \u001b[22m 190ms\u001b[2m (transform 19ms, setup 0ms, import 26ms, tests 19ms, environment 0ms)\u001b[22m\n\n"
+}

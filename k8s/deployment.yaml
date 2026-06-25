@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: helpdesk-backend
+  namespace: helpdesk
+  labels:
+    app: helpdesk-backend
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: helpdesk-backend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: helpdesk-backend
+        version: v1
+    spec:
+      containers:
+        - name: helpdesk-backend
+          image: helpdesk/backend:latest
+          ports:
+            - containerPort: 7860
+              protocol: TCP
+          env:
+            - name: SUPABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: helpdesk-secrets
+                  key: supabase-url
+            - name: SUPABASE_SERVICE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: helpdesk-secrets
+                  key: supabase-service-key
+            - name: AES_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: helpdesk-secrets
+                  key: aes-encryption-key
+            - name: ALLOW_DEGRADED_STARTUP
+              value: "0"
+            - name: REQUIRE_SUPABASE
+              value: "true"
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 7860
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 7860
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: tmp
+              mountPath: /app/tmp
+            - name: logs
+              mountPath: /app/logs
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: logs
+          emptyDir: {}
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30

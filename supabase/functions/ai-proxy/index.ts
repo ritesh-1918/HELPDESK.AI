@@ -1,26 +1,15 @@
 // @ts-nocheck
 // ^ VS Code shows errors here because its TS engine is Node-based.
-//   This file runs in Deno (Supabase Edge Runtime) where all Deno.* globals exist.
+//   This file runs in Deno (Supabase Edge Runtime) where Deno.* globals exist.
 //   These errors are false positives — the code deploys and runs correctly.
 //
 // Deploy:  supabase functions deploy ai-proxy
 // Secrets: supabase secrets set GEMINI_API_KEY_1=... OPENROUTER_API_KEY_1=... etc.
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.42.0";
 
-/**
- * HELPDESK.AI — AI Proxy Edge Function
- *
- * Keeps all AI API keys server-side in Supabase Secrets.
- * Frontend calls this function instead of hitting AI providers directly.
- * Keys are NEVER exposed in the browser JavaScript bundle.
- */
+import { corsHeaders, handleCors } from "../_shared/cors.ts";
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "https://helpdeskaiv1.vercel.app",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, x-client-info",
-};
-
-// Key pools — pulled from Supabase Secrets (env vars, never shipped to browser)
+// Key pools — pulled from Supabase Secrets. Never shipped to the browser.
 const GEMINI_KEYS = [
   Deno.env.get("GEMINI_API_KEY_1"),
   Deno.env.get("GEMINI_API_KEY_2"),
@@ -41,12 +30,12 @@ const GROQ_KEYS = [
   Deno.env.get("GROQ_API_KEY_3"),
 ].filter(Boolean);
 
-/** Try each key in pool until one succeeds. Handles 429 rate-limits automatically. */
+/** Try each key in the pool until one succeeds. Retries on 429 rate-limits. */
 async function tryWithFailover(keys, buildRequest) {
   let lastError = null;
   for (const key of keys) {
     try {
-      const resp = await fetch(buildRequest(key));
+      const resp = await fetch(buildRequest(key), { signal: AbortSignal.timeout(30000) });
       if (resp.ok) return resp;
       if (resp.status === 429) {
         lastError = new Error("Rate limited — trying next key");
@@ -60,22 +49,52 @@ async function tryWithFailover(keys, buildRequest) {
   throw lastError ?? new Error("All keys exhausted");
 }
 
-// Deno.serve is built into the Deno runtime — no import required
 Deno.serve(async (req) => {
-  // Handle CORS preflight
-  if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: CORS_HEADERS });
-  }
+  const cors = handleCors(req);
+  if (cors) return cors;
+
+  const headers = { ...corsHeaders(), "Content-Type": "application/json" };
 
   try {
+    const authorization = req.headers.get("Authorization");
+    if (!authorization) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    );
+    const token = authorization.replace(/^Bearer\s+/i, "");
+    const { data: caller, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !caller.user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
+
     const body = await req.json();
     const { provider, model, messages, prompt } = body;
+    const defaultModel = {
+      gemini: "gemma-3-27b-it",
+      openrouter: "google/gemma-3-27b-it:free",
+      groq: "llama3-8b-8192",
+    }[provider];
+    if (!defaultModel || !ALLOWED_MODELS[provider].has(model || defaultModel)) {
+      return new Response(JSON.stringify({ error: "Model is not allowed" }), {
+        status: 400,
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
 
     let upstreamResponse;
 
-    // ── Gemini ────────────────────────────────────────────────────────────
+    // ── Gemini ──────────────────────────────────────────────────────────────
     if (provider === "gemini") {
-      const requestModel = model || "gemma-3-27b-it";
+      const requestModel = model || "gemini-2.0-flash";
       const contents = messages ?? [{ parts: [{ text: prompt }] }];
 
       upstreamResponse = await tryWithFailover(GEMINI_KEYS, (key) =>
@@ -90,7 +109,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ── OpenRouter ────────────────────────────────────────────────────────
+    // ── OpenRouter ───────────────────────────────────────────────────────────
     else if (provider === "openrouter") {
       upstreamResponse = await tryWithFailover(OPENROUTER_KEYS, (key) =>
         new Request("https://openrouter.ai/api/v1/chat/completions", {
@@ -99,12 +118,15 @@ Deno.serve(async (req) => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${key}`,
           },
-          body: JSON.stringify({ model: model || "google/gemma-3-27b-it:free", messages }),
+          body: JSON.stringify({
+            model: model || "meta-llama/llama-3.2-3b-instruct:free",
+            messages,
+          }),
         })
       );
     }
 
-    // ── Groq ──────────────────────────────────────────────────────────────
+    // ── Groq ─────────────────────────────────────────────────────────────────
     else if (provider === "groq") {
       upstreamResponse = await tryWithFailover(GROQ_KEYS, (key) =>
         new Request("https://api.groq.com/openai/v1/chat/completions", {
@@ -113,28 +135,30 @@ Deno.serve(async (req) => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${key}`,
           },
-          body: JSON.stringify({ model: model || "llama3-8b-8192", messages }),
+          body: JSON.stringify({
+            model: model || "llama-3.1-8b-instant",
+            messages,
+          }),
         })
       );
     }
 
     else {
       return new Response(
-        JSON.stringify({ error: `Unknown provider: "${provider}". Use gemini | openrouter | groq` }),
-        { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+        JSON.stringify({ error: `Unknown provider "${provider}". Use: gemini | openrouter | groq` }),
+        { status: 400, headers }
       );
     }
 
     const data = await upstreamResponse.json();
     return new Response(JSON.stringify(data), {
       status: upstreamResponse.status,
-      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      headers,
     });
-
   } catch (err) {
     return new Response(
       JSON.stringify({ error: err instanceof Error ? err.message : "Proxy error" }),
-      { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+      { status: 500, headers }
     );
   }
 });
