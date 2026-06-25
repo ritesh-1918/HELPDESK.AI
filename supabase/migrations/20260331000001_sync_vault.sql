@@ -1,9 +1,10 @@
--- Syncing the rotated service role key after the security leak
--- This is in a migration to ensure the vault is updated during deployment
+-- Sync the service role key for triggering edge functions from Postgres.
+-- IMPORTANT: Replace 'CHANGE_ME' with the actual key set via the Supabase dashboard.
+-- Never commit live secrets to version control.
 insert into vault.secrets (name, description, secret)
 values (
   'SUPABASE_SERVICE_ROLE_KEY', 
   'Internal key for triggering edge functions from Postgres', 
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFlanVlbmhxY2lhZ3BudGNxb2lyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjM4NDA3OCwiZXhwIjoyMDg3OTYwMDc4fQ.b3tZ_yad4WPQi4oSqGp1ksr_zw-ldByLqZWvT7HX5aQ'
+  'CHANGE_ME'
 )
 on conflict (name) do update set secret = excluded.secret;
