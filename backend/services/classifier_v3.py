@@ -25,8 +25,13 @@ class MultiOutputClassifierV3(nn.Module):
 
     def forward(self, input_ids, attention_mask):
         outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask)
-        pooled_output = outputs.pooler_output 
-        pooled_output = self.dropout(pooled_output)
+        
+        # Pull the raw [CLS] token representation directly from the last hidden state
+        # Shape of last_hidden_state: (batch_size, sequence_length, hidden_size)
+        # Slicing [:, 0] extracts the first token ([CLS]) for the entire batch
+        raw_cls_output = outputs.last_hidden_state[:, 0, :]
+        
+        pooled_output = self.dropout(raw_cls_output)
         logits = {name: head(pooled_output) for name, head in self.heads.items()}
         return logits
 
