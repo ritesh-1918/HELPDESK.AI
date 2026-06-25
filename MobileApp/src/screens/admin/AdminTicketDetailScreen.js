@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import {
   StyleSheet, View, Text, ScrollView, TextInput, TouchableOpacity,
   ActivityIndicator, FlatList, KeyboardAvoidingView, Platform,
@@ -18,6 +18,37 @@ import * as Haptics from 'expo-haptics';
 
 const TEAMS = ['Software Team', 'Hardware Support', 'Network Ops', 'Security Unit', 'General Support'];
 const STATUSES = ['pending', 'in_progress', 'resolved', 'closed'];
+
+// ── Memoized message item ──────
+const MessageItem = memo(({ item }) => {
+  const isSystem = item.sender_id === '00000000-0000-0000-0000-000000000000';
+  const isAdmin = item.sender_role === 'admin' && !isSystem;
+  
+  if (isSystem) {
+    return (
+      <View style={styles.systemMessageContainer}>
+        <Text style={styles.systemMessageText}>{item.message}</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.messageBubbleContainer, isAdmin ? styles.alignRight : styles.alignLeft]}>
+      {!isAdmin && (
+        <View style={styles.chatAvatar}>
+          <Text style={styles.avatarText}>{item.sender_name?.[0]?.toUpperCase() || 'U'}</Text>
+        </View>
+      )}
+      <View style={[styles.messageBubble, isAdmin ? styles.adminBubble : styles.userBubble]}>
+        <Text style={styles.senderLabel}>{item.sender_name}</Text>
+        <Text style={[styles.messageText, isAdmin ? styles.textWhite : styles.textDark]}>{item.message}</Text>
+        <Text style={[styles.messageTime, isAdmin ? styles.textWhiteMuted : styles.textDarkMuted]}>
+          {new Date(item.created_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+        </Text>
+      </View>
+    </View>
+  );
+});
 
 const AdminTicketDetailScreen = () => {
   const route = useRoute();
@@ -321,35 +352,9 @@ const AdminTicketDetailScreen = () => {
     }
   };
 
-  const renderMessageItem = ({ item }) => {
-    const isSystem = item.sender_id === '00000000-0000-0000-0000-000000000000';
-    const isAdmin = item.sender_role === 'admin' && !isSystem;
-    
-    if (isSystem) {
-      return (
-        <View style={styles.systemMessageContainer}>
-          <Text style={styles.systemMessageText}>{item.message}</Text>
-        </View>
-      );
-    }
-
-    return (
-      <View style={[styles.messageBubbleContainer, isAdmin ? styles.alignRight : styles.alignLeft]}>
-        {!isAdmin && (
-          <View style={styles.chatAvatar}>
-            <Text style={styles.avatarText}>{item.sender_name?.[0]?.toUpperCase() || 'U'}</Text>
-          </View>
-        )}
-        <View style={[styles.messageBubble, isAdmin ? styles.adminBubble : styles.userBubble]}>
-          <Text style={styles.senderLabel}>{item.sender_name}</Text>
-          <Text style={[styles.messageText, isAdmin ? styles.textWhite : styles.textDark]}>{item.message}</Text>
-          <Text style={[styles.messageTime, isAdmin ? styles.textWhiteMuted : styles.textDarkMuted]}>
-            {new Date(item.created_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
-          </Text>
-        </View>
-      </View>
-    );
-  };
+  const renderMessageItem = useCallback(({ item }) => (
+    <MessageItem item={item} />
+  ), []);
 
   const getStatusColor = (status) => {
     const rawStatus = String(status || '').toLowerCase().trim();
