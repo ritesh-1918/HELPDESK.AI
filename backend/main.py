@@ -648,8 +648,8 @@ async def save_ticket(request_body: TicketSaveRequest):
         return response
 
     except Exception as e:
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Ticket save failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to create ticket. Please try again later.")
 
 @app.get("/tickets/{ticket_id}")
 async def get_ticket_by_id(ticket_id: str):
@@ -1066,7 +1066,8 @@ async def analyze_ticket_v2(request: TicketRequest):
             "confidence": prediction["category"]["confidence"]
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"AI analysis failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Ticket analysis failed. Please try again later.")
 
 # ---------------------------------------------------------------------------
 # Clean cookie-based Supabase Auth endpoints for /auth/me backward-compatibility
@@ -1126,9 +1127,10 @@ async def get_current_user(request: Request) -> dict:
     try:
         result = supabase.auth.get_user(token)
     except Exception as exc:
+        logger.warning(f"Auth session verification failed: {exc}")
         raise HTTPException(
             status_code=401,
-            detail=f"Invalid session: {exc}",
+            detail="Invalid session",
         ) from exc
     user = getattr(result, "user", None) or (result.get("user") if isinstance(result, dict) else None)
     if not user:
@@ -1159,12 +1161,13 @@ async def auth_login(body: LoginBody, response: Response):
             {"email": body.email, "password": body.password}
         )
     except Exception as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
+        logger.warning(f"Login attempt failed: {exc}")
+        raise HTTPException(status_code=401, detail="Invalid email or password") from exc
 
     session = getattr(result, "session", None)
     user = getattr(result, "user", None)
     if not session or not user:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(status_code=401, detail="Invalid email or password")
 
     _set_session_cookies(response, session)
     user_payload = user.model_dump() if hasattr(user, "model_dump") else dict(user)
@@ -1191,7 +1194,8 @@ async def auth_signup(body: SignupBody, response: Response):
             }
         )
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.warning(f"Signup attempt failed: {exc}")
+        raise HTTPException(status_code=400, detail="Signup failed. Please try again.") from exc
 
     session = getattr(result, "session", None)
     user = getattr(result, "user", None)
