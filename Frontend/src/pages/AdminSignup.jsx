@@ -504,43 +504,6 @@ function AdminSignup() {
                                             </div>
                                         </div>
                                      </div>
-                                                        { label: 'Uppercase (A-Z)', ok: /[A-Z]/.test(formData.password) },
-                                                        { label: 'Lowercase (a-z)', ok: /[a-z]/.test(formData.password) },
-                                                        { label: 'Number (0-9)', ok: /[0-9]/.test(formData.password) },
-                                                    ].map(({ label, ok }) => (
-                                                        <span key={label} className={`text-[10px] font-semibold flex items-center gap-1 transition-colors ${
-                                                            formData.password ? (ok ? 'text-emerald-600' : 'text-red-400') : 'text-gray-300'
-                                                        }`}>
-                                                            <span>{ok ? '✓' : '○'}</span> {label}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
-                                                <Lock className="w-3 h-3" /> Confirm Password
-                                            </label>
-                                            <div className="relative">
-                                                <input
-                                                    type={showConfirmPassword ? "text" : "password"}
-                                                    name="confirmPassword"
-                                                    required
-                                                    placeholder="••••••••••"
-                                                    value={formData.confirmPassword}
-                                                    onChange={handleChange}
-                                                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white outline-none transition-all pr-11"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                                                >
-                                                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
 
                                     <button
                                          type="button"
