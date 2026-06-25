@@ -1,4 +1,6 @@
 import os
+import hashlib
+import hmac
 import torch
 import torch.nn as nn
 import pickle
@@ -44,8 +46,18 @@ class ClassifierServiceV3:
         with open(config_path, "r") as f:
             self.num_labels = json.load(f)
 
-        with open(os.path.join(MODEL_DIR, "label_encoders.pkl"), "rb") as f:
-            self.label_encoders = pickle.load(f)
+        # Load encoders with integrity verification to prevent pickle RCE
+        le_path = os.path.join(MODEL_DIR, "label_encoders.pkl")
+        with open(le_path, "rb") as f:
+            raw = f.read()
+        sig_path = le_path + ".sig"
+        if os.path.exists(sig_path):
+            with open(sig_path, "rb") as sf:
+                stored_sig = sf.read().hex()
+            computed_sig = hmac.new(b"helpdesk-ai-classifier-v3", raw, hashlib.sha256).hexdigest()
+            if not hmac.compare_digest(computed_sig, stored_sig):
+                raise RuntimeError("label_encoders.pkl integrity check failed — possible tampering")
+        self.label_encoders = pickle.loads(raw)
 
         self.model = MultiOutputClassifierV3(self.num_labels).to(self.device)
         self.model.load_state_dict(torch.load(os.path.join(MODEL_DIR, "model.pt"), map_location=self.device))
