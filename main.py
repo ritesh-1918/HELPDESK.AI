@@ -71,10 +71,23 @@ async def list_tickets(
     """List tickets scoped to the authenticated user's tenant."""
     security_manager.verify_tenant_access(company_id, user)
     if supabase:
+        from backend.services.redis_cache import redis_cache
+        cache_key = f"helpdesk:tickets:list:{company_id or 'all'}"
+        
+        if redis_cache.available:
+            cached = redis_cache.get_json(cache_key)
+            if cached is not None:
+                return cached
+
         query = supabase.table("tickets").select("*").order("created_at", desc=True)
         if company_id:
             query = query.eq("company_id", company_id)
-        return query.execute().data
+        data = query.execute().data
+        
+        if redis_cache.available:
+            redis_cache.set_json(cache_key, data, ttl=300)
+            
+        return data
     return []
 
 
