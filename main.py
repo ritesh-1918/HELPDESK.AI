@@ -1,36 +1,34 @@
 import logging
 import os
 from fastapi import FastAPI, Request, HTTPException, Depends
-from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
 from supabase import create_client
 
 from backend.csrf import CSRFTokenMiddleware, set_csrf_cookie, CSRF_COOKIE_NAME
 from backend.swagger_config import SWAGGER_UI_CUSTOM_CSS, SWAGGER_UI_CUSTOM_JS
+from backend.routers import metrics as metrics_router
 
 from backend.routers import tickets, ai, admin, health, auth
 from backend.routes import translation, estimator, voice, privacy, active_learning, weekly_digest
 
-logging.basicConfig(level=logging.INFO)
+from backend.logger import configure_logging
+configure_logging()
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
 app.add_middleware(CSRFTokenMiddleware)
+app.include_router(metrics_router.router)
+
+from backend.config import settings
 
 # Initialize Supabase client
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
-
-# Initialize Supabase client
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
-
 supabase = None
-if SUPABASE_URL and SUPABASE_SERVICE_KEY and os.getenv("ALLOW_DEGRADED_STARTUP") != "1":
+if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_KEY and not settings.ALLOW_DEGRADED_STARTUP:
     try:
-        supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+        supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
     except Exception as e:
         logger.warning(f"Failed to initialize Supabase client: {e}")
 
@@ -74,10 +72,23 @@ async def list_tickets(
     """List tickets scoped to the authenticated user's tenant."""
     security_manager.verify_tenant_access(company_id, user)
     if supabase:
+        from backend.services.redis_cache import redis_cache
+        cache_key = f"helpdesk:tickets:list:{company_id or 'all'}"
+        
+        if redis_cache.available:
+            cached = redis_cache.get_json(cache_key)
+            if cached is not None:
+                return cached
+
         query = supabase.table("tickets").select("*").order("created_at", desc=True)
         if company_id:
             query = query.eq("company_id", company_id)
-        return query.execute().data
+        data = query.execute().data
+        
+        if redis_cache.available:
+            redis_cache.set_json(cache_key, data, ttl=300)
+            
+        return data
     return []
 
 
@@ -172,7 +183,7 @@ async def security_report(
 # ---------------------------------------------------------------------------
 
 @app.get("/auth/csrf-token", tags=["Auth"])
-async def get_csrf_token(response: Response):
+async def get_csrf_token(response: JSONResponse):
     """Issue a CSRF token cookie for authenticated browser sessions."""
     token = set_csrf_cookie(response)
     return {"csrf_token": token}
