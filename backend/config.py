@@ -1,10 +1,11 @@
 from typing import Optional
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     # Core API Keys
-    SUPABASE_URL: str
-    SUPABASE_SERVICE_KEY: str
+    SUPABASE_URL: Optional[str] = None
+    SUPABASE_SERVICE_KEY: Optional[str] = None
     GEMINI_API_KEY: Optional[str] = None
     RESEND_API_KEY: Optional[str] = None
     
@@ -20,5 +21,12 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore"
     )
+
+    @model_validator(mode='after')
+    def validate_dependencies(self) -> 'Settings':
+        if not self.ALLOW_DEGRADED_STARTUP:
+            if not self.SUPABASE_URL or not self.SUPABASE_SERVICE_KEY:
+                raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_KEY must be set unless ALLOW_DEGRADED_STARTUP is True")
+        return self
 
 settings = Settings()
