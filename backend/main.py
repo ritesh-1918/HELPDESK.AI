@@ -536,20 +536,39 @@ async def log_correction(raw_request: Request):
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None):
-    """Fetch persistent tickets from Supabase."""
+async def get_tickets(
+    company_id: str | None = None,
+    user: dict = Depends(get_current_user),
+):
+    """Fetch persistent tickets from Supabase scoped to the authenticated user's tenant."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    user_company = user.get("company_id")
+    # Enforce tenant isolation — always scope to the user's own company
+    effective_company = company_id or user_company
+    if not effective_company:
+        raise HTTPException(
+            status_code=403,
+            detail="No tenant assignment. Contact your administrator.",
+        )
+    if company_id and user_company and str(company_id) != str(user_company):
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: You do not have permissions for this tenant.",
+        )
     
     query = supabase.table("tickets").select("*").order("created_at", desc=True)
-    if company_id:
-        query = query.eq("company_id", company_id)
+    query = query.eq("company_id", effective_company)
         
     res = query.execute()
     return res.data
 
 @app.post("/tickets/save")
-async def save_ticket(request_body: TicketSaveRequest):
+async def save_ticket(
+    request_body: TicketSaveRequest,
+    user: dict = Depends(get_current_user),
+):
     """
     OFFICIAL PERSISTENCE: Saves the analyzed ticket to Supabase.
     This is called AFTER the user confirms the analysis results.
@@ -561,14 +580,15 @@ async def save_ticket(request_body: TicketSaveRequest):
     try:
         final_data = request_body.dict()
 
-        # Resolve tenant linkage from user profile with authorization validation.
+        # Resolve tenant linkage from authenticated user.
+        user_id = user.get("id")
         profile = {}
-        if request_body.user_id:
+        if user_id:
             try:
                 profile_res = (
                     supabase.table("profiles")
                     .select("company_id, company")
-                    .eq("id", request_body.user_id)
+                    .eq("id", user_id)
                     .single()
                     .execute()
                 )
@@ -578,32 +598,27 @@ async def save_ticket(request_body: TicketSaveRequest):
             except HTTPException:
                 raise
             except Exception as profile_error:
-                user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+                user_hash = hashlib.sha256(str(user_id).encode()).hexdigest()[:8]
                 logger.error(f"Tenant resolution error for user {user_hash}: {profile_error}")
                 raise HTTPException(status_code=503, detail="Failed to resolve tenant linkage") from profile_error
 
         # Validate tenant consistency and authorization.
         profile_company_id = profile.get("company_id")
         if final_data.get("company_id"):
-            # User provided company_id: verify it matches their profile.
             if profile_company_id and final_data["company_id"] != profile_company_id:
-                user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+                user_hash = hashlib.sha256(str(user_id).encode()).hexdigest()[:8]
                 logger.warning(f"Tenant mismatch: user {user_hash} attempted {final_data['company_id']}, assigned to {profile_company_id}")
                 raise HTTPException(status_code=403, detail="User not authorized for this tenant")
         elif profile_company_id:
-            # Backfill company_id from profile.
             final_data["company_id"] = profile_company_id
-        elif request_body.user_id:
-            # User has no tenant assignment.
+        elif user_id:
             raise HTTPException(status_code=400, detail="User has no tenant assignment")
 
-        # Backfill company name if missing.
         if not final_data.get("company") and profile.get("company"):
             final_data["company"] = profile["company"]
 
-        user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+        user_hash = hashlib.sha256(str(user_id).encode()).hexdigest()[:8]
         logger.info(f"Tenant linkage: user_hash={user_hash}, company_id={final_data.get('company_id')}")
-
 
         res = supabase.table("tickets").insert(final_data).execute()
         
@@ -652,12 +667,19 @@ async def save_ticket(request_body: TicketSaveRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/tickets/{ticket_id}")
-async def get_ticket_by_id(ticket_id: str):
-    """Fetch single persistent ticket."""
+async def get_ticket_by_id(
+    ticket_id: str,
+    user: dict = Depends(get_current_user),
+):
+    """Fetch single persistent ticket scoped to the authenticated user's tenant."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
-    
-    res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
+
+    user_company = user.get("company_id")
+    if not user_company:
+        raise HTTPException(status_code=403, detail="No tenant assignment.")
+
+    res = supabase.table("tickets").select("*").eq("id", ticket_id).eq("company_id", user_company).single().execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Ticket not found")
     return res.data
