@@ -19,18 +19,13 @@ app = FastAPI()
 
 app.add_middleware(CSRFTokenMiddleware)
 
-# Initialize Supabase client
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
+from backend.config import settings
 
 # Initialize Supabase client
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
-
 supabase = None
-if SUPABASE_URL and SUPABASE_SERVICE_KEY and os.getenv("ALLOW_DEGRADED_STARTUP") != "1":
+if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_KEY and not settings.ALLOW_DEGRADED_STARTUP:
     try:
-        supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+        supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
     except Exception as e:
         logger.warning(f"Failed to initialize Supabase client: {e}")
 
