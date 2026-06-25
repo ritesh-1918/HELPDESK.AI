@@ -268,7 +268,7 @@ const AdminTicketsScreen = () => {
           renderItem={renderTicketItem}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
-          RefreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <AlertCircle size={48} color={COLORS.textMuted} strokeWidth={1} />
