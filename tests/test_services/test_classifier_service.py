@@ -1,11 +1,11 @@
-```python
+# test_classifier_service.py
 import pytest
 from unittest.mock import patch, MagicMock, mock_open
 import numpy as np
 
 # Asumimos que el servicio a probar se encuentra en app.services.classifier_service
 # Ajusta la ruta de importación si la estructura del proyecto es diferente.
-from app.services.classifier_service import ClassifierService
+from backend.services.classifier_service import ClassifierService
 
 @pytest.fixture(autouse=True)
 def reset_classifier_service():
@@ -22,7 +22,7 @@ def reset_classifier_service():
 class TestClassifierService:
     """Grupo de tests para el ClassifierService."""
 
-    @patch("app.services.classifier_service.pickle.load")
+    @patch("backend.services.classifier_service.pickle.load")
     @patch("builtins.open", new_callable=mock_open)
     def test_load_model_success(self, mock_file_open, mock_pickle_load):
         """
@@ -122,5 +122,3 @@ class TestClassifierService:
         # Act / Assert
         with pytest.raises(FileNotFoundError):
             ClassifierService.load_model(model_path, vectorizer_path, categories_path)
-
-```

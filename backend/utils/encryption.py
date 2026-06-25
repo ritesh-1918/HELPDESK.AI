@@ -1,5 +1,5 @@
 """
-PII Encryption Utilities -- AES-256-GCM via pycryptodome.
+PII Encryption and Redaction Utilities -- AES-256-GCM and regex patterns.
 
 Stores ciphertext as:  base64( nonce(12B) || ciphertext || tag(16B) )
 
@@ -9,11 +9,24 @@ Environment variables required:
 """
 
 import os
+import re
 import base64
 import hashlib
 
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
+
+# PII patterns for redaction. Must be ordered so specific patterns (like SSN, Credit Card)
+# are matched and replaced before more general patterns (like phone).
+PII_PATTERNS = {
+    "email": re.compile(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'),
+    "ssn": re.compile(r'\b\d{3}-\d{2}-\d{4}\b'),
+    "credit_card": re.compile(r'\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b'),
+    "phone": re.compile(r'\+?[\d\s\-()]{7,15}'),
+}
 
 
 def _get_key() -> bytes:
@@ -33,6 +46,77 @@ def _get_key() -> bytes:
         iterations=480000,
         dklen=32,
     )
+
+
+def encrypt_aes256_gcm(plaintext: str, password: str | None = None) -> str:
+    """Encrypt plaintext using AES-256-GCM. Returns base64-encoded ciphertext."""
+    if not plaintext:
+        return ""
+
+    key = get_encryption_key(password)
+    nonce = os.urandom(12)
+    aesgcm = AESGCM(key)
+
+    ciphertext = aesgcm.encrypt(nonce, plaintext.encode(), None)
+    # Prepend nonce to ciphertext for decryption
+    encrypted = nonce + ciphertext
+    return base64.b64encode(encrypted).decode("utf-8")
+
+
+def decrypt_aes256_gcm(encrypted_b64: str, password: str | None = None) -> str:
+    """Decrypt AES-256-GCM encrypted base64 string."""
+    if not encrypted_b64:
+        return ""
+
+    key = get_encryption_key(password)
+    try:
+        raw = base64.b64decode(encrypted_b64)
+        if len(raw) < 12:
+            raise ValueError("Ciphertext too short")
+        nonce = raw[:12]
+        ciphertext = raw[12:]
+
+        aesgcm = AESGCM(key)
+        plaintext = aesgcm.decrypt(nonce, ciphertext, None)
+        return plaintext.decode("utf-8")
+    except Exception as e:
+        raise ValueError(f"Failed to decrypt: {e}")
+
+
+def redact_pii(text: str) -> str:
+    """Redact PII from text by replacing with [REDACTED]."""
+    if not text:
+        return text
+
+    redacted = text
+    for pii_type, pattern in PII_PATTERNS.items():
+        redacted = pattern.sub(f"[REDACTED_{pii_type.upper()}]", redacted)
+
+    return redacted
+
+
+def redact_and_encrypt(text: str, password: str | None = None) -> str:
+    """Redact PII and then encrypt the result."""
+    redacted = redact_pii(text)
+    return encrypt_aes256_gcm(redacted, password)
+
+
+def decrypt_and_reveal(encrypted_b64: str, password: str | None = None) -> str:
+    """Decrypt previously redacted and encrypted text."""
+    return decrypt_aes256_gcm(encrypted_b64, password)
+
+
+# Legacy/Pycryptodome fallback functions if needed by any imports
+def _get_key() -> bytes:
+    hex_key = os.environ.get("ENCRYPTION_KEY", "")
+    if len(hex_key) != 64:
+        import warnings
+        warnings.warn(
+            "ENCRYPTION_KEY not set or invalid (must be 64-char hex = 32 bytes). "
+            "Using INSECURE deterministic fallback key -- DO NOT use in production!"
+        )
+        hex_key = "00" * 32
+    return bytes.fromhex(hex_key)
 
 
 def encrypt_pii(plaintext: str) -> str:
