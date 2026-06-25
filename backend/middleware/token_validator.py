@@ -56,13 +56,13 @@ def require_scope(scope: str):
         if not raw_token or not raw_token.startswith("hd_"):
             raise HTTPException(
                 status_code=401,
-                detail="API token required. Provide 'Authorization: Bearer hd_<token>'.",
+                detail={"error": "unauthorized", "message": "API token required. Provide 'Authorization: Bearer hd_<token>'."},
             )
 
         # Lazy-import to avoid circular dependency at module load time.
         from backend.main import supabase  # noqa: PLC0415
         if supabase is None:
-            raise HTTPException(status_code=503, detail="Database unavailable.")
+            raise HTTPException(status_code=503, detail={"error": "service_unavailable", "message": "Database unavailable."})
 
         manager = TokenManager(supabase)
         remote_ip = _get_remote_ip(request)
@@ -80,7 +80,7 @@ def require_scope(scope: str):
             # Record the failed attempt without a token_id since we can't identify it.
             raise HTTPException(
                 status_code=403,
-                detail=f"Invalid token or insufficient scope (required: {scope}).",
+                detail={"error": "forbidden", "message": f"Invalid token or insufficient scope (required: {scope})."},
             )
 
         # Record usage asynchronously (best-effort; non-blocking fire-and-forget).
