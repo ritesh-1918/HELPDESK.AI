@@ -1,7 +1,6 @@
 import os
 import torch
 import torch.nn as nn
-import pickle
 import json
 from transformers import BertTokenizerFast, BertModel
 
@@ -41,11 +40,13 @@ class ClassifierServiceV3:
             print(f"[V3 Service] Model not found yet at {MODEL_DIR}")
             return
 
-        with open(config_path, "r") as f:
+        with open(config_path, "r", encoding="utf-8") as f:
             self.num_labels = json.load(f)
 
-        with open(os.path.join(MODEL_DIR, "label_encoders.pkl"), "rb") as f:
-            self.label_encoders = pickle.load(f)
+        # Securely load label maps from JSON instead of unsafe pickle format
+        encoders_path = os.path.join(MODEL_DIR, "label_encoders.json")
+        with open(encoders_path, "r", encoding="utf-8") as f:
+            self.label_encoders = json.load(f)
 
         self.model = MultiOutputClassifierV3(self.num_labels).to(self.device)
         self.model.load_state_dict(torch.load(os.path.join(MODEL_DIR, "model.pt"), map_location=self.device))
@@ -61,11 +62,14 @@ class ClassifierServiceV3:
             logits = self.model(inputs["input_ids"], inputs["attention_mask"])
             
         results = {}
-        for col, le in self.label_encoders.items():
+        for col, classes_list in self.label_encoders.items():
             probs = torch.softmax(logits[col], dim=1)
             conf, pred_idx = torch.max(probs, dim=1)
+            
+            # Use direct list index mapping instead of the unsafe object method
+            pred_val = classes_list[pred_idx.item()] if pred_idx.item() < len(classes_list) else "Unknown"
             results[col] = {
-                "prediction": le.inverse_transform([pred_idx.item()])[0],
+                "prediction": pred_val,
                 "confidence": float(conf.item())
             }
         
