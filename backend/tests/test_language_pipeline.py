@@ -215,6 +215,23 @@ class TestTranslateToEnglish(unittest.TestCase):
             result = translate_to_english("बोलो", "hi")
             self.assertEqual(result, "बोलो")
 
+    def test_direct_model_failure_uses_multilingual_fallback(self):
+        from backend.language_pipeline import translate_to_english
+        with patch(
+            "backend.language_pipeline._run_translation",
+            side_effect=[OSError("model not found"), "Printer is broken"],
+        ) as m:
+            result = translate_to_english("La impresora está rota", "es")
+
+        self.assertEqual(result, "Printer is broken")
+        self.assertEqual(
+            [mock_call.args for mock_call in m.call_args_list],
+            [
+                ("La impresora está rota", "Helsinki-NLP/opus-mt-es-en"),
+                ("La impresora está rota", "Helsinki-NLP/opus-mt-mul-en"),
+            ],
+        )
+
     def test_returns_translation_result(self):
         from backend.language_pipeline import translate_to_english
         with patch("backend.language_pipeline._run_translation", return_value="My computer does not start"):
@@ -303,6 +320,28 @@ class TestDetectAndTranslateTicketText(unittest.TestCase):
         self.assertTrue(result["was_translated"])
         self.assertTrue(result["translation_attempted"])
         self.assertFalse(result["translation_failed"])
+
+    def test_detect_and_translate_uses_multilingual_fallback(self):
+        from backend.language_pipeline import detect_and_translate_ticket_text
+
+        original = "La impresora está rota"
+        with patch("backend.language_pipeline.detect_language", return_value="es"):
+            with patch(
+                "backend.language_pipeline._run_translation",
+                side_effect=[OSError("model not found"), "Printer is broken"],
+            ) as m:
+                result = detect_and_translate_ticket_text(original)
+
+        self.assertEqual(result["text_for_analysis"], "Printer is broken")
+        self.assertTrue(result["was_translated"])
+        self.assertFalse(result["translation_failed"])
+        self.assertEqual(
+            [mock_call.args for mock_call in m.call_args_list],
+            [
+                (original, "Helsinki-NLP/opus-mt-es-en"),
+                (original, "Helsinki-NLP/opus-mt-mul-en"),
+            ],
+        )
 
     def test_translation_returning_original_logs_failure(self):
         from backend.language_pipeline import detect_and_translate_ticket_text

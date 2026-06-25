@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, ScrollView,
-  ActivityIndicator, Switch, StatusBar, Alert
+  ActivityIndicator, RefreshControl, Switch, StatusBar, Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
@@ -63,6 +63,7 @@ const AdminSettingsScreen = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Settings states
   const [confidenceThreshold, setConfidenceThreshold] = useState(0.80);
@@ -113,8 +114,14 @@ const AdminSettingsScreen = () => {
       console.error('Fetch settings error:', e);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchSettings();
+  };
 
   useEffect(() => {
     fetchSettings();
@@ -190,7 +197,11 @@ const AdminSettingsScreen = () => {
         <Text style={styles.title}>System Settings</Text>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />}
+      >
         {/* Section 1: AI Engine Benchmarks */}
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>

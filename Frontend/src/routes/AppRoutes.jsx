@@ -38,6 +38,7 @@ const TableSkeleton = () => (
 
 const AdminDashboard = lazy(() => import('../admin/pages/Dashboard'));
 const AdminTickets = lazy(() => import('../admin/pages/Tickets'));
+const AdminTicketDetail = lazy(() => import('../admin/pages/AdminTicketDetail'));
 const AdminAnalytics = lazy(() => import('../admin/pages/Analytics'));
 const AdminSettings = lazy(() => import('../admin/pages/Settings'));
 const AdminUsers = lazy(() => import('../admin/pages/Users'));
@@ -49,6 +50,7 @@ const UserDashboard = lazy(() => import('../user/pages/Dashboard'));
 const UserTickets = lazy(() => import('../user/pages/Tickets'));
 const UserTicketDetail = lazy(() => import('../user/pages/TicketDetail'));
 const UserProfile = lazy(() => import('../user/pages/Profile'));
+const TicketTracking = lazy(() => import('../user/pages/TicketTracking'));
 
 // ─── Lazy-loaded Auth Pages ─────────────────────────────────────────────────
 
@@ -90,6 +92,9 @@ const AppRoutes = () => (
         <Route path="/admin/tickets" element={
             <LazyRoute fallback={<TableSkeleton />}><AdminTickets /></LazyRoute>
         } />
+        <Route path="/admin/ticket/:ticket_id" element={
+            <LazyRoute><AdminTicketDetail /></LazyRoute>
+        } />
         <Route path="/admin/analytics" element={
             <LazyRoute><AdminAnalytics /></LazyRoute>
         } />
@@ -112,6 +117,9 @@ const AppRoutes = () => (
         } />
         <Route path="/tickets/:id" element={
             <LazyRoute><UserTicketDetail /></LazyRoute>
+        } />
+        <Route path="/ticket-tracking" element={
+            <LazyRoute><TicketTracking /></LazyRoute>
         } />
         <Route path="/profile" element={
             <LazyRoute><UserProfile /></LazyRoute>

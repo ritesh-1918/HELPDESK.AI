@@ -1,7 +1,7 @@
 # ============================================================
 # HELPDESK.AI — Docker Compose (production override)
 # ============================================================
-# Usage (always combine with base docker-compose.yml):
+# Usage:
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 # ============================================================
 
@@ -14,6 +14,7 @@ services:
     image: helpdesk-ai-backend:latest
     environment:
       - ENVIRONMENT=production
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://helpdeskaiv1.vercel.app}
     volumes: []
     deploy:
       resources:
@@ -26,7 +27,32 @@ services:
     restart: always
 
   frontend:
+    build:
+      args:
+        - VITE_API_URL=${VITE_API_URL:-https://api.helpdeskai.com}
+        - VITE_WS_URL=${VITE_WS_URL:-wss://api.helpdeskai.com/ws/metrics}
+        - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+        - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
     environment:
       - NODE_ENV=production
     volumes: []
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
+    restart: always
+
+  redis:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+        reservations:
+          cpus: "0.05"
+          memory: 64M
     restart: always
