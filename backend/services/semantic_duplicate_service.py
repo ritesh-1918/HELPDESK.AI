@@ -234,35 +234,72 @@ class SemanticDuplicateService:
         Re-generate embeddings for all tickets that don't have them.
         Useful for initial migration or after model update.
         """
-        if not self.supabase:
+        if not self.supabase or not self.model:
             return {"indexed": 0, "errors": 0}
 
         total_indexed = 0
         total_errors = 0
         offset = 0
 
-        while True:
-            res = self.supabase.table("tickets") \
-                .select("id, subject, description, summary") \
-                .is_("description_vector", "null") \
-                .range(offset, offset + batch_size - 1) \
-                .execute()
+        # Start multi-process pool outside the loop to avoid overhead per batch
+        try:
+            pool = self.model.start_multi_process_pool()
+        except Exception as e:
+            logger.error(f"[SemanticDuplicate] Could not start multi_process_pool: {e}")
+            pool = None
 
-            batch = res.data or []
-            if not batch:
-                break
+        try:
+            while True:
+                res = self.supabase.table("tickets") \
+                    .select("id, subject, description, summary") \
+                    .is_("description_vector", "null") \
+                    .range(offset, offset + batch_size - 1) \
+                    .execute()
 
-            for ticket in batch:
-                text = (ticket.get("description") or ticket.get("subject") or ticket.get("summary") or "").strip()
-                if not text:
+                batch = res.data or []
+                if not batch:
+                    break
+
+                texts = []
+                ticket_ids = []
+                for ticket in batch:
+                    text = (ticket.get("description") or ticket.get("subject") or ticket.get("summary") or "").strip()
+                    if text:
+                        texts.append(text)
+                        ticket_ids.append(ticket["id"])
+
+                if not texts:
+                    offset += batch_size
                     continue
-                success = await self.index_ticket(ticket["id"], text)
-                if success:
-                    total_indexed += 1
-                else:
-                    total_errors += 1
 
-            offset += batch_size
+                try:
+                    # Parallel inference
+                    if pool:
+                        embeddings = self.model.encode_multi_process(texts, pool)
+                    else:
+                        embeddings = self.model.encode(texts)
+
+                    # Update each ticket in the database
+                    for ticket_id, embedding in zip(ticket_ids, embeddings):
+                        emb_list = embedding.tolist() if hasattr(embedding, "tolist") else list(embedding)
+                        try:
+                            self.supabase.table("tickets") \
+                                .update({"description_vector": emb_list}) \
+                                .eq("id", ticket_id) \
+                                .execute()
+                            total_indexed += 1
+                        except Exception as e:
+                            logger.error(f"[SemanticDuplicate] Index error for {ticket_id}: {e}")
+                            total_errors += 1
+                            
+                except Exception as e:
+                    logger.error(f"[SemanticDuplicate] Batch encoding error: {e}")
+                    total_errors += len(texts)
+
+                offset += batch_size
+        finally:
+            if pool:
+                self.model.stop_multi_process_pool(pool)
 
         logger.info(f"[SemanticDuplicate] Re-index complete: {total_indexed} indexed, {total_errors} errors")
         return {"indexed": total_indexed, "errors": total_errors}

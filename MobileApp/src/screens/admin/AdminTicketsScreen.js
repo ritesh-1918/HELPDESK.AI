@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import {
   StyleSheet, View, Text, FlatList, TextInput, TouchableOpacity,
   ActivityIndicator, RefreshControl, StatusBar
@@ -17,6 +17,74 @@ const FILTER_TABS = [
   { id: 'resolved', label: 'Resolved' },
   { id: 'closed', label: 'Closed' }
 ];
+
+const getStatusColor = (status) => {
+  const rawStatus = String(status || '').toLowerCase().trim();
+  if (rawStatus.includes('resolv') || rawStatus === 'closed') {
+    return COLORS.success;
+  }
+  if (rawStatus === 'in progress' || rawStatus === 'in_progress') {
+    return '#3b82f6'; // Blue
+  }
+  return '#fbbf24'; // Yellow
+};
+
+const formatTime = (dateStr) => {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+};
+
+// ── Memoized list item — prevents re-render on every parent state change ──────
+const TicketItem = memo(({ item, onPress }) => {
+  const statusColor = getStatusColor(item.status);
+  const creatorName = item.creator?.full_name || 'System User';
+
+  return (
+    <TouchableOpacity
+      style={styles.ticketCard}
+      onPress={() => onPress(item.id)}
+      activeOpacity={0.8}
+    >
+      <View style={[styles.statusStripe, { backgroundColor: statusColor }]} />
+      <View style={styles.cardContent}>
+        <View style={styles.cardHeader}>
+          <View style={styles.creatorInfo}>
+            <Text style={styles.creatorName}>{creatorName}</Text>
+            <Text style={styles.ticketDate}>{formatTime(item.created_at)}</Text>
+          </View>
+          <View style={[styles.priorityBadge, { backgroundColor: item.priority?.toLowerCase() === 'critical' ? '#fee2e2' : item.priority?.toLowerCase() === 'high' ? '#fef3c7' : '#f0fdf4' }]}>
+            <Text style={[styles.priorityText, { color: item.priority?.toLowerCase() === 'critical' ? '#ef4444' : item.priority?.toLowerCase() === 'high' ? '#d97706' : '#16a34a' }]}>
+              {(item.priority || 'Low').toUpperCase()}
+            </Text>
+          </View>
+        </View>
+
+        <Text style={styles.subjectText} numberOfLines={1}>{item.subject}</Text>
+        <Text style={styles.descSnippet} numberOfLines={2}>{item.description}</Text>
+
+        <View style={styles.cardFooter}>
+          <View style={styles.categoryBadge}>
+            <Text style={styles.categoryText}>{(item.category || 'General').toUpperCase()}</Text>
+          </View>
+          <View style={styles.footerRight}>
+            {item.auto_resolve && (
+              <View style={styles.aiBadge}>
+                <Text style={styles.aiBadgeText}>AI AUTO</Text>
+              </View>
+            )}
+            <View style={[styles.statusBadge, { backgroundColor: statusColor + '12' }]}>
+              <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+              <Text style={[styles.statusText, { color: statusColor }]}>
+                {String(item.status || 'PENDING').replace('_', ' ').toUpperCase()}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </View>
+      <ChevronRight size={18} color={COLORS.textMuted} style={{ marginRight: 16 }} />
+    </TouchableOpacity>
+  );
+});
 
 const AdminTicketsScreen = () => {
   const navigation = useNavigation();
@@ -122,76 +190,16 @@ const AdminTicketsScreen = () => {
     return filtered;
   };
 
-  const getStatusColor = (status) => {
-    const rawStatus = String(status || '').toLowerCase().trim();
-    if (rawStatus.includes('resolv') || rawStatus === 'closed') {
-      return COLORS.success;
-    }
-    if (rawStatus === 'in progress' || rawStatus === 'in_progress') {
-      return '#3b82f6'; // Blue
-    }
-    return '#fbbf24'; // Yellow
-  };
 
-  const formatTime = (dateStr) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-  };
 
-  const renderTicketItem = ({ item }) => {
-    const statusColor = getStatusColor(item.status);
-    const creatorName = item.creator?.full_name || 'System User';
-    
-    return (
-      <TouchableOpacity 
-        style={styles.ticketCard}
-        onPress={() => {
-          Haptics.selectionAsync();
-          navigation.navigate('AdminTicketDetail', { ticketId: item.id });
-        }}
-        activeOpacity={0.8}
-      >
-        <View style={[styles.statusStripe, { backgroundColor: statusColor }]} />
-        <View style={styles.cardContent}>
-          <View style={styles.cardHeader}>
-            <View style={styles.creatorInfo}>
-              <Text style={styles.creatorName}>{creatorName}</Text>
-              <Text style={styles.ticketDate}>{formatTime(item.created_at)}</Text>
-            </View>
-            <View style={[styles.priorityBadge, { backgroundColor: item.priority?.toLowerCase() === 'critical' ? '#fee2e2' : item.priority?.toLowerCase() === 'high' ? '#fef3c7' : '#f0fdf4' }]}>
-              <Text style={[styles.priorityText, { color: item.priority?.toLowerCase() === 'critical' ? '#ef4444' : item.priority?.toLowerCase() === 'high' ? '#d97706' : '#16a34a' }]}>
-                {(item.priority || 'Low').toUpperCase()}
-              </Text>
-            </View>
-          </View>
+  const handleTicketPress = useCallback((ticketId) => {
+    Haptics.selectionAsync();
+    navigation.navigate('AdminTicketDetail', { ticketId });
+  }, [navigation]);
 
-          <Text style={styles.subjectText} numberOfLines={1}>{item.subject}</Text>
-          <Text style={styles.descSnippet} numberOfLines={2}>{item.description}</Text>
-
-          <View style={styles.cardFooter}>
-            <View style={styles.categoryBadge}>
-              <Text style={styles.categoryText}>{(item.category || 'General').toUpperCase()}</Text>
-            </View>
-            
-            <View style={styles.footerRight}>
-              {item.auto_resolve && (
-                <View style={styles.aiBadge}>
-                  <Text style={styles.aiBadgeText}>AI AUTO</Text>
-                </View>
-              )}
-              <View style={[styles.statusBadge, { backgroundColor: statusColor + '12' }]}>
-                <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-                <Text style={[styles.statusText, { color: statusColor }]}>
-                  {String(item.status || 'PENDING').replace('_', ' ').toUpperCase()}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-        <ChevronRight size={18} color={COLORS.textMuted} style={{ marginRight: 16 }} />
-      </TouchableOpacity>
-    );
-  };
+  const renderTicketItem = useCallback(({ item }) => (
+    <TicketItem item={item} onPress={handleTicketPress} />
+  ), [handleTicketPress]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -260,7 +268,7 @@ const AdminTicketsScreen = () => {
           renderItem={renderTicketItem}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
-          RefreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <AlertCircle size={48} color={COLORS.textMuted} strokeWidth={1} />
