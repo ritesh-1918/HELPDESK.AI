@@ -68,7 +68,7 @@ class TestKeyRedaction:
         assert REDACTED in result
 
     def test_redacts_token_in_environment_variable(self):
-        result = redact_pii("export GITHUB_TOKEN=***
+        result = redact_pii("export GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx")
         assert REDACTED in result or "ghp_xx...xxxx" not in result
 
 

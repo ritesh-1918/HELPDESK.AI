@@ -163,18 +163,22 @@ mock_supabase_lib = MagicMock()
 mock_supabase_lib.create_client.return_value = mock_supabase
 
 # Mock out libraries to avoid database connection or massive package compilation issues
-if "postgrest" not in sys.modules: sys.modules["postgrest"] = MagicMock()
-if "postgrest.exceptions" not in sys.modules: sys.modules["postgrest.exceptions"] = postgrest_exceptions
-if "postgrest._sync.request_builder" not in sys.modules: sys.modules["postgrest._sync.request_builder"] = MagicMock()
-if "supabase" not in sys.modules: sys.modules["supabase"] = mock_supabase_lib
+if "postgrest" not in sys.modules:
+    sys.modules["postgrest"] = MagicMock()
+if "postgrest.exceptions" not in sys.modules:
+    sys.modules["postgrest.exceptions"] = postgrest_exceptions
+if "postgrest._sync.request_builder" not in sys.modules:
+    sys.modules["postgrest._sync.request_builder"] = MagicMock()
+if "supabase" not in sys.modules:
+    sys.modules["supabase"] = mock_supabase_lib
 
 for module_name in [
     "torch", "torch.nn", "torch.nn.functional", "torch.optim", "transformers", "sentence_transformers", 
     "easyocr", "datasets", "sklearn", "sklearn.metrics", "pandas", "openpyxl",
     "prometheus_client", "starlette", "starlette.testclient"
 ]:
-    if module_name not in sys.modules: sys.modules[module_name] = MagicMock()
-
+    if module_name not in sys.modules:
+        sys.modules[module_name] = MagicMock()
 import pytest
 from starlette.testclient import TestClient
 from fastapi import FastAPI

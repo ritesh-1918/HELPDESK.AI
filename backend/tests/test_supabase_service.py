@@ -22,11 +22,15 @@ if _backend_root not in sys.path:
     sys.path.insert(0, _backend_root)
 
 # Mock heavy/unused ML modules to prevent importing them during test loading
-if "torch" not in sys.modules: sys.modules["torch"] = MagicMock()
-if "torch.nn" not in sys.modules: sys.modules["torch.nn"] = MagicMock()
-if "torch.nn.functional" not in sys.modules: sys.modules["torch.nn.functional"] = MagicMock()
-if "transformers" not in sys.modules: sys.modules["transformers"] = MagicMock()
-
+if "torch" not in sys.modules:
+    sys.modules["torch"] = MagicMock()
+if "torch.nn" not in sys.modules:
+    sys.modules["torch.nn"] = MagicMock()
+if "torch.nn.functional" not in sys.modules:
+    sys.modules["torch.nn.functional"] = MagicMock()
+if "transformers" not in sys.modules:
+    sys.modules["transformers"] = MagicMock()
+    
 # Import the FastAPI test client and application components
 from fastapi.testclient import TestClient
 from fastapi import HTTPException

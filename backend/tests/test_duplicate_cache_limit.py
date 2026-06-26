@@ -133,8 +133,10 @@ def test_concurrent_save_preserves_valid_json(tmp_path, monkeypatch):
             errors.append(exc)
 
     threads = [threading.Thread(target=save, args=(i,)) for i in range(20)]
-    for t in threads: t.start()
-    for t in threads: t.join()
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
 
     assert errors == []
     saved = json.loads(Path(svc.storage_file).read_text())

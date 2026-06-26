@@ -296,15 +296,6 @@ All tests are self-contained: langdetect and transformers are mocked via
 sys.modules injection so the suite runs without optional ML packages installed.
 """
 
-import sys
-import types
-import unittest
-from unittest.mock import MagicMock, patch, call
-
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
-
-
 # ---------------------------------------------------------------------------
 # Module stubs (langdetect + transformers not installed in CI)
 # ---------------------------------------------------------------------------
