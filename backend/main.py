@@ -128,6 +128,7 @@ class TicketResponse(BaseModel):
     timeline: dict = {} # Map of step_name: timestamp
     env_metadata: dict = {} # IP, Hostname, Browser/OS
     version: str = "2.1.0-Neural-Diagnostic"
+    sla_breach_at: str | None = None
 
 
 # --- Persistence Models ---
