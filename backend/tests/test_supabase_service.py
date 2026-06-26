@@ -33,7 +33,6 @@ if "transformers" not in sys.modules:
     
 # Import the FastAPI test client and application components
 from fastapi.testclient import TestClient
-from fastapi import HTTPException
 import backend.main as main
 from backend.main import app, get_system_settings
 

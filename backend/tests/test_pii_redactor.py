@@ -2,11 +2,11 @@
 Tests for PII Redaction Engine — email, phone number, and API key masking.
 """
 
-import sys, os
+import sys
+import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "services"))
 from pii_redactor import redact_pii, find_pii, count_pii, REDACTED
 
-import pytest
 
 
 class TestEmailRedaction:
