@@ -7,6 +7,7 @@ and target language validation.
 """
 
 import sys
+import types
 import os
 import unittest
 from unittest.mock import patch, MagicMock
@@ -347,10 +348,8 @@ from backend.services.translation_service import (
     detect_language,
     get_supported_languages,
     _get_model_name,
-    translate_text,
     translate_ticket,
     clear_cache,
-    SUPPORTED_LANGUAGES,
     MAX_TEXT_LENGTH,
     MAX_CACHE_SIZE,
 )
