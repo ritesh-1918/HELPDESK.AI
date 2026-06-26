@@ -40,7 +40,7 @@ const RecentTickets = () => {
 
     useEffect(() => {
         fetchRecentTickets();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
     }, []);
 
     const getStatusBadge = (status) => {

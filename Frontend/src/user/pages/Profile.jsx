@@ -23,7 +23,7 @@ import {
     Loader2,
     AlertCircle
 } from 'lucide-react';
- 
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
@@ -48,6 +48,7 @@ const Profile = () => {
 
     const [showPasswordModal, setShowPasswordModal] = useState(false);
     const [passwordData, setPasswordData] = useState({
+        currentPassword: '',
         newPassword: '',
         confirmPassword: ''
     });
@@ -141,7 +142,11 @@ const Profile = () => {
 
     const handlePasswordChange = async (e) => {
         if (e) e.preventDefault();
-        
+
+        if (!passwordData.currentPassword) {
+            showToast("Please enter your current password.", "error");
+            return;
+        }
         if (!passwordData.newPassword || passwordData.newPassword.length < 6) {
             showToast("Password must be at least 6 characters.", "error");
             return;
@@ -153,6 +158,18 @@ const Profile = () => {
 
         setPasswordLoading(true);
         try {
+            // Step 1: Verify current password first
+            const { error: authError } = await supabase.auth.signInWithPassword({
+                email: user.email,
+                password: passwordData.currentPassword
+            });
+
+            if (authError) {
+                showToast("Current password is incorrect.", "error");
+                return;
+            }
+
+            // Step 2: Safe to update now
             const { error } = await supabase.auth.updateUser({
                 password: passwordData.newPassword
             });
@@ -161,7 +178,7 @@ const Profile = () => {
 
             showToast("Security credentials updated successfully.", "success");
             setShowPasswordModal(false);
-            setPasswordData({ newPassword: '', confirmPassword: '' });
+            setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
         } catch (err) {
             showToast("Sync failed: " + err.message, "error");
         } finally {
@@ -530,7 +547,7 @@ const Profile = () => {
             <AnimatePresence>
                 {showPasswordModal && (
                     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
@@ -546,6 +563,16 @@ const Profile = () => {
                             </div>
                             <div className="p-8 space-y-6">
                                 <div className="space-y-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Current Password</label>
+                                        <input
+                                            type="password"
+                                            placeholder="Enter current password"
+                                            className="w-full bg-slate-50 border-2 border-transparent focus:border-emerald-500 rounded-2xl px-4 py-3 text-sm font-bold outline-none transition-all"
+                                            value={passwordData.currentPassword}
+                                            onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                                        />
+                                    </div>
                                     <div className="space-y-1.5">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">New Sequence</label>
                                         <input

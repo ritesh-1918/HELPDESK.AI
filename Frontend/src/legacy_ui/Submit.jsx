@@ -34,7 +34,7 @@ function Submit() {
     if (locationState.prefilledCategory) {
       setCategory(locationState.prefilledCategory.toLowerCase());
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [currentUser, navigate, location.state]);
 
   useEffect(() => {

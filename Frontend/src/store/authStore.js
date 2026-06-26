@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '../lib/supabaseClient';
+import useTicketStore from './ticketStore';
 
 const useAuthStore = create(
     persist(
@@ -90,7 +91,7 @@ const useAuthStore = create(
                         set({ user: null, profile: null });
                     }
                     return user;
-// eslint-disable-next-line no-unused-vars
+                    // eslint-disable-next-line no-unused-vars
                 } catch (error) {
                     set({ user: null, profile: null });
                     return null;
@@ -173,9 +174,9 @@ const useAuthStore = create(
                     const profile = await get().getProfile(user);
 
                     if (profile?.status === 'pending_email_verification') {
-                         await supabase.auth.signOut();
-                         set({ user: null, profile: null });
-                         throw new Error("Please verify your email address before continuing.");
+                        await supabase.auth.signOut();
+                        set({ user: null, profile: null });
+                        throw new Error("Please verify your email address before continuing.");
                     }
                     return { user, profile };
                 } catch (error) {
@@ -234,10 +235,14 @@ const useAuthStore = create(
                     const { error } = await supabase.auth.signOut();
                     if (error) throw error;
                     set({ user: null, profile: null });
+                    // clear persisted ticket state to prevent cross-user data leakage
+                    useTicketStore.getState().clearTicket();
+                    useTicketStore.setState({ notifications: [], tickets: [] });
                 } finally {
                     set({ loading: false });
                 }
             },
+
 
             updateProfile: async (updates) => {
                 const { profile } = get();

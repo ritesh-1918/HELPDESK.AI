@@ -11,6 +11,8 @@ import json
 import datetime
 import traceback
 import warnings
+import logging
+import hashlib
 from contextlib import asynccontextmanager
 
 # Suppress harmless PyTorch CPU pin_memory warning
@@ -62,6 +64,23 @@ from backend.services.rag_service import RagService
 # ---------------------------------------------------------------------------
 # Request / Response models
 # ---------------------------------------------------------------------------
+def get_system_settings(company_id: str) -> dict:
+    defaults = {
+        "ai_confidence_threshold": 0.80,
+        "duplicate_sensitivity": 0.85,
+        "enable_auto_resolve": False
+    }
+    if not supabase or not company_id:
+        return defaults
+    try:
+        res = supabase.table("system_settings").select(
+            "ai_confidence_threshold, duplicate_sensitivity, enable_auto_resolve"
+        ).eq("company_id", company_id).single().execute()
+        if res.data:
+            return {**defaults, **res.data}
+    except Exception as e:
+        print(f"[WARNING] Could not fetch system_settings for company_id={company_id}: {e}")
+    return defaults
 class TicketRequest(BaseModel):
     text: str
     image_base64: str = ""
@@ -85,7 +104,8 @@ class TicketSaveRequest(BaseModel):
     is_duplicate: bool
     confidence: float
     image_url: str | None = None
-    company: str
+    company: str | None = None
+    company_id: str | None = None
     sla_breach_at: str
     metadata: dict
     entities: list = []
@@ -124,9 +144,11 @@ class TicketResponse(BaseModel):
     decision_factors: list[str] = []
     image_description: str = ""
     ocr_text: str = ""
+    image_url: str | None = None
     highlights: list[str] = []
     timeline: dict = {} # Map of step_name: timestamp
     env_metadata: dict = {} # IP, Hostname, Browser/OS
+    sla_breach_at: str | None = None
     version: str = "2.1.0-Neural-Diagnostic"
     sla_breach_at: str | None = None
 
@@ -222,6 +244,18 @@ async def lifespan(app: FastAPI):
 
     print("[Startup] Classifier V2 Shadow: Ready.")
     print("[Startup] Ready.")
+    # Strict health checks: fail loudly when core model assets are unavailable.
+    # Set ALLOW_DEGRADED_STARTUP=1 to permit degraded startup for local/dev convenience.
+    try:
+        strict_mode = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") != "1"
+    except Exception:
+        strict_mode = True
+
+    classifier_loaded_flag = getattr(classifier_service, "_loaded", False)
+    ner_loaded_flag = getattr(ner_service, "_loaded", False)
+
+    if strict_mode and not classifier_loaded_flag:
+        raise RuntimeError("[Startup-FATAL] Classifier assets not loaded. Set ALLOW_DEGRADED_STARTUP=1 to bypass.")
     yield
     print("[Shutdown] Cleaning up ...")
 
@@ -352,18 +386,29 @@ async def health_check():
 @app.get("/ready", response_model=ReadinessResponse)
 async def readiness_check():
     require_supabase = os.environ.get("REQUIRE_SUPABASE", "false").lower() == "true"
+    allow_degraded = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") == "1"
+    
     checks = {
         "api": True,
         "classifier_loaded": classifier_service._loaded,
         "ner_loaded": ner_service._loaded,
-        "duplicate_index_loaded": duplicate_service._loaded,
-        "rag_loaded": rag_service._loaded,
+        "duplicate_index_loaded": duplicate_service.is_available(),
+        "rag_loaded": rag_service.is_available(),
     }
     if require_supabase:
         checks["supabase_configured"] = supabase is not None
 
-    if all(checks.values()):
-        return ReadinessResponse(status="ready", checks=checks)
+    # In degraded mode, duplicate and RAG services are optional
+    if allow_degraded:
+        required_checks = {k: v for k, v in checks.items() if k not in ["duplicate_index_loaded", "rag_loaded"]}
+        all_required_pass = all(required_checks.values())
+        
+        if all_required_pass:
+            return ReadinessResponse(status="ready", checks=checks)
+    else:
+        # Strict mode: all checks must pass
+        if all(checks.values()):
+            return ReadinessResponse(status="ready", checks=checks)
 
     return JSONResponse(
         status_code=503,
@@ -513,8 +558,54 @@ async def save_ticket(request_body: TicketSaveRequest):
     if not supabase:
         raise HTTPException(status_code=500, detail="Supabase connection not initialized.")
 
+    logger = logging.getLogger(__name__)
     try:
         final_data = request_body.dict()
+
+        # Resolve tenant linkage from user profile with authorization validation.
+        profile = {}
+        if request_body.user_id:
+            try:
+                profile_res = (
+                    supabase.table("profiles")
+                    .select("company_id, company")
+                    .eq("id", request_body.user_id)
+                    .single()
+                    .execute()
+                )
+                profile = profile_res.data or {}
+                if not profile:
+                    raise HTTPException(status_code=404, detail="User profile not found")
+            except HTTPException:
+                raise
+            except Exception as profile_error:
+                user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+                logger.error(f"Tenant resolution error for user {user_hash}: {profile_error}")
+                raise HTTPException(status_code=503, detail="Failed to resolve tenant linkage") from profile_error
+
+        # Validate tenant consistency and authorization.
+        profile_company_id = profile.get("company_id")
+        if final_data.get("company_id"):
+            # User provided company_id: verify it matches their profile.
+            if profile_company_id and final_data["company_id"] != profile_company_id:
+                user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+                logger.warning(f"Tenant mismatch: user {user_hash} attempted {final_data['company_id']}, assigned to {profile_company_id}")
+                raise HTTPException(status_code=403, detail="User not authorized for this tenant")
+        elif profile_company_id:
+            # Backfill company_id from profile.
+            final_data["company_id"] = profile_company_id
+        elif request_body.user_id:
+            # User has no tenant assignment.
+            raise HTTPException(status_code=400, detail="User has no tenant assignment")
+
+        # Backfill company name if missing.
+        if not final_data.get("company") and profile.get("company"):
+            final_data["company"] = profile["company"]
+
+        user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+        logger.info(f"Tenant linkage: user_hash={user_hash}, company_id={final_data.get('company_id')}")
+
+
         res = supabase.table("tickets").insert(final_data).execute()
         
         if not res.data:
@@ -611,6 +702,11 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     Main endpoint for analyzing a new ticket using the cascade of local AI models.
     """
     text = request_body.text
+
+    settings = get_system_settings(request_body.company)
+    confidence_threshold = settings["ai_confidence_threshold"]
+    duplicate_sensitivity = settings["duplicate_sensitivity"]
+    enable_auto_resolve = settings["enable_auto_resolve"]
     
     # Grab client metadata
     client_ip = request.client.host if request.client else "unknown"
@@ -643,7 +739,11 @@ async def analyze_only(request_body: TicketRequest):
     and duplicate check before committing to a ticket creation.
     """
     text = request_body.text
-    print(f"[AI] Starting Analysis (READ-ONLY) for: {text[:50]}...")
+    print(f"[AI] Starting Analysis (READ-ONLY) for: {text[:50]}...") 
+    settings = get_system_settings(request_body.company)
+    confidence_threshold = settings["ai_confidence_threshold"]
+    duplicate_sensitivity = settings["duplicate_sensitivity"]
+    enable_auto_resolve = settings["enable_auto_resolve"]
     
     # --- Context & Environment ---
     import datetime
@@ -719,7 +819,7 @@ async def analyze_only(request_body: TicketRequest):
 
     # --- Duplicate detection ---
     try:
-        dup_result = duplicate_service.check_duplicate(text, threshold=request_body.duplicate_sensitivity)
+        dup_result = duplicate_service.check_duplicate(text, threshold=duplicate_sensitivity)
     except Exception:
         dup_result = {"is_duplicate": False, "duplicate_ticket_id": None, "similarity": 0.0}
 
@@ -737,7 +837,7 @@ async def analyze_only(request_body: TicketRequest):
 
     # --- Reasoning ---
     decision_factors = []
-    if classification["confidence"] > request_body.confidence_threshold:
+    if classification["confidence"] > confidence_threshold:
         decision_factors.append(f"High confidence match for '{classification['subcategory']}'")
     if entities:
         decision_factors.append(f"Detected entities: {', '.join([e['text'] for e in entities[:2]])}")
@@ -747,6 +847,14 @@ async def analyze_only(request_body: TicketRequest):
         decision_factors.append(f"Found solution article: '{rag_match['title']}'")
 
     reasoning = f"Categorized as '{classification['category']}' - {classification['subcategory']}."
+    if (
+        enable_auto_resolve
+        and classification["confidence"] >= confidence_threshold
+        and classification["auto_resolve"]
+    ):
+        classification["auto_resolve"] = True
+    else:
+        classification["auto_resolve"] = False
     if classification["auto_resolve"]:
         reasoning += " Flagged for AI auto-resolution via Knowledge Base." if rag_match else " Flagged for auto-resolution."
     
@@ -772,11 +880,12 @@ async def analyze_only(request_body: TicketRequest):
         entities=[EntityInfo(**e) for e in entities],
         duplicate_ticket=DuplicateInfo(**dup_result),
         confidence=classification["confidence"],
-        needs_review=classification["confidence"] < 0.20,
+        needs_review=classification["confidence"] < confidence_threshold,
         reasoning=reasoning,
         decision_factors=decision_factors,
         image_description=gemini_analysis["image_description"],
         ocr_text=gemini_analysis["ocr_text"],
+        image_url=request_body.image_url,
         highlights=entities, # Use entities as highlights for now
         timeline=timeline,
         env_metadata=env_metadata,
@@ -799,7 +908,11 @@ async def analyze_stream(request_body: TicketRequest):
             "model_version": "3.0.0-PRO",
             "api_endpoint": "/ai/analyze_stream"
         }
-        timeline = {"received": get_now_ist()}
+        timeline = {"received": get_now_ist()} 
+        settings = get_system_settings(request_body.company)
+        confidence_threshold = settings["ai_confidence_threshold"]
+        duplicate_sensitivity = settings["duplicate_sensitivity"]
+        enable_auto_resolve = settings["enable_auto_resolve"]
 
         # 1. Reading
         yield f"data: {json.dumps({'step': 'Reading your message', 'status': 'in_progress'})}\n\n"
@@ -861,7 +974,7 @@ async def analyze_stream(request_body: TicketRequest):
         yield f"data: {json.dumps({'step': 'Checking duplicate issues', 'status': 'in_progress'})}\n\n"
         await asyncio.sleep(0.2)
         try:
-            dup_result = duplicate_service.check_duplicate(text, threshold=request_body.duplicate_sensitivity)
+            dup_result = duplicate_service.check_duplicate(text, threshold=duplicate_sensitivity)
         except Exception:
             dup_result = {"is_duplicate": False, "duplicate_ticket_id": None, "similarity": 0.0}
 
@@ -879,7 +992,7 @@ async def analyze_stream(request_body: TicketRequest):
             pass
 
         decision_factors = []
-        if classification["confidence"] > request_body.confidence_threshold:
+        if classification["confidence"] > confidence_threshold:
             decision_factors.append(f"High confidence match for '{classification['subcategory']}'")
         if entities:
             decision_factors.append(f"Detected entities: {', '.join([e['text'] for e in entities[:2]])}")
@@ -888,6 +1001,8 @@ async def analyze_stream(request_body: TicketRequest):
         if rag_match:
             decision_factors.append(f"Found solution article: '{rag_match['title']}'")
 
+        if not enable_auto_resolve:
+            classification["auto_resolve"] = False
         reasoning = f"Categorized as '{classification['category']}' - {classification['subcategory']}."
         if classification["auto_resolve"]:
             reasoning += " Flagged for AI auto-resolution via Knowledge Base." if rag_match else " Flagged for auto-resolution."
@@ -912,11 +1027,12 @@ async def analyze_stream(request_body: TicketRequest):
             "entities": [e for e in entities],
             "duplicate_ticket": dup_result,
             "confidence": classification["confidence"],
-            "needs_review": classification["confidence"] < 0.20,
+            "needs_review": classification["confidence"] < confidence_threshold,
             "reasoning": reasoning,
             "decision_factors": decision_factors,
             "image_description": gemini_analysis["image_description"],
             "ocr_text": gemini_analysis["ocr_text"],
+            "image_url": request_body.image_url,
             "highlights": entities,
             "timeline": timeline,
             "env_metadata": env_metadata,
@@ -928,7 +1044,7 @@ async def analyze_stream(request_body: TicketRequest):
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
-@app.post("/ai/analyze_ticket")
+@app.post("/ai/analyze_ticket/legacy")
 async def legacy_analyze_and_save(request_body: TicketRequest):
     """
     BACKWARD COMPATIBILITY: Strictly performs analysis only. 
@@ -952,3 +1068,145 @@ async def analyze_ticket_v2(request: TicketRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# ---------------------------------------------------------------------------
+# Clean cookie-based Supabase Auth endpoints for /auth/me backward-compatibility
+# ---------------------------------------------------------------------------
+ACCESS_COOKIE = "access_token"
+REFRESH_COOKIE = "refresh_token"
+ACCESS_MAX_AGE = 60 * 60
+REFRESH_MAX_AGE = 60 * 60 * 24 * 7
+
+def _cookie_kwargs() -> dict:
+    secure = os.getenv("ENV", "production").lower() != "development"
+    return {
+        "httponly": True,
+        "secure": secure,
+        "samesite": "strict",
+        "path": "/",
+    }
+
+def extract_token(request: Request) -> str | None:
+    cookie_token = request.cookies.get(ACCESS_COOKIE)
+    if cookie_token:
+        return cookie_token
+    auth = request.headers.get("authorization") or request.headers.get("Authorization")
+    if auth and auth.lower().startswith("bearer "):
+        return auth.split(" ", 1)[1].strip() or None
+    return None
+
+def _set_session_cookies(response: Response, session) -> None:
+    if not session or not getattr(session, "access_token", None):
+        return
+    response.set_cookie(
+        ACCESS_COOKIE,
+        session.access_token,
+        max_age=ACCESS_MAX_AGE,
+        **_cookie_kwargs(),
+    )
+    refresh = getattr(session, "refresh_token", None)
+    if refresh:
+        response.set_cookie(
+            REFRESH_COOKIE,
+            refresh,
+            max_age=REFRESH_MAX_AGE,
+            **_cookie_kwargs(),
+        )
+
+def _clear_session_cookies(response: Response) -> None:
+    kwargs = _cookie_kwargs()
+    response.delete_cookie(ACCESS_COOKIE, path=kwargs["path"])
+    response.delete_cookie(REFRESH_COOKIE, path=kwargs["path"])
+
+async def get_current_user(request: Request) -> dict:
+    token = extract_token(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database connection offline")
+    try:
+        result = supabase.auth.get_user(token)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=401,
+            detail=f"Invalid session: {exc}",
+        ) from exc
+    user = getattr(result, "user", None) or (result.get("user") if isinstance(result, dict) else None)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid session")
+    if hasattr(user, "model_dump"):
+        return user.model_dump()
+    if hasattr(user, "dict"):
+        return user.dict()
+    return dict(user)
+
+class LoginBody(BaseModel):
+    email: str
+    password: str
+
+class SignupBody(BaseModel):
+    email: str
+    password: str
+    full_name: str | None = None
+    role: str | None = "user"
+    company: str | None = None
+
+@app.post("/auth/login")
+async def auth_login(body: LoginBody, response: Response):
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database connection offline")
+    try:
+        result = supabase.auth.sign_in_with_password(
+            {"email": body.email, "password": body.password}
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+    session = getattr(result, "session", None)
+    user = getattr(result, "user", None)
+    if not session or not user:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    _set_session_cookies(response, session)
+    user_payload = user.model_dump() if hasattr(user, "model_dump") else dict(user)
+    return {"user": user_payload, "message": "Session cookies set"}
+
+@app.post("/auth/signup")
+async def auth_signup(body: SignupBody, response: Response):
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database connection offline")
+    metadata = {}
+    if body.full_name:
+        metadata["full_name"] = body.full_name
+    if body.role:
+        metadata["role"] = body.role
+    if body.company:
+        metadata["company"] = body.company
+
+    try:
+        result = supabase.auth.sign_up(
+            {
+                "email": body.email,
+                "password": body.password,
+                "options": {"data": metadata} if metadata else {},
+            }
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    session = getattr(result, "session", None)
+    user = getattr(result, "user", None)
+    if session:
+        _set_session_cookies(response, session)
+    user_payload = user.model_dump() if user and hasattr(user, "model_dump") else None
+    return {"user": user_payload, "message": "Signup complete"}
+
+@app.post("/auth/logout")
+async def auth_logout(response: Response):
+    _clear_session_cookies(response)
+    return {"ok": True}
+
+@app.get("/auth/me")
+async def auth_me(user: dict = Depends(get_current_user)):
+    return {"user": user}
+

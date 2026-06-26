@@ -26,7 +26,7 @@ function AdminLobby() {
         // If they are already active, send to dashboard
         if (currentStatus === "active") {
  
-            // eslint-disable-next-line react-hooks/set-state-in-effect
+             
             setIsTransitioning(true);
             const timer = setTimeout(() => navigate("/admin/dashboard"), 2000);
             return () => clearTimeout(timer);

@@ -42,10 +42,9 @@ const Dashboard = () => {
                         <RecentTickets />
                     </section>
 
-                    {/* Footer Info */}
                     <footer className="mt-8 text-center">
                         <p className="text-xs text-gray-400 font-medium tracking-tight">
-                            &copy; 2026 Emerald Helpdesk. All systems operational.
+                            &copy; {new Date().getFullYear()} {profile?.company || 'Emerald Helpdesk'}. All systems operational.
                         </p>
                     </footer>
                 </div>

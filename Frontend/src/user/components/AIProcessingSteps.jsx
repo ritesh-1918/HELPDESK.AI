@@ -22,7 +22,7 @@ const AIProcessingSteps = ({ steps = [], onComplete, delay = 1200, activeStep = 
                 return () => clearTimeout(timer);
             }
         }
-// eslint-disable-next-line react-hooks/exhaustive-deps
+ 
     }, [currentStep, steps.length, delay, onComplete]);
 
     const progressPercentage = Math.min((currentStep / steps.length) * 100, 100);

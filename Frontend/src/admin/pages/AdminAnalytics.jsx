@@ -60,7 +60,7 @@ const AdminAnalytics = () => {
         if (profile) {
             fetchAnalytics();
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
     }, [profile]);
 
     const stats = useMemo(() => {

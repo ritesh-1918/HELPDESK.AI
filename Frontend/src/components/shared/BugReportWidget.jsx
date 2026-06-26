@@ -23,7 +23,7 @@ function useDiagnostics() {
         const browserInfo = navigator.userAgent;
         const screenInfo = `${window.innerWidth}x${window.innerHeight}`;
 
-        // eslint-disable-next-line react-hooks/set-state-in-effect
+         
         setDiagnostics(prev => ({
             ...prev,
             url: window.location.href,

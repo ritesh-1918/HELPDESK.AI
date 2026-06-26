@@ -11,7 +11,7 @@ function History() {
     const storedTickets =
       JSON.parse(localStorage.getItem("tickets")) || [];
  
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     setTickets(storedTickets);
   }, []);
 

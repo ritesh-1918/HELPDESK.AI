@@ -18,7 +18,7 @@ const NotificationToast = () => {
             const shownToasts = JSON.parse(sessionStorage.getItem('shownToasts') || '[]');
 
             if (!latest.read && !shownToasts.includes(latest.id)) {
-                // eslint-disable-next-line react-hooks/set-state-in-effect
+                 
                 setCurrentToast(latest);
 
                 // Add to shown list

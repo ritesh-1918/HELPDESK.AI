@@ -56,7 +56,7 @@ function MyTickets() {
     }, [user]);
 
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
+         
         fetchTickets();
 
         if (!user?.id) return;

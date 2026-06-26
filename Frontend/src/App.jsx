@@ -45,6 +45,15 @@ import AIProcessing from "./user/pages/AIProcessing";
 import AIUnderstanding from "./user/pages/AIUnderstanding";
 import Notifications from "./user/pages/Notifications";
 import Help from "./user/pages/Help";
+import DocsPortal from "./docs/pages/DocsPortal";
+
+// New Showcase Pages
+import ApiReference from "./pages/ApiReference";
+import Changelog from "./pages/Changelog";
+import StatusPage from "./pages/StatusPage";
+import AboutUs from "./pages/AboutUs";
+import Careers from "./pages/Careers";
+import CookiePolicy from "./pages/legal/CookiePolicy";
 
 // NEW Admin Pages (Refactored)
 import AdminDashboard from "./admin/pages/AdminDashboard";
@@ -110,6 +119,13 @@ function TitleUpdater() {
     else if (path === '/my-tickets') title = 'My Tickets';
     else if (path === '/profile') title = 'User Profile';
     else if (path === '/notifications') title = 'Notifications';
+    else if (path === '/docs') title = 'Documentation';
+    else if (path === '/api-reference') title = 'API Reference';
+    else if (path === '/changelog') title = 'Changelog';
+    else if (path === '/status') title = 'Status';
+    else if (path === '/about') title = 'About Us';
+    else if (path === '/careers') title = 'Careers';
+    else if (path === '/cookie-policy') title = 'Cookie Policy';
     // Public / Lobby Routes
     else if (path === '/login') title = 'Login';
     else if (path === '/signup') title = 'Create Account';
@@ -207,6 +223,27 @@ function App() {
     initialize();
   }, [initialize]);
 
+  const isDocsSubdomain = window.location.hostname.startsWith('docs.');
+
+  if (isDocsSubdomain) {
+    return (
+      <BrowserRouter>
+        <TitleUpdater />
+        <ScrollToTop />
+        <Toaster />
+        <BugReportWidget />
+        <Routes>
+          <Route path="/" element={<DocsPortal />} />
+          <Route path="/docs" element={<Navigate to="/" replace />} />
+          <Route path="/api-reference" element={<ApiReference />} />
+          <Route path="/changelog" element={<Changelog />} />
+          <Route path="/status" element={<StatusPage />} />
+          <Route path="*" element={<DocsPortal />} />
+        </Routes>
+      </BrowserRouter>
+    );
+  }
+
   return (
     <BrowserRouter>
       <TitleUpdater />
@@ -225,6 +262,13 @@ function App() {
         <Route path="/user-lobby" element={<UserLobby />} />
         <Route path="/not-approved" element={<NotApproved />} />
         <Route path="/contact-sales" element={<ContactSales />} />
+        <Route path="/docs" element={<DocsPortal />} />
+        <Route path="/api-reference" element={<ApiReference />} />
+        <Route path="/changelog" element={<Changelog />} />
+        <Route path="/status" element={<StatusPage />} />
+        <Route path="/about" element={<AboutUs />} />
+        <Route path="/careers" element={<Careers />} />
+        <Route path="/cookie-policy" element={<CookiePolicy />} />
 
         {/* Feature Pages */}
         <Route path="/features/categorization" element={<AutoCategorizationFeature />} />

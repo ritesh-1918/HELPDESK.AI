@@ -108,7 +108,7 @@ const AIUnderstanding = () => {
 
     useEffect(() => {
         if (aiTicket?.originalIssue) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
+             
             setEditedIssue(aiTicket.originalIssue);
         }
     }, [aiTicket]);

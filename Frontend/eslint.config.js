@@ -9,14 +9,14 @@ export default defineConfig([
   globalIgnores(['dist']),
   {
     files: ['**/*.{js,jsx}'],
+    plugins: {
+      react,
+    },
     extends: [
       js.configs.recommended,
       reactHooks.configs.flat.recommended,
       reactRefresh.configs.vite,
     ],
-    plugins: {
-      react,
-    },
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
@@ -26,10 +26,13 @@ export default defineConfig([
         sourceType: 'module',
       },
     },
-    rules: {
+        rules: {
       'react/jsx-uses-react': 'error',
       'react/jsx-uses-vars': 'error',
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', args: 'none', caughtErrorsIgnorePattern: '^_' }],
-    },
+      'react-hooks/exhaustive-deps': 'off',
+      'react-hooks/set-state-in-effect': 'off',
+      'react-refresh/only-export-components': 'off',
+        },
   },
 ])

@@ -144,7 +144,7 @@ const AdminTickets = () => {
         return () => {
             supabase.removeChannel(channel);
         };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
     }, [statusFilter, categoryFilter, priorityFilter, teamFilter]);
 
     // Seed search from URL

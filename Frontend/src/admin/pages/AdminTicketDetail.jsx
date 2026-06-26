@@ -116,7 +116,7 @@ const AdminTicketDetail = () => {
         return () => {
             supabase.removeChannel(channel);
         };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
     }, [ticket_id]);
 
     const handleUpdate = async (updates, actionType) => {

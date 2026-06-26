@@ -52,7 +52,7 @@ function AutoResolve() {
         if (messages.length === 0) {
             fetchNextStep([]);
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
     }, [aiTicket, navigate]);
 
     useEffect(() => {

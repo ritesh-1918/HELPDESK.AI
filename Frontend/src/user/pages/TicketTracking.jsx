@@ -20,13 +20,13 @@ const TicketTracking = () => {
     const [error, setError] = useState(null);
     const [createdTicket, setCreatedTicket] = useState(null);
     const hasCreated = useRef(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    const resolutionSteps = location.state?.resolutionSteps || [];
     useEffect(() => {
         if (!aiTicket) {
             navigate('/create-ticket');
             return;
         }
+
+        const resolutionSteps = location.state?.resolutionSteps || [];
 
         const finalizeTracking = async () => {
             if (hasCreated.current) return;
@@ -52,6 +52,7 @@ const TicketTracking = () => {
                     confidence: aiTicket.confidence,
                     image_url: aiTicket.image_url || null,
                     company: profile?.company || "System",
+                    company_id: profile?.company_id || null,
                     sla_breach_at: aiTicket.sla_breach_at,
                     metadata: {
                         confidence: aiTicket.confidence,
@@ -90,7 +91,7 @@ const TicketTracking = () => {
         };
 
         finalizeTracking();
-    }, [aiTicket, navigate, user, profile?.company, resolutionSteps]);
+    }, [aiTicket, addTicket, navigate, user, profile?.company, location.state]);
 
     if (!aiTicket) return null;
 

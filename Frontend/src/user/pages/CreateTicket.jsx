@@ -47,7 +47,6 @@ const CreateTicket = () => {
     const [voiceTranscript, setVoiceTranscript] = useState('');
     const [interimVoice, setInterimVoice] = useState('');
 
-
     // Voice Refs & Visualizer
     const recognitionRef = useRef(null);
     const audioContextRef = useRef(null);

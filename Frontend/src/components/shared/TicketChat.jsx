@@ -130,7 +130,7 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
             supabase.removeChannel(channel);
         };
      
-// eslint-disable-next-line react-hooks/exhaustive-deps
+ 
     }, [ticketId]);
 
     const handleInputChange = (e) => {

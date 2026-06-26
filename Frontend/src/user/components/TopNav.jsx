@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bell, Box, CheckCircle2, MessageSquare, Menu, X, LogOut, User as UserIcon } from 'lucide-react';
+import { Bell, Box, CheckCircle2, MessageSquare, Menu, X, LogOut, User as UserIcon, BookOpen } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
 import { Button } from "../../components/ui/button";
@@ -43,6 +43,7 @@ const TopNav = () => {
                     <Link className="text-sm font-semibold text-gray-900 hover:text-emerald-600 transition-colors" to="/dashboard">Dashboard</Link>
                     <Link className="text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors" to="/my-tickets">My Tickets</Link>
                     <Link className="text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors" to="/help">Help</Link>
+                    <Link className="text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors" to="/docs">Documentation</Link>
                 </nav>
 
                 {/* Right: Profile */}
@@ -102,6 +103,13 @@ const TopNav = () => {
                                 className="flex items-center gap-3 text-lg font-bold text-gray-700 hover:text-emerald-700 transition-colors"
                             >
                                 <UserIcon size={20} className="text-gray-400" /> My Profile
+                            </Link>
+                            <Link
+                                to="/docs"
+                                onClick={() => setIsMenuOpen(false)}
+                                className="flex items-center gap-3 text-lg font-bold text-gray-700 hover:text-emerald-700 transition-colors"
+                            >
+                                <BookOpen size={20} className="text-gray-400" /> Documentation
                             </Link>
                         </div>
 

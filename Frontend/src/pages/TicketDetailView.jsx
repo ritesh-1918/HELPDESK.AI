@@ -40,7 +40,7 @@ function TicketDetailView() {
             return;
         }
 
-// eslint-disable-next-line react-hooks/set-state-in-effect
+ 
         setTicket(foundTicket);
 
         // Mark ticket as viewed — only once per ticket_id visit to avoid infinite loops

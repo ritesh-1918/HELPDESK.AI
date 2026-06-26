@@ -26,7 +26,7 @@ function Resolved() {
                 resolved_at: new Date().toISOString()
             };
             addAutoResolvedTicket(record);
-            // eslint-disable-next-line react-hooks/set-state-in-effect
+             
             setDisplayRecord(record);
             hasAdded.current = true;
         }
