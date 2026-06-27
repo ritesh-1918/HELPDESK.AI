@@ -1,8 +1,12 @@
 {
+  "scripts": {
+    "lint:md": "markdownlint '**/*.md'"
+  },
   "dependencies": {
     "puppeteer": "^24.40.0"
   },
   "devDependencies": {
+    "markdownlint-cli": "^0.37.0",
     "supabase": "^2.95.3"
   }
 }

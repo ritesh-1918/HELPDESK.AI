@@ -1,1 +1,1 @@
-# Backend AI System for AI Helpdesk
+# Package initializer

@@ -1,36 +1,53 @@
-# Use an official Python runtime as a parent image
-FROM python:3.10-slim
+# =============================================================================
+# Multi-stage Dockerfile for HELPDESK.AI Backend (FastAPI + uvicorn)
+# Stage 1 (builder): Install Python dependencies
+# Stage 2 (production): Minimal runtime image with non-root user
+# =============================================================================
 
-LABEL version="1.1.1" rebuild_trigger="2026-03-08-2032"
+# ---------------------------------------------------------------------------
+# Stage 1: builder — install dependencies into user space
+# ---------------------------------------------------------------------------
+FROM python:3.12-slim AS builder
 
-# Set the working directory to /app
 WORKDIR /app
 
-# Install system dependencies required for EasyOCR and OpenCV
-RUN apt-get update && apt-get install -y \
-    libgl1 \
-    libglib2.0-0 \
-    git \
+COPY requirements.txt .
+RUN pip install --user --no-cache-dir -r requirements.txt
+
+# ---------------------------------------------------------------------------
+# Stage 2: production — minimal runtime image
+# ---------------------------------------------------------------------------
+FROM python:3.12-slim AS production
+
+LABEL maintainer="HELPDESK.AI Team" \
+      version="2.0.0" \
+      description="AI Helpdesk — backend production image"
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the requirements file into the container
-COPY requirements.txt .
+# Create non-root user
+RUN groupadd --gid 1001 appgroup && \
+    useradd --uid 1001 --gid appgroup --shell /bin/bash --create-home appuser
 
-# Install dependencies (no-cache-dir keeps the docker image smaller)
-RUN pip install --no-cache-dir -r requirements.txt
+WORKDIR /app
 
-# Copy all the remaining files into the container as a 'backend' directory
-# This allows absolute imports like 'from backend.services...' to work perfectly
-COPY . /app/backend
+COPY --from=builder /root/.local /home/appuser/.local
+COPY --chown=appuser:appgroup . .
 
-# Tell Python where to look for modules (so it can find the 'backend' folder)
+ENV PATH=/home/appuser/.local/bin:$PATH
 ENV PYTHONPATH=/app
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
-# Expose port 7860 (Hugging Face Spaces default)
+USER appuser
+
 EXPOSE 7860
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
-    CMD ["python", "backend/healthcheck.py"]
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
+    CMD wget --spider -q http://localhost:7860/health || exit 1
 
-# Run the FastAPI server via Uvicorn
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "7860", "--workers", "2"]

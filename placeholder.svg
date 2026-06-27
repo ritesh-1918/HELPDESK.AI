@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc" />
+      <stop offset="100%" stop-color="#e2e8f0" />
+    </linearGradient>
+    <linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#cbd5e1" />
+      <stop offset="100%" stop-color="#94a3b8" />
+    </linearGradient>
+  </defs>
+
+  <title>Placeholder Image</title>
+
+  <!-- Background -->
+  <rect width="800" height="600" fill="url(#bgGrad)" />
+
+  <!-- Placeholder Image Icon -->
+  <g transform="translate(400, 300)">
+    <!-- Image frame -->
+    <rect x="-120" y="-120" width="240" height="240" rx="32" fill="#ffffff" />
+    <rect x="-110" y="-110" width="220" height="220" rx="24" fill="none" stroke="url(#iconGrad)" stroke-width="8" />
+
+    <!-- Mountain / Landscape inside -->
+    <path d="M -110 110 L -40 20 L 30 60 L 80 -10 L 110 110 Z" fill="url(#iconGrad)" />
+    <circle cx="60" cy="-40" r="24" fill="url(#iconGrad)" />
+
+    <!-- Central plus sign (Add Image) -->
+    <circle cx="0" cy="0" r="40" fill="#3b82f6" />
+    <path d="M -16 0 h 32 M 0 -16 v 32" stroke="#ffffff" stroke-width="6" stroke-linecap="round" />
+  </g>
+
+  <!-- Text placeholder -->
+  <text x="400" y="480" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="600" fill="#64748b" text-anchor="middle">Placeholder Image</text>
+  <text x="400" y="510" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">Scalable • Responsive • Secure</text>
+</svg>

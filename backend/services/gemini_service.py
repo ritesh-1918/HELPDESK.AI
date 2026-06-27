@@ -209,9 +209,11 @@ class GeminiService:
                 f"Description: {description}\n"
                 f"Steps to reproduce: {steps}\n"
                 f"Captured Console/Network Errors: \n{errors_schema}\n\n"
-                "Based on this exact telemetry and report, provide a concise 'Probable Root Cause' (1-3 sentences maximum). "
-                "Focus purely on technical inference and what the developer should investigate first. "
-                "Do not include pleasantries. Do not say 'The probable cause is', just state the technical theory."
+                f"Steps to reproduce: {steps}\n"
+                f"Captured Console/Network Errors: \n{errors_schema}\n\n"
+                f"Based on this exact telemetry and report, provide a concise 'Probable Root Cause' (1-3 sentences maximum). "
+                f"Focus purely on technical inference and what the developer should investigate first. "
+                f"Do not include pleasantries. Do not say 'The probable cause is', just state the technical theory."
             )
 
             response = self.client.models.generate_content(
@@ -222,3 +224,115 @@ class GeminiService:
         except Exception as e:
             print(f"[GeminiService] Bug Analysis Error: {e}")
             return f"Diagnostic analysis failed: {str(e)}"
+
+    def generate_rca_hypotheses(self, ticket_text: str, log_telemetry: list, dependencies: dict) -> list:
+        """
+        Generate 3-5 ranked root-cause hypotheses based on ticket, logs, and dependencies.
+        Includes a rule-based fallback if the API is offline.
+        """
+        if not self._initialized:
+            return self._fallback_rca_hypotheses(ticket_text, log_telemetry, dependencies)
+
+        try:
+            logs_str = json.dumps(log_telemetry, indent=2)
+            dep_str = json.dumps(dependencies, indent=2)
+            prompt = (
+                f"You are a Level 3 Operations & Root Cause Analysis specialist.\n"
+                f"Incident Ticket: {ticket_text}\n"
+                f"Correlated Log Telemetry:\n{logs_str}\n"
+                f"System Dependency Context:\n{dep_str}\n\n"
+                f"Generate 3 to 5 ranked root-cause hypotheses for this incident.\n"
+                f"For each hypothesis, return:\n"
+                f"1. hypothesis: Concise name of the root cause.\n"
+                f"2. confidence: Number between 0.0 and 1.0.\n"
+                f"3. evidence: List of evidence names, e.g. ['Log Correlation', 'Dependency Match', 'Historical Similarity'].\n"
+                f"4. explanation: Professional technical description of why this is a likely cause.\n\n"
+                f"Output strictly as a valid JSON list. Example:\n"
+                f"[\n"
+                f"  {{\n"
+                f"    \"hypothesis\": \"Database Connection Pool Exhaustion\",\n"
+                f"    \"confidence\": 0.91,\n"
+                f"    \"evidence\": [\"Log Correlation\", \"Dependency Match\"],\n"
+                f"    \"explanation\": \"Database logs show max connection limits reached coincident with the CRM authentication timeout.\"\n"
+                f"  }}\n"
+                f"]"
+            )
+
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt
+            )
+            
+            # Clean response text from markdown code blocks
+            clean_text = response.text.strip()
+            if clean_text.startswith("```"):
+                # Remove code blocks
+                clean_text = re.sub(r"^```(?:json)?\n|```$", "", clean_text, flags=re.MULTILINE).strip()
+                
+            result = json.loads(clean_text)
+            if isinstance(result, list):
+                return result
+                
+            return self._fallback_rca_hypotheses(ticket_text, log_telemetry, dependencies)
+        except Exception as e:
+            print(f"[GeminiService] RCA Hypothesis Generation Error: {e}")
+            return self._fallback_rca_hypotheses(ticket_text, log_telemetry, dependencies)
+
+    def _fallback_rca_hypotheses(self, ticket_text: str, log_telemetry: list, dependencies: dict) -> list:
+        """Rule-based fallback for RCA hypotheses."""
+        text_lower = ticket_text.lower()
+        hypotheses = []
+
+        # Find logs with error/critical
+        err_logs = [l for l in log_telemetry if l.get("level") in ["ERROR", "CRITICAL"]]
+        has_db_log = any("db" in l.get("source", "").lower() or "database" in l.get("message", "").lower() for l in err_logs)
+        has_auth_log = any("auth" in l.get("source", "").lower() or "authenticate" in l.get("message", "").lower() for l in err_logs)
+        has_network_log = any("unreachable" in l.get("message", "").lower() or "timeout" in l.get("message", "").lower() for l in err_logs)
+
+        # 1. Check database connectivity
+        if has_db_log or "db" in text_lower or "database" in text_lower or "mysql" in text_lower:
+            hypotheses.append({
+                "hypothesis": "Database Cluster Access Failure",
+                "confidence": 0.89 if has_db_log else 0.75,
+                "evidence": ["Log Correlation", "Dependency Match"] if has_db_log else ["Symptom Matching"],
+                "explanation": "Timeout or query execution failure detected on the production database instances."
+            })
+
+        # 2. Check Auth service
+        if has_auth_log or "auth" in text_lower or "login" in text_lower or "permission" in text_lower:
+            hypotheses.append({
+                "hypothesis": "Authentication Service Degraded",
+                "confidence": 0.82 if has_auth_log else 0.70,
+                "evidence": ["Log Correlation", "Historical Pattern"] if has_auth_log else ["Symptom Matching"],
+                "explanation": "Downstream authentication service timeout preventing session creation for active clients."
+            })
+
+        # 3. Check Network / Timeout
+        if has_network_log or "timeout" in text_lower or "network" in text_lower or "slow" in text_lower:
+            hypotheses.append({
+                "hypothesis": "Network Switch Misconfiguration",
+                "confidence": 0.76 if has_network_log else 0.65,
+                "evidence": ["Log Correlation", "Dependency Match"] if has_network_log else ["Symptom Matching"],
+                "explanation": "High packet loss or switch configuration mismatch resulting in peer connectivity drops."
+            })
+
+        # 4. Check Printer (Common hardware issue)
+        if "printer" in text_lower or "printing" in text_lower:
+            hypotheses.append({
+                "hypothesis": "Print Server Spooler Crash",
+                "confidence": 0.90,
+                "evidence": ["Symptom Matching", "Historical Pattern"],
+                "explanation": "The local print queue host spooler service crashed due to out-of-memory driver errors."
+            })
+
+        # Default fallback if empty
+        if not hypotheses:
+            hypotheses.append({
+                "hypothesis": "General System Dependency Failure",
+                "confidence": 0.60,
+                "evidence": ["Symptom Matching"],
+                "explanation": "System resources or a third-party API service degradation is causing transactional timeouts."
+            })
+
+        return hypotheses
+

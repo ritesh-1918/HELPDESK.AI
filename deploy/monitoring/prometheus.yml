@@ -1,0 +1,19 @@
+# prometheus.yml — Example scrape config for HELPDESK.AI
+#
+# Add this job to your existing Prometheus configuration.
+# The /metrics endpoint is secured by IP allowlist (default: private ranges)
+# and optional bearer token (METRICS_TOKEN env var).
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "helpdesk-ai"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["backend:8000"]  # Adjust to your deployment
+    # If METRICS_TOKEN is set, uncomment and configure:
+    # authorization:
+    #   type: Bearer
+    #   credentials: "<your-metrics-token>"
