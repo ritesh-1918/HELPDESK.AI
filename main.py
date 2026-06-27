@@ -1,6 +1,7 @@
 import logging
 import os
 from fastapi import FastAPI, Request, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
@@ -18,6 +19,30 @@ configure_logging()
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
+
+# ---------------------------------------------------------------------------
+# CORS — strict allowlist driven by environment, no wildcards
+# ---------------------------------------------------------------------------
+_allowed_origins = [
+    o.strip()
+    for o in os.getenv(
+        "ALLOWED_ORIGINS",
+        "https://helpdeskaiv1.vercel.app,http://localhost:5173,http://localhost:3000",
+    ).split(",")
+    if o.strip()
+]
+# Optional regex for staging/preview deployments (e.g. https://.*\.vercel\.app)
+_origin_regex = os.getenv("ALLOWED_ORIGIN_REGEX", "")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_allowed_origins,
+    allow_origin_regex=_origin_regex or None,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allow_headers=["Authorization", "Content-Type", "X-CSRF-Token"],
+    expose_headers=["X-CSRF-Token"],
+)
 
 app.add_middleware(CSRFTokenMiddleware)
 app.include_router(metrics_router.router)
