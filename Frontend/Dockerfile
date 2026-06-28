@@ -2,10 +2,11 @@
 # Multi-stage Dockerfile for HELPDESK.AI Frontend (Vite + nginx)
 # Stage 1 (builder): Build the Vite/React application
 # Stage 2 (production): Serve via nginx:alpine with non-root user
+# Stage 3 (dev): Vite dev server with hot module replacement
 # =============================================================================
 
 # ---------------------------------------------------------------------------
-# Stage 1: builder — install deps and compile Vite production bundle
+# Stage 1: builder - install deps and compile Vite production bundle
 # ---------------------------------------------------------------------------
 FROM node:20-alpine AS builder
 
@@ -28,13 +29,13 @@ COPY . .
 RUN npm run build
 
 # ---------------------------------------------------------------------------
-# Stage 2: production — serve static files via nginx with non-root user
+# Stage 2: production - serve static files via nginx with non-root user
 # ---------------------------------------------------------------------------
 FROM nginx:stable-alpine AS production
 
 LABEL maintainer="HELPDESK.AI Team" \
-      version="2.0.0" \
-      description="AI Helpdesk — frontend production image"
+      version="3.0.0" \
+      description="AI Helpdesk frontend production image (optimized)"
 
 RUN addgroup -g 1001 -S appgroup && \
     adduser -u 1001 -S appuser -G appgroup
@@ -56,3 +57,19 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD wget --spider -q http://localhost:80/ || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
+
+# ---------------------------------------------------------------------------
+# Stage 3: dev - Vite dev server with hot module replacement
+# ---------------------------------------------------------------------------
+FROM node:20-alpine AS dev
+
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+RUN npm ci
+
+COPY . .
+
+EXPOSE 5173
+
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
