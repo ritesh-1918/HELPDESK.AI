@@ -1,12 +1,11 @@
 import logging
-import os
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
-from supabase import create_client
 
 from backend.csrf import CSRFTokenMiddleware, set_csrf_cookie, CSRF_COOKIE_NAME
+from backend.config import settings
 from backend.swagger_config import SWAGGER_UI_CUSTOM_CSS, SWAGGER_UI_CUSTOM_JS
 
 from backend.routers import tickets, ai, admin, health, auth
@@ -19,18 +18,11 @@ app = FastAPI()
 
 app.add_middleware(CSRFTokenMiddleware)
 
-# Initialize Supabase client
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
-
-# Initialize Supabase client
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
-
 supabase = None
-if SUPABASE_URL and SUPABASE_SERVICE_KEY and os.getenv("ALLOW_DEGRADED_STARTUP") != "1":
+if settings.should_init_supabase:
     try:
-        supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+        from supabase import create_client
+        supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
     except Exception as e:
         logger.warning(f"Failed to initialize Supabase client: {e}")
 

@@ -1,10 +1,13 @@
 from typing import Optional
+
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     # Core API Keys
-    SUPABASE_URL: str
-    SUPABASE_SERVICE_KEY: str
+    SUPABASE_URL: Optional[str] = None
+    SUPABASE_SERVICE_KEY: Optional[str] = None
+    SUPABASE_ANON_KEY: Optional[str] = None
     GEMINI_API_KEY: Optional[str] = None
     RESEND_API_KEY: Optional[str] = None
     
@@ -20,5 +23,28 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore"
     )
+
+    @model_validator(mode="after")
+    def validate_supabase_settings(self):
+        if not self.ALLOW_DEGRADED_STARTUP and self.REQUIRE_SUPABASE:
+            missing = [
+                name
+                for name in ("SUPABASE_URL", "SUPABASE_SERVICE_KEY")
+                if not getattr(self, name)
+            ]
+            if missing:
+                missing_list = ", ".join(missing)
+                raise ValueError(
+                    f"Missing required Supabase environment variables: {missing_list}"
+                )
+        return self
+
+    @property
+    def supabase_ready(self) -> bool:
+        return bool(self.SUPABASE_URL and self.SUPABASE_SERVICE_KEY)
+
+    @property
+    def should_init_supabase(self) -> bool:
+        return self.supabase_ready and not self.ALLOW_DEGRADED_STARTUP
 
 settings = Settings()

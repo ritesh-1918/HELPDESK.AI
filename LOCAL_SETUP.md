@@ -98,6 +98,22 @@ pip show fastapi uvicorn
 
 HELPDESK.AI uses Supabase for auth, real-time triggers, and the database layer powering the ticket auto-close system and company-level settings introduced in PR #44.
 
+### Fast path: local compose sandbox
+
+If you only want a self-contained local database plus the API container, use the compose file added for this bounty:
+
+```bash
+docker compose -f docker-compose.local.yml up --build
+```
+
+That starts:
+
+- a local Supabase-compatible PostgreSQL instance on `localhost:54322`
+- the backend API on `localhost:7860`
+- mock auth enabled for quick local smoke tests using tokens like `mock-token-companyA-user-user123`
+
+This path is meant for schema-backed sandbox testing and contributor QA. It does not replace the full Supabase auth stack used by the hosted deployment.
+
 ### 3a. Install the Supabase CLI
 
 Make sure Docker Desktop is **actively running** (check your taskbar/menu bar), then:

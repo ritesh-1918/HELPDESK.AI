@@ -22,15 +22,13 @@ export function useServerAuth() {
     const [loading, setLoading] = useState(true);
     const [role, setRole] = useState(null);
     const hasRun = useRef(false);
-
-    const clearAuth = useAuthStore((s) => {
-        const set = s._set ?? (() => {});
-        return () => {
-            try {
-                useAuthStore.setState({ user: null, profile: null });
-            } catch (_) { /* noop if store shape differs */ }
-        };
-    });
+    const clearAuth = () => {
+        try {
+            useAuthStore.setState({ user: null, profile: null });
+        } catch (_) {
+            // noop if store shape differs
+        }
+    };
 
     useEffect(() => {
         // Prevent double-verification on StrictMode double-mount
@@ -46,6 +44,7 @@ export function useServerAuth() {
                 if (cancelled) return;
 
                 if (userError || !user) {
+                    clearAuth();
                     setVerified(false);
                     setRole(null);
                     setLoading(false);
@@ -62,6 +61,7 @@ export function useServerAuth() {
                 if (cancelled) return;
 
                 if (profileError || !serverProfile) {
+                    clearAuth();
                     setVerified(false);
                     setRole(null);
                     setLoading(false);
@@ -75,7 +75,7 @@ export function useServerAuth() {
                     cachedProfile.role !== serverProfile.role
                 ) {
                     // localStorage was tampered — clear the store
-                    useAuthStore.setState({ user: null, profile: null });
+                    clearAuth();
                     setVerified(false);
                     setRole(null);
                     setLoading(false);
@@ -91,6 +91,7 @@ export function useServerAuth() {
                 useAuthStore.setState({ user, profile: { ...cachedProfile, ...serverProfile } });
             } catch (err) {
                 if (!cancelled) {
+                    clearAuth();
                     setVerified(false);
                     setRole(null);
                     setLoading(false);

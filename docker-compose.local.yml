@@ -1,0 +1,69 @@
+version: "3.9"
+
+# Local sandbox stack for HELPDESK.AI
+# Usage:
+#   docker compose -f docker-compose.local.yml up --build
+#
+# This stack brings up a Supabase-compatible local PostgreSQL instance and the
+# backend API. It is intentionally lighter than the full production compose so
+# contributors can run schema-backed flows without depending on remote infra.
+
+services:
+  db:
+    image: supabase/postgres:17.6.1.084
+    container_name: helpdesk_local_db
+    restart: unless-stopped
+    ports:
+      - "54322:5432"
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - helpdesk_local_db:/var/lib/postgresql/data
+      - ./docker/local-db/00-auth.sql:/docker-entrypoint-initdb.d/00-auth.sql:ro
+      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - helpdesk_local_net
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: production
+    image: helpdesk-ai-backend:local-sandbox
+    container_name: helpdesk_local_api
+    restart: unless-stopped
+    ports:
+      - "7860:7860"
+    environment:
+      ENV: development
+      PYTHONPATH: /app
+      ALLOW_DEGRADED_STARTUP: "1"
+      MOCK_AUTH_ENABLED: "true"
+      SUPABASE_URL: ""
+      SUPABASE_SERVICE_KEY: ""
+      SUPABASE_ANON_KEY: ""
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: postgres
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - helpdesk_local_net
+
+volumes:
+  helpdesk_local_db:
+
+networks:
+  helpdesk_local_net:
+    driver: bridge

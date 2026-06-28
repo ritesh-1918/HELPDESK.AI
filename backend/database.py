@@ -1,25 +1,25 @@
 import logging
-import os
 from pathlib import Path
 from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 
+from backend.config import settings
+
 env_path = Path(__file__).parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
-try:
-    from supabase import create_client, Client
-    url = os.environ.get("SUPABASE_URL")
-    key = os.environ.get("SUPABASE_SERVICE_KEY")
-    if not url or not key:
-        logger.error("SUPABASE_URL or SUPABASE_SERVICE_KEY not set in backend/.env")
+supabase = None
+if settings.supabase_ready:
+    try:
+        from supabase import create_client
+
+        supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
+    except (ImportError, Exception) as e:
+        logger.warning("Supabase initialization failed: %s", e)
         supabase = None
-    else:
-        supabase = create_client(url, key)
-except (ImportError, Exception) as e:
-    logger.warning("Supabase initialization failed: %s", e)
-    supabase = None
+else:
+    logger.error("SUPABASE_URL or SUPABASE_SERVICE_KEY not set in backend/.env")
 
 def get_system_settings(company_id: str) -> dict:
     defaults = {

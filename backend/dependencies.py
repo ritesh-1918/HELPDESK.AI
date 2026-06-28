@@ -5,19 +5,22 @@ from pathlib import Path
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-try:
-    from supabase import create_client, Client
-    url = os.environ.get("SUPABASE_URL")
-    key = os.environ.get("SUPABASE_SERVICE_KEY")
-    if not url or not key:
-        print("[ERROR] SUPABASE_URL or SUPABASE_SERVICE_KEY not set in backend/.env")
+from backend.config import settings
+
+supabase = None
+Client = None
+if settings.supabase_ready:
+    try:
+        from supabase import create_client, Client as SupabaseClient
+
+        supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
+        Client = SupabaseClient
+    except (ImportError, Exception) as e:
+        print(f"[WARNING] Supabase initialization failed: {e}")
         supabase = None
-    else:
-        supabase = create_client(url, key)
-except (ImportError, Exception) as e:
-    print(f"[WARNING] Supabase initialization failed: {e}")
-    supabase = None
-    Client = None
+        Client = None
+else:
+    print("[ERROR] SUPABASE_URL or SUPABASE_SERVICE_KEY not set in backend/.env")
 
 from backend.services.classifier_service import ClassifierService
 from backend.services.classifier_v2 import classifier_v2
