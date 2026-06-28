@@ -1,6 +1,8 @@
 import os
 import logging
 import datetime
+import csv
+import io
 import urllib.request
 import urllib.error
 import json
@@ -35,9 +37,9 @@ def _build_digest_email_subject(stats: dict) -> str:
     return f"Weekly Helpdesk Operations Digest - {cleaned_company}"
 
 
-def get_weekly_stats(company_id: str) -> dict:
+def get_weekly_stats(company_id: str, days: int = 7) -> dict:
     """
-    Query tickets table from Supabase for the last 7 days and compute weekly metrics.
+    Query tickets table from Supabase for the last N days and compute weekly metrics.
     """
     stats = {
         "total_tickets": 0,
@@ -76,16 +78,17 @@ def get_weekly_stats(company_id: str) -> dict:
 
     # Set up date range
     now = datetime.datetime.now(datetime.timezone.utc)
-    seven_days_ago = now - datetime.timedelta(days=7)
-    seven_days_ago_iso = seven_days_ago.isoformat()
-    
-    stats["date_range_str"] = f"{seven_days_ago.strftime('%b %d')} - {now.strftime('%b %d, %Y')}"
+    window_days = max(1, int(days))
+    period_start = now - datetime.timedelta(days=window_days)
+    period_start_iso = period_start.isoformat()
+
+    stats["date_range_str"] = f"{period_start.strftime('%b %d')} - {now.strftime('%b %d, %Y')}"
 
     try:
         # Fetch tickets from last 7 days for the company
         res = supabase.table("tickets").select(
             "id, status, priority, category, assigned_team, created_at, updated_at, closed_at, sla_status"
-        ).eq("company_id", company_id).gte("created_at", seven_days_ago_iso).execute()
+        ).eq("company_id", company_id).gte("created_at", period_start_iso).execute()
 
         tickets = res.data or []
         stats["total_tickets"] = len(tickets)
@@ -220,6 +223,70 @@ def get_weekly_stats(company_id: str) -> dict:
         logger.error(f"[Digest] Error building weekly stats: {e}")
 
     return stats
+
+
+def export_weekly_stats_to_csv_stream(stats: dict) -> io.BytesIO:
+    """Serialize weekly digest stats into a CSV attachment stream."""
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow(["=== WEEKLY DIGEST SUMMARY ==="])
+    summary_rows = [
+        ("Company", stats.get("company_name", "Your Company")),
+        ("Date range", stats.get("date_range_str", "")),
+        ("Total tickets", stats.get("total_tickets", 0)),
+        ("Resolved tickets", stats.get("resolved_tickets", 0)),
+        ("Open tickets", stats.get("open_tickets", 0)),
+        ("Pending tickets", stats.get("pending_tickets", 0)),
+        ("Resolution rate", f"{stats.get('resolution_rate', 0)}%"),
+        ("Average resolution time", stats.get("avg_resolution_time_str", "N/A")),
+        ("SLA breaches", stats.get("sla_breaches", 0)),
+    ]
+    for label, value in summary_rows:
+        writer.writerow([label, value])
+
+    writer.writerow([])
+    writer.writerow(["=== TOP CATEGORIES ==="])
+    writer.writerow(["Category", "Count"])
+    top_categories = stats.get("top_categories", [])
+    if top_categories:
+        for item in top_categories:
+            writer.writerow([item.get("category", "Unclassified"), item.get("count", 0)])
+    else:
+        writer.writerow(["No category data recorded", ""])
+
+    writer.writerow([])
+    writer.writerow(["=== TEAM PERFORMANCE ==="])
+    writer.writerow([
+        "Team",
+        "Total",
+        "Resolved",
+        "Open",
+        "Pending",
+        "Resolution Rate",
+        "Avg Resolution Time",
+        "SLA Breaches",
+    ])
+    team_performance = stats.get("team_performance", [])
+    if team_performance:
+        for team in team_performance:
+            writer.writerow([
+                team.get("team", "Unassigned"),
+                team.get("total", 0),
+                team.get("resolved", 0),
+                team.get("open", 0),
+                team.get("pending", 0),
+                f"{team.get('resolution_rate', 0)}%",
+                team.get("avg_resolution_time", "N/A"),
+                team.get("sla_breaches", 0),
+            ])
+    else:
+        writer.writerow(["No team data recorded", "", "", "", "", "", "", ""])
+
+    buffer = io.BytesIO()
+    buffer.write(output.getvalue().encode("utf-8"))
+    buffer.seek(0)
+    return buffer
 
 
 def generate_ai_summary(stats: dict) -> str:

@@ -9,6 +9,7 @@ import datetime
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from backend.auth_cookie import get_current_user
@@ -16,6 +17,7 @@ from backend.services.digest_service import (
     get_weekly_stats,
     generate_ai_summary,
     send_digest_email,
+    export_weekly_stats_to_csv_stream,
 )
 
 logger = logging.getLogger(__name__)
@@ -62,6 +64,28 @@ async def preview_weekly_digest(
     stats = get_weekly_stats(company_id)
     summary = generate_ai_summary(stats)
     return {"stats": stats, "ai_summary": summary}
+
+
+@router.get("/export/{company_id}")
+async def export_weekly_digest(
+    company_id: str,
+    days: int = 7,
+    user: dict = Depends(get_current_user),
+):
+    """
+    Export the weekly team statistics as a CSV attachment for admin review.
+    """
+    if user.get("role") not in {"admin", "super_admin", "master_admin"}:
+        raise HTTPException(status_code=403, detail="Admins only")
+
+    stats = get_weekly_stats(company_id, days=days)
+    csv_stream = export_weekly_stats_to_csv_stream(stats)
+    filename = f"weekly_digest_{company_id}_{days}d.csv"
+    return StreamingResponse(
+        csv_stream,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
 
 
 @router.post("/send-now", response_model=DigestSendResponse)
