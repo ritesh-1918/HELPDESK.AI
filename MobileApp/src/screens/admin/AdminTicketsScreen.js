@@ -242,6 +242,9 @@ const AdminTicketsScreen = () => {
           showsHorizontalScrollIndicator={false}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.tabScroll}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={5}
+          windowSize={5}
           renderItem={({ item }) => (
             <TouchableOpacity
               style={[styles.tabItem, activeFilter === item.id && styles.activeTabItem]}
@@ -268,6 +271,15 @@ const AdminTicketsScreen = () => {
           renderItem={renderTicketItem}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={10}
+          initialNumToRender={10}
+          getItemLayout={(data, index) => ({
+            length: 120,
+            offset: 120 * index,
+            index,
+          })}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
