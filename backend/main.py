@@ -159,6 +159,14 @@ class Message(BaseModel):
     timestamp: str
 
 
+class CorrectionLog(BaseModel):
+    ticket_id: str
+    original_text: str = ""
+    ocr_text: str = ""
+    original_prediction: dict = {}
+    corrected_prediction: dict = {}
+    confidence: float = 0.0
+
 class TicketRecord(BaseModel):
     ticket_id: str
     owner_id: str
@@ -470,68 +478,6 @@ async def analyze_bug(request: BugReportAnalysisRequest):
 
 
 # ---------------------------------------------------------------------------
-# Admin Correction Logging endpoint
-# ---------------------------------------------------------------------------
-CORRECTIONS_LOG_PATH = Path(__file__).parent / "data" / "corrections_log.json"
-
-@app.post("/ai/log_correction")
-async def log_correction(raw_request: Request):
-    """Log an admin correction when the AI prediction differs from the human decision."""
-    try:
-        body = await raw_request.json()
-    except Exception as e:
-        print(f"[CORRECTION ERROR] Could not parse request body: {e}")
-        return {"status": "error", "message": "Invalid JSON body"}
-
-    print(f"[CORRECTION RECEIVED] Payload keys: {list(body.keys())}")
-
-    ticket_id = str(body.get("ticket_id", "unknown"))
-    original_text = str(body.get("original_text", ""))
-    ocr_text = str(body.get("ocr_text", ""))
-    confidence = float(body.get("confidence") or 0.0)
-    original_prediction = body.get("original_prediction") or {}
-    corrected_prediction = body.get("corrected_prediction") or {}
-
-    # Only log if something actually changed
-    changed_fields = [
-        field for field in ["category", "subcategory", "priority", "assigned_team"]
-        if original_prediction.get(field) != corrected_prediction.get(field)
-    ]
-
-    if not changed_fields:
-        return {"status": "no_change", "message": "Prediction matches correction, nothing logged."}
-
-    entry = {
-        "ticket_id": ticket_id,
-        "original_text": original_text,
-        "ocr_text": ocr_text,
-        "original_prediction": original_prediction,
-        "corrected_prediction": corrected_prediction,
-        "changed_fields": changed_fields,
-        "confidence": confidence,
-        "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
-    }
-
-    try:
-        if CORRECTIONS_LOG_PATH.exists() and CORRECTIONS_LOG_PATH.stat().st_size > 2:
-            with open(CORRECTIONS_LOG_PATH, "r", encoding="utf-8") as f:
-                logs = json.load(f)
-        else:
-            logs = []
-
-        logs.append(entry)
-
-        with open(CORRECTIONS_LOG_PATH, "w", encoding="utf-8") as f:
-            json.dump(logs, f, indent=2)
-
-        print(f"[CORRECTION SAVED] Ticket ID: {ticket_id} | Changed: {changed_fields}")
-        return {"status": "saved", "changed_fields": changed_fields}
-
-    except Exception as e:
-        print(f"[CORRECTION ERROR] Could not save: {e}")
-        return {"status": "error", "message": str(e)}
-
-
 # ---------------------------------------------------------------------------
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
@@ -1209,3 +1155,42 @@ async def auth_logout(response: Response):
 async def auth_me(user: dict = Depends(get_current_user)):
     return {"user": user}
 
+
+# ---------------------------------------------------------------------------
+# Admin Correction Logging endpoint
+# ---------------------------------------------------------------------------
+@app.post("/ai/log_correction")
+@limiter.limit("5/minute")
+async def log_correction(correction: CorrectionLog, request: Request, user: dict = Depends(get_current_user)):
+    """Log an admin correction when the AI prediction differs from the human decision."""
+    try:
+        # Only log if something actually changed
+        changed_fields = [
+            field for field in ["category", "subcategory", "priority", "assigned_team"]
+            if correction.original_prediction.get(field) != correction.corrected_prediction.get(field)
+        ]
+
+        if not changed_fields:
+            return {"status": "no_change", "message": "Prediction matches correction, nothing logged."}
+
+        entry = {
+            "ticket_id": correction.ticket_id,
+            "original_text": correction.original_text,
+            "ocr_text": correction.ocr_text,
+            "original_prediction": correction.original_prediction,
+            "corrected_prediction": correction.corrected_prediction,
+            "changed_fields": changed_fields,
+            "confidence": correction.confidence,
+            "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+            "corrected_by": user.get("id", "unknown")
+        }
+
+        # Insert to Supabase directly
+        res = supabase.table("corrections").insert(entry).execute()
+        
+        logger.info("Correction saved to Supabase", extra={"ticket_id": correction.ticket_id, "changed": changed_fields})
+        return {"status": "saved", "changed_fields": changed_fields}
+
+    except Exception as e:
+        logger.error("Failed to save correction to Supabase", extra={"error_details": str(e)})
+        return {"status": "error", "message": str(e)}
