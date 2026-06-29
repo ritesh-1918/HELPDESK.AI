@@ -59,6 +59,11 @@ from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
+from backend.services.ticket_access import (
+    filter_ticket_updates,
+    require_company_id,
+    ticket_belongs_to_company,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -162,6 +167,7 @@ class Message(BaseModel):
 class TicketRecord(BaseModel):
     ticket_id: str
     owner_id: str
+    company_id: str | None = None
     summary: str
     category: str
     subcategory: str
@@ -189,6 +195,19 @@ class HealthResponse(BaseModel):
 class ReadinessResponse(BaseModel):
     status: str
     checks: dict[str, bool]
+
+
+class TicketUpdateRequest(BaseModel):
+    status: str | None = None
+    assigned_team: str | None = None
+    assigned_agent_id: str | None = None
+    priority: str | None = None
+    category: str | None = None
+    subcategory: str | None = None
+    metadata: dict | None = None
+    timeline: dict | None = None
+    last_user_viewed_at: str | None = None
+    updated_at: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -540,11 +559,15 @@ async def get_tickets(company_id: str | None = None):
     """Fetch persistent tickets from Supabase."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
-    
+
+    try:
+        company_id = require_company_id(company_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
     query = supabase.table("tickets").select("*").order("created_at", desc=True)
-    if company_id:
-        query = query.eq("company_id", company_id)
-        
+    query = query.eq("company_id", company_id)
+
     res = query.execute()
     return res.data
 
@@ -603,8 +626,6 @@ async def save_ticket(request_body: TicketSaveRequest):
 
         user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
         logger.info(f"Tenant linkage: user_hash={user_hash}, company_id={final_data.get('company_id')}")
-
-
         res = supabase.table("tickets").insert(final_data).execute()
         
         if not res.data:
@@ -652,12 +673,24 @@ async def save_ticket(request_body: TicketSaveRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/tickets/{ticket_id}")
-async def get_ticket_by_id(ticket_id: str):
+async def get_ticket_by_id(ticket_id: str, company_id: str | None = None):
     """Fetch single persistent ticket."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
-    
-    res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
+
+    try:
+        company_id = require_company_id(company_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    res = (
+        supabase.table("tickets")
+        .select("*")
+        .eq("id", ticket_id)
+        .eq("company_id", company_id)
+        .single()
+        .execute()
+    )
     if not res.data:
         raise HTTPException(status_code=404, detail="Ticket not found")
     return res.data
@@ -666,6 +699,9 @@ async def get_ticket_by_id(ticket_id: str):
 @app.post("/tickets", response_model=TicketRecord)
 async def create_ticket(ticket: TicketRecord):
     """Save a new ticket into the system."""
+    if not ticket.company_id:
+        raise HTTPException(status_code=400, detail="company_id is required")
+
     # Check for duplicates before adding
     existing = next((t for t in TICKETS_DB if t.ticket_id == ticket.ticket_id), None)
     if existing:
@@ -677,17 +713,26 @@ async def create_ticket(ticket: TicketRecord):
 
 
 @app.patch("/tickets/{ticket_id}", response_model=TicketRecord)
-async def update_ticket(ticket_id: str, updates: dict):
+async def update_ticket(ticket_id: str, updates: TicketUpdateRequest, company_id: str | None = None):
     """Partially update a ticket's fields (e.g., status, viewed_at)."""
+    try:
+        company_id = require_company_id(company_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    safe_updates = filter_ticket_updates(updates.dict(exclude_unset=True))
     for i, ticket in enumerate(TICKETS_DB):
         if str(ticket.ticket_id) == str(ticket_id):
+            if not ticket_belongs_to_company(ticket.company_id, company_id):
+                raise HTTPException(status_code=404, detail="Ticket not found")
+
             # Convert to dict, update, then back to model
             ticket_dict = ticket.dict()
-            ticket_dict.update(updates)
+            ticket_dict.update(safe_updates)
             updated_ticket = TicketRecord(**ticket_dict)
             TICKETS_DB[i] = updated_ticket
             return updated_ticket
-    
+
     raise HTTPException(status_code=404, detail="Ticket not found")
 
 
@@ -1208,4 +1253,3 @@ async def auth_logout(response: Response):
 @app.get("/auth/me")
 async def auth_me(user: dict = Depends(get_current_user)):
     return {"user": user}
-
