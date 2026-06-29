@@ -91,8 +91,9 @@ class TicketRequest(BaseModel):
     confidence_threshold: float = 0.20
     duplicate_sensitivity: float = 0.85
 
+from pydantic import Field
 class BatchTicketRequest(BaseModel):
-    requests: list[TicketRequest]
+    requests: list[TicketRequest] = Field(..., min_length=1, max_length=50)
 
 class TicketSaveRequest(BaseModel):
     user_id: str
@@ -711,16 +712,39 @@ def process_batch_task(batch_id: str, requests: list[TicketRequest]):
     pass
 
 async def async_process_batch_task(batch_id: str, requests: list[TicketRequest]):
+    import asyncio
     BATCH_JOBS[batch_id]["status"] = "processing"
+    sem = asyncio.Semaphore(5)
+    
+    async def process_single(req):
+        if BATCH_JOBS[batch_id].get("cancel_requested"):
+            return None
+        try:
+            async with sem:
+                res = await analyze_only(req)
+                return (req, res, None)
+        except Exception as e:
+            return (req, None, e)
+
     try:
-        for i, req in enumerate(requests):
+        tasks = [asyncio.create_task(process_single(req)) for req in requests]
+        for coro in asyncio.as_completed(tasks):
             if BATCH_JOBS[batch_id].get("cancel_requested"):
                 BATCH_JOBS[batch_id]["status"] = "cancelled"
                 break
                 
-            try:
-                res = await analyze_only(req)
-                # Store minimal info to save memory
+            result = await coro
+            if not result:
+                continue
+                
+            req, res, err = result
+            if err:
+                BATCH_JOBS[batch_id]["results"].append({
+                    "ticket_text_snippet": req.text[:50],
+                    "error": str(err)
+                })
+                BATCH_JOBS[batch_id]["failed"] += 1
+            else:
                 BATCH_JOBS[batch_id]["results"].append({
                     "ticket_text_snippet": req.text[:50],
                     "category": res.category,
@@ -729,29 +753,43 @@ async def async_process_batch_task(batch_id: str, requests: list[TicketRequest])
                     "assigned_team": res.assigned_team,
                     "confidence": res.confidence
                 })
-            except Exception as e:
-                BATCH_JOBS[batch_id]["results"].append({
-                    "ticket_text_snippet": req.text[:50],
-                    "error": str(e)
-                })
-                
+            
             BATCH_JOBS[batch_id]["completed"] += 1
             
+            # Update ETA
+            import time
+            elapsed = time.time() - BATCH_JOBS[batch_id]["start_time"]
+            completed = BATCH_JOBS[batch_id]["completed"]
+            if completed > 0:
+                avg_time = elapsed / completed
+                remaining = BATCH_JOBS[batch_id]["total"] - completed
+                BATCH_JOBS[batch_id]["estimated_time_remaining"] = int(avg_time * remaining)
+                
         if BATCH_JOBS[batch_id]["status"] == "processing":
-            BATCH_JOBS[batch_id]["status"] = "completed"
+            if BATCH_JOBS[batch_id]["failed"] > 0 and BATCH_JOBS[batch_id]["failed"] == BATCH_JOBS[batch_id]["total"]:
+                BATCH_JOBS[batch_id]["status"] = "error"
+            elif BATCH_JOBS[batch_id]["failed"] > 0:
+                BATCH_JOBS[batch_id]["status"] = "partial_failure"
+            else:
+                BATCH_JOBS[batch_id]["status"] = "completed"
     except Exception as exc:
         BATCH_JOBS[batch_id]["status"] = "error"
         BATCH_JOBS[batch_id]["error_details"] = str(exc)
 
 @app.post("/ai/analyze_batch")
-async def analyze_batch(request_body: BatchTicketRequest, background_tasks: BackgroundTasks):
+@limiter.limit("3/hour")
+async def analyze_batch(request: Request, request_body: BatchTicketRequest, background_tasks: BackgroundTasks):
     batch_id = str(uuid.uuid4())
+    import time
     BATCH_JOBS[batch_id] = {
         "status": "pending",
         "total": len(request_body.requests),
         "completed": 0,
+        "failed": 0,
         "results": [],
-        "cancel_requested": False
+        "cancel_requested": False,
+        "start_time": time.time(),
+        "estimated_time_remaining": None
     }
     background_tasks.add_task(async_process_batch_task, batch_id, request_body.requests)
     return {"batch_id": batch_id, "status": "started", "total": len(request_body.requests)}
