@@ -59,8 +59,10 @@ const TicketTracking = () => {
                         entities: aiTicket.entities,
                         decision_factors: aiTicket.decision_factors,
                         ocr_text: aiTicket.ocr_text,
-                        image_description: aiTicket.image_description
+                        image_description: aiTicket.image_description,
+                        classifier_version: aiTicket.classifier_version || "v3"
                     },
+                    classifier_version: aiTicket.classifier_version || "v3",
                     entities: aiTicket.entities,
                     solution_steps: resolutionSteps,
                     ocr_text: aiTicket.ocr_text || "",

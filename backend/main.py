@@ -9,9 +9,11 @@ import sys
 import uuid
 import json
 import datetime
+import logging
 import traceback
 import warnings
 from contextlib import asynccontextmanager
+from typing import Optional
 
 # Suppress harmless PyTorch CPU pin_memory warning
 warnings.filterwarnings("ignore", message="'pin_memory'")
@@ -54,6 +56,13 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from backend.services.classifier_service import ClassifierService
 from backend.services.classifier_v2 import classifier_v2
 from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
+from backend.services.classifier_metrics import (
+    compare_predictions,
+    get_classifier_health,
+    record_shadow_comparison,
+    record_v3_fallback,
+    record_v3_success,
+)
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
@@ -93,6 +102,7 @@ class TicketSaveRequest(BaseModel):
     ocr_text: str = ""
     needs_review: bool = False
     routing_confidence: float
+    classifier_version: Optional[str] = None
 
 
 class DuplicateInfo(BaseModel):
@@ -128,6 +138,7 @@ class TicketResponse(BaseModel):
     timeline: dict = {} # Map of step_name: timestamp
     env_metadata: dict = {} # IP, Hostname, Browser/OS
     version: str = "2.1.0-Neural-Diagnostic"
+    classifier_version: str = "v3"
 
 
 # --- Persistence Models ---
@@ -162,6 +173,18 @@ class HealthResponse(BaseModel):
     status: str
     classifier_loaded: bool
     ner_loaded: bool
+
+
+class ClassifierHealthResponse(BaseModel):
+    total_predictions: int
+    classifier_fallback_count: int
+    classifier_fallback_rate: float
+    v3_success_rate: float
+    v3_average_confidence: float
+    v1_average_confidence: float
+    shadow_comparison_count: int
+    shadow_agreement_rate: float
+    recent_fallback_events: list[dict]
 
 
 # ---------------------------------------------------------------------------
@@ -343,6 +366,75 @@ async def health_check():
     )
 
 
+@app.get("/ai/model_health", response_model=ClassifierHealthResponse)
+async def model_health():
+    return ClassifierHealthResponse(**get_classifier_health())
+
+
+def _build_classifier_routing(text: str):
+    classifier_v3_res = classifier_v3.predict(text)
+    if "error" in classifier_v3_res:
+        fallback = classifier_service.predict(text)
+        record_v3_fallback(classifier_v3_res["error"], text, fallback.get("confidence"))
+        fallback["classifier_version"] = "v1"
+        return fallback, {"classifier_v3": classifier_v3_res, "classifier_v1": fallback}
+
+    cat = classifier_v3_res.get("Category", {}).get("prediction", "Unknown")
+    sub = classifier_v3_res.get("Subcategory", {}).get("prediction", "Unknown")
+    pri = classifier_v3_res.get("priority", {}).get("prediction", "Medium")
+    conf = classifier_v3_res.get("Category", {}).get("confidence", 0.0)
+
+    from backend.services.classifier_service import TEAM_MAP, AUTO_RESOLVE_SUBS
+    assigned_team = TEAM_MAP.get(cat, "General Support")
+    auto_resolve = sub in AUTO_RESOLVE_SUBS
+
+    classification = {
+        "category": cat,
+        "subcategory": sub,
+        "priority": pri,
+        "auto_resolve": auto_resolve,
+        "assigned_team": assigned_team,
+        "confidence": float(conf),
+        "classifier_version": "v3",
+    }
+
+    record_v3_success(float(conf))
+
+    try:
+        v2_prediction = classifier_v2.predict(text)
+        record_shadow_comparison(classification, v2_prediction)
+    except Exception as shadow_error:
+        print(f"[WARN] V2 shadow comparison failed: {shadow_error}")
+
+    return classification, {"classifier_v3": classifier_v3_res, "classifier_v1": None}
+
+
+@app.post("/ai/model_comparison")
+async def model_comparison(request_body: TicketRequest):
+    text = request_body.text
+    v1_prediction = classifier_service.predict(text)
+    v2_prediction = None
+    v3_prediction = classifier_v3.predict(text)
+
+    try:
+        v2_prediction = classifier_v2.predict(text)
+        record_shadow_comparison(v3_prediction if "error" not in v3_prediction else None, v2_prediction)
+    except Exception as shadow_error:
+        v2_prediction = {"error": str(shadow_error)}
+
+    if "error" in v3_prediction:
+        record_v3_fallback(v3_prediction["error"], text, v1_prediction.get("confidence"))
+    else:
+        record_v3_success(v3_prediction.get("Category", {}).get("confidence", 0.0))
+
+    return {
+        "v1": v1_prediction,
+        "v2_shadow": v2_prediction,
+        "v3": v3_prediction,
+        "shadow_agreement": compare_predictions(v3_prediction if "error" not in v3_prediction else None, v2_prediction if isinstance(v2_prediction, dict) and "error" not in v2_prediction else None),
+    }
+
+
 class TroubleshootRequest(BaseModel):
     text: str
     category: str
@@ -487,6 +579,10 @@ async def save_ticket(request_body: TicketSaveRequest):
 
     try:
         final_data = request_body.dict()
+        final_data["metadata"] = {
+            **(final_data.get("metadata") or {}),
+            "classifier_version": request_body.classifier_version or (final_data.get("metadata") or {}).get("classifier_version", "v3"),
+        }
         res = supabase.table("tickets").insert(final_data).execute()
         
         if not res.data:
@@ -648,34 +744,13 @@ async def analyze_only(request_body: TicketRequest):
 
     # --- Classification ---
     try:
-        classification_v3_res = classifier_v3.predict(text)
-        if "error" in classification_v3_res:
-            # Fallback to V1
-            classification = classifier_service.predict(text)
-        else:
-            # Parse V3 output
-            cat = classification_v3_res.get("Category", {}).get("prediction", "Unknown")
-            sub = classification_v3_res.get("Subcategory", {}).get("prediction", "Unknown")
-            pri = classification_v3_res.get("priority", {}).get("prediction", "Medium")
-            conf = classification_v3_res.get("Category", {}).get("confidence", 0.0)
-            
-            from backend.services.classifier_service import TEAM_MAP, AUTO_RESOLVE_SUBS
-            assigned_team = TEAM_MAP.get(cat, "General Support")
-            auto_resolve = sub in AUTO_RESOLVE_SUBS
-            
-            classification = {
-                "category": cat,
-                "subcategory": sub,
-                "priority": pri,
-                "auto_resolve": auto_resolve,
-                "assigned_team": assigned_team,
-                "confidence": float(conf)
-            }
+        classification = _build_classifier_routing(text)
     except Exception as e:
         traceback.print_exc()
         classification = {
             "category": "Unknown", "subcategory": "Unknown", "priority": "Medium",
             "auto_resolve": False, "assigned_team": "General Support", "confidence": 0.0,
+            "classifier_version": "error",
         }
 
     timeline["ai_analyzed"] = get_now_ist()
@@ -800,31 +875,12 @@ async def analyze_stream(request_body: TicketRequest):
         yield f"data: {json.dumps({'step': 'Detecting category and priority', 'status': 'in_progress'})}\n\n"
         await asyncio.sleep(0.2)
         try:
-            classification_v3_res = classifier_v3.predict(text)
-            if "error" in classification_v3_res:
-                classification = classifier_service.predict(text)
-            else:
-                cat = classification_v3_res.get("Category", {}).get("prediction", "Unknown")
-                sub = classification_v3_res.get("Subcategory", {}).get("prediction", "Unknown")
-                pri = classification_v3_res.get("priority", {}).get("prediction", "Medium")
-                conf = classification_v3_res.get("Category", {}).get("confidence", 0.0)
-                
-                from backend.services.classifier_service import TEAM_MAP, AUTO_RESOLVE_SUBS
-                assigned_team = TEAM_MAP.get(cat, "General Support")
-                auto_resolve = sub in AUTO_RESOLVE_SUBS
-                
-                classification = {
-                    "category": cat,
-                    "subcategory": sub,
-                    "priority": pri,
-                    "auto_resolve": auto_resolve,
-                    "assigned_team": assigned_team,
-                    "confidence": float(conf)
-                }
+            classification = _build_classifier_routing(text)
         except Exception as e:
             classification = {
                 "category": "Unknown", "subcategory": "Unknown", "priority": "Medium",
                 "auto_resolve": False, "assigned_team": "General Support", "confidence": 0.0,
+                "classifier_version": "error",
             }
         timeline["ai_analyzed"] = get_now_ist()
         timeline["triaged"] = get_now_ist()
@@ -892,7 +948,8 @@ async def analyze_stream(request_body: TicketRequest):
             "highlights": entities,
             "timeline": timeline,
             "env_metadata": env_metadata,
-            "sla_breach_at": sla_breach_dt.isoformat() + "Z"
+            "sla_breach_at": sla_breach_dt.isoformat() + "Z",
+            "classifier_version": classification.get("classifier_version", "v3"),
         }
 
         # 6. Final Result
