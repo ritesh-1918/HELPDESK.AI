@@ -6,6 +6,7 @@ Priority and other fields are derived from the category mapping.
 
 import os
 import json
+import threading
 import torch
 import torch.nn.functional as F
 from transformers import DistilBertTokenizerFast, DistilBertForSequenceClassification
@@ -51,36 +52,41 @@ class ClassifierService:
         self.id2label = None
         self.label2id = None
         self._loaded = False
+        self._load_lock = threading.Lock()
 
     def load(self):
         """Load model, tokenizer, and label mappings from disk."""
         if self._loaded:
             return
 
-        abs_dir = os.path.abspath(SAVE_DIR)
+        with self._load_lock:
+            if self._loaded:
+                return
 
-        if not os.path.exists(os.path.join(abs_dir, "model.safetensors")):
-            raise FileNotFoundError(
-                f"Classifier model not found at {abs_dir}. "
-                "Please ensure model files are present."
-            )
+            abs_dir = os.path.abspath(SAVE_DIR)
 
-        # Load label mappings
-        with open(os.path.join(abs_dir, "id2label.json"), "r") as f:
-            self.id2label = json.load(f)
-        with open(os.path.join(abs_dir, "label2id.json"), "r") as f:
-            self.label2id = json.load(f)
+            if not os.path.exists(os.path.join(abs_dir, "model.safetensors")):
+                raise FileNotFoundError(
+                    f"Classifier model not found at {abs_dir}. "
+                    "Please ensure model files are present."
+                )
 
-        # Load tokenizer
-        self.tokenizer = DistilBertTokenizerFast.from_pretrained(abs_dir)
+            # Load label mappings
+            with open(os.path.join(abs_dir, "id2label.json"), "r") as f:
+                self.id2label = json.load(f)
+            with open(os.path.join(abs_dir, "label2id.json"), "r") as f:
+                self.label2id = json.load(f)
 
-        # Load model
-        self.model = DistilBertForSequenceClassification.from_pretrained(abs_dir)
-        self.model.to(DEVICE)
-        self.model.eval()
+            # Load tokenizer
+            self.tokenizer = DistilBertTokenizerFast.from_pretrained(abs_dir)
 
-        self._loaded = True
-        print("Classifier loaded successfully")
+            # Load model
+            self.model = DistilBertForSequenceClassification.from_pretrained(abs_dir)
+            self.model.to(DEVICE)
+            self.model.eval()
+
+            self._loaded = True
+            print("Classifier loaded successfully")
 
     def predict(self, text: str) -> dict:
         """
