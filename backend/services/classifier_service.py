@@ -43,6 +43,8 @@ AUTO_RESOLVE_SUBS = {
     "WiFi Issue", "Printer Error", "Monitor Problem",
 }
 
+KEYWORD_OVERRIDE_CONFIDENCE_THRESHOLD = 0.5
+
 
 class ClassifierService:
     def __init__(self):
@@ -122,22 +124,22 @@ class ClassifierService:
         # Derive auto_resolve
         auto_resolve = subcategory in AUTO_RESOLVE_SUBS
 
-        # --- Regex Override Layer (Boost for Technical Keywords) ---
+        # --- Regex Fallback Layer (Boost for Technical Keywords) ---
         tech_keywords = {
             "Network": ["IP address", "hostname", "connection", "network", "bandwidth", "DNS", "firewall", "VPN", "Connectivity", "Latency", "Routing", "Spikes"],
             "Software": ["crash", "load", "website", "application", "error", "bug", "failing", "software", "SQL", "Cluster", "Database", "Production", "Latency"],
             "Access": ["login", "password", "access", "authentication", "account", "permission", "MFA", "OAuth"]
         }
-        
+
         lower_text = text.lower()
         for cat, keywords in tech_keywords.items():
             if any(k.lower() in lower_text for k in keywords):
-                # If current prediction is generic, or we have a high-value technical keyword
-                if category == "General" or confidence < 0.9:
+                # Treat keywords as a fallback signal when the model is uncertain.
+                if category == "General" or confidence < KEYWORD_OVERRIDE_CONFIDENCE_THRESHOLD:
                     category = cat
                     assigned_team = TEAM_MAP.get(cat, "General Support")
-                    # Boost confidence significantly for verified technical signals
-                    confidence = max(confidence, 0.92) 
+                    # Boost confidence modestly to reflect the fallback signal without hiding model uncertainty.
+                    confidence = max(confidence, 0.70)
                     break
 
         return {
