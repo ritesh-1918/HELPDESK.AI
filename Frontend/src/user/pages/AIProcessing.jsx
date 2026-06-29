@@ -12,6 +12,7 @@ import useAuthStore from '../../store/authStore';
 import { supabase } from '../../lib/supabaseClient';
 import { API_CONFIG } from '../../config';
 import { analyzeTicketWithAI } from '../../services/aiAssistant';
+import { anonymizeSensitiveText } from '../../utils/anonymize';
 
 const steps = [
     "Reading your message",
@@ -24,13 +25,14 @@ const steps = [
 const AIProcessing = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { text, image_text, image_base64, template_id, template_used, user_modified, ticket_title, original_text, original_language } = location.state || {};
+    const { text, image_text, image_base64, template_id, template_used, user_modified, ticket_title, original_text, original_language, anonymize_sensitive_data } = location.state || {};
     const setAITicket = useTicketStore((state) => state.setAITicket);
     const { settings } = useAdminStore();
     const { user, profile } = useAuthStore();
     const { showToast } = useToastStore();
     const hasCalledAPI = useRef(false);
     const [activeStep, setActiveStep] = useState(0);
+    const shouldAnonymize = anonymize_sensitive_data !== false;
 
     useEffect(() => {
         if (!text) {
@@ -44,6 +46,8 @@ const AIProcessing = () => {
 
         const analyzeTicket = async () => {
             console.log("[AIProcessing] Starting analysis for:", text);
+            const safeText = shouldAnonymize ? anonymizeSensitiveText(text) : text;
+            const safeOcrText = shouldAnonymize ? anonymizeSensitiveText(image_text || "") : (image_text || "");
 
             try {
 
@@ -107,6 +111,7 @@ const AIProcessing = () => {
                     text: text,
                     image_text: image_text || "",
                     image_base64: image_base64 || "",
+                    anonymize_sensitive_data: anonymize_sensitive_data !== false,
                     user_id: user?.id,
                     company:
                         profile?.company ||
@@ -254,7 +259,7 @@ const AIProcessing = () => {
 
                 // Override the backend summary using the robust frontend multi-provider failover
                 try {
-                    const aiResult = await analyzeTicketWithAI(text, image_text, image_base64);
+                    const aiResult = await analyzeTicketWithAI(safeText, safeOcrText, image_base64);
                     finalTicket.summary = aiResult.summary || finalTicket.summary;
                     if (aiResult.image_description) {
                         finalTicket.image_description = aiResult.image_description;
@@ -276,10 +281,13 @@ const AIProcessing = () => {
                 const aiTicketObject = {
                     ...finalTicket,
                     status: 'analyzing',
-                    originalIssue: original_text || text,
+                    originalIssue: shouldAnonymize
+                        ? anonymizeSensitiveText(original_text || text)
+                        : (original_text || text),
                     originalLanguage: original_language || 'en',
                     capturedFileBase64: image_base64,
-                    ocrText: image_text
+                    ocrText: shouldAnonymize ? anonymizeSensitiveText(image_text || "") : image_text,
+                    anonymizeSensitiveData: anonymize_sensitive_data !== false,
                 };
 
                 setAITicket(aiTicketObject);
@@ -301,9 +309,9 @@ const AIProcessing = () => {
                     );
 
                     let summary =
-    (text.charAt(0).toUpperCase() + text.slice(1))
+    (safeText.charAt(0).toUpperCase() + safeText.slice(1))
         .substring(0, 100)
-    + (text.length > 100 ? '…' : '');
+    + (safeText.length > 100 ? '…' : '');
                     let image_description = "";
                     let fallbackCategory = "General";
                     let fallbackSub = "General Support";
@@ -311,7 +319,7 @@ const AIProcessing = () => {
                     let fallbackTeam = "General Support";
 
                     try {
-                        const aiResult = await analyzeTicketWithAI(text, image_text, image_base64);
+                        const aiResult = await analyzeTicketWithAI(safeText, safeOcrText, image_base64);
                         summary = aiResult.summary || summary;
                         image_description = aiResult.image_description || "";
                         
@@ -347,10 +355,13 @@ const AIProcessing = () => {
 
                         ocr_text: image_text || "",
                         highlights: [],
-                        originalIssue: original_text || text,
+                        originalIssue: shouldAnonymize
+                            ? anonymizeSensitiveText(original_text || text)
+                            : (original_text || text),
                         originalLanguage: original_language || 'en',
                         capturedFileBase64: image_base64,
-                        ocrText: image_text
+                        ocrText: shouldAnonymize ? anonymizeSensitiveText(image_text || "") : image_text,
+                        anonymizeSensitiveData: anonymize_sensitive_data !== false,
                     };
 
                     setAITicket(fallbackTicket);

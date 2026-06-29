@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Spam & Phishing Detection Service — lightweight, dependency-free heuristics.
 

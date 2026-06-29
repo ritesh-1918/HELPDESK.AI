@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Semantic Duplicate Detection Service — pgvector-powered cosine similarity search.
 

@@ -4,6 +4,8 @@ POST /ai/analyze_ticket  →  full analysis of a support ticket
 GET  /health             →  service health check
 """
 
+from __future__ import annotations
+
 import os
 import sys
 import uuid
@@ -76,6 +78,7 @@ from backend.services.spam_service import SpamService
 from backend.services.sla_engine import SLAEngine, compute_sla_breach_at, get_sla_policy
 from backend.services.redis_cache import redis_cache
 from backend.sla_predictor import get_sla_estimate
+from backend.utils.anonymizer import anonymize_sensitive_text, anonymize_sensitive_value
 from backend.auth_cookie import router as auth_cookie_router, get_current_user  # noqa: F401
 
 
@@ -355,6 +358,7 @@ class TicketRequest(BaseModel):
     text: str
     image_base64: str = ""
     image_text: str = "" # Keep for backward compatibility
+    anonymize_sensitive_data: bool = True
     user_id: str | None = None
     company: str | None = None
     company_id: str | None = None
@@ -401,6 +405,7 @@ class TicketSaveRequest(BaseModel):
     ocr_text: str = ""
     needs_review: bool = False
     routing_confidence: float = 0.0
+    anonymize_sensitive_data: bool = True
 
 
 
@@ -1124,6 +1129,13 @@ async def save_ticket(request_body: TicketSaveRequest):
 
     logger = logging.getLogger(__name__)
     final_data = request_body.model_dump()
+    should_anonymize = bool(final_data.get("anonymize_sensitive_data", True))
+    if should_anonymize:
+        for field in ("subject", "description", "original_body", "ocr_text"):
+            if final_data.get(field):
+                final_data[field], _ = anonymize_sensitive_text(str(final_data[field]))
+        if final_data.get("metadata"):
+            final_data["metadata"], _ = anonymize_sensitive_value(final_data["metadata"])
     original_subject = final_data.get("subject", "") or ""
     original_description = final_data.get("description", "") or ""
 
@@ -1208,11 +1220,13 @@ async def save_ticket(request_body: TicketSaveRequest):
             final_data["sla_breach_at"] = calculate_sla_breach_at(priority).isoformat().replace("+00:00", "Z")
         final_data["sla_status"] = final_data.get("sla_status") or classify_sla_status(final_data.get("sla_breach_at"))
         final_data["escalation_level"] = int(final_data.get("escalation_level") or 0)
+        if should_anonymize:
+            final_data["metadata"]["anonymization_enabled"] = True
 
         user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
         logger.info(f"Tenant linkage: user_hash={user_hash}, company_id={final_data.get('company_id')}")
 
-        duplicate_text = (request_body.description or "").strip() or (request_body.subject or "").strip()
+        duplicate_text = (final_data.get("description") or "").strip() or (final_data.get("subject") or "").strip()
         duplicate_threshold = get_duplicate_threshold(final_data.get("company_id"), 0.85)  # noqa: F841
 
 
@@ -1220,7 +1234,7 @@ async def save_ticket(request_body: TicketSaveRequest):
         # This allows us to warn the user before confirming
         duplicate_check_result = None
         try:
-            dupe_text = (request_body.description or request_body.subject or "").strip()
+            dupe_text = (final_data.get("description") or final_data.get("subject") or "").strip()
             if dupe_text:
                 duplicate_check_result = await semantic_dupe_service.check_duplicate(
                     text=dupe_text,
@@ -1241,7 +1255,7 @@ async def save_ticket(request_body: TicketSaveRequest):
         VALID_TICKET_COLUMNS = {
             "user_id", "subject", "description", "category", "subcategory",
             "priority", "assigned_team", "status", "auto_resolve", "is_duplicate",
-            "confidence", "image_url", "company", "company_id",
+            "confidence", "image_url", "company", "company_id", "ocr_text",
             "sla_breach_at", "sla_response_due_at", "sla_status", "escalation_level", "metadata",
         }
         # Merge any extra telemetry and SLA/duplicate fields into metadata before filtering
@@ -1252,7 +1266,10 @@ async def save_ticket(request_body: TicketSaveRequest):
         )
         for extra_key in extra_keys:
             if extra_key in final_data and final_data[extra_key] not in (None, "", [], {}):
-                existing_metadata[extra_key] = final_data[extra_key]
+                value = final_data[extra_key]
+                if should_anonymize:
+                    value, _ = anonymize_sensitive_value(value)
+                existing_metadata[extra_key] = value
         final_data["metadata"] = existing_metadata
 
         # Strip keys not accepted by the DB schema
@@ -1277,8 +1294,8 @@ async def save_ticket(request_body: TicketSaveRequest):
 
         # Index the new ticket's embedding for future duplicate checks
         embedding_indexed = False
-        description_text = (request_body.description or "").strip()
-        subject_text = (request_body.subject or "").strip()
+        description_text = (final_data.get("description") or "").strip()
+        subject_text = (final_data.get("subject") or "").strip()
         duplicate_text = description_text or subject_text
         if duplicate_text:
             try:
@@ -1540,7 +1557,10 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     """
     Main endpoint for analyzing a new ticket using the cascade of local AI models.
     """
+    anonymize_sensitive_data = bool(getattr(request_body, "anonymize_sensitive_data", True))
     text = request_body.text
+    if anonymize_sensitive_data:
+        text, _ = anonymize_sensitive_text(text)
     
     # Grab client metadata
     client_ip = request.client.host if request.client else "unknown"
@@ -1558,24 +1578,35 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     if request_body.image_base64 and ocr_service:
         print("[AI] Extracting text via local OCR...")
         local_ocr_text = ocr_service.extract_text(request_body.image_base64)
+        if anonymize_sensitive_data and local_ocr_text:
+            local_ocr_text, _ = anonymize_sensitive_text(local_ocr_text)
         if local_ocr_text:
             text = f"{text} {local_ocr_text}".strip()
             print(f"[AI] OCR added {len(local_ocr_text)} chars to context.")
 
     # Pass OCR-enriched text downstream so the analyze_only endpoint uses it.
-    enriched = request_body.model_copy(update={"text": text, "image_text": local_ocr_text})
-    return await analyze_only(enriched)
+    enriched = request_body.model_copy(
+        update={
+            "text": text,
+            "image_text": local_ocr_text,
+            "anonymize_sensitive_data": anonymize_sensitive_data,
+        }
+    )
+    return await _analyze_only_impl(enriched, request=request)
 
-@app.post("/ai/analyze")
-@limiter.limit("10/minute")
-async def analyze_only(request_body: TicketRequest, request: Request):
+async def _analyze_only_impl(request_body: TicketRequest, request: Request):
     """
     PERFORMANCE UPGRADE: AI Analysis phase only. 
     Does NOT persist to DB. This allows the user to review the analysis 
     and duplicate check before committing to a ticket creation.
     """
+    anonymize_sensitive_data = bool(getattr(request_body, "anonymize_sensitive_data", True))
     text = request_body.text
+    if anonymize_sensitive_data:
+        text, _ = anonymize_sensitive_text(text)
     translation_ctx = await detect_and_translate_ticket_text(text)
+    if anonymize_sensitive_data and translation_ctx.get("original_text"):
+        translation_ctx["original_text"], _ = anonymize_sensitive_text(translation_ctx["original_text"])
     text = translation_ctx["text_for_analysis"]
     print(f"[AI] Starting Analysis (READ-ONLY) for: {text[:50]}...") 
     settings = get_system_settings(request_body.company_id or request_body.company)
@@ -1643,12 +1674,19 @@ async def analyze_only(request_body: TicketRequest, request: Request):
         "ocr_text": request_body.image_text or "",
         "image_description": ""
     }
+    if anonymize_sensitive_data and gemini_analysis["ocr_text"]:
+        gemini_analysis["ocr_text"], _ = anonymize_sensitive_text(gemini_analysis["ocr_text"])
     
     if request_body.image_base64 and not gemini_analysis["ocr_text"]:
         try:
             print("[AI] Detecting visual context via Gemini...")
             vision_result = gemini_service.analyze_image(request_body.image_base64, text)
             gemini_analysis.update(vision_result)
+            if anonymize_sensitive_data:
+                gemini_analysis["ocr_text"], _ = anonymize_sensitive_text(gemini_analysis.get("ocr_text", ""))
+                gemini_analysis["image_description"], _ = anonymize_sensitive_text(
+                    gemini_analysis.get("image_description", "")
+                )
         except Exception as e:
             print(f"[VISION ERROR] {e}")
 
@@ -1703,7 +1741,12 @@ async def analyze_only(request_body: TicketRequest, request: Request):
     if classification["confidence"] > request_body.confidence_threshold:
         decision_factors.append(f"High confidence match for '{classification['subcategory']}'")
     if entities:
-        decision_factors.append(f"Detected entities: {', '.join([e['text'] for e in entities[:2]])}")
+        detected_entities = [
+            e.text if hasattr(e, "text") else str(e.get("text", ""))
+            for e in entities[:2]
+            if e
+        ]
+        decision_factors.append(f"Detected entities: {', '.join(detected_entities)}")
     if dup_result["is_duplicate"]:
         decision_factors.append(f"Found similar incident ({int(dup_result['similarity']*100)}%)")
     if rag_match:
@@ -1749,7 +1792,10 @@ async def analyze_only(request_body: TicketRequest, request: Request):
         image_description=gemini_analysis["image_description"],
         ocr_text=gemini_analysis["ocr_text"],
         image_url=request_body.image_url,
-        highlights=[e.text for e in entities] if entities else [],
+        highlights=[
+            e.text if hasattr(e, "text") else str(e.get("text", ""))
+            for e in entities
+        ] if entities else [],
         timeline=timeline,
         env_metadata=env_metadata,
         spam_check=SpamCheck(**spam_result),
@@ -1762,6 +1808,12 @@ async def analyze_only(request_body: TicketRequest, request: Request):
         was_translated=translation_ctx["was_translated"],
     )
 
+@app.post("/ai/analyze")
+@limiter.limit("10/minute")
+async def analyze_only(request_body: TicketRequest, request: Request):
+    return await _analyze_only_impl(request_body, request)
+
+
 @app.post("/ai/analyze_stream")
 async def analyze_stream(request_body: TicketRequest):
     """
@@ -1772,7 +1824,10 @@ async def analyze_stream(request_body: TicketRequest):
         return datetime.datetime.utcnow().isoformat() + "Z"
 
     async def event_generator():
+        anonymize_sensitive_data = bool(getattr(request_body, "anonymize_sensitive_data", True))
         text = request_body.text
+        if anonymize_sensitive_data:
+            text, _ = anonymize_sensitive_text(text)
         env_metadata = {
             "timestamp": get_now_ist(),
             "model_version": "3.0.0-PRO",
@@ -1785,10 +1840,17 @@ async def analyze_stream(request_body: TicketRequest):
         await asyncio.sleep(0.5)
 
         gemini_analysis = {"ocr_text": request_body.image_text or "", "image_description": ""}
+        if anonymize_sensitive_data and gemini_analysis["ocr_text"]:
+            gemini_analysis["ocr_text"], _ = anonymize_sensitive_text(gemini_analysis["ocr_text"])
         if request_body.image_base64 and not gemini_analysis["ocr_text"]:
             try:
                 vision_result = gemini_service.analyze_image(request_body.image_base64, text)
                 gemini_analysis.update(vision_result)
+                if anonymize_sensitive_data:
+                    gemini_analysis["ocr_text"], _ = anonymize_sensitive_text(gemini_analysis.get("ocr_text", ""))
+                    gemini_analysis["image_description"], _ = anonymize_sensitive_text(
+                        gemini_analysis.get("image_description", "")
+                    )
             except Exception as e:
                 pass
 
@@ -1918,6 +1980,8 @@ async def legacy_analyze_and_save(request_body: TicketRequest):
 @app.post("/ai/analyze-v2")
 async def analyze_ticket_v2(request: TicketRequest):
     text = request.text
+    if getattr(request, "anonymize_sensitive_data", True):
+        text, _ = anonymize_sensitive_text(text)
     try:
         prediction = classifier_v2.predict(text)
         return {
@@ -2143,6 +2207,8 @@ async def check_duplicate_endpoint(
     Returns top candidates with similarity scores.
     """
     text = (body.text or "").strip()
+    if getattr(body, "anonymize_sensitive_data", True):
+        text, _ = anonymize_sensitive_text(text)
     if not text:
         raise HTTPException(status_code=400, detail="No text provided")
 

@@ -4,6 +4,8 @@ The model outputs combined "Category | SubCategory" labels.
 Priority and other fields are derived from the category mapping.
 """
 
+from __future__ import annotations
+
 import os
 import json
 try:

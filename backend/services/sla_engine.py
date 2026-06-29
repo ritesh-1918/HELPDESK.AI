@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 SLA Engine — Service-Level Agreement monitoring, breach detection,
 and multi-channel escalation for HELPDESK.AI.

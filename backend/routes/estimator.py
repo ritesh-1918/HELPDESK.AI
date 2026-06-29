@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional
 
-from services.response_time_estimator import (
+from backend.services.response_time_estimator import (
     estimate_response_time,
     generate_estimation_summary,
 )
@@ -49,6 +49,6 @@ async def estimate(request: EstimateRequest):
 @router.get("/sla-targets")
 async def get_sla_targets():
     """Get SLA targets for all priority levels."""
-    from services.response_time_estimator import SLA_TARGETS
+    from backend.services.response_time_estimator import SLA_TARGETS
 
     return {"success": True, "data": SLA_TARGETS}

@@ -9,6 +9,7 @@ import {
     BrainCircuit,
     AlertCircle,
     CheckCircle2,
+    ShieldCheck,
     Clock,
     Mic,
     MicOff,
@@ -45,6 +46,7 @@ const CreateTicket = () => {
     const [selectedLanguage, setSelectedLanguage] = useState('en');
     const [isTranslating, setIsTranslating] = useState(false);
     const [isLangOpen, setIsLangOpen] = useState(false);
+    const [anonymizeSensitiveData, setAnonymizeSensitiveData] = useState(true);
     const langRef = useRef(null);
 
     // ── Smart Template state (v2: two-step highlight → activate flow) ──
@@ -412,6 +414,7 @@ const CreateTicket = () => {
                     template_used: templateUsed,
                     user_modified: userModified,
                     ticket_title: ticketTitle.trim() || null,
+                    anonymize_sensitive_data: anonymizeSensitiveData,
                 }
             });
 
@@ -706,7 +709,31 @@ const CreateTicket = () => {
                                                     </div>
                                                 </motion.div>
                                             )}
-                                        </AnimatePresence>
+                                            </AnimatePresence>
+                                    </div>
+
+                                    <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4 shadow-sm">
+                                        <label className="flex items-start gap-3 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={anonymizeSensitiveData}
+                                                onChange={(e) => setAnonymizeSensitiveData(e.target.checked)}
+                                                className="mt-1 h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                                            />
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2">
+                                                    <ShieldCheck size={16} className="text-emerald-600 shrink-0" />
+                                                    <span className="text-sm font-bold text-gray-900">
+                                                        Enable Sensitive Data Anonymization (Recommended)
+                                                    </span>
+                                                </div>
+                                                <p className={`mt-1 text-xs font-medium ${anonymizeSensitiveData ? 'text-emerald-700' : 'text-amber-700'}`}>
+                                                    {anonymizeSensitiveData
+                                                        ? 'Emails, IPs, connection strings, and API keys will be masked before analysis and storage.'
+                                                        : 'Sensitive values will be forwarded as typed. Only disable this for trusted internal testing.'}
+                                                </p>
+                                            </div>
+                                        </label>
                                     </div>
 
                                     {/* Error Message */}

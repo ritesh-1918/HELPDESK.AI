@@ -1,12 +1,14 @@
+from __future__ import annotations
+
 """
 Translation API Routes — Multi-Language Ticket Support
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from typing import Optional
 
-from services.translation_service import (
+from backend.services.translation_service import (
     translate_text,
     translate_ticket,
     detect_language,
@@ -62,7 +64,7 @@ async def translate_ticket_endpoint(request: TranslateTicketRequest):
 
 
 @router.post("/detect")
-async def detect(text: str = Field(..., min_length=1)):
+async def detect(text: str = Query(..., min_length=1)):
     """Detect the language of the given text."""
     lang = detect_language(text)
     if not lang:

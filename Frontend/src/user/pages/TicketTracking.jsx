@@ -64,12 +64,14 @@ const TicketTracking = () => {
                     company: profile?.company || null,
                     company_id: profile?.company_id || null,
                     sla_breach_at: aiTicket.sla_breach_at || getSlaBreachAt(aiTicket.priority),
+                    anonymize_sensitive_data: aiTicket.anonymizeSensitiveData !== false,
                     metadata: {
                         confidence: aiTicket.confidence,
                         entities: aiTicket.entities,
                         decision_factors: aiTicket.decision_factors,
                         ocr_text: aiTicket.ocr_text,
-                        image_description: aiTicket.image_description
+                        image_description: aiTicket.image_description,
+                        anonymization_enabled: aiTicket.anonymizeSensitiveData !== false,
                     },
                     entities: aiTicket.entities,
                     solution_steps: resolutionSteps,

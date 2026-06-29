@@ -90,8 +90,11 @@ export const api = {
       await delay(800);
       return createTicketMock(ticketData);
     }
-    try {
-      const response = await axios.post(`${API_BASE_URL}/tickets/save`, ticketData);
+  try {
+      const response = await axios.post(`${API_BASE_URL}/tickets/save`, {
+        ...ticketData,
+        anonymize_sensitive_data: ticketData.anonymize_sensitive_data ?? true
+      });
       const created = response?.data;
 
       // Normalize to mock shape: { data: <createdTicket> }
@@ -112,6 +115,7 @@ export const api = {
         text: issueText,
         image_base64: imageBase64,
         image_text: "",
+        anonymize_sensitive_data: true,
         company_id: currentUser.company_id || currentUser.companyId || null
       });
 
