@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     # Core API Keys
     SUPABASE_URL: Optional[str] = None
     SUPABASE_SERVICE_KEY: Optional[str] = None
+    SUPABASE_ANON_KEY: Optional[str] = None
     GEMINI_API_KEY: Optional[str] = None
     RESEND_API_KEY: Optional[str] = None
     

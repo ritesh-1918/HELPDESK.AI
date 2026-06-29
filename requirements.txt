@@ -25,3 +25,4 @@ pytest-asyncio==0.23.7
 pytest-mock==3.14.0
 pycryptodome==3.21.0
 psutil>=5.9.0
+echo "tenacity>=8.2.0"
