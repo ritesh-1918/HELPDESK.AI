@@ -91,6 +91,9 @@ class TicketRequest(BaseModel):
     confidence_threshold: float = 0.20
     duplicate_sensitivity: float = 0.85
 
+class BatchTicketRequest(BaseModel):
+    requests: list[TicketRequest]
+
 class TicketSaveRequest(BaseModel):
     user_id: str
     subject: str
@@ -694,6 +697,73 @@ async def update_ticket(ticket_id: str, updates: dict):
 # ---------------------------------------------------------------------------
 # Main AI Analyzer endpoint
 # ---------------------------------------------------------------------------
+BATCH_JOBS = {}
+
+def process_batch_task(batch_id: str, requests: list[TicketRequest]):
+    import asyncio
+    BATCH_JOBS[batch_id]["status"] = "processing"
+    
+    # Run the async analyze_only function for each request
+    # Since background tasks run in their own thread/loop depending on setup,
+    # we can use asyncio.run to execute the coroutine if needed, or if the background task
+    # allows async, we should define this as async def. Wait, FastAPI BackgroundTasks
+    # can accept async functions directly.
+    pass
+
+async def async_process_batch_task(batch_id: str, requests: list[TicketRequest]):
+    BATCH_JOBS[batch_id]["status"] = "processing"
+    try:
+        for i, req in enumerate(requests):
+            if BATCH_JOBS[batch_id].get("cancel_requested"):
+                BATCH_JOBS[batch_id]["status"] = "cancelled"
+                break
+                
+            try:
+                res = await analyze_only(req)
+                # Store minimal info to save memory
+                BATCH_JOBS[batch_id]["results"].append({
+                    "ticket_text_snippet": req.text[:50],
+                    "category": res.category,
+                    "subcategory": res.subcategory,
+                    "priority": res.priority,
+                    "assigned_team": res.assigned_team,
+                    "confidence": res.confidence
+                })
+            except Exception as e:
+                BATCH_JOBS[batch_id]["results"].append({
+                    "ticket_text_snippet": req.text[:50],
+                    "error": str(e)
+                })
+                
+            BATCH_JOBS[batch_id]["completed"] += 1
+            
+        if BATCH_JOBS[batch_id]["status"] == "processing":
+            BATCH_JOBS[batch_id]["status"] = "completed"
+    except Exception as exc:
+        BATCH_JOBS[batch_id]["status"] = "error"
+        BATCH_JOBS[batch_id]["error_details"] = str(exc)
+
+@app.post("/ai/analyze_batch")
+async def analyze_batch(request_body: BatchTicketRequest, background_tasks: BackgroundTasks):
+    batch_id = str(uuid.uuid4())
+    BATCH_JOBS[batch_id] = {
+        "status": "pending",
+        "total": len(request_body.requests),
+        "completed": 0,
+        "results": [],
+        "cancel_requested": False
+    }
+    background_tasks.add_task(async_process_batch_task, batch_id, request_body.requests)
+    return {"batch_id": batch_id, "status": "started", "total": len(request_body.requests)}
+
+@app.get("/ai/analyze_batch/{batch_id}")
+async def get_batch_status(batch_id: str):
+    job = BATCH_JOBS.get(batch_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Batch job not found")
+    return job
+
+
 @app.post("/ai/analyze_ticket", response_model=TicketResponse)
 @limiter.limit("10/minute")
 async def analyze_ticket(request_body: TicketRequest, request: Request):
