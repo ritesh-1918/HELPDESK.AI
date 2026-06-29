@@ -777,6 +777,8 @@ async def analyze_only(request_body: TicketRequest):
     try:
         classification_v3_res = classifier_v3.predict(text)
         if "error" in classification_v3_res:
+            METRICS["v3_fallback_count"] += 1
+            logger.warning("Classifier V3 failed, falling back to V1", extra={"error_details": classification_v3_res.get("error")})
             # Fallback to V1
             classification = classifier_service.predict(text)
         else:
@@ -942,6 +944,8 @@ async def analyze_stream(request_body: TicketRequest):
         try:
             classification_v3_res = classifier_v3.predict(text)
             if "error" in classification_v3_res:
+                METRICS["v3_fallback_count"] += 1
+                logger.warning("Classifier V3 failed in stream, falling back to V1", extra={"error_details": classification_v3_res.get("error")})
                 classification = classifier_service.predict(text)
             else:
                 cat = classification_v3_res.get("Category", {}).get("prediction", "Unknown")
