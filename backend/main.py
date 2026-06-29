@@ -4,6 +4,8 @@ POST /ai/analyze_ticket  →  full analysis of a support ticket
 GET  /health             →  service health check
 """
 
+from __future__ import annotations
+
 import os
 import sys
 import uuid
@@ -493,6 +495,20 @@ class AuditLogRecord(BaseModel):
     new_value: dict | list | str | None = None
     created_at: str
     performed_by_profile: AuditLogProfile | None = None
+
+
+class BulkTicketActionRequest(BaseModel):
+    ticket_ids: list[str]
+    action: str
+    value: str | None = None
+    company_id: str | None = None
+
+
+class BulkTicketActionResponse(BaseModel):
+    action: str
+    requested_count: int
+    updated_count: int
+    updated_ticket_ids: list[str]
 
 
 # --- In-Memory Database (to be replaced with SQL later) ---
@@ -1058,6 +1074,18 @@ async def get_tickets(
     res = query.execute()
     return res.data
 
+
+ALLOWED_BULK_ACTIONS = {
+    "status",
+    "priority",
+    "assigned_team",
+    "assigned_agent_id",
+}
+
+ALLOWED_BULK_STATUSES = {"open", "in progress", "pending", "resolved", "closed"}
+ALLOWED_BULK_PRIORITIES = {"low", "medium", "high", "critical"}
+
+
 def trigger_webhook_for_new_ticket(company_id: str, ticket: dict) -> None:
     """Trigger Slack or Microsoft Teams webhook for new Critical/High tickets (Issue #175)."""
     if not supabase or not company_id:
@@ -1529,6 +1557,88 @@ async def update_ticket(ticket_id: str, updates: dict, user: dict = Depends(get_
             return updated_ticket
     
     raise HTTPException(status_code=404, detail="Ticket not found")
+
+
+@app.post("/tickets/bulk-action", response_model=BulkTicketActionResponse)
+async def bulk_ticket_action(
+    payload: BulkTicketActionRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """Apply a bounded bulk change to a set of tickets within the caller's company scope."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    ticket_ids = [str(ticket_id).strip() for ticket_id in payload.ticket_ids if str(ticket_id).strip()]
+    if not ticket_ids:
+        raise HTTPException(status_code=400, detail="At least one ticket id is required")
+    if len(ticket_ids) > 100:
+        raise HTTPException(status_code=400, detail="Bulk actions are limited to 100 tickets per request")
+
+    action = str(payload.action or "").strip().lower()
+    if action not in ALLOWED_BULK_ACTIONS:
+        raise HTTPException(status_code=400, detail="Unsupported bulk action")
+
+    raw_value = str(payload.value or "").strip()
+    if action in {"status", "priority", "assigned_team", "assigned_agent_id"} and not raw_value:
+        raise HTTPException(status_code=400, detail="A value is required for the selected bulk action")
+
+    normalized_value = raw_value.lower() if action in {"status", "priority"} else raw_value
+    if action == "status" and normalized_value not in ALLOWED_BULK_STATUSES:
+        raise HTTPException(status_code=400, detail="Unsupported bulk status")
+    if action == "priority" and normalized_value not in ALLOWED_BULK_PRIORITIES:
+        raise HTTPException(status_code=400, detail="Unsupported bulk priority")
+
+    profile = _get_authenticated_profile(current_user)
+    company_scope = _ticket_company_scope(profile, payload.company_id or profile.get("company_id"))
+
+    query = (
+        supabase.table("tickets")
+        .select("id, company_id, status, priority, assigned_team, assigned_agent_id, resolved_at")
+        .in_("id", ticket_ids)
+    )
+    if company_scope:
+        query = query.eq("company_id", company_scope)
+
+    result = query.execute()
+    rows = result.data or []
+    rows_by_id = {str(row.get("id")): row for row in rows}
+    missing_ids = [ticket_id for ticket_id in ticket_ids if ticket_id not in rows_by_id]
+    if missing_ids:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Tickets not found or not accessible: {', '.join(missing_ids)}",
+        )
+
+    updated_ticket_ids: list[str] = []
+    current_timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
+
+    for ticket_id in ticket_ids:
+        updates: dict[str, str] = {"updated_at": current_timestamp}
+
+        if action == "status":
+            updates["status"] = normalized_value
+            if normalized_value in {"resolved", "closed"}:
+                updates["resolved_at"] = current_timestamp
+        elif action == "priority":
+            updates["priority"] = normalized_value
+        elif action == "assigned_team":
+            updates["assigned_team"] = raw_value
+        elif action == "assigned_agent_id":
+            updates["assigned_agent_id"] = raw_value
+            updates["status"] = "in progress"
+
+        update_result = supabase.table("tickets").update(updates).eq("id", ticket_id).execute()
+        if not update_result.data:
+            raise HTTPException(status_code=500, detail=f"Failed to update ticket {ticket_id}")
+
+        updated_ticket_ids.append(ticket_id)
+
+    return BulkTicketActionResponse(
+        action=action,
+        requested_count=len(ticket_ids),
+        updated_count=len(updated_ticket_ids),
+        updated_ticket_ids=updated_ticket_ids,
+    )
 
 
 # ---------------------------------------------------------------------------

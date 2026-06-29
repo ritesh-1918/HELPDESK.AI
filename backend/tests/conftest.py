@@ -24,6 +24,7 @@ class FakeTable:
         self.db = db
         self.name = name
         self.filters = {}
+        self.in_filters = {}
         self.payload = None
         self.limit_count = None
         self.is_single = False
@@ -48,6 +49,10 @@ class FakeTable:
 
     def eq(self, field, value):
         self.filters[field] = value
+        return self
+
+    def in_(self, field, values):
+        self.in_filters[field] = list(values)
         return self
 
     def order(self, field, desc=False):
@@ -101,6 +106,9 @@ class FakeTable:
         rows = list(self.db.get(self.name, []))
         for key, value in self.filters.items():
             rows = [row for row in rows if _safe_eq(row.get(key), value)]
+
+        for key, values in self.in_filters.items():
+            rows = [row for row in rows if any(_safe_eq(row.get(key), value) for value in values)]
 
         if self.order_field:
             rows.sort(key=lambda x: x.get(self.order_field, ""), reverse=self.order_desc)

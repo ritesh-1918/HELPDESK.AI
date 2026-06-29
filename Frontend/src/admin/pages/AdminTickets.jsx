@@ -1,29 +1,27 @@
 import jsPDF from 'jspdf';
 import Papa from 'papaparse';
+import axios from 'axios';
 import { Download, FileText } from 'lucide-react';
 import React, { useCallback, useState, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from "../../store/authStore";
 import useToastStore from "../../store/toastStore";
 import { supabase } from "../../lib/supabaseClient";
+import { API_CONFIG } from "../../config";
 import useTicketsRealtime from "../../hooks/useTicketsRealtime";
 import {
     Search,
-    Filter,
     Inbox,
     Activity,
     ShieldAlert,
     Clock,
-    ChevronRight,
-    BarChart3,
-    User,
     ArrowUpRight,
     ExternalLink,
     AlertCircle,
-    CheckCircle2,
     Loader2,
-    Save,
     RotateCcw,
+    Square,
+    CheckSquare2,
 } from 'lucide-react';
 import { Select } from "../../components/ui/select";
 import { formatTicketId } from "../../utils/format";
@@ -51,6 +49,13 @@ const AdminTickets = () => {
     const [languageFilter, setLanguageFilter] = useState('All');
     const [slaAtRisk, setSlaAtRisk] = useState(false);
     const [agents, setAgents] = useState([]); // All staff/admins in the company
+    const [selectedTicketIds, setSelectedTicketIds] = useState([]);
+    const [bulkStatus, setBulkStatus] = useState('');
+    const [bulkPriority, setBulkPriority] = useState('');
+    const [bulkTeam, setBulkTeam] = useState('');
+    const [bulkAgent, setBulkAgent] = useState('');
+    const [bulkActionLoading, setBulkActionLoading] = useState('');
+    const [bulkActionError, setBulkActionError] = useState('');
 
     const ticketMatchesFilters = useCallback((ticket) => {
         if (statusFilter !== 'All' && String(ticket.status || '').toLowerCase() !== statusFilter.toLowerCase()) return false;
@@ -64,6 +69,8 @@ const AdminTickets = () => {
         }
         return true;
     }, [categoryFilter, priorityFilter, statusFilter, teamFilter, languageFilter]);
+
+    const selectedTicketSet = useMemo(() => new Set(selectedTicketIds.map(String)), [selectedTicketIds]);
 
     const handleRealtimeInsert = useCallback((ticket) => {
         showToast(`New Incident Reported: #${formatTicketId(ticket.id)}`, "success");
@@ -176,8 +183,26 @@ const AdminTickets = () => {
         }
     };
 
-    const exportCSV = () => {
-        const exportData = filteredTickets.map(t => ({
+    const toggleTicketSelection = useCallback((ticketId) => {
+        setSelectedTicketIds(prev => {
+            const ticketKey = String(ticketId);
+            return prev.some(id => String(id) === ticketKey)
+                ? prev.filter(id => String(id) !== ticketKey)
+                : [...prev, ticketId];
+        });
+    }, []);
+
+    const clearTicketSelection = useCallback(() => {
+        setSelectedTicketIds([]);
+        setBulkStatus('');
+        setBulkPriority('');
+        setBulkTeam('');
+        setBulkAgent('');
+        setBulkActionError('');
+    }, []);
+
+    const exportTickets = (rows) => {
+        const exportData = rows.map(t => ({
             ID: formatTicketId(t.id),
             Title: t.summary || t.subject || '',
             Category: t.category || '',
@@ -197,13 +222,15 @@ const AdminTickets = () => {
         URL.revokeObjectURL(url);
     };
 
-    const exportPDF = () => {
+    const exportCSV = (rows = filteredTickets) => exportTickets(rows);
+
+    const exportPDF = (rows = filteredTickets) => {
         const doc = new jsPDF();
         doc.setFontSize(16);
         doc.text('Ticket Export Report', 14, 15);
         doc.setFontSize(8);
         let y = 25;
-        filteredTickets.forEach((t, i) => {
+        rows.forEach((t, i) => {
             if (y > 270) { doc.addPage(); y = 15; }
             doc.text(
                 `#${formatTicketId(t.id)} | ${t.summary || t.subject || 'N/A'} | ${t.category || ''} | ${t.priority || ''} | ${t.status || ''} | ${t.created_at ? new Date(t.created_at).toLocaleDateString() : ''}`,
@@ -216,7 +243,7 @@ const AdminTickets = () => {
 
     const categories = ['All', 'Network', 'Hardware', 'Software', 'Access', 'Account'];
     const priorities = ['All', 'Low', 'Medium', 'High'];
-    const statuses = ['All', 'Open', 'In Progress', 'Resolved', 'Closed'];
+    const statuses = ['All', 'Open', 'Pending', 'In Progress', 'Resolved', 'Closed'];
     const teams = ['All', 'Software Team', 'Hardware Support', 'Network Ops', 'Security Unit', 'General Support'];
 
     const filteredTickets = useMemo(() => {
@@ -246,6 +273,63 @@ const AdminTickets = () => {
         return result;
     }, [tickets, searchQuery, languageFilter, slaAtRisk]);
 
+    useEffect(() => {
+        const visibleIds = new Set(filteredTickets.map(ticket => String(ticket.id)));
+        setSelectedTicketIds((prev) => {
+            const next = prev.filter(ticketId => visibleIds.has(String(ticketId)));
+            if (next.length === prev.length && next.every((ticketId, index) => String(ticketId) === String(prev[index]))) {
+                return prev;
+            }
+            return next;
+        });
+    }, [filteredTickets]);
+
+    const selectedTickets = useMemo(
+        () => filteredTickets.filter(ticket => selectedTicketSet.has(String(ticket.id))),
+        [filteredTickets, selectedTicketSet]
+    );
+    const selectedCount = selectedTickets.length;
+    const isAllVisibleSelected = filteredTickets.length > 0 && filteredTickets.every(ticket => selectedTicketSet.has(String(ticket.id)));
+    const bulkAgentOptions = useMemo(() => [
+        { value: '', label: 'Choose Agent' },
+        ...agents.map(agent => ({ value: agent.id, label: agent.full_name || agent.id })),
+    ], [agents]);
+
+    const runBulkAction = async (action, value, successLabel) => {
+        if (!selectedCount) {
+            setBulkActionError('Select at least one ticket before applying a bulk action.');
+            return;
+        }
+        if (!value) {
+            setBulkActionError('Pick a value before applying the bulk action.');
+            return;
+        }
+
+        setBulkActionError('');
+        setBulkActionLoading(action);
+        try {
+            const { data } = await axios.post(`${API_CONFIG.BACKEND_URL}/tickets/bulk-action`, {
+                ticket_ids: selectedTickets.map(ticket => ticket.id),
+                action,
+                value,
+                company_id: profile?.company_id || profile?.company || null,
+            });
+
+            showToast(
+                `${successLabel} ${data?.updated_count || selectedCount} tickets.`,
+                "success"
+            );
+            await fetchTickets();
+            clearTicketSelection();
+        } catch (err) {
+            const detail = err?.response?.data?.detail || err.message || 'Bulk action failed.';
+            setBulkActionError(detail);
+            showToast(`Bulk action failed: ${detail}`, "error");
+        } finally {
+            setBulkActionLoading('');
+        }
+    };
+
     const getPriorityStyle = (priority) => {
         const p = String(priority || '').toLowerCase();
         if (p === 'high' || p === 'critical') return 'text-red-600 bg-red-50 border-red-100';
@@ -274,14 +358,14 @@ const AdminTickets = () => {
                 {/* ✅ EXPORT BUTTONS */}
                 <div className="flex items-center gap-3">
                     <button
-                        onClick={exportCSV}
+                        onClick={() => exportCSV(selectedCount > 0 ? selectedTickets : filteredTickets)}
                         className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20"
                     >
                         <Download size={14} />
                         Export CSV
                     </button>
                     <button
-                        onClick={exportPDF}
+                        onClick={() => exportPDF(selectedCount > 0 ? selectedTickets : filteredTickets)}
                         className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-lg shadow-slate-900/10"
                     >
                         <FileText size={14} />
@@ -289,6 +373,124 @@ const AdminTickets = () => {
                     </button>
                 </div>
             </div>
+
+            {selectedCount > 0 && (
+                <div className="rounded-[2rem] border border-emerald-200 bg-emerald-50/70 p-5 shadow-lg shadow-emerald-100/40">
+                    <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-emerald-500 flex items-center gap-2">
+                                <CheckSquare2 size={13} />
+                                Bulk Selection Active
+                            </p>
+                            <h2 className="text-lg font-black text-slate-900">
+                                {selectedCount} selected ticket{selectedCount === 1 ? '' : 's'}
+                            </h2>
+                            <p className="text-sm text-slate-500 font-medium">
+                                Apply one action to every selected ticket, then export the current selection if you need a handoff bundle.
+                            </p>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-3">
+                            <button
+                                type="button"
+                                onClick={clearTicketSelection}
+                                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-800 hover:border-slate-300 transition-all"
+                            >
+                                <RotateCcw size={14} />
+                                Clear
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => exportCSV(selectedTickets)}
+                                className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-[11px] font-black uppercase tracking-widest text-emerald-700 hover:bg-emerald-600 hover:text-white transition-all"
+                            >
+                                <Download size={14} />
+                                Export Selected
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="mt-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                        <div className="flex items-center gap-2 rounded-2xl border border-white bg-white/90 p-3 shadow-sm">
+                            <Select
+                                value={bulkStatus}
+                                onChange={(e) => setBulkStatus(e.target.value)}
+                                placeholder="Bulk Status"
+                                buttonClassName="w-full bg-transparent border-0 px-0 py-0 text-[11px] font-black uppercase tracking-widest text-slate-700 flex items-center justify-between"
+                                options={statuses.filter(s => s !== 'All').map(s => ({ value: s.toLowerCase(), label: s }))}
+                            />
+                            <button
+                                type="button"
+                                disabled={!bulkStatus || bulkActionLoading === 'status'}
+                                onClick={() => runBulkAction('status', bulkStatus, 'Updated status on')}
+                                className="rounded-xl bg-slate-900 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {bulkActionLoading === 'status' ? 'Applying' : 'Apply'}
+                            </button>
+                        </div>
+
+                        <div className="flex items-center gap-2 rounded-2xl border border-white bg-white/90 p-3 shadow-sm">
+                            <Select
+                                value={bulkPriority}
+                                onChange={(e) => setBulkPriority(e.target.value)}
+                                placeholder="Bulk Priority"
+                                buttonClassName="w-full bg-transparent border-0 px-0 py-0 text-[11px] font-black uppercase tracking-widest text-slate-700 flex items-center justify-between"
+                                options={priorities.filter(p => p !== 'All').map(p => ({ value: p.toLowerCase(), label: p }))}
+                            />
+                            <button
+                                type="button"
+                                disabled={!bulkPriority || bulkActionLoading === 'priority'}
+                                onClick={() => runBulkAction('priority', bulkPriority, 'Updated priority on')}
+                                className="rounded-xl bg-slate-900 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {bulkActionLoading === 'priority' ? 'Applying' : 'Apply'}
+                            </button>
+                        </div>
+
+                        <div className="flex items-center gap-2 rounded-2xl border border-white bg-white/90 p-3 shadow-sm">
+                            <Select
+                                value={bulkTeam}
+                                onChange={(e) => setBulkTeam(e.target.value)}
+                                placeholder="Bulk Team"
+                                buttonClassName="w-full bg-transparent border-0 px-0 py-0 text-[11px] font-black uppercase tracking-widest text-slate-700 flex items-center justify-between"
+                                options={teams.filter(t => t !== 'All').map(t => ({ value: t, label: t }))}
+                            />
+                            <button
+                                type="button"
+                                disabled={!bulkTeam || bulkActionLoading === 'assigned_team'}
+                                onClick={() => runBulkAction('assigned_team', bulkTeam, 'Rerouted')}
+                                className="rounded-xl bg-slate-900 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {bulkActionLoading === 'assigned_team' ? 'Applying' : 'Apply'}
+                            </button>
+                        </div>
+
+                        <div className="flex items-center gap-2 rounded-2xl border border-white bg-white/90 p-3 shadow-sm">
+                            <Select
+                                value={bulkAgent}
+                                onChange={(e) => setBulkAgent(e.target.value)}
+                                placeholder="Bulk Agent"
+                                buttonClassName="w-full bg-transparent border-0 px-0 py-0 text-[11px] font-black uppercase tracking-widest text-slate-700 flex items-center justify-between"
+                                options={bulkAgentOptions}
+                            />
+                            <button
+                                type="button"
+                                disabled={!bulkAgent || bulkActionLoading === 'assigned_agent_id'}
+                                onClick={() => runBulkAction('assigned_agent_id', bulkAgent, 'Assigned')}
+                                className="rounded-xl bg-indigo-600 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {bulkActionLoading === 'assigned_agent_id' ? 'Applying' : 'Apply'}
+                            </button>
+                        </div>
+                    </div>
+
+                    {bulkActionError && (
+                        <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-red-600">
+                            {bulkActionError}
+                        </p>
+                    )}
+                </div>
+            )}
 
             {/* 2. Advanced Filtering Station */}
             <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-xl shadow-slate-200/50 space-y-6">
@@ -390,6 +592,22 @@ const AdminTickets = () => {
                     <table className="w-full border-collapse">
                         <thead>
                             <tr className="bg-slate-50/80 border-b border-slate-100">
+                                <th className="px-4 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (isAllVisibleSelected) {
+                                                setSelectedTicketIds([]);
+                                            } else {
+                                                setSelectedTicketIds(filteredTickets.map(ticket => ticket.id));
+                                            }
+                                        }}
+                                        className="inline-flex items-center justify-center text-slate-400 hover:text-emerald-600 transition-colors"
+                                        title={isAllVisibleSelected ? 'Clear all visible selections' : 'Select all visible tickets'}
+                                    >
+                                        {isAllVisibleSelected ? <CheckSquare2 size={16} /> : <Square size={16} />}
+                                    </button>
+                                </th>
                                 <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">
                                     <div className="flex items-center gap-2">
                                         ID
@@ -416,6 +634,23 @@ const AdminTickets = () => {
 
                                 return (
                                 <tr key={ticket.id} className={`hover:bg-slate-50/50 transition-colors group ${wasLiveChanged ? 'bg-emerald-50/70 ring-1 ring-emerald-100' : slaRowClass} ${isUpdating === ticket.id ? 'opacity-50 pointer-events-none' : ''}`}>
+                                    <td className="px-4 py-6 align-top">
+                                        <button
+                                            type="button"
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                toggleTicketSelection(ticket.id);
+                                            }}
+                                            className="inline-flex items-center justify-center text-slate-400 hover:text-emerald-600 transition-colors"
+                                            title={`Select ticket #${formatTicketId(ticket.id)}`}
+                                        >
+                                            {selectedTicketSet.has(String(ticket.id)) ? (
+                                                <CheckSquare2 size={16} className="text-emerald-600" />
+                                            ) : (
+                                                <Square size={16} />
+                                            )}
+                                        </button>
+                                    </td>
                                     {/* Ticket ID */}
                                     <td className="px-6 py-6">
                                         <span className="font-mono text-xs font-black text-emerald-600">#{formatTicketId(ticket.id)}</span>
