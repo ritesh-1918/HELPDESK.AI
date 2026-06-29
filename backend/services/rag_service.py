@@ -1,3 +1,4 @@
+from backend.logger import logger
 import os
 from sentence_transformers import SentenceTransformer
 from supabase import create_client, Client
@@ -26,24 +27,24 @@ class RagService:
         if self._loaded or self._load_failed:
             return
         
-        print("[RAG] Loading SentenceTransformer for Knowledge Base...")
+        logger.info("[RAG] Loading SentenceTransformer for Knowledge Base...")
         try:
             # Check if a local model path is provided
             model_path = os.environ.get("SENTENCE_TRANSFORMER_MODEL_PATH")
             if model_path and os.path.exists(model_path):
-                print(f"[RAG] Loading from local path: {model_path}")
+                logger.info(f"[RAG] Loading from local path: {model_path}")
                 self.model = SentenceTransformer(model_path)
             else:
                 # Download from HuggingFace
                 self.model = SentenceTransformer('all-MiniLM-L6-v2')
             self._loaded = True
-            print("[RAG] Model loaded successfully.")
+            logger.info("[RAG] Model loaded successfully.")
         except Exception as e:
             allow_degraded = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") == "1"
             self._load_failed = True
-            print(f"[RAG] Failed to load model: {e}")
+            logger.info(f"[RAG] Failed to load model: {e}")
             if allow_degraded:
-                print("[RAG] DEGRADED: Continuing without model (ALLOW_DEGRADED_STARTUP=1)")
+                logger.info("[RAG] DEGRADED: Continuing without model (ALLOW_DEGRADED_STARTUP=1)")
                 self.model = None
                 self._loaded = False
             else:
@@ -56,7 +57,7 @@ class RagService:
         """
         if not self._loaded or not self.supabase:
             if self._load_failed:
-                print("[RAG] DEGRADED: Knowledge base search skipped (model not available)")
+                logger.info("[RAG] DEGRADED: Knowledge base search skipped (model not available)")
             return None
 
         try:
@@ -85,5 +86,5 @@ class RagService:
             return None
             
         except Exception as e:
-            print(f"[RAG ERROR] Query failed: {e}")
+            logger.error(f"[RAG ERROR] Query failed: {e}")
             return None

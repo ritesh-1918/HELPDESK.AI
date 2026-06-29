@@ -1,3 +1,4 @@
+from backend.logger import logger
 """
 Duplicate Detection Service
 Uses sentence-transformers all-MiniLM-L6-v2 to detect similar tickets.
@@ -29,12 +30,12 @@ class DuplicateService:
         if self._loaded or self._load_failed:
             return
         
-        print("[DuplicateService] Loading model...")
+        logger.info("[DuplicateService] Loading model...")
         try:
             # Check if a local model path is provided
             model_path = os.environ.get("SENTENCE_TRANSFORMER_MODEL_PATH")
             if model_path and os.path.exists(model_path):
-                print(f"[DuplicateService] Loading from local path: {model_path}")
+                logger.info(f"[DuplicateService] Loading from local path: {model_path}")
                 self.model = SentenceTransformer(model_path)
             else:
                 # Download from HuggingFace
@@ -42,7 +43,7 @@ class DuplicateService:
             self._loaded = True
             
             if os.path.exists(self.storage_file):
-                print(f"[DuplicateService] Syncing previous ticket history from {self.storage_file}...")
+                logger.info(f"[DuplicateService] Syncing previous ticket history from {self.storage_file}...")
                 import json
                 try:
                     with open(self.storage_file, "r") as f:
@@ -51,15 +52,15 @@ class DuplicateService:
                             text = item["text"]
                             embedding = self.model.encode(text, convert_to_tensor=True)
                             self._tickets.append((item["ticket_id"], embedding, text))
-                    print(f"[DuplicateService] Loaded {len(self._tickets)} tickets.")
+                    logger.info(f"[DuplicateService] Loaded {len(self._tickets)} tickets.")
                 except Exception as e:
-                    print(f"[DuplicateService] Error loading storage: {e}")
+                    logger.info(f"[DuplicateService] Error loading storage: {e}")
         except Exception as e:
             allow_degraded = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") == "1"
             self._load_failed = True
-            print(f"[DuplicateService] Failed to load model: {e}")
+            logger.info(f"[DuplicateService] Failed to load model: {e}")
             if allow_degraded:
-                print("[DuplicateService] DEGRADED: Continuing without model (ALLOW_DEGRADED_STARTUP=1)")
+                logger.info("[DuplicateService] DEGRADED: Continuing without model (ALLOW_DEGRADED_STARTUP=1)")
                 self.model = None
                 self._loaded = False
             else:
@@ -83,15 +84,15 @@ class DuplicateService:
             data.append({"ticket_id": ticket_id, "text": text})
             with open(self.storage_file, "w") as f:
                 json.dump(data, f, indent=2)
-            print(f"[DuplicateService] Indexed ticket {ticket_id} to case history.")
+            logger.info(f"[DuplicateService] Indexed ticket {ticket_id} to case history.")
         except Exception as e:
-            print(f"[DuplicateService] Failed to save to disk: {e}")
+            logger.info(f"[DuplicateService] Failed to save to disk: {e}")
 
     def add_ticket(self, ticket_id: str, text: str):
         """Add a ticket to the in-memory store and persist to disk."""
         self.load()
         if not self.is_available():
-            print(f"[DuplicateService] DEGRADED: Skipping embedding for ticket {ticket_id} (model not available)")
+            logger.info(f"[DuplicateService] DEGRADED: Skipping embedding for ticket {ticket_id} (model not available)")
             return
         embedding = self.model.encode(text, convert_to_tensor=True)
         self._tickets.append((ticket_id, embedding, text))
@@ -116,7 +117,7 @@ class DuplicateService:
         
         # If model is not available, return no duplicate found
         if not self.is_available():
-            print("[DuplicateService] DEGRADED: Duplicate check skipped (model not available)")
+            logger.info("[DuplicateService] DEGRADED: Duplicate check skipped (model not available)")
             return {
                 "is_duplicate": False,
                 "duplicate_ticket_id": None,

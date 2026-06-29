@@ -1,3 +1,4 @@
+from backend.logger import logger
 """
 Classifier Service — Loads the trained DistilBert sequence classifier and predicts.
 The model outputs combined "Category | SubCategory" labels.
@@ -80,7 +81,7 @@ class ClassifierService:
         self.model.eval()
 
         self._loaded = True
-        print("Classifier loaded successfully")
+        logger.info("Classifier loaded successfully")
 
     def predict(self, text: str) -> dict:
         """

@@ -1,3 +1,4 @@
+from backend.logger import logger
 """
 NER Service — Loads the trained DistilBert token classifier and extracts entities.
 Labels follow pattern: B-B-ENTITY_TYPE, I-B-ENTITY_TYPE, O
@@ -62,7 +63,7 @@ class NERService:
         self.model.eval()
 
         self._loaded = True
-        print("NER loaded successfully")
+        logger.info("NER loaded successfully")
 
     def _clean_label(self, label: str) -> tuple[str, str]:
         """
