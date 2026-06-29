@@ -53,7 +53,7 @@ except (ImportError, Exception) as e:
 # Ensure project root is on path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from backend.services.classifier_service import ClassifierService
+
 from backend.services.classifier_v2 import classifier_v2
 from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
@@ -514,7 +514,11 @@ async def log_correction(raw_request: Request):
 
     try:
         if CORRECTIONS_LOG_PATH.exists() and CORRECTIONS_LOG_PATH.stat().st_size > 2:
-            with open(CORRECTIONS_LOG_PATH, "r", encoding="utf-8") as f:
+            import shutil
+            import uuid
+            backup_path = CORRECTIONS_LOG_PATH.with_name(f"corrections_log_{uuid.uuid4().hex}.json")
+            shutil.move(CORRECTIONS_LOG_PATH, backup_path)
+            with open(backup_path, "r", encoding="utf-8") as f:
                 logs = json.load(f)
         else:
             logs = []
@@ -604,7 +608,7 @@ def retrain_pipeline_task():
         print(f"[RETRAIN ERROR] Pipeline failed: {e}")
 
 @app.post("/ai/retrain")
-async def trigger_retrain(background_tasks: BackgroundTasks):
+async def trigger_retrain(background_tasks: BackgroundTasks, user: dict = Depends(get_current_user)):
     """Trigger the automated model retraining pipeline in the background."""
     background_tasks.add_task(retrain_pipeline_task)
     return {"status": "started", "message": "Retraining pipeline started in the background."}

@@ -54,6 +54,20 @@ class ClassifierServiceV3:
         self.tokenizer = BertTokenizerFast.from_pretrained(MODEL_DIR)
         print("[INFO] Classifier Service V3 (Power Model) Loaded.")
 
+    
+    def load(self):
+        print(f"[V3 Service] Reloading Model from {MODEL_DIR}")
+        with open(os.path.join(MODEL_DIR, "model_config.json"), "r") as f:
+            self.num_labels = json.load(f)
+        with open(os.path.join(MODEL_DIR, "label_encoders.pkl"), "rb") as f:
+            self.label_encoders = pickle.load(f)
+        
+        self.model = MultiOutputClassifierV3(self.num_labels).to(self.device)
+        self.model.load_state_dict(torch.load(os.path.join(MODEL_DIR, "model.pt"), map_location=self.device))
+        self.model.eval()
+        self.tokenizer = BertTokenizerFast.from_pretrained(MODEL_DIR)
+        print("[INFO] Classifier Service V3 (Power Model) Reloaded.")
+
     def predict(self, text: str):
         if self.model is None: return {"error": "V3 Model not loaded"}
         inputs = self.tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=256).to(self.device)

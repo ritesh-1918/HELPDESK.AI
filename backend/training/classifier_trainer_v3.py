@@ -27,7 +27,7 @@ from transformers import (
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 MODEL_DIR = os.path.join(PROJECT_ROOT, "Model")
 SAVE_DIR = os.path.join(PROJECT_ROOT, "backend", "models", "classifier-v3") 
-DATASET_PATH = os.environ.get("AUGMENTED_DATASET_PATH", os.path.join(MODEL_DIR, "Final_Balanced_10000_IT_Support_Tickets.csv"))
+DEFAULT_DATASET_PATH = os.path.join(MODEL_DIR, "Final_Balanced_10000_IT_Support_Tickets.csv")
 
 LABEL_COLUMNS = ["category", "sub_category", "Priority", "auto_resolve", "assigned_team"]
 TEXT_COLUMN = "user_input_text"
@@ -86,10 +86,11 @@ class TicketDataset(Dataset):
 # ---------------------------------------------------------------------------
 # Training Logic
 # ---------------------------------------------------------------------------
-def train_v3():
+def train_v3(dataset_path=None):
     print("🔥 Starting POWER TRAINING (V3 - BERT-Base)")
     
-    df = pd.read_csv(DATASET_PATH)
+    dataset_path = dataset_path or os.environ.get("AUGMENTED_DATASET_PATH", DEFAULT_DATASET_PATH)
+    df = pd.read_csv(dataset_path)
     df.dropna(subset=[TEXT_COLUMN] + LABEL_COLUMNS, inplace=True)
     df.reset_index(drop=True, inplace=True)
 
