@@ -6,6 +6,11 @@ import useAuthStore from "../../store/authStore";
 import { supabase } from "../../lib/supabaseClient";
 import StatCard from "../components/StatCard";
 import TicketTable from "../components/TicketTable";
+import {
+    ChartSkeleton,
+    DashboardHeaderSkeleton,
+    StatCardsSkeleton,
+} from "../../components/shared/DashboardSkeletons";
 import { formatTimelineDate } from "../../utils/dateUtils";
 
 // Inline SVG icon components
@@ -110,6 +115,23 @@ const AdminDashboard = () => {
             { name: 'Duplicate Detection', status: 'Active', latency: 'Optimal' },
         ];
     }, [tickets]);
+
+    if (isLoading) {
+        return (
+            <div style={{ background: '#f8faf9', minHeight: '100vh', paddingBottom: '40px' }} className="space-y-10 -m-6 p-6 md:-m-10 md:p-10">
+                <DashboardHeaderSkeleton />
+                <StatCardsSkeleton />
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                    <div className="lg:col-span-8">
+                        <ChartSkeleton titleWidth="w-56" chartHeight="h-[28rem]" />
+                    </div>
+                    <div className="lg:col-span-4">
+                        <ChartSkeleton titleWidth="w-44" chartHeight="h-[28rem]" />
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div style={{ background: '#f8faf9', minHeight: '100vh', paddingBottom: '40px' }} className="space-y-10 -m-6 p-6 md:-m-10 md:p-10">

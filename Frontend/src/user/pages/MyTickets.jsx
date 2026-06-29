@@ -12,6 +12,7 @@ import { Select } from "../../components/ui/select";
 import { formatTicketId } from "../../utils/format";
 import TicketStatusBadge from "../components/TicketStatusBadge";
 import { formatTimelineDate, getTimeZoneAbbr } from "../../utils/dateUtils";
+import { MyTicketsSkeleton } from "../../components/shared/DashboardSkeletons";
 import {
     Tooltip,
     TooltipContent,
@@ -178,38 +179,7 @@ function MyTickets() {
             {/* Main Content */}
 
             {loading ? (
-                <Card className="border border-gray-100 rounded-2xl bg-white shadow-sm overflow-hidden p-6 w-full">
-                    <div className="space-y-6">
-                        <style>{`@keyframes shimmer{100%{transform:translateX(100%)}}`}</style>
-                        <div className="flex items-center gap-4 border-b border-gray-50 pb-4">
-                            <div className="h-4 w-12 bg-slate-100 rounded relative overflow-hidden"><div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 to-transparent animate-[shimmer_1.5s_infinite]" /></div>
-                            <div className="h-4 w-32 bg-slate-100 rounded relative overflow-hidden"><div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 to-transparent animate-[shimmer_1.5s_infinite]" /></div>
-                            <div className="h-4 w-20 bg-slate-100 rounded relative overflow-hidden"><div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 to-transparent animate-[shimmer_1.5s_infinite]" /></div>
-                        </div>
-                        {[...Array(6)].map((_, i) => (
-                            <div key={i} className="flex items-center gap-6 py-2">
-                                <div className="h-5 w-16 bg-slate-100 rounded-md relative overflow-hidden shrink-0">
-                                    <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 to-transparent animate-[shimmer_1.5s_infinite]" />
-                                </div>
-                                <div className="h-5 flex-1 bg-slate-100 rounded-md relative overflow-hidden max-w-[300px]">
-                                    <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 to-transparent animate-[shimmer_1.5s_infinite]" />
-                                </div>
-                                <div className="h-6 w-24 bg-slate-100 rounded-md relative overflow-hidden shrink-0">
-                                    <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 to-transparent animate-[shimmer_1.5s_infinite]" />
-                                </div>
-                                <div className="h-6 w-20 bg-slate-100 rounded-full relative overflow-hidden shrink-0">
-                                    <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 to-transparent animate-[shimmer_1.5s_infinite]" />
-                                </div>
-                                <div className="h-5 w-16 bg-slate-100 rounded-md relative overflow-hidden shrink-0">
-                                    <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 to-transparent animate-[shimmer_1.5s_infinite]" />
-                                </div>
-                                <div className="h-8 w-24 bg-slate-100 rounded-md relative overflow-hidden shrink-0 hidden sm:block">
-                                    <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 to-transparent animate-[shimmer_1.5s_infinite]" />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </Card>
+            <MyTicketsSkeleton />
             ) : error ? (
                 <Card className="p-8 border-red-100 bg-red-50/50 rounded-2xl flex flex-col items-center text-center">
                     <AlertCircle className="w-12 h-12 text-red-500 mb-4" />

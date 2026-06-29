@@ -6,13 +6,18 @@ import {
 import {
     BarChart3, PieChart as PieChartIcon, LineChart as LineChartIcon,
     TrendingUp, Users, ShieldCheck, Zap, AlertCircle, Clock, Activity,
-    Layers, Inbox, User, Loader2, Bot, Star, Target
+    Layers, Inbox, User, Bot, Star, Target
 } from 'lucide-react';
 import { supabase } from "../../lib/supabaseClient";
 import StatCard from '../components/StatCard';
 import { Card, CardContent } from "../../components/ui/card";
 import useAuthStore from "../../store/authStore";
 import { formatTimelineDate } from "../../utils/dateUtils";
+import {
+    ChartSkeleton,
+    DashboardHeaderSkeleton,
+    StatCardsSkeleton,
+} from "../../components/shared/DashboardSkeletons";
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#a855f7', '#ec4899'];
 
@@ -156,9 +161,19 @@ const AdminAnalytics = () => {
 
     // Removed tab state - moving to single dashboard layout
     if (loading) return (
-        <div className="flex flex-col items-center justify-center min-h-[400px]">
-            <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mb-4" />
-            <p className="text-slate-400 font-black uppercase tracking-widest italic text-center">Crunching mission data analytics...</p>
+        <div style={{ background: '#f8faf9', minHeight: '100vh', paddingBottom: '80px' }} className="space-y-10 -m-6 p-6 md:-m-10 md:p-10 animate-in fade-in duration-700">
+            <DashboardHeaderSkeleton />
+            <StatCardsSkeleton />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                <div className="lg:col-span-8 space-y-10">
+                    <ChartSkeleton titleWidth="w-56" chartHeight="h-[20rem]" />
+                    <ChartSkeleton titleWidth="w-52" chartHeight="h-[18rem]" />
+                </div>
+                <div className="lg:col-span-4 space-y-10">
+                    <ChartSkeleton titleWidth="w-44" chartHeight="h-[20rem]" />
+                    <ChartSkeleton titleWidth="w-40" chartHeight="h-[18rem]" />
+                </div>
+            </div>
         </div>
     );
 

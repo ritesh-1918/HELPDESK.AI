@@ -25,6 +25,7 @@ import { Select } from "../../components/ui/select";
 import { formatTicketId } from "../../utils/format";
 import SLABadge from "../components/SLABadge";
 import { formatFullTimestamp, formatTimelineDate } from "../../utils/dateUtils";
+import { DashboardHeaderSkeleton, TicketTableSkeleton } from "../../components/shared/DashboardSkeletons";
 
 const AdminTickets = () => {
     const navigate = useNavigate();
@@ -205,6 +206,15 @@ const AdminTickets = () => {
         if (conf >= 0.5) return 'bg-amber-500';
         return 'bg-red-500';
     };
+
+    if (loading) {
+        return (
+            <div className="space-y-8 animate-in fade-in duration-700">
+                <DashboardHeaderSkeleton />
+                <TicketTableSkeleton rows={6} />
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-8 animate-in fade-in duration-700">
