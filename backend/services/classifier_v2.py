@@ -1,13 +1,20 @@
 import os
 import torch
 import torch.nn as nn
-import pickle
 import json
 from transformers import DistilBertTokenizerFast, DistilBertModel
 
 # Paths
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_DIR = os.path.join(BASE_DIR, "models", "classifier-v2")
+
+
+class LabelEncoderView:
+    def __init__(self, classes):
+        self.classes_ = list(classes)
+
+    def inverse_transform(self, values):
+        return [self.classes_[int(value)] for value in values]
 
 # We must use the exact same class definition as trainer_v2
 class MultiOutputClassifierV2(nn.Module):
@@ -42,8 +49,19 @@ class ClassifierServiceV2:
             self.num_labels = json.load(f)
 
         # 2. Load Encoders
-        with open(os.path.join(MODEL_DIR, "label_encoders.pkl"), "rb") as f:
-            self.label_encoders = pickle.load(f)
+        label_encoders_path = os.path.join(MODEL_DIR, "label_encoders.json")
+        if not os.path.exists(label_encoders_path):
+            raise FileNotFoundError(
+                f"Missing safe label encoder artifact at {label_encoders_path}. "
+                "Regenerate the classifier-v2 artifacts with label_encoders.json."
+            )
+
+        with open(label_encoders_path, "r") as f:
+            raw_label_encoders = json.load(f)
+
+        self.label_encoders = {
+            col: LabelEncoderView(classes) for col, classes in raw_label_encoders.items()
+        }
 
         # 3. Load Model
         self.model = MultiOutputClassifierV2(self.num_labels).to(self.device)
