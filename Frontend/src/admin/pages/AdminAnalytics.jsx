@@ -20,6 +20,7 @@ const AdminAnalytics = () => {
     const { profile } = useAuthStore();
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isRetraining, setIsRetraining] = useState(false);
 
     const fetchAnalytics = async () => {
         setLoading(true);
@@ -53,6 +54,26 @@ const AdminAnalytics = () => {
             console.error("Analytics fetch error:", err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleRetrain = async () => {
+        setIsRetraining(true);
+        try {
+            const response = await fetch("http://localhost:8000/ai/retrain", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" }
+            });
+            if (response.ok) {
+                alert("Model retraining pipeline started successfully.");
+            } else {
+                alert("Failed to start model retraining.");
+            }
+        } catch (error) {
+            console.error("Retrain API Error:", error);
+            alert("Error starting retraining pipeline.");
+        } finally {
+            setIsRetraining(false);
         }
     };
 
@@ -319,11 +340,24 @@ const AdminAnalytics = () => {
 
                     {/* AI Correction Log */}
                     <Card className="p-8 border-none shadow-xl shadow-slate-200/50 rounded-[2rem] bg-white">
-                        <div className="mb-8">
-                            <h3 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2 uppercase italic">
-                                <AlertCircle size={18} className="text-amber-500" /> AI Correction Log
-                            </h3>
-                            <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-1">Categories with manual corrections</p>
+                        <div className="mb-8 flex justify-between items-start">
+                            <div>
+                                <h3 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2 uppercase italic">
+                                    <AlertCircle size={18} className="text-amber-500" /> AI Correction Log
+                                </h3>
+                                <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-1">Categories with manual corrections</p>
+                            </div>
+                            <button
+                                onClick={handleRetrain}
+                                disabled={isRetraining}
+                                className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all flex items-center gap-2 ${isRetraining ? 'bg-slate-200 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md hover:shadow-lg'}`}
+                            >
+                                {isRetraining ? (
+                                    <><Loader2 size={14} className="animate-spin" /> Retraining...</>
+                                ) : (
+                                    <><Zap size={14} /> Retrain AI Model</>
+                                )}
+                            </button>
                         </div>
                         <div className="h-[250px]">
                             {aiStats.misclassifiedCategories.length > 0 ? (

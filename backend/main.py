@@ -19,7 +19,7 @@ from contextlib import asynccontextmanager
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, HTTPException, Request, BackgroundTasks
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -530,6 +530,84 @@ async def log_correction(raw_request: Request):
     except Exception as e:
         print(f"[CORRECTION ERROR] Could not save: {e}")
         return {"status": "error", "message": str(e)}
+
+# ---------------------------------------------------------------------------
+# Automated Model Retraining Pipeline
+# ---------------------------------------------------------------------------
+def retrain_pipeline_task():
+    import pandas as pd
+    from backend.training.classifier_trainer_v3 import train_v3
+    print("[RETRAIN] Starting automated model retraining pipeline...")
+    
+    if not CORRECTIONS_LOG_PATH.exists():
+        print("[RETRAIN] No corrections log found. Aborting.")
+        return
+
+    try:
+        with open(CORRECTIONS_LOG_PATH, "r", encoding="utf-8") as f:
+            logs = json.load(f)
+            
+        if not logs:
+            print("[RETRAIN] Corrections log is empty. Aborting.")
+            return
+
+        # Load original dataset
+        original_csv_path = Path(__file__).parent.parent / "Model" / "Final_Balanced_10000_IT_Support_Tickets.csv"
+        augmented_csv_path = Path(__file__).parent.parent / "Model" / "Final_Balanced_10000_IT_Support_Tickets_Augmented.csv"
+        
+        df = pd.read_csv(original_csv_path)
+        
+        # Augment dataset with corrections
+        new_rows = []
+        for log in logs:
+            if not log.get("original_text"):
+                continue
+            # For each correction, add multiple copies to heavily weight it
+            # Or just append it. Let's append 5 copies.
+            for _ in range(5):
+                new_rows.append({
+                    "ticket_id": log.get("ticket_id"),
+                    "user_input_text": log.get("original_text"),
+                    "category": log["corrected_prediction"].get("category", "General"),
+                    "sub_category": log["corrected_prediction"].get("subcategory", "Other"),
+                    "Priority": log["corrected_prediction"].get("priority", "Low"),
+                    "auto_resolve": "False",
+                    "assigned_team": log["corrected_prediction"].get("assigned_team", "IT Service Desk")
+                })
+                
+        if new_rows:
+            new_df = pd.DataFrame(new_rows)
+            df = pd.concat([df, new_df], ignore_index=True)
+            df.to_csv(augmented_csv_path, index=False)
+            print(f"[RETRAIN] Augmented dataset created with {len(new_rows)} new rows.")
+            
+            # Set env var and trigger training
+            os.environ["AUGMENTED_DATASET_PATH"] = str(augmented_csv_path)
+            
+            try:
+                train_v3()
+                print("[RETRAIN] Model retraining completed.")
+                
+                # Reload model into memory
+                classifier_service.load()
+                print("[RETRAIN] New model loaded into memory.")
+                
+                # Clear corrections log
+                with open(CORRECTIONS_LOG_PATH, "w", encoding="utf-8") as f:
+                    json.dump([], f)
+                print("[RETRAIN] Corrections log cleared.")
+                
+            except Exception as train_e:
+                print(f"[RETRAIN ERROR] Training failed: {train_e}")
+                
+    except Exception as e:
+        print(f"[RETRAIN ERROR] Pipeline failed: {e}")
+
+@app.post("/ai/retrain")
+async def trigger_retrain(background_tasks: BackgroundTasks):
+    """Trigger the automated model retraining pipeline in the background."""
+    background_tasks.add_task(retrain_pipeline_task)
+    return {"status": "started", "message": "Retraining pipeline started in the background."}
 
 
 # ---------------------------------------------------------------------------
