@@ -159,6 +159,7 @@ class Message(BaseModel):
     timestamp: str
 
 
+from pydantic import Field
 class CorrectionLog(BaseModel):
     ticket_id: str
     original_text: str = ""
@@ -1163,6 +1164,10 @@ async def auth_me(user: dict = Depends(get_current_user)):
 @limiter.limit("5/minute")
 async def log_correction(correction: CorrectionLog, request: Request, user: dict = Depends(get_current_user)):
     """Log an admin correction when the AI prediction differs from the human decision."""
+    user_id = user.get("id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid authenticated user")
+        
     try:
         # Only log if something actually changed
         changed_fields = [
@@ -1182,15 +1187,19 @@ async def log_correction(correction: CorrectionLog, request: Request, user: dict
             "changed_fields": changed_fields,
             "confidence": correction.confidence,
             "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
-            "corrected_by": user.get("id", "unknown")
+            "corrected_by": user.get("id")
         }
 
         # Insert to Supabase directly
         res = supabase.table("corrections").insert(entry).execute()
         
-        logger.info("Correction saved to Supabase", extra={"ticket_id": correction.ticket_id, "changed": changed_fields})
+        import logging
+        logging.info("Correction saved to Supabase", extra={"ticket_id": correction.ticket_id, "changed": changed_fields})
         return {"status": "saved", "changed_fields": changed_fields}
 
-    except Exception as e:
-        logger.error("Failed to save correction to Supabase", extra={"error_details": str(e)})
-        return {"status": "error", "message": str(e)}
+    except HTTPException:
+        raise
+    except Exception:
+        import logging
+        logging.exception("Failed to save correction to Supabase", extra={"ticket_id": correction.ticket_id})
+        raise HTTPException(status_code=500, detail="Failed to save correction")

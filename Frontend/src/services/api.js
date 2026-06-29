@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { supabase } from '../lib/supabaseClient';
 import { MOCK_TICKETS } from './mockData';
 import { API_CONFIG } from '../config';
 
