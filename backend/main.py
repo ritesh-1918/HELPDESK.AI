@@ -177,7 +177,8 @@ class TicketRecord(BaseModel):
 
 
 # --- In-Memory Database (to be replaced with SQL later) ---
-TICKETS_DB: list[TicketRecord] = []
+# TICKETS_DB removed (Issue #3056)
+
 
 
 class HealthResponse(BaseModel):
@@ -665,30 +666,36 @@ async def get_ticket_by_id(ticket_id: str):
 
 @app.post("/tickets", response_model=TicketRecord)
 async def create_ticket(ticket: TicketRecord):
-    """Save a new ticket into the system."""
-    # Check for duplicates before adding
-    existing = next((t for t in TICKETS_DB if t.ticket_id == ticket.ticket_id), None)
-    if existing:
-        return existing
-        
-    TICKETS_DB.append(ticket)
-    print(f"[DB] Ticket #{ticket.ticket_id} created for user {ticket.owner_id}")
-    return ticket
+    """Save a new ticket into the system (Supabase)."""
+    ticket_dict = ticket.dict()
+    
+    try:
+        # Upsert or Insert to avoid duplicate constraint errors
+        res = supabase.table("tickets").upsert(ticket_dict).execute()
+        return res.data[0] if res.data else ticket
+    except Exception as e:
+        logger.error("Failed to insert ticket to Supabase", extra={"error_details": str(e)})
+        raise HTTPException(status_code=500, detail="Database insertion failed")
 
 
 @app.patch("/tickets/{ticket_id}", response_model=TicketRecord)
 async def update_ticket(ticket_id: str, updates: dict):
     """Partially update a ticket's fields (e.g., status, viewed_at)."""
-    for i, ticket in enumerate(TICKETS_DB):
-        if str(ticket.ticket_id) == str(ticket_id):
-            # Convert to dict, update, then back to model
-            ticket_dict = ticket.dict()
-            ticket_dict.update(updates)
-            updated_ticket = TicketRecord(**ticket_dict)
-            TICKETS_DB[i] = updated_ticket
-            return updated_ticket
-    
-    raise HTTPException(status_code=404, detail="Ticket not found")
+    try:
+        # Fallback to check eq("id") or eq("ticket_id") based on standard pattern
+        res = supabase.table("tickets").update(updates).eq("ticket_id", ticket_id).execute()
+        if not res.data:
+            # Maybe the primary key is 'id'
+            res = supabase.table("tickets").update(updates).eq("id", ticket_id).execute()
+            
+        if not res.data:
+            raise HTTPException(status_code=404, detail="Ticket not found")
+        return res.data[0]
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Failed to update ticket in Supabase", extra={"error_details": str(e)})
+        raise HTTPException(status_code=500, detail="Database update failed")
 
 
 # ---------------------------------------------------------------------------
