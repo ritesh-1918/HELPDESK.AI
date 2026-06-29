@@ -1,13 +1,20 @@
 import os
 import torch
 import torch.nn as nn
-import pickle
 import json
 from transformers import BertTokenizerFast, BertModel
 
 # Paths
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_DIR = os.path.join(BASE_DIR, "models", "classifier-v3")
+
+
+class LabelEncoderView:
+    def __init__(self, classes):
+        self.classes_ = list(classes)
+
+    def inverse_transform(self, values):
+        return [self.classes_[int(value)] for value in values]
 
 class MultiOutputClassifierV3(nn.Module):
     def __init__(self, num_labels_per_output: dict):
@@ -44,8 +51,19 @@ class ClassifierServiceV3:
         with open(config_path, "r") as f:
             self.num_labels = json.load(f)
 
-        with open(os.path.join(MODEL_DIR, "label_encoders.pkl"), "rb") as f:
-            self.label_encoders = pickle.load(f)
+        label_encoders_path = os.path.join(MODEL_DIR, "label_encoders.json")
+        if not os.path.exists(label_encoders_path):
+            raise FileNotFoundError(
+                f"Missing safe label encoder artifact at {label_encoders_path}. "
+                "Regenerate the classifier-v3 artifacts with label_encoders.json."
+            )
+
+        with open(label_encoders_path, "r") as f:
+            raw_label_encoders = json.load(f)
+
+        self.label_encoders = {
+            col: LabelEncoderView(classes) for col, classes in raw_label_encoders.items()
+        }
 
         self.model = MultiOutputClassifierV3(self.num_labels).to(self.device)
         self.model.load_state_dict(torch.load(os.path.join(MODEL_DIR, "model.pt"), map_location=self.device))

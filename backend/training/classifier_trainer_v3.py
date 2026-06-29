@@ -4,7 +4,6 @@ Upgraded to BERT-Base for maximum accuracy and power.
 """
 
 import os
-import pickle
 import json
 import numpy as np
 import pandas as pd
@@ -147,7 +146,9 @@ def train_v3():
     os.makedirs(SAVE_DIR, exist_ok=True)
     torch.save(model.state_dict(), os.path.join(SAVE_DIR, "model.pt"))
     tokenizer.save_pretrained(SAVE_DIR)
-    with open(os.path.join(SAVE_DIR, "label_encoders.pkl"), "wb") as f: pickle.dump(label_encoders, f)
+    label_encoder_payload = {col: le.classes_.tolist() for col, le in label_encoders.items()}
+    with open(os.path.join(SAVE_DIR, "label_encoders.json"), "w") as f:
+        json.dump(label_encoder_payload, f)
     with open(os.path.join(SAVE_DIR, "model_config.json"), "w") as f: json.dump(num_labels_per_output, f)
     print(f"\n[SUCCESS] V3 Power Model saved to {SAVE_DIR}")
 
