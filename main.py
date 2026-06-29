@@ -12,6 +12,7 @@ from backend.routers import metrics as metrics_router
 
 from backend.routers import tickets, ai, admin, health, auth
 from backend.routes import translation, estimator, voice, privacy, active_learning, weekly_digest
+from backend.routers import upload as upload_router
 
 from backend.logger import configure_logging
 configure_logging()
@@ -19,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
+app.include_router(upload_router.router)
 app.add_middleware(CSRFTokenMiddleware)
 app.include_router(metrics_router.router)
 
