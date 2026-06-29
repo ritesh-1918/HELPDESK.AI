@@ -1,28 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
+import { isLikelyValidAnonKey, isLikelyValidUrl } from './supabaseUrlValidation.js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-const INVALID_MARKERS = new Set([
-	'your_supabase_url',
-	'your_project_url',
-	'your_supabase_anon_key',
-	'your_key',
-])
-
-const isLikelyValidUrl = (value) => {
-	if (!value || INVALID_MARKERS.has(value)) return false
-	try {
-		const parsed = new URL(value)
-		return parsed.protocol === 'https:' || parsed.protocol === 'http:'
-	} catch {
-		return false
-	}
-}
-
-const isLikelyValidAnonKey = (value) => {
-	return Boolean(value && !INVALID_MARKERS.has(value) && value.length > 20)
-}
 
 const disabledMessage =
 	'[Supabase] Client is disabled. Set valid VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Frontend/.env and restart Vite.'
