@@ -4,6 +4,8 @@ POST /ai/analyze_ticket  →  full analysis of a support ticket
 GET  /health             →  service health check
 """
 
+from __future__ import annotations
+
 import os
 import sys
 import uuid
@@ -14,6 +16,7 @@ import traceback
 import warnings
 import logging
 import hashlib
+from collections import deque
 from contextlib import asynccontextmanager
 
 # Suppress harmless PyTorch CPU pin_memory warning
@@ -199,6 +202,163 @@ class ConnectionManager:
 # Singleton — reused across lifespan and WebSocket route
 connection_manager = ConnectionManager()
 
+CLASSIFIER_TELEMETRY_WINDOW = 100
+classifier_telemetry: deque[dict] = deque(maxlen=CLASSIFIER_TELEMETRY_WINDOW)
+
+
+def _hash_ticket_text(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:12]
+
+
+def _prediction_value(payload: dict | None, key: str, default: str = "", alt_key: str | None = None) -> str:
+    if not payload:
+        return default
+    candidates = (key, alt_key) if alt_key else (key,)
+    for candidate in candidates:
+        if not candidate:
+            continue
+        value = payload.get(candidate)
+        if isinstance(value, dict):
+            return str(value.get("prediction") or default)
+        if value is not None:
+            return str(value)
+    return default
+
+
+def _prediction_confidence(payload: dict | None, key: str, alt_key: str | None = None) -> float:
+    if not payload:
+        return 0.0
+    candidates = (key, alt_key) if alt_key else (key,)
+    for candidate in candidates:
+        if not candidate:
+            continue
+        value = payload.get(candidate)
+        if isinstance(value, dict):
+            raw = value.get("confidence")
+            try:
+                return float(raw or 0.0)
+            except (TypeError, ValueError):
+                return 0.0
+        if candidate == "confidence" and value is not None:
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return 0.0
+    raw_confidence = payload.get("confidence")
+    try:
+        return float(raw_confidence or 0.0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _normalize_classifier_output(payload: dict | None, model: str) -> dict | None:
+    if not payload or "error" in payload:
+        return None
+
+    category = _prediction_value(payload, "category", "Unknown", "Category")
+    subcategory = _prediction_value(payload, "subcategory", "Unknown", "Subcategory")
+    priority = _prediction_value(payload, "priority", "Medium", "Priority")
+    assigned_team = _prediction_value(payload, "assigned_team", "General Support", "AssignedTeam")
+    confidence = _prediction_confidence(payload, "confidence")
+    return {
+        "model": model,
+        "category": category,
+        "subcategory": subcategory,
+        "priority": priority,
+        "assigned_team": assigned_team,
+        "confidence": confidence,
+    }
+
+
+def _record_classifier_telemetry(
+    *,
+    text: str,
+    primary_model: str,
+    primary_payload: dict,
+    fallback_used: bool,
+    fallback_error: str | None = None,
+    v2_shadow_payload: dict | None = None,
+) -> None:
+    v3_payload = None
+    v1_payload = None
+    if primary_model == "v3":
+        v3_payload = primary_payload
+    elif primary_model == "v1":
+        v1_payload = primary_payload
+
+    event = {
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"),
+        "text_hash": _hash_ticket_text(text),
+        "primary_model": primary_model,
+        "fallback_used": fallback_used,
+        "fallback_error": fallback_error,
+        "v3_confidence": _prediction_confidence(v3_payload, "confidence") if v3_payload else 0.0,
+        "v1_confidence": _prediction_confidence(v1_payload, "confidence") if v1_payload else 0.0,
+        "v2_agrees": None,
+        "v2_confidence": 0.0,
+    }
+
+    shadow = _normalize_classifier_output(v2_shadow_payload, "v2_shadow")
+    if shadow:
+        event["v2_confidence"] = shadow["confidence"]
+        primary_normalized = _normalize_classifier_output(primary_payload, primary_model)
+        if primary_normalized:
+            event["v2_agrees"] = all(
+                shadow[field] == primary_normalized[field]
+                for field in ("category", "subcategory", "priority")
+            )
+
+    classifier_telemetry.append(event)
+    fallback_rate = sum(1 for item in classifier_telemetry if item["fallback_used"]) / len(classifier_telemetry)
+    if fallback_rate > 0.10:
+        print(
+            f"[CRITICAL] V3 fallback rate is {fallback_rate:.1%} over the last {len(classifier_telemetry)} predictions."
+        )
+
+
+def _model_prediction_response(model: str, payload: dict | None) -> ModelPredictionResponse:
+    normalized = _normalize_classifier_output(payload or {}, model) or {
+        "model": model,
+        "category": "Unknown",
+        "subcategory": "Unknown",
+        "priority": "Medium",
+        "assigned_team": "General Support",
+        "confidence": 0.0,
+    }
+    return ModelPredictionResponse(**normalized)
+
+
+def _classifier_telemetry_summary() -> ModelHealthResponse:
+    events = list(classifier_telemetry)
+    total = len(events)
+    fallback_count = sum(1 for item in events if item["fallback_used"])
+    v3_successes = sum(1 for item in events if item["primary_model"] == "v3" and not item["fallback_used"])
+    v3_confidences = [item["v3_confidence"] for item in events if item["v3_confidence"] > 0]
+    v1_confidences = [item["v1_confidence"] for item in events if item["v1_confidence"] > 0]
+    v2_agreements = [item["v2_agrees"] for item in events if item["v2_agrees"] is not None]
+    v2_agreement_count = sum(1 for item in v2_agreements if item)
+    last_fallback = next((item["timestamp"] for item in reversed(events) if item["fallback_used"]), None)
+    fallback_rate = (fallback_count / total) if total else 0.0
+    critical_warning = fallback_rate > 0.10
+    if critical_warning:
+        print(
+            f"[CRITICAL] V3 fallback rate is {fallback_rate:.1%} over the last {total} predictions."
+        )
+    return ModelHealthResponse(
+        window_size=CLASSIFIER_TELEMETRY_WINDOW,
+        observations=total,
+        classifier_fallback_count=fallback_count,
+        v3_success_rate=(v3_successes / total) if total else 0.0,
+        v3_average_confidence=(sum(v3_confidences) / len(v3_confidences)) if v3_confidences else 0.0,
+        v1_average_confidence=(sum(v1_confidences) / len(v1_confidences)) if v1_confidences else 0.0,
+        v2_shadow_agreement_rate=(v2_agreement_count / len(v2_agreements)) if v2_agreements else 0.0,
+        v2_shadow_disagreement_rate=(
+            (len(v2_agreements) - v2_agreement_count) / len(v2_agreements)
+        ) if v2_agreements else 0.0,
+        last_fallback_at=last_fallback,
+        critical_warning=critical_warning,
+    )
+
 
 async def _heartbeat_loop() -> None:
     """Background task: broadcast ping every ``HEARTBEAT_INTERVAL`` seconds.
@@ -315,41 +475,100 @@ def classify_ticket_text(text: str) -> dict:
 
 
 def _classify_ticket_text_uncached(text: str) -> dict:
+    fallback_error: str | None = None
     try:
         classification_v3_res = classifier_v3.predict(text)
         if "error" not in classification_v3_res:
-            cat = classification_v3_res.get("Category", {}).get("prediction", "Unknown")
-            sub = classification_v3_res.get("Subcategory", {}).get("prediction", "Unknown")
-            pri = classification_v3_res.get("priority", {}).get("prediction", "Medium")
-            conf = classification_v3_res.get("Category", {}).get("confidence", 0.0)
+            v3_snapshot = _normalize_classifier_output(classification_v3_res, "v3")
+            if v3_snapshot:
+                from backend.services.classifier_service import TEAM_MAP, AUTO_RESOLVE_SUBS
 
-            from backend.services.classifier_service import TEAM_MAP, AUTO_RESOLVE_SUBS
-            return {
-                "category": cat,
-                "subcategory": sub,
-                "priority": pri,
-                "auto_resolve": sub in AUTO_RESOLVE_SUBS,
-                "assigned_team": TEAM_MAP.get(cat, "General Support"),
-                "confidence": float(conf),
-            }
-    except Exception:
+                result = {
+                    "category": v3_snapshot["category"],
+                    "subcategory": v3_snapshot["subcategory"],
+                    "priority": v3_snapshot["priority"],
+                    "auto_resolve": v3_snapshot["subcategory"] in AUTO_RESOLVE_SUBS,
+                    "assigned_team": TEAM_MAP.get(v3_snapshot["category"], "General Support"),
+                    "confidence": float(v3_snapshot["confidence"]),
+                    "classifier_version": "v3",
+                }
+                try:
+                    v2_shadow_res = classifier_v2.predict(text)
+                except Exception:
+                    v2_shadow_res = None
+                _record_classifier_telemetry(
+                    text=text,
+                    primary_model="v3",
+                    primary_payload=result,
+                    fallback_used=False,
+                    v2_shadow_payload=v2_shadow_res,
+                )
+                return result
+            fallback_error = "V3 classifier returned an empty prediction"
+        else:
+            fallback_error = str(classification_v3_res.get("error") or "V3 classifier error")
+    except Exception as error:
+        fallback_error = str(error)
         traceback.print_exc()
 
     try:
         onnx_result = onnx_classifier.predict(text)
         if onnx_result:
-            return onnx_result
+            result = dict(onnx_result)
+            result["classifier_version"] = "onnx"
+            try:
+                v2_shadow_res = classifier_v2.predict(text)
+            except Exception:
+                v2_shadow_res = None
+            _record_classifier_telemetry(
+                text=text,
+                primary_model="onnx",
+                primary_payload=result,
+                fallback_used=True,
+                fallback_error=fallback_error,
+                v2_shadow_payload=v2_shadow_res,
+            )
+            return result
     except Exception as error:
         print(f"[ONNX] Fallback classification skipped: {error}")
 
     try:
-        return classifier_service.predict(text)
-    except Exception:
+        result = classifier_service.predict(text)
+        result["classifier_version"] = "v1"
+        try:
+            v2_shadow_res = classifier_v2.predict(text)
+        except Exception:
+            v2_shadow_res = None
+        _record_classifier_telemetry(
+            text=text,
+            primary_model="v1",
+            primary_payload=result,
+            fallback_used=True,
+            fallback_error=fallback_error,
+            v2_shadow_payload=v2_shadow_res,
+        )
+        return result
+    except Exception as error:
+        fallback_error = str(error)
         traceback.print_exc()
-        return {
+        result = {
             "category": "Unknown", "subcategory": "Unknown", "priority": "Medium",
             "auto_resolve": False, "assigned_team": "General Support", "confidence": 0.0,
+            "classifier_version": "v1",
         }
+        try:
+            v2_shadow_res = classifier_v2.predict(text)
+        except Exception:
+            v2_shadow_res = None
+        _record_classifier_telemetry(
+            text=text,
+            primary_model="v1",
+            primary_payload=result,
+            fallback_used=True,
+            fallback_error=fallback_error,
+            v2_shadow_payload=v2_shadow_res,
+        )
+        return result
 
 class TicketRequest(BaseModel):
     text: str
@@ -508,6 +727,41 @@ class HealthResponse(BaseModel):
 class ReadinessResponse(BaseModel):
     status: str
     checks: dict[str, bool]
+
+
+class ModelHealthResponse(BaseModel):
+    window_size: int
+    observations: int
+    classifier_fallback_count: int
+    v3_success_rate: float
+    v3_average_confidence: float
+    v1_average_confidence: float
+    v2_shadow_agreement_rate: float
+    v2_shadow_disagreement_rate: float
+    last_fallback_at: str | None = None
+    critical_warning: bool = False
+
+
+class ModelComparisonRequest(BaseModel):
+    text: str
+
+
+class ModelPredictionResponse(BaseModel):
+    model: str
+    category: str
+    subcategory: str
+    priority: str
+    assigned_team: str
+    confidence: float
+
+
+class ModelComparisonResponse(BaseModel):
+    text_hash: str
+    fallback_used: bool
+    primary_model: ModelPredictionResponse
+    v2_shadow: ModelPredictionResponse | None = None
+    v2_agrees_with_primary: bool | None = None
+    fallback_error: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -856,6 +1110,11 @@ async def health_check():
     )
 
 
+@app.get("/ai/model_health", response_model=ModelHealthResponse)
+async def model_health():
+    return _classifier_telemetry_summary()
+
+
 @app.get("/ready", response_model=ReadinessResponse)
 async def readiness_check():
     require_supabase = os.environ.get("REQUIRE_SUPABASE", "false").lower() == "true"
@@ -904,6 +1163,59 @@ async def troubleshoot(request: TroubleshootRequest):
         request.category
     )
     return TroubleshootResponse(**result)
+
+
+@app.post("/ai/model_comparison", response_model=ModelComparisonResponse)
+async def model_comparison(request: ModelComparisonRequest):
+    text = request.text.strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Text is required")
+
+    try:
+        v3_raw = classifier_v3.predict(text)
+    except Exception as error:
+        v3_raw = {"error": str(error)}
+
+    try:
+        v2_raw = classifier_v2.predict(text)
+    except Exception as error:
+        v2_raw = {"error": str(error)}
+
+    primary_raw = v3_raw if "error" not in v3_raw else None
+    fallback_used = primary_raw is None
+    fallback_error = str(v3_raw.get("error")) if isinstance(v3_raw, dict) and v3_raw.get("error") else None
+
+    if primary_raw is not None:
+        primary_model = _model_prediction_response("v3", primary_raw)
+    else:
+        try:
+            fallback_raw = classifier_service.predict(text)
+        except Exception:
+            fallback_raw = {
+                "category": "Unknown",
+                "subcategory": "Unknown",
+                "priority": "Medium",
+                "assigned_team": "General Support",
+                "confidence": 0.0,
+            }
+        primary_model = _model_prediction_response("v1", fallback_raw)
+
+    v2_model = _model_prediction_response("v2_shadow", v2_raw) if "error" not in v2_raw else None
+    v2_agrees = None
+    if v2_model:
+        v2_agrees = all(
+            getattr(v2_model, field) == getattr(primary_model, field)
+            for field in ("category", "subcategory", "priority")
+        )
+
+    return ModelComparisonResponse(
+        text_hash=_hash_ticket_text(text),
+        fallback_used=fallback_used,
+        primary_model=primary_model,
+        v2_shadow=v2_model,
+        v2_agrees_with_primary=v2_agrees,
+        fallback_error=fallback_error,
+    )
 
 
 class BugReportAnalysisRequest(BaseModel):
@@ -1666,6 +1978,9 @@ async def analyze_only(request_body: TicketRequest, request: Request):
 
     # --- Classification ---
     classification = classify_ticket_text(text)
+    classifier_version = classification.get("classifier_version", "v1")
+    env_metadata["classifier_version"] = classifier_version
+    env_metadata["shadow_classifier_version"] = "v2_shadow"
     if not enable_auto_resolve:
         classification["auto_resolve"] = False
 
@@ -1749,7 +2064,7 @@ async def analyze_only(request_body: TicketRequest, request: Request):
         image_description=gemini_analysis["image_description"],
         ocr_text=gemini_analysis["ocr_text"],
         image_url=request_body.image_url,
-        highlights=[e.text for e in entities] if entities else [],
+        highlights=[e.get("text", "") if isinstance(e, dict) else getattr(e, "text", "") for e in entities] if entities else [],
         timeline=timeline,
         env_metadata=env_metadata,
         spam_check=SpamCheck(**spam_result),
@@ -1820,6 +2135,9 @@ async def analyze_stream(request_body: TicketRequest):
         enable_auto_resolve = settings.get("enable_auto_resolve", False)
         
         classification = classify_ticket_text(text)
+        classifier_version = classification.get("classifier_version", "v1")
+        env_metadata["classifier_version"] = classifier_version
+        env_metadata["shadow_classifier_version"] = "v2_shadow"
         if not enable_auto_resolve:
             classification["auto_resolve"] = False
             

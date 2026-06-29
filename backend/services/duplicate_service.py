@@ -3,6 +3,8 @@ Duplicate Detection Service
 Uses sentence-transformers all-MiniLM-L6-v2 to detect similar tickets.
 """
 
+from __future__ import annotations
+
 import uuid
 import os
 from typing import Any
@@ -253,4 +255,3 @@ class DuplicateService:
             "duplicate_ticket_id": best_id if is_dup else None,
             "similarity": round(best_score, 4),
         }
-

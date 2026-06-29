@@ -13,6 +13,8 @@ Usage:
     await service.index_ticket(ticket_id, text)
 """
 
+from __future__ import annotations
+
 import os
 import json
 import logging
