@@ -18,12 +18,14 @@ CREATE TABLE IF NOT EXISTS public.bug_reports (
 -- Turn on Row Level Security
 ALTER TABLE public.bug_reports ENABLE ROW LEVEL SECURITY;
 
--- Allow anyone (even anonymous) to insert a bug report. 
--- For a SaaS dashboard, usually only authenticated users are reporting, 
--- but in an open demo it's safer to allow inserts.
+-- Allow inserts from anonymous reporters (user_id IS NULL) or from an
+-- authenticated user reporting on their own behalf (user_id = auth.uid()).
+-- The previous policy used `WITH CHECK (true)` which let any caller -- including
+-- the anon role -- INSERT rows with a spoofed user_id, enabling impersonation
+-- and audit-log forgery (CWE-862).
 CREATE POLICY "Allow public inserts" ON public.bug_reports
     FOR INSERT
-    WITH CHECK (true);
+    WITH CHECK (user_id IS NULL OR user_id = auth.uid());
 
 -- Allow admins OR the creator to view reports
 CREATE POLICY "Users can view their own reports" ON public.bug_reports
@@ -39,7 +41,37 @@ CREATE POLICY "Super Admins and Admins can view all reports" ON public.bug_repor
       )
     );
 
--- Grant privileges
-GRANT ALL ON TABLE public.bug_reports TO authenticated;
-GRANT ALL ON TABLE public.bug_reports TO anon;
+-- Only admins / master admins may change a report's status.
+CREATE POLICY "Super Admins and Admins can update reports" ON public.bug_reports
+    FOR UPDATE
+    USING (
+      EXISTS (
+        SELECT 1 FROM public.profiles
+        WHERE profiles.id = auth.uid() AND (profiles.role = 'admin' OR profiles.role = 'master_admin')
+      )
+    )
+    WITH CHECK (
+      EXISTS (
+        SELECT 1 FROM public.profiles
+        WHERE profiles.id = auth.uid() AND (profiles.role = 'admin' OR profiles.role = 'master_admin')
+      )
+    );
+
+-- Only admins / master admins may purge reports.
+CREATE POLICY "Super Admins and Admins can delete reports" ON public.bug_reports
+    FOR DELETE
+    USING (
+      EXISTS (
+        SELECT 1 FROM public.profiles
+        WHERE profiles.id = auth.uid() AND (profiles.role = 'admin' OR profiles.role = 'master_admin')
+      )
+    );
+
+-- Grant privileges (least-privilege for anon: INSERT only, subject to RLS).
+-- The previous `GRANT ALL ... TO anon` exposed UPDATE/DELETE/SELECT at the
+-- table level to unauthenticated callers; RLS narrowed reads/writes but the
+-- table-level grant was unnecessarily broad. Authenticated users keep SELECT
+-- so they can read their own reports; admin mutations are mediated by RLS.
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.bug_reports TO authenticated;
+GRANT INSERT ON TABLE public.bug_reports TO anon;
 GRANT ALL ON TABLE public.bug_reports TO service_role;
