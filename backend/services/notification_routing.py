@@ -185,6 +185,31 @@ class NotificationRoutingMiddleware:
         self.log_notification_sent(company_id, NotificationType.PUSH_NOTIFICATION)
         return True
 
+    def send_push_notification(self, company_id: str, expo_push_token: str, title: str, body: str, data: dict = None) -> bool:
+        """Send an Expo push notification if settings allow."""
+        if not self.should_send_push_notification(company_id):
+            return False
+            
+        import requests
+        payload = {
+            "to": expo_push_token,
+            "title": title,
+            "body": body,
+            "data": data or {}
+        }
+        
+        try:
+            response = requests.post("https://exp.host/--/api/v2/push/send", json=payload)
+            if response.status_code == 200:
+                self.log_notification_sent(company_id, NotificationType.PUSH_NOTIFICATION)
+                return True
+            else:
+                logger.error(f"Expo push failed: {response.text}")
+                return False
+        except Exception as e:
+            self.log_notification_error(company_id, NotificationType.PUSH_NOTIFICATION, e)
+            return False
+
     def log_notification_sent(self, company_id: str, notification_type: NotificationType) -> None:
         """Log that a notification was sent."""
         if self.log_level in ["debug", "info"]:
