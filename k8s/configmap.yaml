@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: helpdesk-ai-config
+  namespace: helpdesk
+data:
+  ALLOW_DEGRADED_STARTUP: "0"
+  REDIS_URL: "redis://redis-svc:6379/0"
+  ENV: "production"
+  REQUIRE_SUPABASE: "true"
+  AUTO_CLOSE_DAYS: "7"
+  RATE_LIMIT_AI: "10/minute"
+  RATE_LIMIT_TICKETS: "30/minute"
+  RATE_LIMIT_AUTH: "5/minute"
