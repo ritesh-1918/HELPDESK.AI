@@ -5,6 +5,7 @@ import uuid
 import datetime
 import traceback
 import asyncio
+import os 
 from pathlib import Path
 from fastapi import APIRouter, Depends, Request, HTTPException
 from fastapi.responses import StreamingResponse
@@ -22,7 +23,8 @@ from backend.models import (
     TroubleshootRequest, TroubleshootResponse, CorrectionLogRequest,
     BugReportAnalysisRequest, BugReportAnalysisResponse
 )
-
+from pydantic import BaseModel, Field, validator
+import uuid as uuid_lib
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/ai", tags=["ai"])
@@ -73,33 +75,80 @@ async def analyze_bug(request: BugReportAnalysisRequest, user: dict = Depends(ge
     return BugReportAnalysisResponse(probable_cause=cause)
 
 
+# --- Correction Log Schema ---
+class PredictionSnapshot(BaseModel):
+    category: str = Field("", max_length=100)
+    subcategory: str = Field("", max_length=100)
+    priority: str = Field("", max_length=50)
+    assigned_team: str = Field("", max_length=100)
 
+class CorrectionLogRequest(BaseModel):
+    ticket_id: str = Field(..., max_length=100)
+    original_text: str = Field("", max_length=5000)
+    ocr_text: str = Field("", max_length=2000)
+    confidence: float = Field(0.0, ge=0.0, le=1.0)
+    original_prediction: PredictionSnapshot = Field(default_factory=PredictionSnapshot)
+    corrected_prediction: PredictionSnapshot = Field(default_factory=PredictionSnapshot)
 @router.post("/log_correction")
 async def log_correction(correction: CorrectionLogRequest, user: dict = Depends(get_current_user)):
     """Log an admin correction when the AI prediction differs from the human decision."""
     original_prediction = correction.original_prediction or {}
     corrected_prediction = correction.corrected_prediction or {}
 
+    @validator("ticket_id")
+    def ticket_id_must_not_be_empty(cls, v):
+        if not v.strip():
+            raise ValueError("ticket_id cannot be empty")
+        return v.strip()
+    
+MAX_LOG_SIZE_BYTES = 5 * 1024 * 1024  # 5MB
+
+@router.post("/log_correction")
+async def log_correction(body: CorrectionLogRequest, user: dict = Depends(get_current_user)):
+    """Log an admin correction with schema validation, auth, log rotation and atomic writes."""
+
     changed_fields = [
         field for field in ["category", "subcategory", "priority", "assigned_team"]
-        if original_prediction.get(field) != corrected_prediction.get(field)
+        if getattr(body.original_prediction, field) != getattr(body.corrected_prediction, field)
     ]
 
     if not changed_fields:
         return {"status": "no_change", "message": "Prediction matches correction, nothing logged."}
 
+    correlation_id = str(uuid_lib.uuid4())
+
     entry = {
+        "correlation_id": correlation_id,
+        "ticket_id": body.ticket_id,
+        "original_text": body.original_text,
+        "ocr_text": body.ocr_text,
+        "original_prediction": body.original_prediction.dict(),
+        "corrected_prediction": body.corrected_prediction.dict(),
         "ticket_id": correction.ticket_id,
         "original_text": correction.original_text,
         "ocr_text": correction.ocr_text,
         "original_prediction": original_prediction,
         "corrected_prediction": corrected_prediction,
         "changed_fields": changed_fields,
+        "confidence": body.confidence,
+        "logged_by": user.get("id", "unknown"),
         "confidence": correction.confidence,
         "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
     }
 
     try:
+        # Log rotation: archive if over 5MB
+        if CORRECTIONS_LOG_PATH.exists() and CORRECTIONS_LOG_PATH.stat().st_size > MAX_LOG_SIZE_BYTES:
+            archive_path = CORRECTIONS_LOG_PATH.with_suffix(
+                f".{datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')}.json"
+            )
+            CORRECTIONS_LOG_PATH.rename(archive_path)
+            logger.info(f"[CORRECTION] Log rotated to {archive_path}")
+
+        # Load existing logs
+        if CORRECTIONS_LOG_PATH.exists() and CORRECTIONS_LOG_PATH.stat().st_size > 2:
+            with open(CORRECTIONS_LOG_PATH, "r", encoding="utf-8") as f:
+                logs = json.load(f)
         service = _get_corrections_service()
         success = service.append_entry(entry)
 
@@ -110,10 +159,34 @@ async def log_correction(correction: CorrectionLogRequest, user: dict = Depends(
             logger.error(f"[CORRECTION ERROR] Failed to save correction for ticket {correction.ticket_id}")
             return {"status": "error", "message": "Failed to save correction log entry."}
 
+        # Deduplication: skip if same ticket_id + changed_fields logged in last 60s
+        now = datetime.datetime.utcnow()
+        for existing in logs[-50:]:  # only check recent entries
+            if (
+                existing.get("ticket_id") == body.ticket_id
+                and existing.get("changed_fields") == changed_fields
+            ):
+                existing_ts = datetime.datetime.fromisoformat(existing["timestamp"].rstrip("Z"))
+                if (now - existing_ts).total_seconds() < 60:
+                    return {"status": "duplicate", "message": "Duplicate correction ignored."}
+
+        logs.append(entry)
+
+        # Atomic write: write to .tmp then replace
+        tmp_path = CORRECTIONS_LOG_PATH.with_suffix(".tmp")
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(logs, f, indent=2)
+        os.replace(tmp_path, CORRECTIONS_LOG_PATH)
+
+        logger.info(f"[CORRECTION SAVED] ticket_id={body.ticket_id} | changed={changed_fields} | correlation_id={correlation_id}")
+        return {"status": "saved", "changed_fields": changed_fields, "correlation_id": correlation_id}
+
     except Exception as e:
+        logger.error(f"[CORRECTION ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to save correction log.")
+    
         logger.error(f"[CORRECTION ERROR] Unexpected error: {e}")
         return {"status": "error", "message": "An unexpected error occurred while saving the correction."}
-
 
 @router.post("/analyze_ticket", response_model=TicketResponse)
 @limiter.limit("10/minute")
@@ -244,14 +317,19 @@ async def analyze_only(request_body: TicketRequest, user: dict = Depends(get_cur
         dup_result = {"is_duplicate": False, "duplicate_ticket_id": None, "similarity": 0.0}
 
     # --- RAG Knowledge Base Check ---
+    rag_suggestions = []
+    rag_recommendations = []
     rag_match = None
     try:
-        rag_match = rag_service.search_knowledge_base(text, threshold=0.85)
+        rag_res = rag_service.search_enhanced(text, threshold=0.65, match_count=5, company_id=request_body.company)
+        rag_match = rag_res.get("best_match")
         if rag_match:
             classification["auto_resolve"] = True
             classification["assigned_team"] = "Auto-Resolve AI"
-            classification["confidence"] = max(classification["confidence"], float(rag_match["similarity"]))
+            classification["confidence"] = max(classification["confidence"], float(rag_match["confidence"]))
             print(f"[RAG SUCCESS] Found solution for: '{rag_match['title']}'")
+        rag_suggestions = rag_res.get("suggestions") or []
+        rag_recommendations = rag_res.get("recommendations") or []
     except Exception as e:
         print(f"[RAG ERROR] {e}")
 
@@ -309,7 +387,9 @@ async def analyze_only(request_body: TicketRequest, user: dict = Depends(get_cur
         highlights=entities, # Use entities as highlights for now
         timeline=timeline,
         env_metadata=env_metadata,
-        sla_breach_at=sla_breach_dt.isoformat() + "Z"
+        sla_breach_at=sla_breach_dt.isoformat() + "Z",
+        rag_suggestions=rag_suggestions,
+        rag_recommendations=rag_recommendations
     )
 
 @router.post("/analyze_stream")
@@ -401,13 +481,18 @@ async def analyze_stream(request_body: TicketRequest, user: dict = Depends(get_c
         # 5. RAG / Solutions
         yield f"data: {json.dumps({'step': 'Finding possible solutions', 'status': 'in_progress'})}\n\n"
         await asyncio.sleep(0.2)
+        rag_suggestions = []
+        rag_recommendations = []
         rag_match = None
         try:
-            rag_match = rag_service.search_knowledge_base(text, threshold=0.85)
+            rag_res = rag_service.search_enhanced(text, threshold=0.65, match_count=5, company_id=request_body.company)
+            rag_match = rag_res.get("best_match")
             if rag_match:
                 classification["auto_resolve"] = True
                 classification["assigned_team"] = "Auto-Resolve AI"
-                classification["confidence"] = max(classification["confidence"], float(rag_match["similarity"]))
+                classification["confidence"] = max(classification["confidence"], float(rag_match["confidence"]))
+            rag_suggestions = rag_res.get("suggestions") or []
+            rag_recommendations = rag_res.get("recommendations") or []
         except Exception as e:
             pass
 
@@ -456,7 +541,9 @@ async def analyze_stream(request_body: TicketRequest, user: dict = Depends(get_c
             "highlights": entities,
             "timeline": timeline,
             "env_metadata": env_metadata,
-            "sla_breach_at": sla_breach_dt.isoformat() + "Z"
+            "sla_breach_at": sla_breach_dt.isoformat() + "Z",
+            "rag_suggestions": rag_suggestions,
+            "rag_recommendations": rag_recommendations
         }
 
         # 6. Final Result
@@ -474,6 +561,7 @@ async def legacy_analyze_and_save(request_body: TicketRequest, user: dict = Depe
 
 @router.post("/analyze-v2")
 async def analyze_ticket_v2(request: TicketRequest, user: dict = Depends(get_current_user)):
+    """Run the legacy V2 classifier and return its prediction payload."""
     text = request.text
     try:
         prediction = classifier_v2.predict(text)
@@ -489,4 +577,3 @@ async def analyze_ticket_v2(request: TicketRequest, user: dict = Depends(get_cur
     except Exception as e:
         logger.error("AI ticket analysis failed", exc_info=e)
         raise HTTPException(status_code=500, detail="Ticket analysis failed. Please try again later.")
-
