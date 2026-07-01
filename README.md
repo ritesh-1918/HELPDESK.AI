@@ -190,6 +190,14 @@ VITE_STRIPE_GROWTH_LINK=your_stripe_link
 VITE_BACKEND_URL=http://localhost:8000
 ```
 
+### Devcontainers Setup
+For the easiest setup experience, we support VS Code Devcontainers. This will automatically set up both the Node.js frontend and Python backend environments with all required extensions.
+
+1. Ensure you have Docker and the "Dev Containers" extension installed in VS Code.
+2. Open the repository folder in VS Code.
+3. When prompted "Folder contains a Dev Container configuration file", click **Reopen in Container**.
+4. VS Code will build the container, install NPM packages for the Frontend, and Python dependencies for the Backend.
+
 ### Local Installation
 ```bash
 git clone https://github.com/ritesh-1918/HELPDESK.AI.git
