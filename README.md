@@ -190,6 +190,24 @@ VITE_STRIPE_GROWTH_LINK=your_stripe_link
 VITE_BACKEND_URL=http://localhost:8000
 ```
 
+### Environment Secrets Setup
+For the AI proxy and email notification edge functions, you must configure secrets in Supabase. These should never be committed to version control.
+Run the following commands using the Supabase CLI:
+
+```bash
+# Setup Gemini API Keys for AI features
+supabase secrets set GEMINI_API_KEY_1=AIzaSy...
+supabase secrets set GEMINI_API_KEY_2=AIzaSy...
+
+# Setup OpenRouter and Groq for fallback
+supabase secrets set OPENROUTER_API_KEY_1=sk-or-v1-...
+supabase secrets set GROQ_API_KEY_1=gsk_...
+
+# Email configuration
+supabase secrets set RESEND_API_KEY=re_...
+supabase secrets set SUPPORT_EMAIL_ADDRESS=support@yourdomain.com
+```
+
 ### Local Installation
 ```bash
 git clone https://github.com/ritesh-1918/HELPDESK.AI.git
