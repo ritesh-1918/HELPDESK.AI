@@ -41,14 +41,38 @@ try:
     url = os.environ.get("SUPABASE_URL")
     key = os.environ.get("SUPABASE_SERVICE_KEY")
     if not url or not key:
-        print("[ERROR] SUPABASE_URL or SUPABASE_SERVICE_KEY not set in backend/.env")
+        print("[ERROR] SUPABASE_URL or SUPABASE_SERVICE_KEY not set in backend/.env. Using SQLite fallback.")
         supabase = None
     else:
         supabase = create_client(url, key)
 except (ImportError, Exception) as e:
-    print(f"[WARNING] Supabase initialization failed: {e}")
+    print(f"[WARNING] Supabase initialization failed: {e}. Using SQLite fallback.")
     supabase = None
     Client = None
+
+if supabase is None:
+    # Basic SQLite Fallback Initialization
+    import sqlite3
+    import logging
+    logging.info("Initializing SQLite fallback database...")
+    sqlite_conn = sqlite3.connect("local_fallback.db", check_same_thread=False)
+    sqlite_conn.execute('''
+        CREATE TABLE IF NOT EXISTS tickets (
+            id TEXT PRIMARY KEY,
+            company_id TEXT,
+            status TEXT,
+            data TEXT
+        )
+    ''')
+    sqlite_conn.execute('''
+        CREATE TABLE IF NOT EXISTS system_settings (
+            company_id TEXT PRIMARY KEY,
+            ai_confidence_threshold REAL,
+            duplicate_sensitivity REAL,
+            enable_auto_resolve INTEGER
+        )
+    ''')
+    sqlite_conn.commit()
 
 # Ensure project root is on path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
