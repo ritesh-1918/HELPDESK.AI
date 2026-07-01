@@ -1,9 +1,22 @@
 import React from 'react';
- 
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, AlertCircle, Info, X, Zap } from 'lucide-react';
 import useToastStore from '../../store/toastStore';
 
+/**
+ * Toaster Component
+ *
+ * Displays toast notifications for user feedback. Supports success, error, info,
+ * and warning toast types with animated enter/exit transitions. Toasts are managed
+ * through the toast store and can be dismissed individually.
+ *
+ * @returns {JSX.Element} A container for displaying toast notifications.
+ *
+ * @example
+ * <Toaster />
+ * // Automatically renders toasts added to the toast store
+ */
 const Toaster = () => {
     const { toasts, removeToast } = useToastStore();
 

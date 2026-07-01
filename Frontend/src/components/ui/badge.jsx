@@ -23,6 +23,23 @@ const badgeVariants = cva(
     }
 )
 
+/**
+ * Badge Component
+ *
+ * A small label component used to display status, categories, or metadata.
+ * Supports multiple variants (default, secondary, destructive, outline) with
+ * different color schemes and hover states.
+ *
+ * @param {Object} props Component props.
+ * @param {string} props.className Additional CSS classes.
+ * @param {string} props.variant Badge variant style (default, secondary, destructive, outline).
+ * @returns {JSX.Element} A badge element.
+ *
+ * @example
+ * <Badge variant="default">New</Badge>
+ * @example
+ * <Badge variant="destructive">Error</Badge>
+ */
 function Badge({ className, variant, ...props }) {
     return (
         <div className={cn(badgeVariants({ variant }), className)} {...props} />

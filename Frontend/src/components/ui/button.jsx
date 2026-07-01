@@ -33,6 +33,26 @@ const buttonVariants = cva(
     },
 )
 
+/**
+ * Button Component
+ *
+ * A customizable button component with multiple variants (default, destructive, outline,
+ * secondary, ghost, link) and sizes (default, sm, lg, icon). Supports ref forwarding and
+ * can render as a child component when using the asChild prop.
+ *
+ * @param {Object} props Component props.
+ * @param {string} props.className Additional CSS classes.
+ * @param {string} props.variant Button variant style (default, destructive, outline, secondary, ghost, link).
+ * @param {string} props.size Button size (default, sm, lg, icon).
+ * @param {boolean} props.asChild Whether to render as a child element.
+ * @param {React.RefObject} ref Forwarded ref.
+ * @returns {JSX.Element} A styled button element.
+ *
+ * @example
+ * <Button variant="default" size="default">Click me</Button>
+ * @example
+ * <Button variant="outline" size="sm">Small outline button</Button>
+ */
 const Button = React.forwardRef(
     ({ className, variant, size, asChild = false, ...props }, ref) => {
         const Comp = asChild ? Slot : "button"

@@ -5,8 +5,16 @@ import useAuthStore from '../../store/authStore';
 
 /**
  * ProtectedRoute Component
- * Restricts access to routes to only authenticated users.
- * Redirects to the login page if not authenticated.
+ *
+ * Restricts access to routes to only authenticated users. Redirects to the login page
+ * if not authenticated. Additionally handles role-based redirects for master_admin,
+ * admin, and user roles to their respective dashboards.
+ *
+ * @returns {JSX.Element} The protected route content or a redirect to login/dashboard.
+ *
+ * @example
+ * <ProtectedRoute />
+ * // Renders child routes if authenticated, redirects to /login if not
  */
 const ProtectedRoute = () => {
     const { user, profile, loading, getCurrentUser } = useAuthStore();
