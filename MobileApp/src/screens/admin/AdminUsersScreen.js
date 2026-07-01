@@ -406,6 +406,15 @@ const AdminUsersScreen = () => {
           renderItem={renderUserItem}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={10}
+          initialNumToRender={10}
+          getItemLayout={(data, index) => ({
+            length: 80,
+            offset: 80 * index,
+            index,
+          })}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />}
           ListEmptyComponent={
             <View style={styles.empty}>
