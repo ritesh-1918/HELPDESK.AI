@@ -7,6 +7,7 @@ import { supabase } from "../../lib/supabaseClient";
 import StatCard from "../components/StatCard";
 import TicketTable from "../components/TicketTable";
 import { formatTimelineDate } from "../../utils/dateUtils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../components/ui/tooltip";
 
 // Inline SVG icon components
 const TicketIcon = () => (
@@ -205,20 +206,53 @@ const AdminDashboard = () => {
             </div>
 
             {/* KPIs */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <button onClick={() => navigate('/admin/tickets')} className="text-left group focus:outline-none">
-                    <StatCard label="Total Tickets" value={metrics.total} color="indigo" subtitle="Lifetime generated" customIcon={<TicketIcon />} />
-                </button>
-                <button onClick={() => navigate('/admin/tickets')} className="text-left group focus:outline-none">
-                    <StatCard label="Active Tickets" value={metrics.active} color="amber" subtitle="Need attention" customIcon={<ActivityIcon />} />
-                </button>
-                <button onClick={() => navigate('/admin/tickets?filter=auto')} className="text-left group focus:outline-none">
-                    <StatCard label="AI Auto-Resolved" value={metrics.autoResolved} color="emerald" subtitle="Resolved by AI" customIcon={<CpuIcon />} />
-                </button>
-                <button onClick={() => navigate('/admin/tickets?filter=human')} className="text-left group focus:outline-none">
-                    <StatCard label="Escalated Tickets" value={metrics.humanEscalated} color="red" subtitle="Requires support agent" customIcon={<UsersIcon />} />
-                </button>
-            </div>
+            <TooltipProvider delayDuration={300}>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <button onClick={() => navigate('/admin/tickets')} className="text-left group focus:outline-none">
+                                <StatCard label="Total Tickets" value={metrics.total} color="indigo" subtitle="Lifetime generated" customIcon={<TicketIcon />} />
+                            </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Total number of tickets ever created across all time</p>
+                        </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <button onClick={() => navigate('/admin/tickets')} className="text-left group focus:outline-none">
+                                <StatCard label="Active Tickets" value={metrics.active} color="amber" subtitle="Need attention" customIcon={<ActivityIcon />} />
+                            </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Tickets that are currently unresolved and require attention</p>
+                        </TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <button onClick={() => navigate('/admin/tickets?filter=auto')} className="text-left group focus:outline-none">
+                                <StatCard label="AI Auto-Resolved" value={metrics.autoResolved} color="emerald" subtitle="Resolved by AI" customIcon={<CpuIcon />} />
+                            </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Issues handled completely by the AI Neural Pipeline</p>
+                        </TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <button onClick={() => navigate('/admin/tickets?filter=human')} className="text-left group focus:outline-none">
+                                <StatCard label="Escalated Tickets" value={metrics.humanEscalated} color="red" subtitle="Requires support agent" customIcon={<UsersIcon />} />
+                            </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Complex tickets that were routed to human support staff</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </div>
+            </TooltipProvider>
 
             <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #fee2e2', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', padding: '24px' }}>
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
