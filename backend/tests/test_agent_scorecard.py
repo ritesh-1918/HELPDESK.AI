@@ -1,0 +1,342 @@
+"""
+Unit tests for the agent scorecard feature:
+  - GeminiService.get_agent_coaching()
+  - GET /ai/agent_scorecard endpoint logic (metric computation helpers)
+"""
+
+import datetime
+import sys
+import types
+import unittest
+from unittest.mock import MagicMock, patch
+
+
+# ---------------------------------------------------------------------------
+# Helpers — minimal metric dict used across tests
+# ---------------------------------------------------------------------------
+
+def _make_metrics(**overrides) -> dict:
+    base = {
+        "total_tickets": 20,
+        "resolved_tickets": 15,
+        "open_tickets": 5,
+        "critical_tickets": 2,
+        "avg_resolution_hours": 6.5,
+        "sla_breach_rate": 10.0,
+        "auto_resolved_rate": 25.0,
+        "top_categories": ["Network", "Software"],
+        "common_subcategories": ["VPN Connection", "Login Failure"],
+    }
+    base.update(overrides)
+    return base
+
+
+# ---------------------------------------------------------------------------
+# GeminiService.get_agent_coaching tests
+# ---------------------------------------------------------------------------
+
+class TestGeminiAgentCoaching(unittest.TestCase):
+
+    def _make_service(self, initialized: bool = True, response_text: str = ""):
+        """Return a GeminiService instance with a mocked Google GenAI client."""
+        # Stub out the google.genai import
+        genai_stub = types.ModuleType("google.genai")
+        google_stub = types.ModuleType("google")
+        google_stub.genai = genai_stub
+
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.text = response_text
+        mock_client.models.generate_content.return_value = mock_response
+
+        genai_stub.Client = MagicMock(return_value=mock_client)
+
+        with patch.dict(sys.modules, {"google": google_stub, "google.genai": genai_stub}):
+            from backend.services.gemini_service import GeminiService
+            svc = GeminiService.__new__(GeminiService)
+            svc.api_key = "fake-key" if initialized else None
+            svc._initialized = initialized
+            svc.model_name = "gemini-2.5-flash"
+            svc.client = mock_client
+            return svc
+
+    def test_returns_fallback_when_not_initialized(self):
+        svc = self._make_service(initialized=False)
+        result = svc.get_agent_coaching("Team Alpha", _make_metrics())
+
+        self.assertEqual(result["performance_score"], 0)
+        self.assertEqual(result["strengths"], [])
+        self.assertIn("unavailable", result["coaching_tip"].lower())
+
+    def test_parses_well_formed_gemini_response(self):
+        response = (
+            "SCORE: 82\n"
+            "STRENGTHS: Fast triage | Good SLA adherence | High auto-resolve rate\n"
+            "IMPROVEMENTS: Critical ticket handling | Reduce open backlog\n"
+            "TIP: Focus on closing critical tickets within 2 hours to improve SLA scores.\n"
+            "TRAINING: ITIL Fundamentals | Critical Incident Response | SLA Management"
+        )
+        svc = self._make_service(response_text=response)
+        result = svc.get_agent_coaching("Network Support", _make_metrics())
+
+        self.assertEqual(result["performance_score"], 82)
+        self.assertIn("Fast triage", result["strengths"])
+        self.assertIn("Critical ticket handling", result["improvement_areas"])
+        self.assertIn("ITIL Fundamentals", result["recommended_training"])
+        self.assertGreater(len(result["coaching_tip"]), 10)
+
+    def test_score_clamped_to_0_100_on_out_of_range_value(self):
+        response = "SCORE: 150\nSTRENGTHS: x\nIMPROVEMENTS: y\nTIP: tip\nTRAINING: z"
+        svc = self._make_service(response_text=response)
+        result = svc.get_agent_coaching("Team X", _make_metrics())
+        self.assertLessEqual(result["performance_score"], 100)
+        self.assertGreaterEqual(result["performance_score"], 0)
+
+    def test_score_clamped_when_negative(self):
+        response = "SCORE: -10\nSTRENGTHS: x\nIMPROVEMENTS: y\nTIP: tip\nTRAINING: z"
+        svc = self._make_service(response_text=response)
+        result = svc.get_agent_coaching("Team X", _make_metrics())
+        self.assertGreaterEqual(result["performance_score"], 0)
+
+    def test_returns_50_when_score_unparseable(self):
+        response = "SCORE: not-a-number\nSTRENGTHS: x\nIMPROVEMENTS: y\nTIP: tip\nTRAINING: z"
+        svc = self._make_service(response_text=response)
+        result = svc.get_agent_coaching("Team X", _make_metrics())
+        self.assertEqual(result["performance_score"], 50)
+
+    def test_partial_response_missing_sections_returns_empty_lists(self):
+        response = "SCORE: 60\nTIP: Focus on speed."
+        svc = self._make_service(response_text=response)
+        result = svc.get_agent_coaching("Team X", _make_metrics())
+        self.assertEqual(result["strengths"], [])
+        self.assertEqual(result["improvement_areas"], [])
+        self.assertEqual(result["recommended_training"], [])
+
+    def test_splits_pipe_delimited_training_modules(self):
+        response = (
+            "SCORE: 70\n"
+            "STRENGTHS: a | b\n"
+            "IMPROVEMENTS: c\n"
+            "TIP: Do better.\n"
+            "TRAINING: Module One | Module Two | Module Three"
+        )
+        svc = self._make_service(response_text=response)
+        result = svc.get_agent_coaching("IAM Team", _make_metrics())
+        self.assertEqual(len(result["recommended_training"]), 3)
+        self.assertIn("Module Two", result["recommended_training"])
+
+    def test_gemini_api_exception_returns_fallback(self):
+        svc = self._make_service(initialized=True)
+        svc.client.models.generate_content.side_effect = RuntimeError("API error")
+        result = svc.get_agent_coaching("Team X", _make_metrics())
+        self.assertEqual(result["performance_score"], 0)
+        self.assertIn("failed", result["coaching_tip"].lower())
+
+    def test_metrics_are_embedded_in_prompt(self):
+        """Verify the prompt sent to Gemini includes the agent name and key metrics."""
+        response = "SCORE: 75\nSTRENGTHS: x\nIMPROVEMENTS: y\nTIP: tip\nTRAINING: z"
+        svc = self._make_service(response_text=response)
+        metrics = _make_metrics(total_tickets=42, sla_breach_rate=15.5)
+        svc.get_agent_coaching("Hardware Support", metrics)
+
+        call_args = svc.client.models.generate_content.call_args
+        prompt = call_args.kwargs.get("contents") or call_args.args[0]
+        if isinstance(prompt, list):
+            prompt = prompt[0]
+
+        self.assertIn("Hardware Support", prompt)
+        self.assertIn("42", prompt)
+        self.assertIn("15.5", prompt)
+
+
+# ---------------------------------------------------------------------------
+# Metric computation tests (logic extracted from the endpoint for unit testing)
+# ---------------------------------------------------------------------------
+
+def _compute_metrics(tickets: list) -> dict:
+    """
+    Mirror of the metric computation in GET /ai/agent_scorecard so it can be
+    unit-tested independently of FastAPI / Supabase.
+    """
+    from collections import Counter
+
+    total = len(tickets)
+    resolved = sum(1 for t in tickets if (t.get("status") or "").lower().startswith("resolv"))
+    open_count = total - resolved
+    critical = sum(1 for t in tickets if (t.get("priority") or "").lower() == "critical")
+    auto_resolved = sum(1 for t in tickets if t.get("auto_resolve"))
+
+    resolution_times: list[float] = []
+    for t in tickets:
+        if (t.get("status") or "").lower().startswith("resolv") and t.get("created_at") and t.get("updated_at"):
+            try:
+                created = datetime.datetime.fromisoformat(t["created_at"].replace("Z", "+00:00"))
+                updated = datetime.datetime.fromisoformat(t["updated_at"].replace("Z", "+00:00"))
+                hours = (updated - created).total_seconds() / 3600
+                if hours >= 0:
+                    resolution_times.append(hours)
+            except Exception:
+                pass
+
+    avg_resolution_hours = (
+        round(sum(resolution_times) / len(resolution_times), 2)
+        if resolution_times else 0.0
+    )
+
+    now_utc = datetime.datetime(2099, 1, 1, tzinfo=datetime.timezone.utc)
+    sla_breached = 0
+    for t in tickets:
+        breach_at = t.get("sla_breach_at")
+        if breach_at:
+            try:
+                breach_dt = datetime.datetime.fromisoformat(breach_at.replace("Z", "+00:00"))
+                ticket_open = not (t.get("status") or "").lower().startswith("resolv")
+                if ticket_open and breach_dt < now_utc:
+                    sla_breached += 1
+            except Exception:
+                pass
+
+    sla_breach_rate = round((sla_breached / total) * 100, 2) if total else 0.0
+    auto_resolved_rate = round((auto_resolved / total) * 100, 2) if total else 0.0
+
+    cat_counter = Counter(t.get("category") or "Unknown" for t in tickets)
+    sub_counter = Counter(t.get("subcategory") or "Unknown" for t in tickets)
+
+    return {
+        "total_tickets": total,
+        "resolved_tickets": resolved,
+        "open_tickets": open_count,
+        "critical_tickets": critical,
+        "avg_resolution_hours": avg_resolution_hours,
+        "sla_breach_rate": sla_breach_rate,
+        "auto_resolved_rate": auto_resolved_rate,
+        "top_categories": [c for c, _ in cat_counter.most_common(3)],
+        "common_subcategories": [s for s, _ in sub_counter.most_common(3)],
+    }
+
+
+class TestMetricComputation(unittest.TestCase):
+
+    def _make_ticket(self, status="open", priority="Medium", category="Network",
+                     subcategory="VPN Connection", auto_resolve=False,
+                     created_at="2026-01-01T08:00:00Z", updated_at="2026-01-01T10:00:00Z",
+                     sla_breach_at=None):
+        return {
+            "status": status,
+            "priority": priority,
+            "category": category,
+            "subcategory": subcategory,
+            "auto_resolve": auto_resolve,
+            "created_at": created_at,
+            "updated_at": updated_at,
+            "sla_breach_at": sla_breach_at,
+        }
+
+    def test_empty_ticket_list_returns_zeros(self):
+        m = _compute_metrics([])
+        self.assertEqual(m["total_tickets"], 0)
+        self.assertEqual(m["resolved_tickets"], 0)
+        self.assertEqual(m["sla_breach_rate"], 0.0)
+
+    def test_all_resolved_count(self):
+        tickets = [self._make_ticket(status="resolved") for _ in range(5)]
+        m = _compute_metrics(tickets)
+        self.assertEqual(m["resolved_tickets"], 5)
+        self.assertEqual(m["open_tickets"], 0)
+
+    def test_mixed_resolved_and_open(self):
+        tickets = [
+            self._make_ticket(status="resolved"),
+            self._make_ticket(status="resolved"),
+            self._make_ticket(status="open"),
+        ]
+        m = _compute_metrics(tickets)
+        self.assertEqual(m["resolved_tickets"], 2)
+        self.assertEqual(m["open_tickets"], 1)
+
+    def test_critical_count(self):
+        tickets = [
+            self._make_ticket(priority="Critical"),
+            self._make_ticket(priority="High"),
+            self._make_ticket(priority="Critical"),
+        ]
+        m = _compute_metrics(tickets)
+        self.assertEqual(m["critical_tickets"], 2)
+
+    def test_avg_resolution_hours_calculation(self):
+        tickets = [
+            self._make_ticket(
+                status="resolved",
+                created_at="2026-01-01T08:00:00Z",
+                updated_at="2026-01-01T10:00:00Z"  # 2 h
+            ),
+            self._make_ticket(
+                status="resolved",
+                created_at="2026-01-01T08:00:00Z",
+                updated_at="2026-01-01T12:00:00Z"  # 4 h
+            ),
+        ]
+        m = _compute_metrics(tickets)
+        self.assertAlmostEqual(m["avg_resolution_hours"], 3.0)
+
+    def test_avg_resolution_hours_zero_when_no_resolved(self):
+        tickets = [self._make_ticket(status="open")]
+        m = _compute_metrics(tickets)
+        self.assertEqual(m["avg_resolution_hours"], 0.0)
+
+    def test_sla_breach_rate_open_breached(self):
+        # sla_breach_at in the past → open ticket → breached
+        past_breach = "2020-01-01T00:00:00Z"
+        tickets = [
+            self._make_ticket(status="open", sla_breach_at=past_breach),
+            self._make_ticket(status="open", sla_breach_at=past_breach),
+            self._make_ticket(status="open"),  # no breach_at
+            self._make_ticket(status="resolved", sla_breach_at=past_breach),  # resolved → not counted
+        ]
+        m = _compute_metrics(tickets)
+        # 2 out of 4 breached
+        self.assertAlmostEqual(m["sla_breach_rate"], 50.0)
+
+    def test_auto_resolved_rate(self):
+        tickets = [
+            self._make_ticket(auto_resolve=True),
+            self._make_ticket(auto_resolve=True),
+            self._make_ticket(auto_resolve=False),
+            self._make_ticket(auto_resolve=False),
+        ]
+        m = _compute_metrics(tickets)
+        self.assertAlmostEqual(m["auto_resolved_rate"], 50.0)
+
+    def test_top_categories_sorted_by_frequency(self):
+        tickets = (
+            [self._make_ticket(category="Network")] * 5 +
+            [self._make_ticket(category="Software")] * 3 +
+            [self._make_ticket(category="Hardware")] * 2
+        )
+        m = _compute_metrics(tickets)
+        self.assertEqual(m["top_categories"][0], "Network")
+        self.assertEqual(m["top_categories"][1], "Software")
+
+    def test_top_categories_limited_to_three(self):
+        tickets = [
+            self._make_ticket(category=c)
+            for c in ["A", "B", "C", "D", "E"]
+        ]
+        m = _compute_metrics(tickets)
+        self.assertLessEqual(len(m["top_categories"]), 3)
+
+    def test_malformed_timestamps_are_skipped(self):
+        tickets = [
+            self._make_ticket(status="resolved", created_at="bad-date", updated_at="also-bad"),
+        ]
+        m = _compute_metrics(tickets)
+        self.assertEqual(m["avg_resolution_hours"], 0.0)
+
+    def test_none_status_treated_as_open(self):
+        tickets = [self._make_ticket(status=None)]
+        m = _compute_metrics(tickets)
+        self.assertEqual(m["resolved_tickets"], 0)
+        self.assertEqual(m["open_tickets"], 1)
+
+if __name__ == "__main__":
+    unittest.main()

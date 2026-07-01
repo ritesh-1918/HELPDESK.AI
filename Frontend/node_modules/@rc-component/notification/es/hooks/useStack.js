@@ -1,0 +1,17 @@
+const DEFAULT_OFFSET = 8;
+const DEFAULT_THRESHOLD = 3;
+const DEFAULT_GAP = 16;
+const useStack = config => {
+  const result = {
+    offset: DEFAULT_OFFSET,
+    threshold: DEFAULT_THRESHOLD,
+    gap: DEFAULT_GAP
+  };
+  if (config && typeof config === 'object') {
+    result.offset = config.offset ?? DEFAULT_OFFSET;
+    result.threshold = config.threshold ?? DEFAULT_THRESHOLD;
+    result.gap = config.gap ?? DEFAULT_GAP;
+  }
+  return [!!config, result];
+};
+export default useStack;

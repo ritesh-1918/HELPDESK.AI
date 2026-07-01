@@ -44,4 +44,10 @@ This document provides a comprehensive breakdown of all 30+ pages and interactio
 | **Master Bug Reports** | Platform diagnostics. | System-wide error tracking and resolution. |
 
 ---
+## 🧠 AI Layer: Next-Generation Semantic Search & RAG Framework
+- **Query Expansion**: IT-specific synonym thesaurus and error-code mapping.
+- **Hybrid Retrieval**: Combines pgvector semantic similarity (0.60 weight) with BM25 full-text keyword retrieval (0.40 weight).
+- **Intelligent Re-Ranking**: Reranks Top 50 candidates using keyword overlap, document quality, ticket recency, and resolution success rates to produce the Top 5 RAG suggestions.
+- **Unified Retrieval**: Searches across KB articles (Confluence, Notion, SharePoint, FAQs, wikis) and historical tickets.
+
 *Documented with millisecond precision for Helpdesk.ai Platform.*

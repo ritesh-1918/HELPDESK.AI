@@ -1,0 +1,137 @@
+function isPointsEq(a1 = [], a2 = [], isAlignPoint) {
+  const getVal = (a, index) => a[index] || '';
+  if (isAlignPoint) {
+    return getVal(a1, 0) === getVal(a2, 0);
+  }
+  return getVal(a1, 0) === getVal(a2, 0) && getVal(a1, 1) === getVal(a2, 1);
+}
+export function getAlignPopupClassName(builtinPlacements, prefixCls, align, isAlignPoint) {
+  const {
+    points
+  } = align;
+  const placements = Object.keys(builtinPlacements);
+  for (let i = 0; i < placements.length; i += 1) {
+    const placement = placements[i];
+    if (isPointsEq(builtinPlacements[placement]?.points, points, isAlignPoint)) {
+      return `${prefixCls}-placement-${placement}`;
+    }
+  }
+  return '';
+}
+export function getWin(ele) {
+  return ele.ownerDocument.defaultView;
+}
+
+/**
+ * Get all the scrollable parent elements of the element
+ * @param ele       The element to be detected
+ * @param areaOnly  Only return the parent which will cut visible area
+ */
+export function collectScroller(ele) {
+  const scrollerList = [];
+  let current = ele?.parentElement;
+  const scrollStyle = ['hidden', 'scroll', 'clip', 'auto'];
+  while (current) {
+    const {
+      overflowX,
+      overflowY,
+      overflow
+    } = getWin(current).getComputedStyle(current);
+    if ([overflowX, overflowY, overflow].some(o => scrollStyle.includes(o))) {
+      scrollerList.push(current);
+    }
+    current = current.parentElement;
+  }
+  return scrollerList;
+}
+export function toNum(num, defaultValue = 1) {
+  return Number.isNaN(num) ? defaultValue : num;
+}
+function getPxValue(val) {
+  return toNum(parseFloat(val), 0);
+}
+/**
+ *
+ *
+ *  **************************************
+ *  *              Border                *
+ *  *     **************************     *
+ *  *     *                  *     *     *
+ *  *  B  *                  *  S  *  B  *
+ *  *  o  *                  *  c  *  o  *
+ *  *  r  *      Content     *  r  *  r  *
+ *  *  d  *                  *  o  *  d  *
+ *  *  e  *                  *  l  *  e  *
+ *  *  r  ********************  l  *  r  *
+ *  *     *        Scroll          *     *
+ *  *     **************************     *
+ *  *              Border                *
+ *  **************************************
+ *
+ */
+/**
+ * Get visible area of element
+ */
+export function getVisibleArea(initArea, scrollerList) {
+  const visibleArea = {
+    ...initArea
+  };
+  (scrollerList || []).forEach(ele => {
+    if (ele instanceof HTMLBodyElement || ele instanceof HTMLHtmlElement) {
+      return;
+    }
+
+    // Skip if static position which will not affect visible area
+    const {
+      overflow,
+      overflowClipMargin,
+      borderTopWidth,
+      borderBottomWidth,
+      borderLeftWidth,
+      borderRightWidth
+    } = getWin(ele).getComputedStyle(ele);
+    const eleRect = ele.getBoundingClientRect();
+    const {
+      offsetHeight: eleOutHeight,
+      clientHeight: eleInnerHeight,
+      offsetWidth: eleOutWidth,
+      clientWidth: eleInnerWidth
+    } = ele;
+    const borderTopNum = getPxValue(borderTopWidth);
+    const borderBottomNum = getPxValue(borderBottomWidth);
+    const borderLeftNum = getPxValue(borderLeftWidth);
+    const borderRightNum = getPxValue(borderRightWidth);
+    const scaleX = toNum(Math.round(eleRect.width / eleOutWidth * 1000) / 1000);
+    const scaleY = toNum(Math.round(eleRect.height / eleOutHeight * 1000) / 1000);
+
+    // Original visible area
+    const eleScrollWidth = (eleOutWidth - eleInnerWidth - borderLeftNum - borderRightNum) * scaleX;
+    const eleScrollHeight = (eleOutHeight - eleInnerHeight - borderTopNum - borderBottomNum) * scaleY;
+
+    // Cut border size
+    const scaledBorderTopWidth = borderTopNum * scaleY;
+    const scaledBorderBottomWidth = borderBottomNum * scaleY;
+    const scaledBorderLeftWidth = borderLeftNum * scaleX;
+    const scaledBorderRightWidth = borderRightNum * scaleX;
+
+    // Clip margin
+    let clipMarginWidth = 0;
+    let clipMarginHeight = 0;
+    if (overflow === 'clip') {
+      const clipNum = getPxValue(overflowClipMargin);
+      clipMarginWidth = clipNum * scaleX;
+      clipMarginHeight = clipNum * scaleY;
+    }
+
+    // Region
+    const eleLeft = eleRect.x + scaledBorderLeftWidth - clipMarginWidth;
+    const eleTop = eleRect.y + scaledBorderTopWidth - clipMarginHeight;
+    const eleRight = eleLeft + eleRect.width + 2 * clipMarginWidth - scaledBorderLeftWidth - scaledBorderRightWidth - eleScrollWidth;
+    const eleBottom = eleTop + eleRect.height + 2 * clipMarginHeight - scaledBorderTopWidth - scaledBorderBottomWidth - eleScrollHeight;
+    visibleArea.left = Math.max(visibleArea.left, eleLeft);
+    visibleArea.top = Math.max(visibleArea.top, eleTop);
+    visibleArea.right = Math.min(visibleArea.right, eleRight);
+    visibleArea.bottom = Math.min(visibleArea.bottom, eleBottom);
+  });
+  return visibleArea;
+}

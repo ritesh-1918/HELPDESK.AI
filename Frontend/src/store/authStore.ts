@@ -1,0 +1,475 @@
+const validatePassword = (password) => {
+  if (!password || password.length < 8) return 'Password must be at least 8 characters.';
+  if (!/[A-Z]/.test(password)) return 'Password must contain one uppercase letter.';
+  if (!/[a-z]/.test(password)) return 'Password must contain one lowercase letter.';
+  if (!/[0-9]/.test(password)) return 'Password must contain one number.';
+  return null;
+};
+
+import { create } from 'zustand';
+import { supabase } from '../lib/supabaseClient';
+import { API_CONFIG } from '../config';
+import { logger } from '../utils/logger';
+import useTicketStore from './ticketStore';
+
+const BACKEND_URL = API_CONFIG.BACKEND_URL;
+
+const verifyServerCookieSession = async () => {
+   try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+        const res = await fetch(`${BACKEND_URL}/auth/me`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: { Accept: 'application/json' },
+            signal: controller.signal,
+        });
+        clearTimeout(timeout);
+        if (!res.ok) return null;
+        const body = await res.json();
+        return body?.user || null;
+    } catch (e) {
+        logger.warn('Server cookie session check failed:', e?.message || e);
+        return null;
+    }
+};
+
+const mirrorBackendAuth = async (path, payload) => {
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+        await fetch(`${BACKEND_URL}${path}`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            signal: controller.signal,
+        });
+        clearTimeout(timeout);
+    } catch (e) {
+        logger.warn(`Backend auth ${path} failed:`, e?.message || e);
+    }
+};
+
+let currentUserPromise = null;
+
+const getProfileCache = (profile) => {
+    if (!profile?.id) return null;
+
+    return {
+        id: profile.id,
+        email: profile.email,
+        full_name: profile.full_name,
+        company: profile.company,
+        company_id: profile.company_id,
+        profile_picture: profile.profile_picture,
+    };
+};
+
+const useAuthStore = create(
+        (set, get) => ({
+            // --- AUTH STATE ---
+            user: null,
+            profile: null,
+            loading: false,
+            isCheckingSession: true,
+
+      // --- SUPABASE AUTH METHODS ---
+
+      // Helper to fetch profile linked to auth user
+      getProfile: async (user) => {
+        if (!user) return null;
+
+                const metadata = user.user_metadata || {};
+                set({ profile: null });
+
+                // Always resolve authorization fields from the database. Local storage and
+                // user_metadata are client-controlled surfaces and must not grant roles.
+                const dbProfile = await get()._syncProfile(user.id);
+                if (dbProfile) {
+                    if (user.email_confirmed_at && dbProfile.status === 'pending_email_verification') {
+                        logger.log("Email confirmed — upgrading status to pending_approval.");
+                        const updated = await get().updateProfile({ status: 'pending_approval' });
+                        if (updated) return updated;
+                    }
+                    return dbProfile;
+                }
+
+                const instantProfile = {
+                    id: user.id,
+                    email: user.email,
+                    full_name: metadata.full_name || 'User',
+                    role: 'user',
+                    status: 'pending_email_verification',
+                    company: metadata.company || ''
+                };
+
+                logger.log("Falling back to non-authoritative profile:", instantProfile.role);
+                set({ profile: instantProfile });
+                return instantProfile;
+            },
+
+            // Helper for DB-side profile syncing
+            _syncProfile: async (userId) => {
+                try {
+                    const { data, error } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .eq('id', userId)
+                        .single();
+
+                    if (data) {
+                        logger.log("Database profile found, upgrading state.");
+                        set({ profile: data });
+                        return data;
+                    }
+
+                    if (error && error.code !== 'PGRST116') {
+                        logger.warn("DB Profile fetch error:", error.message);
+                    }
+                } catch (e) {
+                    logger.error("Background profile fetch error:", e);
+                }
+                return null;
+            },
+
+            getCurrentUser: async () => {
+                if (currentUserPromise) {
+                    return currentUserPromise;
+                }
+
+                currentUserPromise = (async () => {
+                    try {
+                        set({ isCheckingSession: true });
+                        const cookieUser = await verifyServerCookieSession();
+                        if (cookieUser) {
+                            set({ user: cookieUser });
+                            await get().getProfile(cookieUser);
+                            return cookieUser;
+                        }
+
+                        const { data: { user }, error } = await supabase.auth.getUser();
+                        if (error) throw error;
+
+                        if (user) {
+                            set({ user });
+                            await get().getProfile(user);
+                        } else {
+                            set({ user: null, profile: null });
+                        }
+                        return user;
+                        // eslint-disable-next-line no-unused-vars
+                    } catch (error) {
+                        set({ user: null, profile: null });
+                        return null;
+                    } finally {
+                        set({ loading: false, isCheckingSession: false });
+                        currentUserPromise = null;
+                    }
+                })();
+
+                return currentUserPromise;
+            },
+
+            login: async (email, password) => {
+                set({ loading: true });
+                try {
+                    await mirrorBackendAuth('/auth/login', { email, password });
+
+                    const { data, error } = await supabase.auth.signInWithPassword({
+                        email,
+                        password,
+                    });
+
+                    if (error) throw error;
+
+                    const user = data.user;
+                    set({ user });
+
+                    // Fetch profile from DB (Supabase client used only for data queries, not auth)
+                    const profile = await get().getProfile(user);
+
+                    if (profile?.status === 'pending_email_verification') {
+                        await get().logout();
+                        set({ user: null, profile: null });
+                        throw new Error("Please verify your email address before continuing. Check your inbox.");
+                    }
+
+                    return { user, profile };
+                } catch (error) {
+                    throw error;
+                } finally {
+                    set({ loading: false });
+                }
+            },
+
+            loginWithGoogle: async () => {
+                const { error } =
+                    await supabase.auth.signInWithOAuth({
+                        provider: 'google',
+                        options: {
+                            redirectTo:
+                                `${window.location.origin}/auth/callback`
+                        }
+                    });
+
+                if (error) {
+                    logger.error("Google OAuth error:", error.message);
+                    throw error;
+                }
+            },
+
+            signInWithMagicLink: async (email) => {
+                set({ loading: true });
+                logger.log("Attempting magic link / OTP login.");
+                try {
+                    const { error } = await supabase.auth.signInWithOtp({
+                        email,
+                        options: {
+                            shouldCreateUser: false, // Only existing users
+                        }
+                    });
+
+                    if (error) throw error;
+                    return true;
+                } catch (error) {
+                    logger.error("Magic link operation failed:", error.message);
+                    throw error;
+                } finally {
+                    set({ loading: false });
+                }
+            },
+
+            signInWithGoogle: async () => {
+                set({ loading: true });
+                try {
+                    const { error } = await supabase.auth.signInWithOAuth({
+                        provider: 'google',
+                        options: {
+                            redirectTo: `${window.location.origin}/dashboard`
+                        }
+                    });
+
+                    if (error) throw error;
+                    return true;
+                } catch (error) {
+                    logger.error("Google OAuth operation failed:", error.message);
+                    throw error;
+                } finally {
+                    set({ loading: false });
+                }
+            },
+
+            verifyOtpAndLogin: async (email, token, type = 'magiclink') => {
+                set({ loading: true });
+                logger.log("Attempting OTP verification.");
+                try {
+                    const { data, error } = await supabase.auth.verifyOtp({
+                        email,
+                        token,
+                        type,
+                    });
+
+                    if (error) throw error;
+
+                    const user = data.user;
+                    set({ user });
+
+                    logger.log("OTP Login successful, resolving profile...");
+                    const profile = await get().getProfile(user);
+
+                    if (profile?.status === 'pending_email_verification') {
+                        await supabase.auth.signOut();
+                        set({ user: null, profile: null });
+                        throw new Error("Please verify your email address before continuing.");
+                    }
+                    return { user, profile };
+                } catch (error) {
+                    logger.error("OTP verification failed:", error.message);
+                    throw error;
+                } finally {
+                    set({ loading: false });
+                }
+            },
+
+            signup: async (email, password, fullName, role = 'user', company = '', extraMetadata = {}, emailRedirectTo = undefined) => {
+                set({ loading: true });
+                logger.log("Starting signup.");
+
+        const passwordError = validatePassword(password);
+        if (passwordError) throw new Error(passwordError);
+
+                try {
+                    await mirrorBackendAuth('/auth/signup', {
+                        email,
+                        password,
+                        full_name: fullName,
+                        role,
+                        company,
+                    });
+
+                    // 1. Auth Signup with Metadata
+                    logger.log("Step 1: Auth.signUp...");
+                    const { data, error } = await supabase.auth.signUp({
+                        email,
+                        password,
+                        options: {
+                            data: {
+                                full_name: fullName,
+                                role: role,
+                                company: company,
+                                ...extraMetadata
+                            },
+                            ...(emailRedirectTo && { emailRedirectTo })
+                        }
+                    });
+
+                    if (error) {
+                        logger.error("Auth.signUp error:", error.message);
+                        throw error;
+                    }
+
+                    if (data.user) {
+                        logger.log("Step 2: User created, resolving profile...");
+                        set({ user: data.user });
+                        await get().getProfile(data.user);
+                    }
+
+                    logger.log("Signup complete!");
+                    return data.user;
+                } catch (error) {
+                    logger.error("Signup operation failed:", error.message);
+                    throw error;
+                } finally {
+                    set({ loading: false });
+                }
+            },
+
+            logout: async () => {
+                set({ loading: true });
+                try {
+                    try {
+                        await fetch(`${BACKEND_URL}/auth/logout`, {
+                            method: 'POST',
+                            credentials: 'include',
+                        });
+                    } catch (e) {
+                        logger.warn('Backend cookie logout failed:', e?.message || e);
+                    }
+
+                    const { error } = await supabase.auth.signOut();
+                    if (error) throw error;
+                    set({ user: null, profile: null });
+                    // Clear persisted ticket state to prevent cross-user data leakage
+                    useTicketStore.getState().clearTicket?.();
+                    useTicketStore.setState({ notifications: [], tickets: [] });
+                } finally {
+                    set({ loading: false });
+                }
+            },
+
+            /**
+             * verifySession — Calls GET /auth/me with credentials to verify the
+             * httpOnly cookie session is still valid.
+             * Returns the user object if valid, null otherwise.
+             */
+            verifySession: async () => {
+                try {
+                    const resp = await fetch(`${BACKEND_URL}/auth/me`, {
+                        credentials: 'include',
+                    });
+                    if (!resp.ok) return null;
+                    const data = await resp.json();
+                    return data.user || null;
+                } catch (_) {
+                    return null;
+                }
+            },
+
+
+            /**
+             * verifyServerRole — Always fetches fresh profile from DB.
+             * Never reads from persisted Zustand state (prevents localStorage spoofing).
+             *
+             * @param {string} userId — Supabase auth user ID
+             * @returns {boolean} true if the server role matches an allowed admin role
+             */
+            verifyServerRole: async (userId) => {
+                if (!userId) return false;
+                try {
+                    const { data, error } = await supabase
+                        .from('profiles')
+                        .select('role, status')
+                        .eq('id', userId)
+                        .single();
+
+                    if (error || !data) return false;
+                    const adminRoles = ['admin', 'super_admin', 'master_admin'];
+                    return adminRoles.includes(data.role) && data.status === 'active';
+                } catch (_) {
+                    return false;
+                }
+            },
+
+            updateProfile: async (updates) => {
+                const { profile } = get();
+                if (!profile?.id) return;
+
+                set({ loading: true });
+                try {
+                    const { data, error } = await supabase
+                        .from('profiles')
+                        .update(updates)
+                        .eq('id', profile.id)
+                        .select()
+                        .single();
+
+                    if (error) throw error;
+                    if (data) {
+                        set({ profile: data });
+                        return data;
+                    }
+                } catch (err) {
+                    logger.error("Profile update failed:", err);
+                    throw err;
+                } finally {
+                    set({ loading: false });
+                }
+            },
+
+            _initialized: false,
+            initialize: () => {
+                if (get()._initialized) return;
+                set({ _initialized: true });
+
+                get().getCurrentUser();
+
+                supabase.auth.onAuthStateChange(async (event, session) => {
+                    logger.log("Auth state change:", event);
+                    try {
+                        if (session?.user) {
+                            set({ user: session.user, loading: true, isCheckingSession: true });
+                            await get().getProfile(session.user);
+                        } else {
+                            set({ user: null, profile: null });
+                        }
+                    } catch (e) {
+                        logger.warn("Auth state change error:", e?.message || e);
+                        set({ user: null, profile: null });
+                    } finally {
+                        set({ loading: false, isCheckingSession: false });
+                    }
+                });
+            }
+        }),
+        {
+            partialize: (state) => ({
+                // Cache display-only profile fields. Role/status must come from the DB.
+                profile: getProfileCache(state.profile)
+            }),
+        }
+    )
+);
+
+export default useAuthStore;
+

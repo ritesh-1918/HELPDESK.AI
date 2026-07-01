@@ -1,0 +1,86 @@
+Metadata-Version: 2.4
+Name: supabase-functions
+Version: 2.30.0
+Summary: Library for Supabase Functions
+Author: Joel Lee, Andrew Smith
+Author-email: Joel Lee <joel@joellee.org>, Andrew Smith <a.smith@silentworks.co.uk>
+License-Expression: MIT
+Requires-Dist: httpx[http2]>=0.26,<0.29
+Requires-Dist: strenum>=0.4.15
+Requires-Dist: yarl>=1.20.1
+Maintainer: Leonardo Santiago
+Maintainer-email: Leonardo Santiago <leonardo.santiago@supabase.io>
+Requires-Python: >=3.9
+Project-URL: changelog, https://github.com/supabase/supabase-py/tree/main/CHANGELOG.md
+Project-URL: homepage, https://github.com/supabase/supabase-py/tree/main/src/functions
+Project-URL: repository, https://github.com/supabase/supabase-py
+Description-Content-Type: text/markdown
+
+# Functions-py
+
+## Installation
+The package can be installed using pip, uv or poetry:
+### Pip
+```bash
+pip install supabase_functions
+```
+### UV
+```bash
+uv add supabase_functions
+```
+### Poetry
+```bash
+poetry add supabase_functions
+```
+
+## Usage
+
+Deploy your Edge Function following the [Supabase Functions documentation](https://supabase.com/docs/guides/functions).
+
+
+### Asynchronous Client
+
+```python
+import asyncio
+from supabase_functions import AsyncFunctionsClient
+
+async def run_func():
+    # Initialize the client with your project URL and optional headers
+    headers = {
+        "Authorization": "Bearer your-publishable-key",
+        # Add any other headers you might need
+    }
+    
+    fc = AsyncFunctionsClient("https://<project_ref>.functions.supabase.co", headers)
+    
+    try:
+        # Invoke your Edge Function
+        res = await fc.invoke("payment-sheet", {
+            "responseType": "json",
+            "body": {"amount": 1000, "currency": "usd"}
+        })
+        print("Response:", res)
+    except Exception as e:
+        print(f"Error: {e}")
+
+if __name__ == "__main__":
+    asyncio.run(run_func())
+```
+### Synchronous Client
+```python
+from supabase_functions import SyncFunctionsClient
+
+# Initialize the client
+headers = {"Authorization": "Bearer your-publishable-key"}
+fc = SyncFunctionsClient("https://<project_ref>.functions.supabase.co", headers)
+
+# Invoke your Edge Function
+try:
+    res = fc.invoke("payment-sheet", {
+        "responseType": "json", 
+        "body": {"amount": 1000, "currency": "usd"}
+    })
+    print("Response:", res)
+except Exception as e:
+    print(f"Error: {e}")
+```

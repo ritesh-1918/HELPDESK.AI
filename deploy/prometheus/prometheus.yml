@@ -1,0 +1,210 @@
+# =============================================================================
+# Prometheus Configuration — Production-Grade for HELP DESK AI
+# =============================================================================
+# This file defines how Prometheus scrapes metrics from all monitored services.
+# It is designed for high reliability, security, minimal cardinality, and
+# follows Site Reliability Engineering (SRE) best practices.
+#
+# Version: 3.3
+# Last Modified: 2025-04-07
+# Maintainer: DevOps Team <devops@helpdesk.ai>
+# License: Proprietary, Internal Use Only
+# =============================================================================
+
+# ------------------------------------------------------------------------------
+# Global Configuration
+# ------------------------------------------------------------------------------
+global:
+  scrape_interval: 15s          # Base scrape interval, overridden per-job
+  evaluation_interval: 15s      # Rule evaluation interval
+  scrape_timeout: 10s           # Must be < scrape_interval to avoid overlaps
+
+  external_labels:
+    monitor: 'helpdesk-production'
+    environment: 'production'
+    team: 'platform'
+    region: 'us-east-1'         # Example region, adjust as needed
+
+  # Structured JSON logging for integration with ELK / Loki
+  log_level: info
+  log_format: json
+
+# ------------------------------------------------------------------------------
+# Storage Settings (TSDB)
+# ------------------------------------------------------------------------------
+storage:
+  tsdb:
+    retention.time: 30d
+    # retention.size: 50GB      # Uncomment to limit disk usage
+    out_of_order_time_window: 10m   # Allow out-of-order samples (v2.26+)
+    # wal_compression: true     # Enable WAL compression (v2.20+)
+    # Memory map for head block – reduce memory pressure
+    # no_lockfile: false
+
+# ------------------------------------------------------------------------------
+# Rule Files (Alerting & Recording)
+# ------------------------------------------------------------------------------
+rule_files:
+  - '/etc/prometheus/rules/alerting/*.rules'
+  - '/etc/prometheus/rules/recording/*.rules'
+
+# ------------------------------------------------------------------------------
+# Alertmanager Configuration
+# ------------------------------------------------------------------------------
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+      timeout: 5s
+      # Optionally configure TLS or basic auth for alertmanager
+      # tls_config:
+      #   insecure_skip_verify: false
+
+# ------------------------------------------------------------------------------
+# Scrape Configurations
+# ------------------------------------------------------------------------------
+scrape_configs:
+
+  # --------------------------------------------------------------------------
+  # Job: Backend (FastAPI) – Primary application metrics
+  # --------------------------------------------------------------------------
+  - job_name: 'helpdesk-backend'
+    scrape_interval: 10s          # Higher frequency for real-time API health
+    scrape_timeout: 8s            # Must be less than scrape_interval
+    metrics_path: '/metrics'      # Exposed by prometheus-fastapi-instrumentator
+    scheme: http                  # Change to 'https' if TLS is active
+    honor_labels: false           # Prevent label collisions
+    follow_redirects: true        # Explicit default, change to false if needed
+
+    # ------------------------------------------------------------------
+    # Authentication (Bearer Token)
+    # ------------------------------------------------------------------
+    # Recommended: use authorization block with credentials_file
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/prometheus_token.txt  # 0600 permissions
+      # Alternative inline (less secure, use environment variable injection):
+      # credentials: ${PROMETHEUS_TOKEN}
+
+    # ------------------------------------------------------------------
+    # TLS Configuration (if https)
+    # ------------------------------------------------------------------
+    # tls_config:
+    #   insecure_skip_verify: false
+    #   ca_file: /etc/prometheus/certs/ca.crt
+    #   cert_file: /etc/prometheus/certs/client.crt
+    #   key_file: /etc/prometheus/certs/client.key
+
+    # ------------------------------------------------------------------
+    # Service Discovery & Targets
+    # ------------------------------------------------------------------
+    static_configs:
+      - targets: ['backend:8000']
+        labels:
+          service: 'api'
+          component: 'backend'
+          tier: 'application'
+          # Add geographic or availability zone labels for multi-region setups
+          # az: 'us-east-1a'
+
+    # ------------------------------------------------------------------
+    # Target Relabeling (Security & Filtering)
+    # ------------------------------------------------------------------
+    relabel_configs:
+      # Drop targets with critical health status (e.g., Consul service discovery)
+      - source_labels: ['__meta_consul_health']
+        regex: 'critical'
+        action: drop
+
+      # Keep only targets from private IP ranges (10.0.0.0/8)
+      - source_labels: ['__address__']
+        regex: '^(10\.\d+\.\d+\.\d+:\d+)$'
+        action: keep
+
+      # Preserve original instance label (IP:port)
+      - source_labels: ['__address__']
+        target_label: 'instance'
+        replacement: '${1}'
+
+      # Add a static component label
+      - target_label: 'component'
+        replacement: 'fastapi'
+
+    # ------------------------------------------------------------------
+    # Metric Relabeling (Cardinality & Security Control)
+    # ------------------------------------------------------------------
+    metric_relabel_configs:
+      # Drop Go runtime and Prometheus client internal metrics (usually noise)
+      - source_labels: ['__name__']
+        regex: '(go_.*|promhttp_.*)'
+        action: drop
+
+      # Drop any metric with high‑cardinality labels (e.g., path, endpoint)
+      - regex: '(path|endpoint|handler|method|status|quantile)'
+        action: labeldrop
+
+      # Keep only essential metric families (reduce storage & network)
+      - source_labels: ['__name__']
+        regex: '(http_requests_total|http_request_duration_seconds_bucket|http_request_duration_seconds_count|http_request_duration_seconds_sum|up)'
+        action: keep
+
+    # ------------------------------------------------------------------
+    # Scrape Limits (Protect Prometheus from misbehaving targets)
+    # ------------------------------------------------------------------
+    sample_limit: 10000          # Maximum number of samples per scrape
+    # target_limit: 1            # Number of targets per scrape group (optional)
+    # label_limit: 1000          # Maximum labels per metric
+    # metric_limit: 10000        # Maximum metric families
+
+  # --------------------------------------------------------------------------
+  # Job: Node Exporter (Host metrics)
+  # --------------------------------------------------------------------------
+  - job_name: 'node'
+    scrape_interval: 30s
+    scrape_timeout: 15s
+    metrics_path: '/metrics'
+    scheme: http
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          service: 'infrastructure'
+          component: 'machine'
+    # Optional: add TLS / auth
+
+  # --------------------------------------------------------------------------
+  # Job: cAdvisor (Container metrics)
+  # --------------------------------------------------------------------------
+  - job_name: 'cadvisor'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    metrics_path: '/metrics'
+    scheme: http
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          service: 'infrastructure'
+          component: 'container'
+
+# ------------------------------------------------------------------------------
+# Remote Write / Read (optional – for long‑term storage or federation)
+# ------------------------------------------------------------------------------
+# remote_write:
+#   - url: "https://thanos-receiver.example.com/api/v1/receive"
+#     basic_auth:
+#       username: "admin"
+#       password: ${THANOS_PASSWORD}
+#
+# remote_read:
+#   - url: "https://thanos-querier.example.com/api/v1/read"
+#     read_recent: true
+
+# ------------------------------------------------------------------------------
+# Additional Production Hardening Tips (commented)
+# ------------------------------------------------------------------------------
+# 1. Use environment‐specific token files with restrictive permissions (0600).
+# 2. Enable TLS for all metrics endpoints in production.
+# 3. Set `scrape_interval` higher than `scrape_timeout` for each job.
+# 4. Use `sample_limit` to prevent overload from misconfigured exporters.
+# 5. Place recording rules to aggregate high‑cardinality metrics into lower
+#    cardinality ones (e.g., average latency by service).
+# 6. Configure `grpc_compression` for remote write if network bandwidth is a concern.

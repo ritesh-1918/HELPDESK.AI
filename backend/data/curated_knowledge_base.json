@@ -1,0 +1,47 @@
+[
+  {
+    "title": "Laptop Overheating Issues",
+    "content": "Laptop overheating can be caused by blocked vents, dust buildup, or high CPU usage. Try these steps:\n1. Shut down the laptop and let it cool for 15-20 minutes\n2. Clean the vents with compressed air (don't blow too hard)\n3. Use the laptop on a hard flat surface, not on soft surfaces like beds/couches\n4. Close unused applications to reduce CPU load\n5. Check if fans are working properly\nIf issues persist, contact hardware support for further diagnostics.",
+    "category": "Hardware Support"
+  },
+  {
+    "title": "VPN Connection Troubleshooting",
+    "content": "If you're having trouble connecting to the VPN:\n1. Verify your internet connection is stable\n2. Double-check your username and password\n3. Ensure you're not connecting from a restricted network\n4. Try disconnecting and reconnecting\n5. Restart your computer\n6. Check if your VPN client is up to date\n7. Verify MFA requests are coming through and you're accepting them promptly",
+    "category": "Network & Connectivity"
+  },
+  {
+    "title": "Payroll System Authentication Failed",
+    "content": "If you get an 'Authentication Failed' message when trying to access payroll:\n1. Make sure you're connected to the VPN first\n2. Clear your browser cache and cookies\n3. Try a different browser (Chrome, Firefox, Edge)\n4. Reset your password via the password reset portal\n5. Verify your MFA device is working correctly\n6. If you still have issues, contact IT support.",
+    "category": "Account Access"
+  },
+  {
+    "title": "Printer Not Working Over VPN",
+    "content": "If your printer won't print while working from home on VPN:\n1. Verify the printer is turned on and connected to the office network\n2. Ensure you can ping the printer's IP address\n3. Restart the print spooler service (Windows: services.msc > Print Spooler > Restart)\n4. Try adding the printer by IP address instead of hostname\n5. Contact IT support if problems continue.",
+    "category": "Peripherals"
+  },
+  {
+    "title": "Blue Screen of Death (BSOD) Troubleshooting",
+    "content": "If you get a BSOD:\n1. Note the stop code and any affected drivers mentioned\n2. Restart your computer and see if the issue recurs\n3. Check for Windows updates and install all pending updates\n4. Update your device drivers (especially graphics and network drivers)\n5. Run a memory diagnostic test (Windows: mdsched.exe)\n6. If the problem persists, contact IT support with the stop code information.",
+    "category": "Software Issues"
+  },
+  {
+    "title": "DNS Issues After VPN Connection",
+    "content": "If VPN connects but you can't access internal servers by hostname:\n1. Check ipconfig /all to verify DNS servers are set correctly after VPN connect\n2. Try flushing DNS: ipconfig /flushdns\n3. Manually set internal DNS servers in VPN adapter settings if needed\n4. Contact IT support to verify VPN configuration.",
+    "category": "Network & Connectivity"
+  },
+  {
+    "title": "OneDrive Crashing at Startup",
+    "content": "If OneDrive keeps crashing when you start your computer:\n1. Clear OneDrive cache\n2. Reset OneDrive (Windows: %localappdata%\\Microsoft\\OneDrive\\onedrive.exe /reset)\n3. Reinstall OneDrive\n4. Run System File Checker: sfc /scannow\n5. Check Event Viewer for detailed error messages.",
+    "category": "Software Issues"
+  },
+  {
+    "title": "Phishing Email Response",
+    "content": "If you clicked a suspicious link or entered credentials in a phishing site:\n1. Change your password immediately\n2. Enable multi-factor authentication if not already enabled\n3. Report the email to IT security\n4. Monitor your accounts for unusual activity\n5. Run a full antivirus scan on your computer.",
+    "category": "Security"
+  },
+  {
+    "title": "Slow or Unresponsive Laptop",
+    "content": "If your laptop is slow or unresponsive:\n1. Close unused applications and browser tabs\n2. Check Task Manager for high CPU/memory usage\n3. Restart your computer\n4. Clear temporary files\n5. Check for and install Windows updates\n6. Run a virus/malware scan.",
+    "category": "Hardware Support"
+  }
+]
