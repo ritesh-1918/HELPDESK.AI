@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -15,32 +15,9 @@ import { supabase } from '../../lib/supabase';
 import { COLORS, SHADOWS } from '../../styles/theme';
 import { ArrowLeft, Send, User, Bot } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
+import locale from '../../config/locales/en.json';
 
-const MessageItem = React.memo(({ item }) => {
-  const isUser = item.sender_role === 'user';
-  const isAI = item.sender_role === 'ai';
-
-  return (
-    <View style={[
-      styles.messageBubble,
-      isUser ? styles.userBubble : styles.adminBubble,
-      isAI && styles.aiBubble
-    ]}>
-      {!isUser && (
-        <View style={styles.senderHeader}>
-          {isAI ? <Bot size={14} color={COLORS.primary} /> : <User size={14} color={COLORS.textLight} />}
-          <Text style={styles.senderName}>{isAI ? 'AI Assistant' : item.sender_name || 'Support'}</Text>
-        </View>
-      )}
-      <Text style={[styles.messageText, isUser && styles.userMessageText]}>
-        {item.message}
-      </Text>
-      <Text style={[styles.messageTime, isUser && styles.userTimeText]}>
-        {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-      </Text>
-    </View>
-  );
-});
+const t = locale.ticketDetail;
 
 const TicketDetailScreen = ({ route }) => {
   const { ticketId } = route.params || {};
@@ -126,9 +103,31 @@ const TicketDetailScreen = ({ route }) => {
     }
   };
 
-  const renderMessage = useCallback(({ item }) => (
-    <MessageItem item={item} />
-  ), []);
+  const renderMessage = ({ item }) => {
+    const isUser = item.sender_role === 'user';
+    const isAI = item.sender_role === 'ai';
+
+    return (
+      <View style={[
+        styles.messageBubble,
+        isUser ? styles.userBubble : styles.adminBubble,
+        isAI && styles.aiBubble
+      ]}>
+        {!isUser && (
+          <View style={styles.senderHeader}>
+            {isAI ? <Bot size={14} color={COLORS.primary} /> : <User size={14} color={COLORS.textLight} />}
+            <Text style={styles.senderName}>{isAI ? t.aiAssistant : item.sender_name || t.support}</Text>
+          </View>
+        )}
+        <Text style={[styles.messageText, isUser && styles.userMessageText]}>
+          {item.message}
+        </Text>
+        <Text style={[styles.messageTime, isUser && styles.userTimeText]}>
+          {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </Text>
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -138,7 +137,7 @@ const TicketDetailScreen = ({ route }) => {
         </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle} numberOfLines={1}>
-            {ticket?.subject || 'Ticket Details'}
+            {ticket?.subject || t.titleFallback}
           </Text>
           <Text style={styles.headerSubtitle}>#{ticketId?.slice(0, 8).toUpperCase()}</Text>
         </View>
@@ -163,7 +162,7 @@ const TicketDetailScreen = ({ route }) => {
             onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No messages yet. Send a message to start the conversation.</Text>
+                <Text style={styles.emptyText}>{t.emptyMessages}</Text>
               </View>
             }
           />
@@ -172,7 +171,7 @@ const TicketDetailScreen = ({ route }) => {
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Type a message..."
+            placeholder={t.inputPlaceholder}
             value={newMessage}
             onChangeText={setNewMessage}
             multiline
