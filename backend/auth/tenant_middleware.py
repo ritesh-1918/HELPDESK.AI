@@ -50,21 +50,20 @@ class TenantSecurityManager:
 
         try:
             # AFTER
-res = (
-    self.supabase.table("profiles")
-    .select("id, company_id, role, phone_number, address, employee_id, department")
-    .eq("id", user_id)
-    .single()
-    .execute()
-)
-profile_data = decrypt_profile(res.data or {})
-
-# Cache the decrypted result
-_profile_cache[user_id] = {
-    "profile": profile_data,
-    "cached_at": now
-}
-return profile_data
+            res = (
+            self.supabase.table("profiles")
+            .select("id, company_id, role, phone_number, address, employee_id, department")
+            .eq("id", user_id)
+            .single()
+            .execute()
+            )
+            profile_data = decrypt_profile(res.data or {})
+            # Cache the decrypted result
+            _profile_cache[user_id] = {
+                "profile": profile_data,
+                "cached_at": now
+            }
+            return profile_data
 
         except Exception as e:
             logger.error(f"Error fetching user profile for {user_id}: {e}")

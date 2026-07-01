@@ -14,8 +14,6 @@ import base64
 import hashlib
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
 
@@ -46,6 +44,10 @@ def _get_key() -> bytes:
         iterations=480000,
         dklen=32,
     )
+
+
+# Alias for backward compatibility
+get_encryption_key = _get_key
 
 
 def encrypt_aes256_gcm(plaintext: str, password: str | None = None) -> str:
