@@ -23,6 +23,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../..
 import { Textarea } from "../../components/ui/textarea";
 import Tesseract from 'tesseract.js';
 import { translateText, SUPPORTED_LANGUAGES } from '../../services/translationService';
+import KBSuggestionPanel from '../components/KBSuggestionPanel';
 
 const CreateTicket = () => {
     const [issue, setIssue] = useState('');
@@ -428,6 +429,9 @@ const CreateTicket = () => {
                                             />
                                         </div>
                                     </div>
+
+                                    {/* Knowledge Base Auto-Suggestion (Issue #3203) */}
+                                    <KBSuggestionPanel issueText={issue} />
 
                                     {/* Premium Voice Visualizer */}
                                     {supportsSpeech && (

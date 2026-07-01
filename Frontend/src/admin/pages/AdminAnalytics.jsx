@@ -6,13 +6,14 @@ import {
 import {
     BarChart3, PieChart as PieChartIcon, LineChart as LineChartIcon,
     TrendingUp, Users, ShieldCheck, Zap, AlertCircle, Clock, Activity,
-    Layers, Inbox, User, Loader2, Bot, Star, Target
+    Layers, Inbox, User, Loader2, Bot, Star, Target, BookOpen
 } from 'lucide-react';
 import { supabase } from "../../lib/supabaseClient";
 import StatCard from '../components/StatCard';
 import { Card, CardContent } from "../../components/ui/card";
 import useAuthStore from "../../store/authStore";
 import { formatTimelineDate } from "../../utils/dateUtils";
+import { api } from "../../services/api";
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#a855f7', '#ec4899'];
 
@@ -20,6 +21,7 @@ const AdminAnalytics = () => {
     const { profile } = useAuthStore();
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [deflection, setDeflection] = useState({ deflected_count: 0, tickets_created: 0, deflection_rate_percent: 0 });
 
     const fetchAnalytics = async () => {
         setLoading(true);
@@ -59,6 +61,7 @@ const AdminAnalytics = () => {
     useEffect(() => {
         if (profile) {
             fetchAnalytics();
+            api.getDeflectionRate(profile?.company).then(setDeflection);
         }
      
     }, [profile]);
@@ -194,7 +197,7 @@ const AdminAnalytics = () => {
             </div>
 
             {/* Combined KPI Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                 <StatCard
                     label="Total Tickets"
                     value={stats.total}
@@ -222,6 +225,13 @@ const AdminAnalytics = () => {
                     subtitle="Tickets needing attention"
                     icon={AlertCircle}
                     color="red"
+                />
+                <StatCard
+                    label="Self-Service Deflection"
+                    value={<span style={{ color: '#059669' }}>{deflection.deflection_rate_percent}%</span>}
+                    subtitle={`${deflection.deflected_count} resolved via KB suggestions`}
+                    icon={BookOpen}
+                    color="emerald"
                 />
             </div>
 

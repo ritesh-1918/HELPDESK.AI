@@ -59,6 +59,7 @@ from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
+from backend.services.kb_matcher import kb_matcher_service
 
 
 # ---------------------------------------------------------------------------
@@ -235,6 +236,10 @@ async def lifespan(app: FastAPI):
         rag_service.load()
     except Exception as e:
         print(f"[WARNING] RAG service not loaded: {e}")
+    try:
+        kb_matcher_service.load()
+    except Exception as e:
+        print(f"[WARNING] KB matcher service not loaded: {e}")
     
     if gemini_service:
         print(f"[Startup] Gemini Service: {'Initialized' if gemini_service._initialized else 'FAILED (Key missing or SDK error)'}")
@@ -393,13 +398,14 @@ async def readiness_check():
         "ner_loaded": ner_service._loaded,
         "duplicate_index_loaded": duplicate_service.is_available(),
         "rag_loaded": rag_service.is_available(),
+        "kb_matcher_loaded": kb_matcher_service.is_available(),
     }
     if require_supabase:
         checks["supabase_configured"] = supabase is not None
 
-    # In degraded mode, duplicate and RAG services are optional
+    # In degraded mode, duplicate/RAG/KB-matcher services are optional
     if allow_degraded:
-        required_checks = {k: v for k, v in checks.items() if k not in ["duplicate_index_loaded", "rag_loaded"]}
+        required_checks = {k: v for k, v in checks.items() if k not in ["duplicate_index_loaded", "rag_loaded", "kb_matcher_loaded"]}
         all_required_pass = all(required_checks.values())
         
         if all_required_pass:
@@ -530,6 +536,130 @@ async def log_correction(raw_request: Request):
     except Exception as e:
         print(f"[CORRECTION ERROR] Could not save: {e}")
         return {"status": "error", "message": str(e)}
+
+
+
+# ---------------------------------------------------------------------------
+# Knowledge Base Auto-Suggestion (Issue #3203)
+# ---------------------------------------------------------------------------
+SELF_SERVICE_LOG_PATH = Path(__file__).parent / "data" / "self_service_log.json"
+
+
+class KBSuggestionRequest(BaseModel):
+    text: str
+    top_k: int = 3
+
+
+class KBSuggestion(BaseModel):
+    type: str            # "kb_article" | "resolved_ticket"
+    id: str
+    title: str
+    snippet: str
+    category: str
+    similarity: float
+
+
+class KBSuggestionResponse(BaseModel):
+    suggestions: list[KBSuggestion]
+
+
+@app.post("/kb/suggest", response_model=KBSuggestionResponse)
+@limiter.limit("60/minute")
+async def kb_suggest(request: Request, body: KBSuggestionRequest):
+    """
+    Lightweight, low-latency endpoint meant to be called on a debounce
+    while the user is still typing their ticket (before submission).
+    Does NOT run classification/NER/duplicate-detection - just a fast
+    TF-IDF lookup against KB articles + previously-resolved tickets.
+    """
+    try:
+        results = kb_matcher_service.get_suggestions(body.text, top_k=body.top_k)
+        return KBSuggestionResponse(suggestions=[KBSuggestion(**r) for r in results])
+    except Exception as e:
+        print(f"[KB SUGGEST ERROR] {e}")
+        return KBSuggestionResponse(suggestions=[])
+
+
+class SelfServiceResolutionRequest(BaseModel):
+    article_id: str
+    article_title: str | None = None
+    query_text: str = ""
+    company: str | None = None
+
+
+@app.post("/kb/self_service_resolution")
+async def log_self_service_resolution(payload: SelfServiceResolutionRequest):
+    """
+    Called when a user clicks "This solved it" on a suggested article
+    instead of submitting a ticket. Used to compute the self-service
+    deflection rate shown in Admin Analytics.
+    """
+    entry = {
+        "article_id": payload.article_id,
+        "article_title": payload.article_title,
+        "query_text": payload.query_text,
+        "company": payload.company,
+        "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+    }
+
+    try:
+        if SELF_SERVICE_LOG_PATH.exists() and SELF_SERVICE_LOG_PATH.stat().st_size > 2:
+            with open(SELF_SERVICE_LOG_PATH, "r", encoding="utf-8") as f:
+                logs = json.load(f)
+        else:
+            logs = []
+
+        logs.append(entry)
+
+        with open(SELF_SERVICE_LOG_PATH, "w", encoding="utf-8") as f:
+            json.dump(logs, f, indent=2)
+
+        print(f"[SELF-SERVICE] Deflected via article {payload.article_id}")
+        return {"status": "saved"}
+    except Exception as e:
+        print(f"[SELF-SERVICE ERROR] Could not save: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@app.get("/analytics/deflection_rate")
+async def get_deflection_rate(company_id: str | None = None):
+    """
+    Self-service deflection rate = self-resolved-via-KB / (self-resolved + tickets created).
+    Ticket volume is pulled from Supabase (source of truth for created tickets);
+    self-service events come from the local log written by /kb/self_service_resolution.
+    """
+    deflections = []
+    try:
+        if SELF_SERVICE_LOG_PATH.exists() and SELF_SERVICE_LOG_PATH.stat().st_size > 2:
+            with open(SELF_SERVICE_LOG_PATH, "r", encoding="utf-8") as f:
+                deflections = json.load(f)
+    except Exception as e:
+        print(f"[DEFLECTION RATE ERROR] Could not read log: {e}")
+
+    if company_id:
+        deflections = [d for d in deflections if d.get("company") == company_id]
+
+    deflected_count = len(deflections)
+
+    ticket_count = 0
+    if supabase:
+        try:
+            query = supabase.table("tickets").select("id", count="exact")
+            if company_id:
+                query = query.eq("company", company_id)
+            resp = query.execute()
+            ticket_count = resp.count or 0
+        except Exception as e:
+            print(f"[DEFLECTION RATE ERROR] Supabase ticket count failed: {e}")
+
+    total = deflected_count + ticket_count
+    rate = round((deflected_count / total) * 100, 1) if total > 0 else 0.0
+
+    return {
+        "deflected_count": deflected_count,
+        "tickets_created": ticket_count,
+        "deflection_rate_percent": rate,
+    }
 
 
 # ---------------------------------------------------------------------------

@@ -125,5 +125,48 @@ export const api = {
       // Non-fatal: log but don't break the UI flow
       console.warn("[Correction Log] Failed to save correction:", error);
     }
-  }
+  },
+
+  // --- Knowledge Base Auto-Suggestion (Issue #3203) ---
+
+  getKbSuggestions: async (text, topK = 3) => {
+    if (!text || text.trim().length < 12) {
+      return { suggestions: [] };
+    }
+    try {
+      const response = await axios.post(`${API_BASE_URL}/kb/suggest`, {
+        text,
+        top_k: topK,
+      });
+      return response.data;
+    } catch (error) {
+      console.warn("[KB Suggest] Failed to fetch suggestions:", error);
+      return { suggestions: [] };
+    }
+  },
+
+  logSelfServiceResolution: async ({ articleId, articleTitle, queryText, company }) => {
+    try {
+      await axios.post(`${API_BASE_URL}/kb/self_service_resolution`, {
+        article_id: articleId,
+        article_title: articleTitle,
+        query_text: queryText,
+        company,
+      });
+    } catch (error) {
+      console.warn("[Self-Service Log] Failed to log deflection:", error);
+    }
+  },
+
+  getDeflectionRate: async (companyId = null) => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/analytics/deflection_rate`, {
+        params: companyId ? { company_id: companyId } : {},
+      });
+      return response.data;
+    } catch (error) {
+      console.warn("[Deflection Rate] Failed to fetch:", error);
+      return { deflected_count: 0, tickets_created: 0, deflection_rate_percent: 0 };
+    }
+  },
 };
