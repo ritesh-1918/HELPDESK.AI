@@ -7,7 +7,7 @@ import {
 } from "react-router-dom";
 import React, { useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
-import { NotFound } from "./components/ui/not-found-2";
+import NotFound from "./pages/NotFound";
 import useTicketStore from "./store/ticketStore";
 import Toaster from "./components/shared/Toaster";
 import BugReportWidget from "./components/shared/BugReportWidget";
@@ -170,42 +170,44 @@ function AppLayout() {
   return (
     <>
       <Routes>
-        <Route path="/knowledge-check" element={<DuplicateDetection />} />
-        <Route path="/auto-resolve" element={<AutoResolveChat />} />
-        <Route path="/resolved" element={<Resolved />} />
+        <Route element={<ProtectedRoute />}>
+          <Route path="/knowledge-check" element={<DuplicateDetection />} />
+          <Route path="/auto-resolve" element={<AutoResolveChat />} />
+          <Route path="/resolved" element={<Resolved />} />
 
-        {/* --- User Portal --- */}
-        <Route element={
-          profile?.role === 'master_admin' ? <Navigate to="/master-admin/dashboard" replace /> :
-            (profile?.role === 'admin' || profile?.role === 'super_admin') ? <Navigate to="/admin/dashboard" replace /> :
-              profile?.status === 'pending_approval' ? <Navigate to="/user-lobby" replace /> :
-                profile?.status === 'rejected' ? <Navigate to="/not-approved" replace /> :
-                  <UserLayout />
-        }>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/create-ticket" element={<CreateTicket />} />
-          <Route path="/my-tickets" element={<MyTickets />} />
-          <Route path="/ticket/:ticket_id" element={<TicketDetail />} />
-          <Route path="/ai-processing" element={<AIProcessing />} />
-          <Route path="/ai-understanding" element={<AIUnderstanding />} />
-          <Route path="/ticket-tracking" element={<TicketTracking />} />
-          <Route path="/ticket-result" element={<TicketResult />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/help" element={<Help />} />
-          <Route path="/notifications" element={<Notifications />} />
-        </Route>
+          {/* --- User Portal --- */}
+          <Route element={
+            profile?.role === 'master_admin' ? <Navigate to="/master-admin/dashboard" replace /> :
+              (profile?.role === 'admin' || profile?.role === 'super_admin') ? <Navigate to="/admin/dashboard" replace /> :
+                profile?.status === 'pending_approval' ? <Navigate to="/user-lobby" replace /> :
+                  profile?.status === 'rejected' ? <Navigate to="/not-approved" replace /> :
+                    <UserLayout />
+          }>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/create-ticket" element={<CreateTicket />} />
+            <Route path="/my-tickets" element={<MyTickets />} />
+            <Route path="/ticket/:ticket_id" element={<TicketDetail />} />
+            <Route path="/ai-processing" element={<AIProcessing />} />
+            <Route path="/ai-understanding" element={<AIUnderstanding />} />
+            <Route path="/ticket-tracking" element={<TicketTracking />} />
+            <Route path="/ticket-result" element={<TicketResult />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/help" element={<Help />} />
+            <Route path="/notifications" element={<Notifications />} />
+          </Route>
 
-        {/* --- Admin Portal (Protected) --- */}
-        <Route element={<AdminProtectedRoute />}>
-          <Route element={<AdminLayout />}>
-            <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            <Route path="/admin/tickets" element={<AdminTickets />} />
-            <Route path="/admin/ticket/:ticket_id" element={<AdminTicketDetail />} />
-            <Route path="/admin/users" element={<AdminUsers />} />
-            <Route path="/admin/analytics" element={<AdminAnalytics />} />
-            <Route path="/admin/profile" element={<AdminProfile />} />
-            <Route path="/admin/settings" element={<AdminSettings />} />
+          {/* --- Admin Portal (Protected) --- */}
+          <Route element={<AdminProtectedRoute />}>
+            <Route element={<AdminLayout />}>
+              <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/tickets" element={<AdminTickets />} />
+              <Route path="/admin/ticket/:ticket_id" element={<AdminTicketDetail />} />
+              <Route path="/admin/users" element={<AdminUsers />} />
+              <Route path="/admin/analytics" element={<AdminAnalytics />} />
+              <Route path="/admin/profile" element={<AdminProfile />} />
+              <Route path="/admin/settings" element={<AdminSettings />} />
+            </Route>
           </Route>
         </Route>
 
@@ -293,10 +295,8 @@ function App() {
           </Route>
         </Route>
 
-        {/* Protected */}
-        <Route element={<ProtectedRoute />}>
-          <Route path="/*" element={<AppLayout />} />
-        </Route>
+        {/* Protected routing handled internally by AppLayout */}
+        <Route path="/*" element={<AppLayout />} />
       </Routes>
     </BrowserRouter>
   );
