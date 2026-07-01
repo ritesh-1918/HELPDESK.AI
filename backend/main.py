@@ -335,6 +335,26 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data: https:; "
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'; "
+        "frame-ancestors 'none';"
+    )
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
 # Rate limiter — 10 AI requests per minute per IP (free tier protection)
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
@@ -602,15 +622,14 @@ async def log_correction(raw_request: Request):
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None):
+async def get_tickets(company_id: str):
     """Fetch persistent tickets from Supabase."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
+    if not company_id:
+        raise HTTPException(status_code=400, detail="company_id is required for strict tenant isolation")
     
-    query = supabase.table("tickets").select("*").order("created_at", desc=True)
-    if company_id:
-        query = query.eq("company_id", company_id)
-        
+    query = supabase.table("tickets").select("*").eq("company_id", company_id).order("created_at", desc=True)
     res = query.execute()
     return res.data
 
@@ -818,14 +837,16 @@ async def save_ticket(request_body: TicketSaveRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/tickets/{ticket_id}")
-async def get_ticket_by_id(ticket_id: str):
+async def get_ticket_by_id(ticket_id: str, company_id: str):
     """Fetch single persistent ticket."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
+    if not company_id:
+        raise HTTPException(status_code=400, detail="company_id is required for strict tenant isolation")
     
-    res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
+    res = supabase.table("tickets").select("*").eq("id", ticket_id).eq("company_id", company_id).single().execute()
     if not res.data:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail="Ticket not found or unauthorized")
     return res.data
 
 
