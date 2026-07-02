@@ -61,5 +61,11 @@
     "tailwindcss": "^3.4.19",
     "vite": "^7.3.1"
   },
+  "overrides": {
+    "react-joyride": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    }
+  },
   "lint-staged": "{'*.{js,jsx}': ['eslint --fix', 'prettier --write']}"
 }
