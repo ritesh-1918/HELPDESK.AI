@@ -12,6 +12,67 @@ import {
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
+// ── Memoized list item — prevents re-render on every parent state change ──────
+const UserItem = React.memo(({ item, isPending, updatingUser, isUserAdmin, onApprove, onDecline, onProfileDetail }) => {
+  return (
+    <View style={styles.userCard}>
+      <TouchableOpacity 
+        style={styles.avatar} 
+        onPress={() => onProfileDetail(item)}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.avatarText}>{item.full_name?.[0]?.toUpperCase() || 'U'}</Text>
+      </TouchableOpacity>
+
+      <View style={styles.userInfo}>
+        <TouchableOpacity onPress={() => onProfileDetail(item)} activeOpacity={0.7}>
+          <Text style={styles.userName}>{item.full_name}</Text>
+        </TouchableOpacity>
+        <View style={styles.metaRow}>
+          <Mail size={12} color={COLORS.textMuted} />
+          <Text style={styles.metaText} numberOfLines={1}>{item.email}</Text>
+        </View>
+        <View style={styles.metaRow}>
+          <Shield size={12} color={isUserAdmin ? COLORS.primary : COLORS.textMuted} />
+          <Text style={[styles.metaText, isUserAdmin && { color: COLORS.primary, fontWeight: '700' }]}>
+            {isUserAdmin ? 'Administrator' : 'Standard Employee'}
+          </Text>
+        </View>
+      </View>
+
+      {updatingUser === item.id ? (
+        <ActivityIndicator size="small" color={COLORS.primary} style={{ marginRight: 10 }} />
+      ) : isPending ? (
+        <View style={styles.actions}>
+          <TouchableOpacity 
+            style={[styles.actionBtn, styles.approveBtn]}
+            onPress={() => onApprove(item)}
+            title="Approve"
+          >
+            <UserCheck size={18} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.actionBtn, styles.declineBtn]}
+            onPress={() => onDecline(item)}
+            title="Decline"
+          >
+            <UserX size={18} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={{ flexDirection: 'row', gap: 6 }}>
+          <TouchableOpacity 
+            style={styles.viewDetailsBtn}
+            onPress={() => onProfileDetail(item)}
+          >
+            <Eye size={16} color={COLORS.textLight} />
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
+});
+
 const AdminUsersScreen = () => {
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -82,7 +143,7 @@ const AdminUsersScreen = () => {
     fetchUsers();
   };
 
-  const handleApprove = async (userItem) => {
+  const handleApprove = useCallback(async (userItem) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setUpdatingUser(userItem.id);
     try {
@@ -128,9 +189,9 @@ const AdminUsersScreen = () => {
     } finally {
       setUpdatingUser(null);
     }
-  };
+  }, [fetchUsers]);
 
-  const handleDecline = (userItem) => {
+  const handleDecline = useCallback((userItem) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     Alert.alert(
       "Decline Registration",
@@ -162,7 +223,7 @@ const AdminUsersScreen = () => {
         }
       ]
     );
-  };
+  }, [fetchUsers]);
 
   const handleUpdateRole = async (userItem, newRole) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -248,74 +309,32 @@ const AdminUsersScreen = () => {
     return filtered;
   }, [profiles, activeTab, searchQuery]);
 
-  const openProfileDetail = (userItem) => {
+  const openProfileDetail = useCallback((userItem) => {
     Haptics.selectionAsync();
     setSelectedUser(userItem);
     setShowDetailModal(true);
-  };
+  }, []);
 
-  const renderUserItem = ({ item }) => {
+  const handleApproveCb = useCallback((item) => handleApprove(item), [handleApprove]);
+  const handleDeclineCb = useCallback((item) => handleDecline(item), [handleDecline]);
+  const openProfileDetailCb = useCallback((item) => openProfileDetail(item), [openProfileDetail]);
+
+  const renderUserItem = useCallback(({ item }) => {
     const isPending = item.status === 'pending_approval';
     const isUserAdmin = item.role === 'admin' || item.role === 'master_admin';
     
     return (
-      <View style={styles.userCard}>
-        <TouchableOpacity 
-          style={styles.avatar} 
-          onPress={() => openProfileDetail(item)}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.avatarText}>{item.full_name?.[0]?.toUpperCase() || 'U'}</Text>
-        </TouchableOpacity>
-
-        <View style={styles.userInfo}>
-          <TouchableOpacity onPress={() => openProfileDetail(item)} activeOpacity={0.7}>
-            <Text style={styles.userName}>{item.full_name}</Text>
-          </TouchableOpacity>
-          <View style={styles.metaRow}>
-            <Mail size={12} color={COLORS.textMuted} />
-            <Text style={styles.metaText} numberOfLines={1}>{item.email}</Text>
-          </View>
-          <View style={styles.metaRow}>
-            <Shield size={12} color={isUserAdmin ? COLORS.primary : COLORS.textMuted} />
-            <Text style={[styles.metaText, isUserAdmin && { color: COLORS.primary, fontWeight: '700' }]}>
-              {isUserAdmin ? 'Administrator' : 'Standard Employee'}
-            </Text>
-          </View>
-        </View>
-
-        {updatingUser === item.id ? (
-          <ActivityIndicator size="small" color={COLORS.primary} style={{ marginRight: 10 }} />
-        ) : isPending ? (
-          <View style={styles.actions}>
-            <TouchableOpacity 
-              style={[styles.actionBtn, styles.approveBtn]}
-              onPress={() => handleApprove(item)}
-              title="Approve"
-            >
-              <UserCheck size={18} color="#fff" />
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.actionBtn, styles.declineBtn]}
-              onPress={() => handleDecline(item)}
-              title="Decline"
-            >
-              <UserX size={18} color="#fff" />
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={{ flexDirection: 'row', gap: 6 }}>
-            <TouchableOpacity 
-              style={styles.viewDetailsBtn}
-              onPress={() => openProfileDetail(item)}
-            >
-              <Eye size={16} color={COLORS.textLight} />
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
+      <UserItem
+        item={item}
+        isPending={isPending}
+        isUserAdmin={isUserAdmin}
+        updatingUser={updatingUser}
+        onApprove={handleApproveCb}
+        onDecline={handleDeclineCb}
+        onProfileDetail={openProfileDetailCb}
+      />
     );
-  };
+  }, [updatingUser, handleApproveCb, handleDeclineCb, openProfileDetailCb]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -387,7 +406,16 @@ const AdminUsersScreen = () => {
           renderItem={renderUserItem}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
-          RefreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={10}
+          initialNumToRender={10}
+          getItemLayout={(data, index) => ({
+            length: 80,
+            offset: 80 * index,
+            index,
+          })}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />}
           ListEmptyComponent={
             <View style={styles.empty}>
               <Users size={48} color={COLORS.textMuted} strokeWidth={1} />

@@ -29,7 +29,7 @@ const verifyServerCookieSession = async () => {
         const body = await res.json();
         return body?.user || null;
     } catch (e) {
-        console.warn('Server cookie session check failed:', e?.message || e);
+        logger.warn('Server cookie session check failed:', e?.message || e);
         return null;
     }
 };
@@ -47,7 +47,7 @@ const mirrorBackendAuth = async (path, payload) => {
         });
         clearTimeout(timeout);
     } catch (e) {
-        console.warn(`Backend auth ${path} failed:`, e?.message || e);
+        logger.warn(`Backend auth ${path} failed:`, e?.message || e);
     }
 };
 
@@ -88,7 +88,7 @@ const useAuthStore = create(
                 const dbProfile = await get()._syncProfile(user.id);
                 if (dbProfile) {
                     if (user.email_confirmed_at && dbProfile.status === 'pending_email_verification') {
-                        console.log("Email confirmed! Upgrading status in database to pending_approval.");
+                        logger.log("Email confirmed — upgrading status to pending_approval.");
                         const updated = await get().updateProfile({ status: 'pending_approval' });
                         if (updated) return updated;
                     }
@@ -104,7 +104,7 @@ const useAuthStore = create(
                     company: metadata.company || ''
                 };
 
-                console.log("Falling back to non-authoritative profile:", instantProfile.role);
+                logger.log("Falling back to non-authoritative profile:", instantProfile.role);
                 set({ profile: instantProfile });
                 return instantProfile;
             },
@@ -214,18 +214,14 @@ const useAuthStore = create(
                     });
 
                 if (error) {
-                    console.error(
-                        "Google OAuth error:",
-                        error.message
-                    );
-
+                    logger.error("Google OAuth error:", error.message);
                     throw error;
                 }
             },
 
             signInWithMagicLink: async (email) => {
                 set({ loading: true });
-                logger.log("Attempting magic link / OTP login for:", email);
+                logger.log("Attempting magic link / OTP login.");
                 try {
                     const { error } = await supabase.auth.signInWithOtp({
                         email,
@@ -246,7 +242,6 @@ const useAuthStore = create(
 
             signInWithGoogle: async () => {
                 set({ loading: true });
-                console.log("Attempting Google OAuth login");
                 try {
                     const { error } = await supabase.auth.signInWithOAuth({
                         provider: 'google',
@@ -258,7 +253,7 @@ const useAuthStore = create(
                     if (error) throw error;
                     return true;
                 } catch (error) {
-                    console.error("Google OAuth operation failed:", error.message);
+                    logger.error("Google OAuth operation failed:", error.message);
                     throw error;
                 } finally {
                     set({ loading: false });
@@ -267,7 +262,7 @@ const useAuthStore = create(
 
             verifyOtpAndLogin: async (email, token, type = 'magiclink') => {
                 set({ loading: true });
-                logger.log("Attempting OTP verification for:", email);
+                logger.log("Attempting OTP verification.");
                 try {
                     const { data, error } = await supabase.auth.verifyOtp({
                         email,
@@ -299,7 +294,7 @@ const useAuthStore = create(
 
             signup: async (email, password, fullName, role = 'user', company = '', extraMetadata = {}, emailRedirectTo = undefined) => {
                 set({ loading: true });
-                logger.log("Starting signup for:", email);
+                logger.log("Starting signup.");
 
         const passwordError = validatePassword(password);
         if (passwordError) throw new Error(passwordError);
@@ -359,7 +354,7 @@ const useAuthStore = create(
                             credentials: 'include',
                         });
                     } catch (e) {
-                        console.warn('Backend cookie logout failed:', e?.message || e);
+                        logger.warn('Backend cookie logout failed:', e?.message || e);
                     }
 
                     const { error } = await supabase.auth.signOut();
@@ -450,7 +445,7 @@ const useAuthStore = create(
                 get().getCurrentUser();
 
                 supabase.auth.onAuthStateChange(async (event, session) => {
-                    console.log("Auth state change:", event);
+                    logger.log("Auth state change:", event);
                     try {
                         if (session?.user) {
                             set({ user: session.user, loading: true, isCheckingSession: true });
@@ -459,7 +454,7 @@ const useAuthStore = create(
                             set({ user: null, profile: null });
                         }
                     } catch (e) {
-                        console.warn("Auth state change error:", e?.message || e);
+                        logger.warn("Auth state change error:", e?.message || e);
                         set({ user: null, profile: null });
                     } finally {
                         set({ loading: false, isCheckingSession: false });

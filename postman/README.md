@@ -15,9 +15,9 @@ Postman collection covering the core HELPDESK.AI backend API endpoints.
 
 ## Setup
 
-1. Import `HELPDESK_AI_API.postman_collection.json` into Postman
-2. Set `baseUrl` variable to your backend server (default: `http://localhost:8000`)
-3. For protected endpoints, set the `session` cookie from `/auth/login` response
+1. Import `postman_collection.json` into Postman
+2. Set `base_url` or `production_url` to your backend server
+3. Set `auth_token` from the `/auth/login` response for protected endpoints
 4. For `/metrics`, set `metricsToken` to your configured metrics token
 
 ## Endpoints

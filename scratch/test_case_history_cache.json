@@ -1,0 +1,22 @@
+[
+  {
+    "ticket_id": "TICKET-0",
+    "text": "My screen is black and won't turn on."
+  },
+  {
+    "ticket_id": "TICKET-1",
+    "text": "Unable to connect to the corporate VPN from home."
+  },
+  {
+    "ticket_id": "TICKET-2",
+    "text": "Printer in the hallway is jamming constantly."
+  },
+  {
+    "ticket_id": "TICKET-3",
+    "text": "Reset password request for Active Directory account."
+  },
+  {
+    "ticket_id": "TICKET-4",
+    "text": "Outlook keeps crashing when opening attachments."
+  }
+]

@@ -66,6 +66,13 @@ def get_weekly_stats(company_id: str) -> dict:
         logger.warning("[Digest] Supabase connection is offline. Returning mock stats.")
         return stats
 
+    from backend.services.redis_cache import redis_cache
+    cache_key = f"helpdesk:stats:weekly:{company_id}"
+    if redis_cache.available:
+        cached_stats = redis_cache.get_json(cache_key)
+        if cached_stats is not None:
+            return cached_stats
+
     try:
         # Get company name
         company_res = supabase.table("companies").select("name").eq("id", company_id).single().execute()
@@ -218,6 +225,10 @@ def get_weekly_stats(company_id: str) -> dict:
 
     except Exception as e:
         logger.error(f"[Digest] Error building weekly stats: {e}")
+
+    from backend.services.redis_cache import redis_cache
+    if redis_cache.available:
+        redis_cache.set_json(cache_key, stats, ttl=3600)
 
     return stats
 
