@@ -1,1 +1,1 @@
-@backend/services/export_duplicate_onnx.py
+"""Export duplicate detection model to ONNX format."""
