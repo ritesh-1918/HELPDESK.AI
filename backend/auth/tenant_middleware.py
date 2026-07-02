@@ -5,6 +5,7 @@ from typing import Dict, Optional
 from fastapi import Request, HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from postgrest.exceptions import APIError
+from backend.models.user_profile import decrypt_profile
 
 logger = logging.getLogger(__name__)
 
@@ -48,21 +49,22 @@ class TenantSecurityManager:
             return {"company_id": None, "role": "user", "id": user_id}
 
         try:
+            # AFTER
             res = (
-                self.supabase.table("profiles")
-                .select("id, company_id, role")
-                .eq("id", user_id)
-                .single()
-                .execute()
+            self.supabase.table("profiles")
+            .select("id, company_id, role, phone_number, address, employee_id, department")
+            .eq("id", user_id)
+            .single()
+            .execute()
             )
-            profile_data = res.data or {}
-            
-            # Cache the result
+            profile_data = decrypt_profile(res.data or {})
+            # Cache the decrypted result
             _profile_cache[user_id] = {
                 "profile": profile_data,
                 "cached_at": now
             }
             return profile_data
+
         except Exception as e:
             logger.error(f"Error fetching user profile for {user_id}: {e}")
             # Fallback to no company_id (safe default)
@@ -75,7 +77,7 @@ class TenantSecurityManager:
         if not credentials:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Authentication credentials missing."
+                detail={"error": "unauthorized", "message": "Authentication credentials missing."}
             )
         
         token = credentials.credentials
@@ -96,7 +98,7 @@ class TenantSecurityManager:
         if not self.supabase:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Database service not initialized."
+                detail={"error": "service_unavailable", "message": "Database service not initialized."}
             )
 
         try:
@@ -105,7 +107,7 @@ class TenantSecurityManager:
             if not user_res or not user_res.user:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid or expired token."
+                    detail={"error": "unauthorized", "message": "Invalid or expired token."}
                 )
             
             user = user_res.user
@@ -113,7 +115,7 @@ class TenantSecurityManager:
             if not profile:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="User profile not registered."
+                    detail={"error": "forbidden", "message": "User profile not registered."}
                 )
             return profile
 
@@ -121,7 +123,7 @@ class TenantSecurityManager:
             logger.warning(f"Auth verification failed: {e}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Authentication failed."
+                detail={"error": "unauthorized", "message": "Authentication failed."}
             )
 
     def verify_tenant_access(self, target_company_id: Optional[str], current_user: dict) -> None:
@@ -136,7 +138,7 @@ class TenantSecurityManager:
         if not user_company_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="User is not assigned to any tenant organization."
+                detail={"error": "forbidden", "message": "User is not assigned to any tenant organization."}
             )
 
         if target_company_id and str(target_company_id) != str(user_company_id):
@@ -146,7 +148,7 @@ class TenantSecurityManager:
             )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied: You do not have permissions for this tenant."
+                detail={"error": "forbidden", "message": "Access denied: You do not have permissions for this tenant."}
             )
 
     def verify_resource_ownership(self, table_name: str, resource_id: str, current_user: dict) -> dict:
@@ -162,19 +164,19 @@ class TenantSecurityManager:
                 res = self.supabase.table(table_name).select("*").eq("id", resource_id).single().execute()
                 return res.data or {}
             except Exception:
-                raise HTTPException(status_code=404, detail=f"{table_name.capitalize()} not found.")
+                raise HTTPException(status_code=404, detail={"error": "not_found", "message": f"{table_name.capitalize()} not found."})
 
         user_company_id = current_user.get("company_id")
         if not user_company_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied: User has no tenant assignments."
+                detail={"error": "forbidden", "message": "Access denied: User has no tenant assignments."}
             )
 
         if not self.supabase:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Database service not initialized."
+                detail={"error": "service_unavailable", "message": "Database service not initialized."}
             )
 
         try:
@@ -198,11 +200,11 @@ class TenantSecurityManager:
                 if exist_check.data:
                     raise HTTPException(
                         status_code=status.HTTP_403_FORBIDDEN,
-                        detail="Access denied: Resource belongs to another organization."
+                        detail={"error": "forbidden", "message": "Access denied: Resource belongs to another organization."}
                     )
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"{table_name.capitalize()} not found."
+                    detail={"error": "not_found", "message": f"{table_name.capitalize()} not found."}
                 )
             
             return res.data[0]
@@ -210,7 +212,7 @@ class TenantSecurityManager:
             logger.error(f"Supabase APIError in verify_resource_ownership: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Database query error."
+                detail={"error": "internal_error", "message": "Database query error."}
             )
         except HTTPException:
             raise
@@ -218,7 +220,7 @@ class TenantSecurityManager:
             logger.error(f"Error checking resource ownership: {e}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"{table_name.capitalize()} not found."
+                detail={"error": "not_found", "message": f"{table_name.capitalize()} not found."}
             )
 
 # Create singleton security manager

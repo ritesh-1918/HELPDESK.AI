@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 import sys
 import hmac
@@ -12,6 +13,8 @@ from backend.auth_cookie import (
     ACCESS_COOKIE,
     REFRESH_COOKIE,
     extract_token,
+    get_user_role,
+    require_roles,
     _cookie_kwargs,
     _set_session_cookies,
     _clear_session_cookies,
@@ -46,6 +49,47 @@ class _FakeSession:
     def __init__(self, access_token: str = "acc-tok", refresh_token: str = "ref-tok"):
         self.access_token = access_token
         self.refresh_token = refresh_token
+
+
+# ---------------------------------------------------------------------------
+# RBAC role helper tests
+# ---------------------------------------------------------------------------
+
+
+def test_get_user_role_defaults_to_user():
+    assert get_user_role({}) == "user"
+    assert get_user_role(None) == "user"
+
+
+def test_get_user_role_prefers_direct_role_and_normalizes():
+    assert get_user_role({"role": "Company-Admin"}) == "company_admin"
+
+
+def test_get_user_role_reads_supabase_user_metadata():
+    user = {"user_metadata": {"role": "support-agent"}}
+    assert get_user_role(user) == "support_agent"
+
+
+def test_get_user_role_reads_supabase_app_metadata():
+    user = {"app_metadata": {"user_role": "Master-Admin"}}
+    assert get_user_role(user) == "master_admin"
+
+
+def test_require_roles_allows_matching_role():
+    dependency = require_roles("admin")
+    result = asyncio.run(dependency({"user_metadata": {"role": "admin"}}))
+    assert result == {"user_metadata": {"role": "admin"}}
+
+
+def test_require_roles_rejects_non_matching_role():
+    dependency = require_roles("admin")
+    try:
+        asyncio.run(dependency({"user_metadata": {"role": "user"}}))
+    except Exception as exc:
+        assert exc.status_code == 403
+        assert exc.detail == "Insufficient role permissions"
+    else:
+        raise AssertionError("Expected HTTPException")
 
 
 # ---------------------------------------------------------------------------

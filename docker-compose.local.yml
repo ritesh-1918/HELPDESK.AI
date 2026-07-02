@@ -1,0 +1,81 @@
+# ============================================================
+# HELPDESK.AI — Docker Compose for Local Development
+# ============================================================
+# Lightweight local development stack: database + Redis only.
+# Run the backend and frontend natively for hot-reload debugging.
+#
+# Usage:
+#   docker compose -f docker-compose.local.yml up -d
+#   # Then run backend:  uvicorn main:app --reload --port 7860
+#   # Then run frontend: cd Frontend && npm run dev
+#   docker compose -f docker-compose.local.yml down
+# ============================================================
+
+version: "3.9"
+
+services:
+  # ── Database: PostgreSQL with pgvector ──────────────────────
+  db:
+    image: pgvector/pgvector:pg15
+    container_name: helpdesk_local_db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local_dev_db_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-helpdesk}
+    volumes:
+      - pg_local_data:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-helpdesk}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - helpdesk_local
+
+  # ── Redis Cache ─────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: helpdesk_local_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --save 60 1 --loglevel warning
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - redis_local_data:/data
+    networks:
+      - helpdesk_local
+
+  # ── PostgREST: Auto REST API from DB ────────────────────────
+  api:
+    image: postgrest/postgrest:latest
+    container_name: helpdesk_local_api
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      PGRST_DB_URI: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-local_dev_db_pass}@db:5432/${POSTGRES_DB:-helpdesk}
+      PGRST_DB_SCHEMA: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${PGRST_JWT_SECRET:-dev-jwt-secret-change-me}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - helpdesk_local
+
+volumes:
+  pg_local_data:
+  redis_local_data:
+
+networks:
+  helpdesk_local:
+    driver: bridge

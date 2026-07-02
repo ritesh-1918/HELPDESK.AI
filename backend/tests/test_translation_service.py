@@ -7,6 +7,7 @@ and target language validation.
 """
 
 import sys
+import types
 import os
 import unittest
 from unittest.mock import patch, MagicMock
@@ -296,15 +297,6 @@ All tests are self-contained: langdetect and transformers are mocked via
 sys.modules injection so the suite runs without optional ML packages installed.
 """
 
-import sys
-import types
-import unittest
-from unittest.mock import MagicMock, patch, call
-
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
-
-
 # ---------------------------------------------------------------------------
 # Module stubs (langdetect + transformers not installed in CI)
 # ---------------------------------------------------------------------------
@@ -356,10 +348,8 @@ from backend.services.translation_service import (
     detect_language,
     get_supported_languages,
     _get_model_name,
-    translate_text,
     translate_ticket,
     clear_cache,
-    SUPPORTED_LANGUAGES,
     MAX_TEXT_LENGTH,
     MAX_CACHE_SIZE,
 )
