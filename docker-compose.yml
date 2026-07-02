@@ -82,10 +82,51 @@ services:
     networks:
       - helpdesk_net
 
+  # ── Database: PostgreSQL with pgvector ─────────────────────────────────────
+  db:
+    image: pgvector/pgvector:pg15
+    container_name: helpdesk_db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local_dev_db_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-helpdesk}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-helpdesk}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - helpdesk_net
+
+  # ── API: PostgREST for direct DB access ────────────────────────────────────
+  api:
+    image: postgrest/postgrest:latest
+    container_name: helpdesk_api
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      PGRST_DB_URI: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-local_dev_db_pass}@db:5432/${POSTGRES_DB:-helpdesk}
+      PGRST_DB_SCHEMA: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${PGRST_JWT_SECRET}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - helpdesk_net
+
 volumes:
   model_cache:
   ticket_data:
   redis_data:
+  pg_data:
 
 networks:
   helpdesk_net:

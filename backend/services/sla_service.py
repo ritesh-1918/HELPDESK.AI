@@ -100,6 +100,61 @@ def classify_sla_status(sla_breach_at: str | None, now: datetime | None = None) 
     return "ACTIVE"
 
 
+def get_sla_status(
+    ticket: dict[str, Any],
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Compute real-time SLA status for a single ticket.
+
+    Returns a dict with:
+    - status         : "active" | "warning" | "critical" | "breached"
+    - remaining_seconds : seconds left until breach (negative if already breached)
+    - percentage_used   : 0–100+ percent of the SLA window consumed
+    - severity          : "healthy" | "warning" | "critical" | "breached"
+    """
+    current = now or _utc_now()
+
+    priority = normalize_priority(ticket.get("priority"))
+    total_hours = RESOLUTION_DEADLINES_HOURS[priority]
+    total_seconds = total_hours * 3600
+
+    sla_breach_at_raw: str | None = ticket.get("sla_breach_at")
+    deadline = parse_sla_datetime(sla_breach_at_raw)
+
+    if deadline is None:
+        # No deadline stored — treat as fully active
+        return {
+            "status": "active",
+            "remaining_seconds": total_seconds,
+            "percentage_used": 0,
+            "severity": "healthy",
+        }
+
+    remaining_seconds = int((deadline - current).total_seconds())
+    elapsed_seconds = total_seconds - remaining_seconds
+    percentage_used = round((elapsed_seconds / total_seconds) * 100) if total_seconds > 0 else 100
+
+    if remaining_seconds <= 0:
+        status = "breached"
+        severity = "breached"
+    elif percentage_used >= 90:
+        status = "critical"
+        severity = "critical"
+    elif percentage_used >= 75:
+        status = "warning"
+        severity = "warning"
+    else:
+        status = "active"
+        severity = "healthy"
+
+    return {
+        "status": status,
+        "remaining_seconds": remaining_seconds,
+        "percentage_used": min(percentage_used, 100),
+        "severity": severity,
+    }
+
+
 def is_terminal_status(status: str | None) -> bool:
     return str(status or "").strip().lower() in TERMINAL_STATUSES
 

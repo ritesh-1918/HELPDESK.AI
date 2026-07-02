@@ -98,16 +98,48 @@ export const api = {
     return { data: created };
   },
 
-  predictTicket: async (issueText, imageBase64 = '') => {
-    const currentUser = JSON.parse(sessionStorage.getItem("currentUser") || "{}");
-    const response = await apiClient.post('/ai/analyze_ticket', {
-      text: issueText,
-      image_base64: imageBase64,
-      image_text: "",
-      company_id: currentUser.company_id || currentUser.companyId || null
-    });
+  predictTicket: async (issueText: string, imageBase64 = ''): Promise<{ data: AIAnalysisResult }> => {
+    let currentUser: Record<string, unknown> = {};
+    try {
+      currentUser = JSON.parse(sessionStorage.getItem("currentUser") || "{}");
+    } catch {
+      console.warn("[predictTicket] Failed to parse currentUser from sessionStorage.");
+    }
+
+    let response;
+    try {
+      response = await apiClient.post('/ai/analyze_ticket', {
+        text: issueText,
+        image_base64: imageBase64,
+        image_text: "",
+        company_id: currentUser.company_id || currentUser.companyId || null
+      });
+    } catch (error: unknown) {
+      const axiosError = error as { response?: { status: number; data?: { detail?: string } }; message?: string };
+      const status = axiosError?.response?.status;
+      const detail = axiosError?.response?.data?.detail;
+
+      if (status === 401) {
+        throw new Error("Session expired. Please log in again.");
+      }
+      if (status === 429) {
+        throw new Error("Too many requests. Please wait a moment before trying again.");
+      }
+      if (status && status >= 500) {
+        throw new Error("The AI service is temporarily unavailable. Please try again later.");
+      }
+
+      // Surface the real error — never fall back to mock data silently
+      throw new Error(
+        detail || axiosError?.message || "Ticket analysis failed. Please try again."
+      );
+    }
 
     const result = response.data;
+
+    if (!result || typeof result !== "object") {
+      throw new Error("Received an invalid response from the AI service.");
+    }
 
     return {
       data: {

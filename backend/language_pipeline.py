@@ -109,12 +109,21 @@ def translate_to_english(text: str, source_lang: str) -> str:
         return text
 
     model_name = f"Helsinki-NLP/opus-mt-{lang}-en"
+    fallback_model_name = "Helsinki-NLP/opus-mt-mul-en"
     try:
         return _run_translation(text, model_name)
     except Exception as exc:
         logger.warning(
-            "translate_to_english failed (model=%s): %s – returning original text",
+            "translate_to_english failed (model=%s): %s – trying multilingual fallback",
             model_name, exc,
+        )
+
+    try:
+        return _run_translation(text, fallback_model_name)
+    except Exception as exc:
+        logger.warning(
+            "translate_to_english fallback failed (model=%s): %s – returning original text",
+            fallback_model_name, exc,
         )
         return text
 
@@ -183,20 +192,31 @@ def detect_and_translate_ticket_text(text: str) -> dict:
 
     lang = str(detected_lang).lower().split("-")[0][:2]
     model_name = f"Helsinki-NLP/opus-mt-{lang}-en"
+    fallback_model_name = "Helsinki-NLP/opus-mt-mul-en"
     translated_text = original_text
     failure_reason = "translation returned original text"
 
-    try:
-        translated_text = _run_translation(original_text, model_name)
-    except Exception as e:
-        failure_reason = str(e)
-        logger.error(
-            "Translation failed: %s | detected language: %s",
-            str(e),
-            detected_lang,
-        )
+    for candidate_model in (model_name, fallback_model_name):
+        try:
+            translated_text = _run_translation(original_text, candidate_model)
+            if translated_text and translated_text.strip() and translated_text.strip() != original_text:
+                break
+            failure_reason = f"{candidate_model} returned original or empty text"
+        except Exception as e:
+            failure_reason = str(e)
+            logger.error(
+                "Translation failed: %s | detected language: %s | model: %s",
+                str(e),
+                detected_lang,
+                candidate_model,
+            )
 
     if not translated_text or not translated_text.strip() or translated_text.strip() == original_text:
+        logger.error(
+            "Translation attempted but failed: %s | detected language: %s",
+            failure_reason,
+            detected_lang,
+        )
         logger.warning(
             "detect_and_translate_ticket_text: translation returned empty/unchanged text "
             "(lang=%s, original_len=%d). Setting translation_failed=True.",

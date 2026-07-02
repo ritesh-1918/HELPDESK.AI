@@ -69,40 +69,45 @@ def decrypt(cipher_text: str, tenant_id: str | None = None, field_name: str | No
     return decrypt_field(cipher_text, tenant_id=tenant_id, field_name=field_name)
 
 # ORM Payload Processing Helpers
-TARGET_FIELDS = {"contact_email", "description", "raw_text"}
+TABLE_PII_FIELDS = {
+    "tickets": {"contact_email", "description", "raw_text"},
+    "profiles": {"email", "full_name", "phone"},
+}
 
-def encrypt_row(row: dict) -> dict:
+def encrypt_row(row: dict, table_name: str = "tickets") -> dict:
     if not isinstance(row, dict):
         return row
     new_row = dict(row)
     company_id = row.get("company_id")
-    for field in TARGET_FIELDS:
+    fields = TABLE_PII_FIELDS.get(table_name, set())
+    for field in fields:
         if field in new_row and new_row[field] is not None:
             new_row[field] = encrypt(str(new_row[field]), tenant_id=company_id, field_name=field)
     return new_row
 
-def decrypt_row(row: dict) -> dict:
+def decrypt_row(row: dict, table_name: str = "tickets") -> dict:
     if not isinstance(row, dict):
         return row
     new_row = dict(row)
     company_id = row.get("company_id")
-    for field in TARGET_FIELDS:
+    fields = TABLE_PII_FIELDS.get(table_name, set())
+    for field in fields:
         if field in new_row and new_row[field] is not None:
             new_row[field] = decrypt(str(new_row[field]), tenant_id=company_id, field_name=field)
     return new_row
 
-def encrypt_payload(payload: Any) -> Any:
+def encrypt_payload(payload: Any, table_name: str = "tickets") -> Any:
     if isinstance(payload, list):
-        return [encrypt_row(row) for row in payload]
+        return [encrypt_row(row, table_name) for row in payload]
     elif isinstance(payload, dict):
-        return encrypt_row(payload)
+        return encrypt_row(payload, table_name)
     return payload
 
-def decrypt_payload(payload: Any) -> Any:
+def decrypt_payload(payload: Any, table_name: str = "tickets") -> Any:
     if isinstance(payload, list):
-        return [decrypt_row(row) for row in payload]
+        return [decrypt_row(row, table_name) for row in payload]
     elif isinstance(payload, dict):
-        return decrypt_row(payload)
+        return decrypt_row(payload, table_name)
     return payload
 
 # Transparent client query wrapper proxy
@@ -112,21 +117,21 @@ class WrappedRequestBuilder:
         object.__setattr__(self, "_table_name", table_name)
 
     def insert(self, json: Any, *args, **kwargs) -> "WrappedRequestBuilder":
-        if self._table_name == "tickets":
-            json = encrypt_payload(json)
+        if self._table_name in TABLE_PII_FIELDS:
+            json = encrypt_payload(json, self._table_name)
         res = self._builder.insert(json, *args, **kwargs)
         return WrappedRequestBuilder(res, self._table_name)
 
     def update(self, json: Any, *args, **kwargs) -> "WrappedRequestBuilder":
-        if self._table_name == "tickets":
-            json = encrypt_payload(json)
+        if self._table_name in TABLE_PII_FIELDS:
+            json = encrypt_payload(json, self._table_name)
         res = self._builder.update(json, *args, **kwargs)
         return WrappedRequestBuilder(res, self._table_name)
 
     def execute(self, *args, **kwargs) -> Any:
         res = self._builder.execute(*args, **kwargs)
-        if self._table_name == "tickets" and res and hasattr(res, "data"):
-            res.data = decrypt_payload(res.data)
+        if self._table_name in TABLE_PII_FIELDS and res and hasattr(res, "data"):
+            res.data = decrypt_payload(res.data, self._table_name)
         return res
 
     def __getattr__(self, name: str) -> Any:
@@ -147,7 +152,7 @@ class WrappedRequestBuilder:
 
 
 def wrap_client(client: Any) -> Any:
-    """Wraps a Supabase client's table method for transparent tickets encryption."""
+    """Wraps a Supabase client's table method for transparent encryption."""
     if client is None:
         return None
 
@@ -159,7 +164,7 @@ def wrap_client(client: Any) -> Any:
 
     def wrapped_table(table_name: str, *args, **kwargs) -> Any:
         builder = original_table(table_name, *args, **kwargs)
-        if table_name == "tickets":
+        if table_name in TABLE_PII_FIELDS:
             return WrappedRequestBuilder(builder, table_name)
         return builder
 
@@ -168,7 +173,7 @@ def wrap_client(client: Any) -> Any:
     return client
 
 def apply_db_encryption_patch():
-    """Apply transparent monkeypatch to Postgrest/Supabase client execute method for 'tickets' table."""
+    """Apply transparent monkeypatch to Postgrest/Supabase client execute method for PII-encrypted tables."""
     try:
         from postgrest._sync.request_builder import SyncQueryRequestBuilder
         
@@ -178,35 +183,37 @@ def apply_db_encryption_patch():
             path_str = getattr(self.request.path, "path", "")
             table_name = path_str.split('/')[-1]
             
-            if table_name == "tickets":
+            if table_name in TABLE_PII_FIELDS:
                 payload = self.request.json
+                fields = TABLE_PII_FIELDS[table_name]
                 if isinstance(payload, dict):
                     company_id = payload.get("company_id")
-                    for field in ["contact_email", "description", "raw_text"]:
+                    for field in fields:
                         if field in payload and payload[field] is not None:
                             payload[field] = encrypt(str(payload[field]), tenant_id=company_id, field_name=field)
                 elif isinstance(payload, list):
                     for item in payload:
                         if isinstance(item, dict):
                             company_id = item.get("company_id")
-                            for field in ["contact_email", "description", "raw_text"]:
+                            for field in fields:
                                 if field in item and item[field] is not None:
                                     item[field] = encrypt(str(item[field]), tenant_id=company_id, field_name=field)
                                     
             res = _original_execute(self)
             
-            if table_name == "tickets" and res and hasattr(res, "data"):
+            if table_name in TABLE_PII_FIELDS and res and hasattr(res, "data"):
                 data = res.data
+                fields = TABLE_PII_FIELDS[table_name]
                 if isinstance(data, dict):
                     company_id = data.get("company_id")
-                    for field in ["contact_email", "description", "raw_text"]:
+                    for field in fields:
                         if field in data and data[field] is not None:
                             data[field] = decrypt(str(data[field]), tenant_id=company_id, field_name=field)
                 elif isinstance(data, list):
                     for item in data:
                         if isinstance(item, dict):
                             company_id = item.get("company_id")
-                            for field in ["contact_email", "description", "raw_text"]:
+                            for field in fields:
                                 if field in item and item[field] is not None:
                                     item[field] = decrypt(str(item[field]), tenant_id=company_id, field_name=field)
                                     
@@ -216,3 +223,6 @@ def apply_db_encryption_patch():
         print("[Crypto] Supabase database encryption patch applied successfully.")
     except Exception as e:
         print(f"[Crypto WARNING] Failed to apply database encryption patch: {e}")
+
+# Automatically apply the monkeypatch on module load
+apply_db_encryption_patch()
