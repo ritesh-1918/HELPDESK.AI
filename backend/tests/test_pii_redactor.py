@@ -2,11 +2,11 @@
 Tests for PII Redaction Engine — email, phone number, and API key masking.
 """
 
-import sys, os
+import sys
+import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "services"))
 from pii_redactor import redact_pii, find_pii, count_pii, REDACTED
 
-import pytest
 
 
 class TestEmailRedaction:
@@ -68,7 +68,7 @@ class TestKeyRedaction:
         assert REDACTED in result
 
     def test_redacts_token_in_environment_variable(self):
-        result = redact_pii("export GITHUB_TOKEN=***
+        result = redact_pii("export GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx")
         assert REDACTED in result or "ghp_xx...xxxx" not in result
 
 

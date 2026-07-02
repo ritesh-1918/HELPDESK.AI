@@ -1,0 +1,72 @@
+[
+  {
+    "id": "kb-001",
+    "title": "VPN Authentication Error 401 — How to Fix",
+    "content": "If you see 'Authentication Failed' or error 401 when connecting to the VPN, first confirm your password hasn't expired by logging into the company portal directly. Clear the saved VPN credentials in the client (Settings > Forget Saved Password), then reconnect and re-enter your username and password. If MFA prompts never arrive, check that your phone has signal and the authenticator app clock is synced. Persistent failures after these steps usually mean your account was locked after repeated attempts — wait 15 minutes or contact IT to unlock it.",
+    "tags": ["vpn", "authentication", "401", "login", "mfa", "password"],
+    "category": "Network"
+  },
+  {
+    "id": "kb-002",
+    "title": "Laptop Overheating and Unexpected Shutdowns",
+    "content": "Overheating is most often caused by blocked air vents or dust buildup in the fan. Place the laptop on a hard, flat surface (not a bed or couch), and check that the fan spins up under load. Close unnecessary background apps, especially browser tabs and video conferencing tools, which are common CPU hogs. If the device still overheats at idle, it likely needs a physical cleaning or thermal paste replacement — submit a hardware ticket so IT can inspect it in person. Avoid running the laptop on battery saver mode long-term as this can mask the underlying issue.",
+    "tags": ["laptop", "overheating", "hardware", "shutdown", "fan"],
+    "category": "Hardware"
+  },
+  {
+    "id": "kb-003",
+    "title": "Blue Screen of Death (BSOD) — First Steps",
+    "content": "A Blue Screen usually points to a driver conflict, failing RAM, or disk corruption. Note the stop code shown on the blue screen if possible. Restart the machine and let Windows attempt automatic repair. Run 'chkdsk /f' from an elevated command prompt and check Windows Update for pending driver updates. If the BSOD repeats within a session or two, back up any unsaved work immediately and open a hardware ticket, since repeated BSODs can indicate a failing hard drive.",
+    "tags": ["bsod", "blue screen", "crash", "windows", "data loss"],
+    "category": "Hardware"
+  },
+  {
+    "id": "kb-004",
+    "title": "Payroll System Login Failures",
+    "content": "Payroll system logins fail most commonly due to expired passwords or a VPN/firewall blocking the authentication request. Confirm you're connected to the company VPN before attempting to log in, since the payroll portal is only reachable internally. If you get 'Authentication Failed' despite a correct password, try resetting it via the self-service portal — repeated failed attempts can also trigger a temporary account lock. If MFA codes aren't arriving, check with IT whether your number needs to be re-registered.",
+    "tags": ["payroll", "login", "authentication failed", "vpn", "firewall"],
+    "category": "Software"
+  },
+  {
+    "id": "kb-005",
+    "title": "Wi-Fi Keeps Dropping or Disconnecting",
+    "content": "Intermittent Wi-Fi drops are usually caused by weak signal strength in certain areas of the office, channel congestion, or a laptop's power-saving settings turning the adapter off. Move closer to an access point to confirm signal strength is the issue. In Windows, disable 'Allow the computer to turn off this device to save power' under the network adapter's power management settings. If the problem persists in a specific location only, report it as a facilities/network coverage issue so IT can check the access point in that area.",
+    "tags": ["wifi", "wireless", "network", "disconnect", "signal"],
+    "category": "Network"
+  },
+  {
+    "id": "kb-006",
+    "title": "Application Crashing After Recent Update",
+    "content": "If an application started crashing right after an update, the most likely cause is a compatibility issue between the new version and existing plugins, extensions, or OS libraries. Try clearing the app's cache/temp files, then reinstalling the latest version. Check the vendor's release notes for known issues with your OS version. If the crash includes a specific error code, search for that code in the vendor's support docs before escalating — this resolves the majority of post-update crash tickets.",
+    "tags": ["crash", "software", "update", "compatibility", "application"],
+    "category": "Software"
+  },
+  {
+    "id": "kb-007",
+    "title": "Firewall Blocking MFA / Authentication Requests",
+    "content": "Corporate firewalls occasionally block outbound requests to MFA/authenticator push-notification services after a security policy change. Symptoms include logins that accept the password but never deliver the MFA push or code. Confirm whether the issue happens only on the office network (test on mobile data as a comparison). If confirmed, this needs to be escalated to network/security to allow-list the MFA provider's endpoints — it is not something end users can resolve themselves.",
+    "tags": ["firewall", "mfa", "authentication", "security", "network"],
+    "category": "Network"
+  },
+  {
+    "id": "kb-008",
+    "title": "Password Reset Self-Service Guide",
+    "content": "Most account lockouts and 'incorrect password' errors can be resolved through the self-service password reset portal without waiting for IT. Go to the company SSO login page and select 'Forgot Password', then verify your identity via your registered email or phone. New passwords must be at least 12 characters and cannot reuse your last 5 passwords. Allow a few minutes for the change to sync across VPN, email, and internal tools before retrying login.",
+    "tags": ["password", "reset", "account", "lockout", "sso"],
+    "category": "Account"
+  },
+  {
+    "id": "kb-009",
+    "title": "Screen Freezing or Unresponsive System",
+    "content": "A frozen screen with no response to mouse or keyboard input is often caused by a hung process consuming all available memory or CPU. Wait 30-60 seconds in case the system recovers on its own. If not, hold the power button for 10 seconds to force a restart, then check Task Manager/Activity Monitor after reboot for any application using unusually high resources. Frequent freezing across multiple sessions may indicate failing RAM and should be logged as a hardware ticket.",
+    "tags": ["freeze", "unresponsive", "hang", "screen", "system"],
+    "category": "Hardware"
+  },
+  {
+    "id": "kb-010",
+    "title": "Slow Laptop Performance Troubleshooting",
+    "content": "Gradual slowdowns are usually caused by too many startup programs, a nearly-full disk, or malware/antivirus scans running in the background. Check available disk space (aim for at least 15% free) and disable unnecessary startup apps. Run a full antivirus scan during off-hours. If the slowdown coincided with a specific software install, consider uninstalling it to test. Hardware over 3-4 years old may simply need a RAM or SSD upgrade — flag this to IT if software fixes don't help.",
+    "tags": ["slow", "performance", "laptop", "disk space", "startup"],
+    "category": "Hardware"
+  }
+]

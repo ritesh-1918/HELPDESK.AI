@@ -6,110 +6,115 @@ edge cases, get_data_dir, and additional error paths.
 """
 
 import json
-import os
-import sys
-import tempfile
-import unittest
+from pathlib import Path
 
-sys.path.insert(
-    0,
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")),
-)
+import pytest
 
 from backend.utils.data_loader import (
+    get_data_dir,
     load_json_data,
     save_json_data,
-    get_data_dir,
 )
 
 
-class TestSaveJsonData(unittest.TestCase):
-    def test_save_and_reload(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            path = os.path.join(tmp, "sub", "data.json")
-            self.assertTrue(save_json_data(path, [{"a": 1}, {"b": 2}]))
-            data = load_json_data(path)
-            self.assertEqual(data, [{"a": 1}, {"b": 2}])
+# ─── save_json_data ───────────────────────────────────────────────────────────
 
-    def test_creates_parent_directories(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            path = os.path.join(tmp, "deeply", "nested", "path", "f.json")
-            self.assertTrue(save_json_data(path, [1, 2, 3]))
-            self.assertTrue(os.path.exists(path))
-
-    def test_save_empty_list(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            path = os.path.join(tmp, "f.json")
-            self.assertTrue(save_json_data(path, []))
-            self.assertEqual(load_json_data(path), [])
-
-    def test_save_non_list_data(self):
-        # save_json_data does not validate type; just writes JSON
-        with tempfile.TemporaryDirectory() as tmp:
-            path = os.path.join(tmp, "f.json")
-            self.assertTrue(save_json_data(path, {"a": 1}))
-            with open(path) as f:
-                content = f.read()
-            self.assertIn('"a"', content)
+def test_save_and_reload(tmp_path):
+    p = tmp_path / "sub" / "data.json"
+    assert save_json_data(str(p), [{"a": 1}, {"b": 2}]) is True
+    assert load_json_data(str(p)) == [{"a": 1}, {"b": 2}]
 
 
-class TestLoadJsonDataExtended(unittest.TestCase):
-    def test_non_list_json_returns_empty(self):
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            json.dump({"key": "value"}, f)
-            f.flush()
-            try:
-                self.assertEqual(load_json_data(f.name), [])
-            finally:
-                os.unlink(f.name)
-
-    def test_string_json_returns_empty(self):
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            f.write('"just a string"')
-            f.flush()
-            try:
-                self.assertEqual(load_json_data(f.name), [])
-            finally:
-                os.unlink(f.name)
-
-    def test_number_json_returns_empty(self):
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            f.write("42")
-            f.flush()
-            try:
-                self.assertEqual(load_json_data(f.name), [])
-            finally:
-                os.unlink(f.name)
-
-    def test_unicode_content(self):
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, encoding="utf-8") as f:
-            json.dump([{"name": "\u4e2d\u6587"}], f, ensure_ascii=False)
-            f.flush()
-            try:
-                data = load_json_data(f.name)
-                self.assertEqual(data, [{"name": "\u4e2d\u6587"}])
-            finally:
-                os.unlink(f.name)
-
-    def test_nested_list(self):
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            json.dump([[1, 2], [3, 4]], f)
-            f.flush()
-            try:
-                self.assertEqual(load_json_data(f.name), [[1, 2], [3, 4]])
-            finally:
-                os.unlink(f.name)
+def test_creates_parent_directories(tmp_path):
+    p = tmp_path / "deeply" / "nested" / "path" / "f.json"
+    assert save_json_data(str(p), [1, 2, 3]) is True
+    assert p.exists()
 
 
-class TestGetDataDir(unittest.TestCase):
-    def test_returns_absolute_path(self):
-        path = get_data_dir()
-        self.assertTrue(os.path.isabs(path))
-
-    def test_ends_with_data(self):
-        path = get_data_dir()
-        self.assertTrue(path.endswith("data") or path.endswith("data/"))
+def test_save_empty_list(tmp_path):
+    p = tmp_path / "f.json"
+    assert save_json_data(str(p), []) is True
+    assert load_json_data(str(p)) == []
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_save_non_list_data(tmp_path):
+    # save_json_data does not validate type; just writes JSON
+    p = tmp_path / "f.json"
+    assert save_json_data(str(p), {"a": 1}) is True
+    assert '"a"' in p.read_text()
+
+
+def test_save_json_data_unserializable_raises(tmp_path):
+    p = tmp_path / "f.json"
+    with pytest.raises((TypeError, ValueError)):
+        save_json_data(str(p), [object()])
+
+
+def test_save_json_data_read_only_dir(tmp_path):
+    ro = tmp_path / "readonly"
+    ro.mkdir()
+    ro.chmod(0o444)
+    try:
+        result = save_json_data(str(ro / "f.json"), [1])
+        assert result is False
+    finally:
+        ro.chmod(0o755)
+
+
+# ─── load_json_data ───────────────────────────────────────────────────────────
+
+@pytest.mark.parametrize("content", [
+    '{"key": "value"}',
+    '"just a string"',
+    "42",
+    "null",
+    "true",
+    "false",
+])
+def test_non_list_json_returns_empty(tmp_path, content):
+    p = tmp_path / "f.json"
+    p.write_text(content)
+    assert load_json_data(str(p)) == []
+
+
+def test_unicode_content(tmp_path):
+    p = tmp_path / "f.json"
+    p.write_text('[{"name": "中文"}]', encoding="utf-8")
+    assert load_json_data(str(p)) == [{"name": "中文"}]
+
+
+def test_nested_list(tmp_path):
+    p = tmp_path / "f.json"
+    p.write_text("[[1, 2], [3, 4]]")
+    assert load_json_data(str(p)) == [[1, 2], [3, 4]]
+
+
+def test_load_json_data_permission_error(tmp_path):
+    p = tmp_path / "f.json"
+    p.write_text("[1]")
+    p.chmod(0o000)
+    try:
+        result = load_json_data(str(p))
+        assert result == []
+    finally:
+        p.chmod(0o644)
+
+
+def test_load_json_data_missing_file_returns_empty():
+    assert load_json_data("/nonexistent/path/file.json") == []
+
+
+def test_load_json_data_corrupt_json(tmp_path):
+    p = tmp_path / "bad.json"
+    p.write_text("{corrupt json{{")
+    assert load_json_data(str(p)) == []
+
+
+# ─── get_data_dir ─────────────────────────────────────────────────────────────
+
+def test_get_data_dir_returns_absolute_path():
+    assert Path(get_data_dir()).is_absolute()
+
+
+def test_get_data_dir_ends_with_data():
+    assert Path(get_data_dir()).name == "data"

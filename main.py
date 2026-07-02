@@ -1,22 +1,28 @@
 import logging
 import os
 from fastapi import FastAPI, Request, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
 from supabase import create_client
 
 from contextlib import asynccontextmanager
 from backend.csrf import CSRFTokenMiddleware, set_csrf_cookie, CSRF_COOKIE_NAME
+from backend.swagger_config import SWAGGER_UI_CUSTOM_CSS, SWAGGER_UI_CUSTOM_JS
+from backend.routers import metrics as metrics_router
 from backend.database import close_supabase as close_db_supabase
 
 from backend.routers import tickets, ai, admin, health, auth
 from backend.routes import translation, estimator, voice, privacy, active_learning, weekly_digest
+from backend.routers import upload as upload_router
 
-logging.basicConfig(level=logging.INFO)
+from backend.logger import configure_logging
+configure_logging()
 logger = logging.getLogger(__name__)
 
 
+app.include_router(upload_router.router)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     yield
@@ -26,19 +32,15 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(CSRFTokenMiddleware)
+app.include_router(metrics_router.router)
+
+from backend.config import settings
 
 # Initialize Supabase client
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
-
-# Initialize Supabase client
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
-
 supabase = None
-if SUPABASE_URL and SUPABASE_SERVICE_KEY and os.getenv("ALLOW_DEGRADED_STARTUP") != "1":
+if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_KEY and not settings.ALLOW_DEGRADED_STARTUP:
     try:
-        supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+        supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
     except Exception as e:
         logger.warning(f"Failed to initialize Supabase client: {e}")
 
@@ -82,10 +84,23 @@ async def list_tickets(
     """List tickets scoped to the authenticated user's tenant."""
     security_manager.verify_tenant_access(company_id, user)
     if supabase:
+        from backend.services.redis_cache import redis_cache
+        cache_key = f"helpdesk:tickets:list:{company_id or 'all'}"
+        
+        if redis_cache.available:
+            cached = redis_cache.get_json(cache_key)
+            if cached is not None:
+                return cached
+
         query = supabase.table("tickets").select("*").order("created_at", desc=True)
         if company_id:
             query = query.eq("company_id", company_id)
-        return query.execute().data
+        data = query.execute().data
+        
+        if redis_cache.available:
+            redis_cache.set_json(cache_key, data, ttl=300)
+            
+        return data
     return []
 
 
@@ -181,20 +196,161 @@ async def security_report(
 
 @app.get("/auth/csrf-token", tags=["Auth"])
 async def get_csrf_token(response: JSONResponse):
+    """Issue a CSRF token cookie for authenticated browser sessions."""
     token = set_csrf_cookie(response)
     return {"csrf_token": token}
 
 @app.get("/docs", include_in_schema=False)
 async def get_docs():
-    return get_redoc_html(
+    """Serve the themed Swagger UI for interactive API exploration."""
+    swagger_html = get_swagger_ui_html(
         openapi_url="/openapi.json",
-        title="HelpDesk AI Backend",
-        redoc_favicon_url="https://helpdeskaiv1.vercel.app/favicon.ico",
-        with_google_font=False,
+        title="HelpDesk AI Backend - Swagger UI",
+        swagger_css_url="/docs/theme.css",
+        swagger_favicon_url="https://helpdeskaiv1.vercel.app/favicon.ico",
+        swagger_ui_parameters={
+            "docExpansion": "list",
+            "deepLinking": True,
+            "displayRequestDuration": True,
+            "persistAuthorization": True,
+            "filter": True,
+        },
+    )
+    body = swagger_html.body.decode("utf-8").replace(
+        "</body>",
+        '<script src="/docs/theme.js"></script></body>',
+    )
+    return HTMLResponse(content=body, status_code=swagger_html.status_code)
+
+
+@app.get("/docs/theme.css", include_in_schema=False)
+async def get_docs_theme_css():
+    """Expose the custom Swagger UI theme stylesheet."""
+    return Response(content=SWAGGER_UI_CUSTOM_CSS, media_type="text/css")
+
+
+@app.get("/docs/theme.js", include_in_schema=False)
+async def get_docs_theme_js():
+    """Expose the custom Swagger UI bootstrap script."""
+    return Response(content=SWAGGER_UI_CUSTOM_JS, media_type="application/javascript")
+
+
+@app.get("/redoc", include_in_schema=False)
+async def get_redoc():
+    """Serve a themed ReDoc view for schema browsing."""
+    return HTMLResponse(
+        content="""
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HelpDesk AI Backend - ReDoc</title>
+    <link rel="icon" href="https://helpdeskaiv1.vercel.app/favicon.ico" />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0f172a;
+        --panel: #111827;
+        --panel-2: #1e293b;
+        --border: rgba(148, 163, 184, 0.2);
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+        --accent: #10b981;
+      }
+      html, body {
+        margin: 0;
+        min-height: 100%;
+        background: radial-gradient(circle at top, rgba(16, 185, 129, 0.12), transparent 35%), var(--bg);
+        color: var(--text);
+        font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      .shell {
+        min-height: 100vh;
+      }
+      .bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 16px 24px;
+        background: rgba(15, 23, 42, 0.9);
+        border-bottom: 1px solid var(--border);
+        backdrop-filter: blur(12px);
+      }
+      .brand {
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .subtitle {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      #redoc {
+        min-height: calc(100vh - 65px);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <div class="bar">
+        <div>
+          <div class="brand">HelpDesk.AI</div>
+          <div class="subtitle">ReDoc API reference</div>
+        </div>
+        <div class="subtitle">OpenAPI 1.0.0</div>
+      </div>
+      <div id="redoc"></div>
+    </div>
+    <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
+    <script>
+      Redoc.init('/openapi.json', {
+        theme: {
+          colors: {
+            primary: { main: '#10b981' },
+            http: {
+              get: '#22c55e',
+              post: '#3b82f6',
+              put: '#f59e0b',
+              patch: '#a855f7',
+              delete: '#ef4444'
+            },
+            text: {
+              primary: '#e2e8f0',
+              secondary: '#94a3b8'
+            },
+            border: {
+              dark: '#334155'
+            }
+          },
+          typography: {
+            fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
+            headings: {
+              fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'
+            }
+          },
+          sidebar: {
+            backgroundColor: '#0b1220',
+            textColor: '#cbd5e1'
+          },
+          rightPanel: {
+            backgroundColor: '#111827',
+            textColor: '#e2e8f0'
+          }
+        }
+      }, document.getElementById('redoc'));
+    </script>
+  </body>
+</html>
+        """,
+        media_type="text/html",
     )
 
 @app.get("/openapi.json", include_in_schema=False)
 async def get_open_api():
+    """Return the live OpenAPI schema used by the docs and Postman generator."""
     return get_openapi(
         title="HelpDesk AI Backend",
         version="1.0.0",

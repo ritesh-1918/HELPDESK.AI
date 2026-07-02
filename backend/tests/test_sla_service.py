@@ -7,6 +7,7 @@ from backend.services.sla_service import (
     SlaEscalationService,
     calculate_sla_breach_at,
     classify_sla_status,
+    get_sla_status,
 )
 
 
@@ -90,6 +91,56 @@ class SlaServiceTest(unittest.TestCase):
         self.assertEqual(classify_sla_status("2026-05-22T06:59:00Z", now), "BREACHED")
         self.assertEqual(classify_sla_status("2026-05-22T07:30:00Z", now), "WARNING")
         self.assertEqual(classify_sla_status("2026-05-22T09:00:00Z", now), "ACTIVE")
+
+    def test_get_sla_status_transitions(self):
+        # 4 hours resolution time for critical priority = 14400 seconds
+        now = datetime(2026, 5, 22, 12, 0, 0, tzinfo=timezone.utc)
+        
+        # 1. Healthy / Active: < 75% SLA consumption
+        # deadline is 3 hours away, meaning 1 hour elapsed out of 4 (25% consumed)
+        ticket_healthy = {
+            "priority": "critical",
+            "sla_breach_at": "2026-05-22T15:00:00Z"
+        }
+        res = get_sla_status(ticket_healthy, now)
+        self.assertEqual(res["status"], "active")
+        self.assertEqual(res["severity"], "healthy")
+        self.assertEqual(res["remaining_seconds"], 3 * 3600)
+        self.assertEqual(res["percentage_used"], 25)
+
+        # 2. Warning: between 75% and 89% SLA consumption
+        # deadline is 48 minutes away, meaning 3 hours 12 minutes elapsed (80% consumed)
+        ticket_warning = {
+            "priority": "critical",
+            "sla_breach_at": "2026-05-22T12:48:00Z"
+        }
+        res = get_sla_status(ticket_warning, now)
+        self.assertEqual(res["status"], "warning")
+        self.assertEqual(res["severity"], "warning")
+        self.assertEqual(res["percentage_used"], 80)
+
+        # 3. Critical: between 90% and 99% SLA consumption
+        # deadline is 12 minutes away, meaning 3 hours 48 minutes elapsed (95% consumed)
+        ticket_critical = {
+            "priority": "critical",
+            "sla_breach_at": "2026-05-22T12:12:00Z"
+        }
+        res = get_sla_status(ticket_critical, now)
+        self.assertEqual(res["status"], "critical")
+        self.assertEqual(res["severity"], "critical")
+        self.assertEqual(res["percentage_used"], 95)
+
+        # 4. Breached: 100%+ SLA consumption (remaining_seconds <= 0)
+        # deadline was 5 minutes ago (-300 seconds)
+        ticket_breached = {
+            "priority": "critical",
+            "sla_breach_at": "2026-05-22T11:55:00Z"
+        }
+        res = get_sla_status(ticket_breached, now)
+        self.assertEqual(res["status"], "breached")
+        self.assertEqual(res["severity"], "breached")
+        self.assertTrue(res["remaining_seconds"] <= 0)
+        self.assertEqual(res["percentage_used"], 100)
 
     def test_run_once_escalates_only_overdue_open_tickets(self):
         now = datetime(2026, 5, 22, 7, 0, tzinfo=timezone.utc)

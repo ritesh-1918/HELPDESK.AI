@@ -12,8 +12,9 @@ _supabase_instance = None
 
 try:
     from supabase import create_client, Client
-    url = os.environ.get("SUPABASE_URL")
-    key = os.environ.get("SUPABASE_SERVICE_KEY")
+    from backend.config import settings
+    url = settings.SUPABASE_URL
+    key = settings.SUPABASE_SERVICE_KEY
     if not url or not key:
         logger.error("SUPABASE_URL or SUPABASE_SERVICE_KEY not set in backend/.env")
         supabase = None

@@ -227,3 +227,45 @@ async def test_embeddings_use_stub_without_loading_sentence_transformer():
 
     assert result["is_duplicate"] is False
     service._model.encode.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_reindex_all_parallel_processing():
+    service = SemanticDuplicateService(supabase_client=MagicMock())
+    service._loaded = True
+    service._model = MagicMock()
+    
+    mock_pool = MagicMock()
+    service._model.start_multi_process_pool.return_value = mock_pool
+    
+    class FakeNumpyArray:
+        def __init__(self, vals):
+            self.vals = vals
+        def tolist(self):
+            return self.vals
+
+    service._model.encode_multi_process.return_value = [
+        FakeNumpyArray([0.1]*384),
+        FakeNumpyArray([0.2]*384)
+    ]
+    
+    mock_query = service.supabase.table.return_value.select.return_value.is_.return_value.range.return_value
+    mock_query.execute.side_effect = [
+        MagicMock(data=[
+            {"id": "t1", "subject": "subj1"},
+            {"id": "t2", "subject": "subj2"}
+        ]),
+        MagicMock(data=[])
+    ]
+    
+    result = await service.reindex_all(batch_size=2)
+    
+    assert result["indexed"] == 2
+    assert result["errors"] == 0
+    
+    service._model.start_multi_process_pool.assert_called_once()
+    service._model.encode_multi_process.assert_called_once_with(["subj1", "subj2"], mock_pool)
+    service._model.stop_multi_process_pool.assert_called_once_with(mock_pool)
+    
+    update_mock = service.supabase.table.return_value.update
+    assert update_mock.call_count == 2
