@@ -26,4 +26,4 @@ pytest-mock==3.14.0
 pycryptodome==3.21.0
 psutil>=5.9.0
 
-echo "python-magic>=0.4.27"
+python-magic>=0.4.27
