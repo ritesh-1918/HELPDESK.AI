@@ -55,7 +55,7 @@ jobs:
         with:
           python-version: "3.11"
           cache: "pip"
-          cache-dependency-path: "backend/requirements.txt"
+          cache-dependency-path: "requirements.txt"
 
       - name: Install dependencies (non-ML subset for CI speed)
         run: |
@@ -66,7 +66,7 @@ jobs:
                       requests httpx apscheduler \
                       pytest pytest-cov
           # Try full requirements but tolerate torch/transformers failures in CI
-          pip install -r backend/requirements.txt --ignore-requires-python || true
+          pip install -r requirements.txt --ignore-requires-python || true
 
       - name: Run import smoke test
         run: python scripts/smoke_test.py
