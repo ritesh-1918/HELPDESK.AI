@@ -72,8 +72,10 @@ class TestAutoCloseServiceRun(unittest.TestCase):
         settings_table_mock = Mock()
         settings_table_mock.select.return_value = settings_select_mock
         def table_side_effect(name):
-            if name == "tickets": return tickets_table_mock
-            elif name == "system_settings": return settings_table_mock
+            if name == "tickets":
+                return tickets_table_mock
+            elif name == "system_settings":
+                return settings_table_mock
             return Mock()
         mock_client.table.side_effect = table_side_effect
         mock_create_client.return_value = mock_client
@@ -112,8 +114,10 @@ class TestAutoCloseServiceRun(unittest.TestCase):
         settings_table_mock = Mock()
         settings_table_mock.select.return_value = settings_select_mock
         def table_side_effect(name):
-            if name == "tickets": return tickets_table_mock
-            elif name == "system_settings": return settings_table_mock
+            if name == "tickets":
+                return tickets_table_mock
+            elif name == "system_settings":
+                return settings_table_mock
             return Mock()
         mock_client.table.side_effect = table_side_effect
         mock_create_client.return_value = mock_client
@@ -152,8 +156,10 @@ class TestAutoCloseServiceRun(unittest.TestCase):
         settings_table_mock = Mock()
         settings_table_mock.select.return_value = settings_select_mock
         def table_side_effect(name):
-            if name == "tickets": return tickets_table_mock
-            elif name == "system_settings": return settings_table_mock
+            if name == "tickets":
+                return tickets_table_mock
+            elif name == "system_settings":
+                return settings_table_mock
             return Mock()
         mock_client.table.side_effect = table_side_effect
         mock_create_client.return_value = mock_client
@@ -191,8 +197,10 @@ class TestAutoCloseServiceRun(unittest.TestCase):
         settings_table_mock = Mock()
         settings_table_mock.select.return_value = settings_select_mock
         def table_side_effect(name):
-            if name == "tickets": return tickets_table_mock
-            elif name == "system_settings": return settings_table_mock
+            if name == "tickets":
+                return tickets_table_mock
+            elif name == "system_settings":
+                return settings_table_mock
             return Mock()
         mock_client.table.side_effect = table_side_effect
         mock_create_client.return_value = mock_client
@@ -229,8 +237,10 @@ class TestAutoCloseServiceRun(unittest.TestCase):
         settings_table_mock = Mock()
         settings_table_mock.select.return_value = settings_select_mock
         def table_side_effect(name):
-            if name == "tickets": return tickets_table_mock
-            elif name == "system_settings": return settings_table_mock
+            if name == "tickets":
+                return tickets_table_mock
+            elif name == "system_settings":
+                return settings_table_mock
             return Mock()
         mock_client.table.side_effect = table_side_effect
         mock_create_client.return_value = mock_client
@@ -267,8 +277,10 @@ class TestAutoCloseServiceRun(unittest.TestCase):
         tickets_table_mock = Mock()
         tickets_table_mock.select.return_value = tickets_select_mock2
         def table_side_effect(name):
-            if name == "tickets": return tickets_table_mock
-            elif name == "system_settings": return settings_table_mock
+            if name == "tickets":
+                return tickets_table_mock
+            elif name == "system_settings":
+                return settings_table_mock
             return Mock()
         mock_client.table.side_effect = table_side_effect
         mock_create_client.return_value = mock_client
@@ -308,8 +320,10 @@ class TestAutoCloseServiceRun(unittest.TestCase):
         settings_table_mock = Mock()
         settings_table_mock.select.return_value = settings_select_mock
         def table_side_effect(name):
-            if name == "tickets": return tickets_table_mock
-            elif name == "system_settings": return settings_table_mock
+            if name == "tickets":
+                return tickets_table_mock
+            elif name == "system_settings":
+                return settings_table_mock
             return Mock()
         mock_client.table.side_effect = table_side_effect
         mock_create_client.return_value = mock_client

@@ -156,5 +156,29 @@ class RedisInferenceCache:
         except Exception as error:
             logger.warning("[RedisCache] embedding set failed: %s", error)
 
+    def get_json(self, key: str) -> Any | None:
+        """Retrieve a cached generic JSON payload."""
+        if not self.available:
+            return None
+        try:
+            raw = self._client.get(key)
+            return json.loads(raw) if raw else None
+        except Exception as error:
+            logger.warning("[RedisCache] get_json failed for %s: %s", key, error)
+            return None
+
+    def set_json(self, key: str, payload: Any, ttl: int | None = None) -> None:
+        """Cache a generic JSON payload."""
+        if not self.available:
+            return
+        try:
+            self._client.setex(
+                key,
+                ttl or self.ttl_seconds,
+                json.dumps(payload),
+            )
+        except Exception as error:
+            logger.warning("[RedisCache] set_json failed for %s: %s", key, error)
+
 
 redis_cache = RedisInferenceCache()

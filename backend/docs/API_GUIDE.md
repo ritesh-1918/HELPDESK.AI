@@ -13,7 +13,7 @@ Alternative documentation view with search and schema drill-down.
 ### Postman Collection
 Import `postman_collection.json` into Postman. The collection includes:
 
-- **Pre-configured variables** — `{{base_url}}`, `{{access_token}}`
+- **Pre-configured variables** — `{{base_url}}`, `{{production_url}}`, `{{auth_token}}`
 - **All ticket endpoints** — CRUD, search, bulk operations, ratings
 - **AI analysis endpoints** — classify, troubleshoot, bug analysis, duplicate detection
 - **System endpoints** — health, readiness, metrics, cache health
@@ -21,7 +21,7 @@ Import `postman_collection.json` into Postman. The collection includes:
 - **Translation & Voice** — multi-language support, speech-to-ticket
 
 ### Authentication
-Set `access_token` in the Postman environment variable after signing in.
+Set `auth_token` in the Postman environment variable after signing in.
 The API validates tokens against Supabase Auth.
 
 ## API Categories

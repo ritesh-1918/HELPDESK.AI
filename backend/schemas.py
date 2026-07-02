@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Dict, Any
 class TicketRequest(BaseModel):
     text: str
@@ -69,5 +69,34 @@ class TicketResponse(BaseModel):
     env_metadata: dict = {} # IP, Hostname, Browser/OS
     sla_breach_at: str | None = None
     version: str = "2.1.0-Neural-Diagnostic"
+    rag_suggestions: list = []
+    rag_recommendations: list = []
 
+
+# ─── Profile update schema (closes #2894) ──────────────────────────────────
+# `extra="forbid"` rejects unknown fields, so a client cannot smuggle
+# `role`, `status`, `company_id`, `email`, etc. into the PATCH body.
+# Fields are all Optional so PATCH can update a subset; the handler uses
+# `exclude_unset=True` to only persist what was actually sent.
+class ProfileUpdate(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    full_name: Optional[str] = Field(default=None, max_length=200)
+    avatar_url: Optional[str] = Field(default=None, max_length=2048)
+    bio: Optional[str] = Field(default=None, max_length=1000)
+    phone: Optional[str] = Field(default=None, max_length=32)
+    timezone: Optional[str] = Field(default=None, max_length=64)
+    locale: Optional[str] = Field(default=None, max_length=16)
+
+    @field_validator("avatar_url")
+    @classmethod
+    def _validate_avatar_url(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        v = v.strip()
+        if not v:
+            return None
+        if not (v.startswith("http://") or v.startswith("https://")):
+            raise ValueError("avatar_url must be an http(s) URL")
+        return v
 

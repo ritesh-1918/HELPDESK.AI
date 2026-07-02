@@ -3,7 +3,6 @@ agent_scorecard.py — Agent performance metrics + AI coaching via Gemini
 Issue #774 — Real-Time Agent Performance Scorecard
 """
 import os
-import math
 from datetime import datetime, timedelta, timezone
 
 import google.generativeai as genai

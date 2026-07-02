@@ -80,6 +80,7 @@ async def _run_retrain_background(dry_run: bool) -> None:
 
 @router.get("/status")
 async def pipeline_status(_: None = Depends(_require_admin)):
+    """Return the current active-learning pipeline status."""
     return {
         "pipeline_active": True,
         "retrain_in_progress": _retrain_in_progress,
@@ -96,6 +97,7 @@ async def trigger_retrain(
     background_tasks: BackgroundTasks,
     _: None = Depends(_require_admin),
 ):
+    """Queue a retraining job for the active-learning pipeline."""
     global _retrain_in_progress
     if _retrain_in_progress and not body.force:
         raise HTTPException(
@@ -109,11 +111,13 @@ async def trigger_retrain(
 
 @router.get("/retrain/status")
 async def retrain_status(_: None = Depends(_require_admin)):
+    """Return the status of the latest retraining job."""
     return {"in_progress": _retrain_in_progress, "result": _last_retrain_result}
 
 
 @router.get("/dataset/prepare")
 async def prepare_dataset(_: None = Depends(_require_admin)):
+    """Build the dataset used for the next retraining run."""
     try:
         summary = active_learning_service.prepare_training_dataset()
         return {"status": "ok", "summary": summary}
@@ -123,11 +127,13 @@ async def prepare_dataset(_: None = Depends(_require_admin)):
 
 @router.get("/model/registry")
 async def get_model_registry(_: None = Depends(_require_admin)):
+    """Return the active-learning model registry."""
     return active_learning_service.get_registry()
 
 
 @router.post("/model/rollback")
 async def rollback_model(_: None = Depends(_require_admin)):
+    """Roll back to the previous model version."""
     restored = active_learning_service.rollback_to_previous()
     if restored is None:
         raise HTTPException(status_code=404, detail="No previous model version available.")
@@ -136,6 +142,7 @@ async def rollback_model(_: None = Depends(_require_admin)):
 
 @router.post("/model/promote/{version_tag}")
 async def promote_model(version_tag: str, _: None = Depends(_require_admin)):
+    """Promote a specific model version to active use."""
     success = active_learning_service.promote_model(version_tag)
     if not success:
         raise HTTPException(status_code=404, detail=f"Version '{version_tag}' not found.")
@@ -144,6 +151,7 @@ async def promote_model(version_tag: str, _: None = Depends(_require_admin)):
 
 @router.get("/pool")
 async def get_annotation_pool(limit: int = 20, _: None = Depends(_require_admin)):
+    """Return the unannotated review pool."""
     pool = active_learning_service.get_unannotated_pool(limit=limit)
     return {"count": len(pool), "items": pool}
 
@@ -152,6 +160,7 @@ async def get_annotation_pool(limit: int = 20, _: None = Depends(_require_admin)
 async def annotate_pool_entry(
     entry_id: str, body: AnnotationRequest, _: None = Depends(_require_admin)
 ):
+    """Mark a pool entry as annotated with a human label."""
     ok = active_learning_service.mark_annotated(entry_id, body.human_label)
     if not ok:
         raise HTTPException(status_code=404, detail=f"Pool entry '{entry_id}' not found.")
@@ -160,9 +169,11 @@ async def annotate_pool_entry(
 
 @router.get("/stats/corrections")
 async def correction_statistics(_: None = Depends(_require_admin)):
+    """Return correction statistics for the active-learning loop."""
     return active_learning_service.get_correction_statistics()
 
 
 @router.get("/stats/drift")
 async def drift_statistics(_: None = Depends(_require_admin)):
+    """Return low-confidence and drift statistics."""
     return active_learning_service.get_low_confidence_statistics()

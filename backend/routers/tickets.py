@@ -19,12 +19,25 @@ async def get_tickets(request: Request, company_id: str | None = None, user: dic
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
     
+    from backend.services.redis_cache import redis_cache
+    
+    cache_key = f"helpdesk:tickets:list:{company_id or 'all'}"
+    if redis_cache.available:
+        cached_data = redis_cache.get_json(cache_key)
+        if cached_data is not None:
+            return cached_data
+
     query = supabase.table("tickets").select("*").order("created_at", desc=True)
     if company_id:
         query = query.eq("company_id", company_id)
         
     res = query.execute()
-    return res.data
+    data = res.data
+    
+    if redis_cache.available:
+        redis_cache.set_json(cache_key, data, ttl=300)
+        
+    return data
 
 @router.post("/save")
 @limiter.limit(TICKET_WRITE_LIMIT)
@@ -144,7 +157,7 @@ async def get_ticket_by_id(ticket_id: str, user: dict = Depends(get_current_user
 
 
 @router.post("", response_model=TicketRecord)
-async def create_ticket(ticket: TicketRecord):
+async def create_ticket(ticket: TicketRecord, user: dict = Depends(get_current_user)):
     """Save a new ticket into the system."""
     ticket_dict = sanitize_ticket_data(ticket.dict())
     ticket = TicketRecord(**ticket_dict)
@@ -159,7 +172,7 @@ async def create_ticket(ticket: TicketRecord):
 
 
 @router.patch("/{ticket_id}", response_model=TicketRecord)
-async def update_ticket(ticket_id: str, updates: dict):
+async def update_ticket(ticket_id: str, updates: dict, user: dict = Depends(get_current_user)):
     """Partially update a ticket's fields (e.g., status, viewed_at)."""
     sanitized_updates = sanitize_ticket_data(updates)
     for i, ticket in enumerate(TICKETS_DB):
@@ -172,4 +185,3 @@ async def update_ticket(ticket_id: str, updates: dict):
             return updated_ticket
     
     raise HTTPException(status_code=404, detail="Ticket not found")
-
