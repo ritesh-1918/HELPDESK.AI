@@ -1,5 +1,6 @@
 import os
 import base64
+import binascii
 import io
 import re
 import asyncio
@@ -47,6 +48,7 @@ class GeminiService:
         self.model_name = 'gemini-2.5-flash'
         self.timeout = int(os.getenv("GEMINI_API_TIMEOUT", "30"))  # 30 second default timeout
         self.max_retries = int(os.getenv("GEMINI_MAX_RETRIES", "3"))
+        self.max_image_bytes = int(os.getenv("GEMINI_MAX_IMAGE_BYTES", "10485760"))
         
         if self.api_key:
             try:
@@ -75,6 +77,8 @@ class GeminiService:
         """
         Perform OCR and image analysis using Gemini logic with timeout protection.
         """
+        max_image_bytes = getattr(self, "max_image_bytes", 10 * 1024 * 1024)
+
         if not self._initialized:
             return {
                 "image_description": "[Gemini API Key Missing] Could not analyze image.",
@@ -83,8 +87,23 @@ class GeminiService:
             }
 
         try:
-            # Decode base64 image
-            image_bytes = base64.b64decode(image_base64)
+            if not image_base64:
+                raise ValueError("empty image payload")
+
+            payload = image_base64.strip()
+            if "," in payload:
+                payload = payload.split(",", 1)[1].strip()
+
+            if len(payload) > max_image_bytes:
+                raise ValueError("image payload too large")
+
+            if not re.fullmatch(r"[A-Za-z0-9+/=]+", payload):
+                raise ValueError("image payload contains invalid base64 characters")
+
+            image_bytes = base64.b64decode(payload, validate=True)
+            if len(image_bytes) > max_image_bytes:
+                raise ValueError("decoded image exceeds size limit")
+
             img = Image.open(io.BytesIO(image_bytes))
 
             prompt = (
@@ -117,6 +136,13 @@ class GeminiService:
                 "detected_problem": problem_match.group(1).strip() if problem_match else ""
             }
 
+        except (binascii.Error, ValueError) as e:
+            print(f"[GeminiService] Image Validation Error: {e}")
+            return {
+                "image_description": f"Image validation failed: {str(e)}",
+                "ocr_text": "",
+                "detected_problem": ""
+            }
         except TimeoutError as e:
             print(f"[GeminiService] Image Analysis Timeout: {e}")
             return {
