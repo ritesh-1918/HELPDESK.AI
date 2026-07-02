@@ -279,8 +279,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://helpdeskaiv1.vercel.app",
-        # Hapus localhost origins jika ingin environment production murni atau batasi lewat env vars
-        os.getenv("FRONTEND_URL", "https://helpdeskaiv1.vercel.app")
+        os.getenv("FRONTEND_URL", "http://localhost:5173"),
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -1208,22 +1207,3 @@ async def auth_logout(response: Response):
 @app.get("/auth/me")
 async def auth_me(user: dict = Depends(get_current_user)):
     return {"user": user}
-
-
-
-@app.post("/auth/logout")
-async def logout(response: Response, request: Request):
-    """Secure Session Revocation"""
-    token = extract_token(request)
-    if token:
-        try:
-            # Meminta supabase untuk mencabut token dari backend
-            supabase.auth.sign_out()
-        except Exception:
-            pass
-            
-    # Menghapus token dari browser cookies
-    response.delete_cookie(key="sb-access-token", path="/", secure=True, httponly=True, samesite="lax")
-    response.delete_cookie(key="sb-refresh-token", path="/", secure=True, httponly=True, samesite="lax")
-    
-    return {"status": "success", "message": "Session revoked successfully"}
