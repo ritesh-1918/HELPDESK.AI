@@ -13,6 +13,7 @@ import traceback
 import warnings
 import logging
 import hashlib
+import platform
 from contextlib import asynccontextmanager
 
 # Suppress harmless PyTorch CPU pin_memory warning
@@ -184,6 +185,18 @@ class HealthResponse(BaseModel):
     status: str
     classifier_loaded: bool
     ner_loaded: bool
+
+
+class SystemHealthResponse(BaseModel):
+    status: str
+    load_average_1m: float | None = None
+    load_average_5m: float | None = None
+    load_average_15m: float | None = None
+    memory_total_bytes: int | None = None
+    memory_available_bytes: int | None = None
+    memory_used_percent: float | None = None
+    cpu_count: int | None = None
+    platform: str
 
 
 class ReadinessResponse(BaseModel):
@@ -379,6 +392,45 @@ async def health_check():
         status="ok",
         classifier_loaded=classifier_service._loaded,
         ner_loaded=ner_service._loaded,
+    )
+
+
+@app.get("/health/system", response_model=SystemHealthResponse)
+async def health_system():
+    """Return basic CPU load averages and memory metrics for monitoring integrations."""
+    load_1m = load_5m = load_15m = None
+    try:
+        load_1m, load_5m, load_15m = os.getloadavg()
+    except (AttributeError, OSError):
+        pass
+
+    mem_total = mem_avail = mem_pct = None
+    cpu_count = os.cpu_count()
+    try:
+        import psutil
+
+        vm = psutil.virtual_memory()
+        mem_total = vm.total
+        mem_avail = vm.available
+        mem_pct = round(vm.percent, 2)
+        if load_1m is None and hasattr(psutil, "getloadavg"):
+            try:
+                load_1m, load_5m, load_15m = psutil.getloadavg()
+            except (AttributeError, OSError):
+                pass
+    except ImportError:
+        pass
+
+    return SystemHealthResponse(
+        status="ok",
+        load_average_1m=load_1m,
+        load_average_5m=load_5m,
+        load_average_15m=load_15m,
+        memory_total_bytes=mem_total,
+        memory_available_bytes=mem_avail,
+        memory_used_percent=mem_pct,
+        cpu_count=cpu_count,
+        platform=platform.system(),
     )
 
 
