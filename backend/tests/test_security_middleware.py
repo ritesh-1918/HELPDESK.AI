@@ -125,6 +125,21 @@ class TestSecurityHeadersMiddleware:
         csp = self.resp.headers.get("Content-Security-Policy", "")
         assert "default-src *" not in csp
 
+    def test_csp_strict_script_src(self):
+        csp = self.resp.headers.get("Content-Security-Policy", "")
+        # The script-src directive should be present
+        assert "script-src" in csp
+        # Should allow self
+        assert "'self'" in csp
+        # Should allow the specific whitelisted swagger-ui and redoc js scripts
+        assert "https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js" in csp
+        assert "https://cdn.jsdelivr.net/npm/redoc@next/bundles/redoc.standalone.js" in csp
+        # Should NOT allow the entire jsdelivr domain (avoiding wildcard bypasses)
+        assert " https://cdn.jsdelivr.net " not in csp
+        # Extract the script-src directive
+        script_src = [part.strip() for part in csp.split(";") if part.strip().startswith("script-src")][0]
+        assert "'unsafe-inline'" not in script_src  # script-src shouldn't have unsafe-inline without nonce/hash
+
     def test_cross_origin_opener_policy(self):
         assert self.resp.headers.get("Cross-Origin-Opener-Policy") == "same-origin"
 

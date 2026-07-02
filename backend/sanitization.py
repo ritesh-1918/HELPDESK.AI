@@ -182,8 +182,8 @@ def get_security_headers() -> dict[str, str]:
     return {
         "Content-Security-Policy": (
             "default-src 'self'; "
-            "script-src 'self' https://cdn.tailwindcss.com; "
-            "style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://fonts.googleapis.com; "
+            "script-src 'self' https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js https://cdn.jsdelivr.net/npm/redoc@next/bundles/redoc.standalone.js; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "img-src 'self' data: https:; "
             "font-src 'self' data: https://fonts.gstatic.com; "
             "connect-src 'self' wss: ws: https:; "

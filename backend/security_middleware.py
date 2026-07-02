@@ -16,7 +16,9 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_CSP = (
     "default-src 'self'; "
-    "script-src 'self' https://cdn.jsdelivr.net; "
+    "script-src 'self' "
+    "https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js "
+    "https://cdn.jsdelivr.net/npm/redoc@next/bundles/redoc.standalone.js; "
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
     "font-src 'self' https://fonts.gstatic.com data:; "
     "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in; "
@@ -45,7 +47,9 @@ def _resolve_csp() -> str:
     origins_joined = " ".join(origins)
     return (
         f"default-src 'self' {origins_joined}; "
-        f"script-src 'self' https://cdn.jsdelivr.net {origins_joined}; "
+        f"script-src 'self' "
+        f"https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js "
+        f"https://cdn.jsdelivr.net/npm/redoc@next/bundles/redoc.standalone.js {origins_joined}; "
         f"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         f"font-src 'self' https://fonts.gstatic.com data:; "
         f"img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in {origins_joined}; "
