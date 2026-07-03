@@ -12,11 +12,16 @@ begin
   -- This prevents hardcoding sensitive secrets in version control.
   select decrypted_secret into service_key from vault.decrypted_secrets where name = 'SUPABASE_SERVICE_ROLE_KEY' limit 1;
 
+  if service_key is null then
+    raise warning 'SUPABASE_SERVICE_ROLE_KEY not configured in vault - webhook will not be authenticated';
+    return NEW;
+  end if;
+
   perform net.http_post(
     url:='https://aejuenhqciagpntcqoir.supabase.co/functions/v1/email-notifier',
     headers:=jsonb_build_object(
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer ' || coalesce(service_key, 'FALLBACK_PLEASE_CONFIGURE_VAULT')
+      'Authorization', 'Bearer ' || service_key
     ),
     body:=jsonb_build_object(
       'type', 'INSERT',

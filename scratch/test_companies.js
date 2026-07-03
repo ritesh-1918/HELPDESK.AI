@@ -1,12 +1,13 @@
 const https = require('https');
 
-const SUPABASE_URL = "https://aejuenhqciagpntcqoir.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFlanVlbmhxY2lhZ3BudGNxb2lyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjM4NDA3OCwiZXhwIjoyMDg3OTYwMDc4fQ.b3tZ_yad4WPQi4oSqGp1ksr_zw-ldByLqZWvT7HX5aQ";
+// NOTE: Set these via environment variables - never hardcode credentials.
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://your-project.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || 'your-service-role-key';
 
 const getRequest = (path) => {
   return new Promise((resolve, reject) => {
     const options = {
-      hostname: 'aejuenhqciagpntcqoir.supabase.co',
+      hostname: new URL(SUPABASE_URL).hostname,
       port: 443,
       path: path,
       method: 'GET',
