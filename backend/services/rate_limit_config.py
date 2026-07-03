@@ -11,7 +11,7 @@ DEFAULT_AI = "10/minute"
 DEFAULT_TICKETS = "30/minute"
 DEFAULT_AUTH = "5/minute"
 
-LIMIT_REGEX = re.compile(r"^\d+/(second|minute|hour|day)$")
+LIMIT_REGEX = re.compile(r"^(?P<count>\d+)/(second|minute|hour|day)$")
 
 def _parse_limit(env_name: str, default: str) -> str:
     val = os.getenv(env_name)
@@ -20,7 +20,8 @@ def _parse_limit(env_name: str, default: str) -> str:
     val = val.strip()
     if not val:
         return default
-    if LIMIT_REGEX.match(val):
+    match = LIMIT_REGEX.match(val)
+    if match and int(match.group("count")) > 0:
         return val
     return default
 
