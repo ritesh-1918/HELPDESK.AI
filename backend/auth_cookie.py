@@ -211,6 +211,14 @@ get_current_active_admin = require_roles(*ADMIN_ROLES)
 get_current_active_agent = require_roles(*AGENT_ROLES)
 
 
+def _validate_email_format(email: str) -> str:
+    """Shared email format validator."""
+    pattern = r"^[a-zA-Z0-9_.+%\-]+@[a-zA-Z0-9\-]+\.[a-zA-Z0-9\-.]+$"
+    if not re.match(pattern, email):
+        raise ValueError("Invalid email format")
+    return email
+
+
 class LoginBody(BaseModel):
     email: str = Field(min_length=3)
     password: str = Field(min_length=1)
@@ -218,10 +226,7 @@ class LoginBody(BaseModel):
     @field_validator("email")
     @classmethod
     def validate_email_format(cls, v: str) -> str:
-        pattern = r"^[a-zA-Z0-9_.+%\-]+@[a-zA-Z0-9\-]+\.[a-zA-Z0-9\-.]+$"
-        if not re.match(pattern, v):
-            raise ValueError("Invalid email format")
-        return v
+        return _validate_email_format(v)
 
 
 class SignupBody(BaseModel):
@@ -234,10 +239,7 @@ class SignupBody(BaseModel):
     @field_validator("email")
     @classmethod
     def validate_email_format(cls, v: str) -> str:
-        pattern = r"^[a-zA-Z0-9_.+%\-]+@[a-zA-Z0-9\-]+\.[a-zA-Z0-9\-.]+$"
-        if not re.match(pattern, v):
-            raise ValueError("Invalid email format")
-        return v
+        return _validate_email_format(v)
 
 
 @router.post("/login")
