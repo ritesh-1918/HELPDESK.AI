@@ -39,7 +39,29 @@ CREATE POLICY "Super Admins and Admins can view all reports" ON public.bug_repor
       )
     );
 
--- Grant privileges
-GRANT ALL ON TABLE public.bug_reports TO authenticated;
-GRANT ALL ON TABLE public.bug_reports TO anon;
+-- Update + Delete policies for admins
+CREATE POLICY "Admins can update any report" ON public.bug_reports
+    FOR UPDATE
+    USING (
+      EXISTS (
+        SELECT 1 FROM public.profiles
+        WHERE profiles.id = auth.uid() AND (profiles.role = 'admin' OR profiles.role = 'master_admin')
+      )
+    );
+
+CREATE POLICY "Admins can delete any report" ON public.bug_reports
+    FOR DELETE
+    USING (
+      EXISTS (
+        SELECT 1 FROM public.profiles
+        WHERE profiles.id = auth.uid() AND (profiles.role = 'admin' OR profiles.role = 'master_admin')
+      )
+    );
+
+-- Grant minimal privileges (principle of least privilege)
+-- anon: only INSERT (submit bug reports)
+GRANT INSERT ON TABLE public.bug_reports TO anon;
+-- authenticated: INSERT + SELECT (submit and view their own reports - RLS controls which rows)
+GRANT INSERT, SELECT ON TABLE public.bug_reports TO authenticated;
+-- service_role: full access for backend operations
 GRANT ALL ON TABLE public.bug_reports TO service_role;
