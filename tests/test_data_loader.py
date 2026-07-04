@@ -12,6 +12,13 @@ def test_save_and_load_valid_json(tmp_path):
     assert save_json_data(str(test_file), data) is True
     assert load_json_data(str(test_file)) == data
 
+
+def test_save_json_data_current_directory(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    data = [{"id": 2, "text": "local"}]
+    assert save_json_data("ticket.json", data) is True
+    assert load_json_data("ticket.json") == data
+
 def test_load_invalid_json(tmp_path):
     test_file = tmp_path / "invalid.json"
     with open(test_file, "w") as f:
