@@ -100,3 +100,25 @@ class ProfileUpdate(BaseModel):
             raise ValueError("avatar_url must be an http(s) URL")
         return v
 
+
+class TicketRecord(BaseModel):
+    ticket_id: str
+    owner_id: str
+    company_id: str | None = None
+    subject: str
+    description: str
+    category: str
+    subcategory: str
+    priority: str
+    assigned_team: str
+    status: str
+    auto_resolve: bool
+    is_duplicate: bool
+    confidence: float
+    sla_breach_at: str
+    routing_confidence: float
+    metadata: dict = {}
+
+
+TICKETS_DB: list[TicketRecord] = []
+
