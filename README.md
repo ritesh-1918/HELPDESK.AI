@@ -144,21 +144,58 @@ Under the hood, Helpdesk.ai leverages a custom suite of high speed models.
 
 <h2 id="deploy">🚀 Deployment & Operations</h2>
 
-Create a `.env` file in the `/Frontend` directory:
+### Environment Secrets Configuration
+
+Create a `.env` file in the `/Frontend` directory with the following variables. Here are detailed instructions on how to obtain each secret:
+
 ```bash
+# Supabase Configuration
+# 1. Create a project on Supabase (https://supabase.com)
+# 2. Go to Project Settings -> API
+# 3. Copy the Project URL and paste it below
 VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+
+# 4. Copy the `anon` public key and paste it below
 VITE_SUPABASE_ANON_KEY=your_key
+
+# Stripe Configuration (For Enterprise/Billing)
+# 1. Go to your Stripe Dashboard (https://dashboard.stripe.com)
+# 2. Set up a payment link for the growth/enterprise tier
+# 3. Paste the payment link URL below
 VITE_STRIPE_GROWTH_LINK=your_stripe_link
+
+# Backend API Configuration
+# Points to your local or hosted FastAPI backend
 VITE_BACKEND_URL=http://localhost:8000
 ```
 
+*Note: Never commit your actual `.env` file to version control. It is already included in `.gitignore`.*
+
 ### Local Installation
+
 ```bash
 git clone https://github.com/ritesh-1918/HELPDESK.AI.git
 cd HELPDESK.AI/Frontend
 npm install
 npm run dev
 ```
+
+### Development with Devcontainers
+
+We support [Devcontainers](https://containers.dev/) for a consistent, isolated development environment.
+
+**Prerequisites:**
+1. Install [Docker](https://www.docker.com/products/docker-desktop).
+2. Install [Visual Studio Code](https://code.visualstudio.com/).
+3. Install the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) in VS Code.
+
+**Getting Started:**
+1. Clone the repository: `git clone https://github.com/ritesh-1918/HELPDESK.AI.git`
+2. Open the project in VS Code: `code HELPDESK.AI`
+3. A prompt will appear asking to **Reopen in Container**. Click it.
+   *(Alternatively, open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and select **Dev Containers: Reopen in Container**).*
+4. The devcontainer will build automatically, install required Node.js and Python dependencies, and forward ports `5173` (Frontend) and `8000` (Backend).
+5. Once loaded, you can run the application seamlessly inside the container.
 
 ---
 

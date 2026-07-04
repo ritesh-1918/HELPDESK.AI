@@ -1,0 +1,20 @@
+{
+    "name": "HelpDesk.AI Universal Devcontainer",
+    "image": "mcr.microsoft.com/devcontainers/universal:2",
+    "features": {
+        "ghcr.io/devcontainers/features/node:1": {},
+        "ghcr.io/devcontainers/features/python:1": {}
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "dbaeumer.vscode-eslint",
+                "esbenp.prettier-vscode",
+                "ms-python.python",
+                "ms-python.vscode-pylance"
+            ]
+        }
+    },
+    "forwardPorts": [5173, 8000],
+    "postCreateCommand": "cd Frontend && npm install && cd ../backend && pip install -r requirements.txt || echo 'No requirements.txt found in backend'"
+}
