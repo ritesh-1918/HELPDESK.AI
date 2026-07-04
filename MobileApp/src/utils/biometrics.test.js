@@ -51,6 +51,17 @@ describe('authenticateUser', () => {
     expect(LocalAuthentication.authenticateAsync).toHaveBeenCalledTimes(1);
   });
 
+  it('stops immediately on user_fallback — no retry', async () => {
+    LocalAuthentication.authenticateAsync.mockResolvedValue({
+      success: false,
+      error: 'user_fallback',
+    });
+    const result = await authenticateUser();
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('user_fallback');
+    expect(LocalAuthentication.authenticateAsync).toHaveBeenCalledTimes(1);
+  });
+
   it('stops immediately on lockout — no retry', async () => {
     LocalAuthentication.authenticateAsync.mockResolvedValue({
       success: false,

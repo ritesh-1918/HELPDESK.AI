@@ -46,6 +46,11 @@ export const authenticateUser = async () => {
       return { success: false, error: 'cancelled' };
     }
 
+    // User chose fallback (e.g. Use PIN) — stop immediately, do NOT retry
+    if (result.error === 'user_fallback') {
+      return { success: false, error: 'user_fallback' };
+    }
+
     // Device lockout — biometrics disabled by OS, stop immediately
     if (
       result.error === 'lockout' ||
