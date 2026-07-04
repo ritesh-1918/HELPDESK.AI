@@ -12,6 +12,7 @@ import useAuthStore from '../../store/authStore';
 import { supabase } from '../../lib/supabaseClient';
 import { API_CONFIG } from '../../config';
 import { analyzeTicketWithAI } from '../../services/aiAssistant';
+import { optimizeBase64Image } from '../../utils/imageUtils';
 
 const steps = [
     "Reading your message",
@@ -44,6 +45,7 @@ const AIProcessing = () => {
 
         const analyzeTicket = async () => {
             console.log("[AIProcessing] Starting analysis for:", text);
+            let uploadedImageUrl = null;
 
             try {
 
@@ -52,7 +54,6 @@ const AIProcessing = () => {
 
 
                 // ── Upload Image if present ──
-                let uploadedImageUrl = null;
 
                 if (image_base64) {
 
@@ -64,18 +65,7 @@ const AIProcessing = () => {
 
                         const fileExt = contentType.split('/')[1] || 'jpeg';
 
-                        const byteCharacters = atob(base64Data);
-                        const byteNumbers = new Array(byteCharacters.length);
-
-                        for (let i = 0; i < byteCharacters.length; i++) {
-                            byteNumbers[i] = byteCharacters.charCodeAt(i);
-                        }
-
-                        const byteArray = new Uint8Array(byteNumbers);
-
-                        const blob = new Blob([byteArray], {
-                            type: contentType
-                        });
+                        const optimizedFile = await optimizeBase64Image(image_base64, `image.${fileExt}`, 1200, 1200, 0.8);
 
                         const fileName =
                             `${user?.id || 'anon'}/${Date.now()}-${Math.random()
@@ -84,7 +74,7 @@ const AIProcessing = () => {
 
                         const { error: uploadError } = await supabase.storage
                             .from('ticket-attachments')
-                            .upload(fileName, blob, {
+                            .upload(fileName, optimizedFile, {
                                 contentType,
                                 upsert: true
                             });
@@ -298,7 +288,7 @@ const AIProcessing = () => {
 
                 // Graceful fallback for any error (e.g. backend 503 offline, streaming failed, or network protocol errors)
                 if (
-                    true // Always fallback gracefully to keep the ticket creation flow 100% operational!
+                    error !== null // Always fallback gracefully to keep the ticket creation flow 100% operational!
                 ) {
 
 

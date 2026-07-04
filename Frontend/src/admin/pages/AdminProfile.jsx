@@ -8,6 +8,7 @@ import useAuthStore from '../../store/authStore';
 import useToastStore from '../../store/toastStore';
 import { supabase } from "../../lib/supabaseClient";
 import BugReportWidget from "../../components/shared/BugReportWidget";
+import { optimizeImageFile } from "../../utils/imageUtils";
 
 const AdminProfile = () => {
     const { user, profile: adminProfile } = useAuthStore();
@@ -66,11 +67,12 @@ const AdminProfile = () => {
         const file = e.target.files?.[0];
         if (!file) return;
         try {
+            const optimizedFile = await optimizeImageFile(file, 800, 800, 0.8);
             const userId = user?.id || adminProfile?.id;
-            const fileExt = file.name.split('.').pop();
+            const fileExt = optimizedFile.name.split('.').pop();
             const fileName = `${userId}/${Date.now()}.${fileExt}`;
             const { error: uploadError } = await supabase.storage
-                .from('profile-pics').upload(fileName, file, { upsert: true, contentType: file.type || 'image/jpeg' });
+                .from('profile-pics').upload(fileName, optimizedFile, { upsert: true, contentType: optimizedFile.type || 'image/jpeg' });
             if (uploadError) throw uploadError;
             const { data } = supabase.storage.from('profile-pics').getPublicUrl(fileName);
             setProfileForm(prev => ({ ...prev, profile_picture: data?.publicUrl }));

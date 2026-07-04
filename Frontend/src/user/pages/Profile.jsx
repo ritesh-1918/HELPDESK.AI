@@ -32,6 +32,7 @@ import useAuthStore from "../../store/authStore";
 import useToastStore from "../../store/toastStore";
 import { supabase } from "../../lib/supabaseClient";
 import BugReportWidget from "../../components/shared/BugReportWidget";
+import { optimizeImageFile } from "../../utils/imageUtils";
 const Profile = () => {
     const navigate = useNavigate();
     const { profile, user, logout, loading: authLoading, updateProfile } = useAuthStore();
@@ -113,14 +114,15 @@ const Profile = () => {
 
         setIsUploading(true);
         try {
-            const fileExt = file.name.split('.').pop();
+            const optimizedFile = await optimizeImageFile(file, 800, 800, 0.8);
+            const fileExt = optimizedFile.name.split('.').pop();
             const fileName = `${user.id}/${Date.now()}.${fileExt}`;
             const filePath = `${fileName}`;
 
             // 1. Upload to Supabase Storage
             const { error: uploadError } = await supabase.storage
                 .from('profile-pics')
-                .upload(filePath, file, { upsert: true });
+                .upload(filePath, optimizedFile, { upsert: true });
 
             if (uploadError) throw uploadError;
 
