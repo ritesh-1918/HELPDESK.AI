@@ -1,5 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import ProtectedRoute, { AdminRoute } from './ProtectedRoute';
 
 // ─── Skeleton Loaders ───────────────────────────────────────────────────────
 
@@ -77,7 +78,7 @@ const AppRoutes = () => (
     <>
         <AIAssistant />
         <Routes>
-        {/* Auth routes */}
+        {/* Auth routes — public */}
         <Route path="/login" element={
             <LazyRoute><Login /></LazyRoute>
         } />
@@ -85,44 +86,44 @@ const AppRoutes = () => (
             <LazyRoute><Register /></LazyRoute>
         } />
 
-        {/* Admin routes - all lazy loaded */}
+        {/* Admin routes — protected, require admin role */}
         <Route path="/admin" element={
-            <LazyRoute><AdminDashboard /></LazyRoute>
+            <AdminRoute><LazyRoute><AdminDashboard /></LazyRoute></AdminRoute>
         } />
         <Route path="/admin/tickets" element={
-            <LazyRoute fallback={<TableSkeleton />}><AdminTickets /></LazyRoute>
+            <AdminRoute><LazyRoute fallback={<TableSkeleton />}><AdminTickets /></LazyRoute></AdminRoute>
         } />
         <Route path="/admin/ticket/:ticket_id" element={
-            <LazyRoute><AdminTicketDetail /></LazyRoute>
+            <AdminRoute><LazyRoute><AdminTicketDetail /></LazyRoute></AdminRoute>
         } />
         <Route path="/admin/analytics" element={
-            <LazyRoute><AdminAnalytics /></LazyRoute>
+            <AdminRoute><LazyRoute><AdminAnalytics /></LazyRoute></AdminRoute>
         } />
         <Route path="/admin/settings" element={
-            <LazyRoute><AdminSettings /></LazyRoute>
+            <AdminRoute><LazyRoute><AdminSettings /></LazyRoute></AdminRoute>
         } />
         <Route path="/admin/users" element={
-            <LazyRoute fallback={<TableSkeleton />}><AdminUsers /></LazyRoute>
+            <AdminRoute><LazyRoute fallback={<TableSkeleton />}><AdminUsers /></LazyRoute></AdminRoute>
         } />
         <Route path="/admin/knowledge" element={
-            <LazyRoute><AdminKnowledge /></LazyRoute>
+            <AdminRoute><LazyRoute><AdminKnowledge /></LazyRoute></AdminRoute>
         } />
 
-        {/* User routes - all lazy loaded */}
+        {/* User routes — protected, any authenticated user */}
         <Route path="/dashboard" element={
-            <LazyRoute><UserDashboard /></LazyRoute>
+            <ProtectedRoute><LazyRoute><UserDashboard /></LazyRoute></ProtectedRoute>
         } />
         <Route path="/tickets" element={
-            <LazyRoute fallback={<TableSkeleton />}><UserTickets /></LazyRoute>
+            <ProtectedRoute><LazyRoute fallback={<TableSkeleton />}><UserTickets /></LazyRoute></ProtectedRoute>
         } />
         <Route path="/tickets/:id" element={
-            <LazyRoute><UserTicketDetail /></LazyRoute>
+            <ProtectedRoute><LazyRoute><UserTicketDetail /></LazyRoute></ProtectedRoute>
         } />
         <Route path="/ticket-tracking" element={
-            <LazyRoute><TicketTracking /></LazyRoute>
+            <ProtectedRoute><LazyRoute><TicketTracking /></LazyRoute></ProtectedRoute>
         } />
         <Route path="/profile" element={
-            <LazyRoute><UserProfile /></LazyRoute>
+            <ProtectedRoute><LazyRoute><UserProfile /></LazyRoute></ProtectedRoute>
         } />
         <Route path="/about" element={
             <LazyRoute><AboutUs /></LazyRoute>
