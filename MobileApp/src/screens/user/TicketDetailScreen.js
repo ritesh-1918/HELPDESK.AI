@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -15,32 +15,7 @@ import { supabase } from '../../lib/supabase';
 import { COLORS, SHADOWS } from '../../styles/theme';
 import { ArrowLeft, Send, User, Bot } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
-
-const MessageItem = React.memo(({ item }) => {
-  const isUser = item.sender_role === 'user';
-  const isAI = item.sender_role === 'ai';
-
-  return (
-    <View style={[
-      styles.messageBubble,
-      isUser ? styles.userBubble : styles.adminBubble,
-      isAI && styles.aiBubble
-    ]}>
-      {!isUser && (
-        <View style={styles.senderHeader}>
-          {isAI ? <Bot size={14} color={COLORS.primary} /> : <User size={14} color={COLORS.textLight} />}
-          <Text style={styles.senderName}>{isAI ? 'AI Assistant' : item.sender_name || 'Support'}</Text>
-        </View>
-      )}
-      <Text style={[styles.messageText, isUser && styles.userMessageText]}>
-        {item.message}
-      </Text>
-      <Text style={[styles.messageTime, isUser && styles.userTimeText]}>
-        {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-      </Text>
-    </View>
-  );
-});
+import * as Haptics from 'expo-haptics';
 
 const TicketDetailScreen = ({ route }) => {
   const { ticketId } = route.params || {};
@@ -121,14 +96,41 @@ const TicketDetailScreen = ({ route }) => {
         });
 
       if (error) throw error;
+      
+      // Trigger haptic feedback on successful send
+      Haptics.selectionAsync();
     } catch (error) {
       console.error('Error sending message:', error);
+      // Trigger error haptic feedback
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
   };
 
-  const renderMessage = useCallback(({ item }) => (
-    <MessageItem item={item} />
-  ), []);
+  const renderMessage = ({ item }) => {
+    const isUser = item.sender_role === 'user';
+    const isAI = item.sender_role === 'ai';
+
+    return (
+      <View style={[
+        styles.messageBubble,
+        isUser ? styles.userBubble : styles.adminBubble,
+        isAI && styles.aiBubble
+      ]}>
+        {!isUser && (
+          <View style={styles.senderHeader}>
+            {isAI ? <Bot size={14} color={COLORS.primary} /> : <User size={14} color={COLORS.textLight} />}
+            <Text style={styles.senderName}>{isAI ? 'AI Assistant' : item.sender_name || 'Support'}</Text>
+          </View>
+        )}
+        <Text style={[styles.messageText, isUser && styles.userMessageText]}>
+          {item.message}
+        </Text>
+        <Text style={[styles.messageTime, isUser && styles.userTimeText]}>
+          {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </Text>
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
