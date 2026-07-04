@@ -23,9 +23,11 @@ def _text_key(prefix: str, text: str) -> str:
     Computes an MD5 hash of the given text for use as a cache key.
     
     Raises:
-        ValueError: If the input text is empty or only whitespace.
+        ValueError: If the input text is empty, only whitespace, or not a string.
     """
-    if not text or not text.strip():
+    if text is None or not isinstance(text, str):
+        raise ValueError("Text must be a non-None string.")
+    if not text.strip():
         raise ValueError("Text cannot be empty or whitespace.")
     digest = hashlib.md5(text.strip().lower().encode("utf-8")).hexdigest()
     return f"{prefix}{digest}"
