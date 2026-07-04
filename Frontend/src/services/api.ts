@@ -4,17 +4,37 @@ import { API_CONFIG } from '../config';
 import { Ticket, AIAnalysisResult } from '../types';
 
 const USE_MOCK = API_CONFIG.USE_MOCK;
+const OFFLINE_TICKET_QUEUE_KEY = 'helpdesk-offline-ticket-queue';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const getSlaBreachAt = (priority = 'Low') => {
-  const hoursMap = { Critical: 2, High: 8, Medium: 24, Low: 72 };
+  const hoursMap: Record<string, number> = { Critical: 2, High: 8, Medium: 24, Low: 72 };
   const slaHours = hoursMap[priority] || 72;
   return new Date(Date.now() + slaHours * 60 * 60 * 1000).toISOString();
 };
 
 // In-memory cache replaces localStorage to prevent data leakage (XSS Mitigation)
 const inMemoryCache = new Map();
+
+type OfflineTicketQueueItem = {
+  id: string;
+  queuedAt: string;
+  reason: 'offline' | 'network-error';
+  ticketData: Partial<Ticket>;
+};
+
+let useMockOverride: boolean | null = null;
+let offlineSyncListenerRegistered = false;
+
+export const setUseMock = (value: boolean) => {
+  useMockOverride = value;
+};
+
+const isMockMode = () => useMockOverride ?? USE_MOCK;
+
+const hasBrowserStorage = () =>
+  typeof globalThis !== 'undefined' && typeof globalThis.localStorage !== 'undefined';
 
 // Safe helper to get data from storage or default
 const getStorage = <T>(key: string, defaultData: T): T => {
@@ -40,8 +60,128 @@ const setStorage = <T>(key: string, data: T): void => {
   }
 };
 
+const getOfflineTicketQueue = (): OfflineTicketQueueItem[] => {
+  if (!hasBrowserStorage()) return [];
+
+  try {
+    const raw = globalThis.localStorage.getItem(OFFLINE_TICKET_QUEUE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.warn('[Offline Queue] Failed to read queued tickets:', error);
+    return [];
+  }
+};
+
+const setOfflineTicketQueue = (queue: OfflineTicketQueueItem[]): void => {
+  if (!hasBrowserStorage()) return;
+
+  try {
+    globalThis.localStorage.setItem(OFFLINE_TICKET_QUEUE_KEY, JSON.stringify(queue));
+  } catch (error) {
+    console.warn('[Offline Queue] Failed to persist queued tickets:', error);
+  }
+};
+
+const isNetworkFailure = (error: unknown) => {
+  if (!error || typeof error !== 'object') return false;
+  const maybeError = error as { response?: unknown; code?: string; message?: string };
+  if (!maybeError.response) return true;
+  if (maybeError.code === 'ERR_NETWORK') return true;
+  return typeof maybeError.message === 'string' && /network|offline/i.test(maybeError.message);
+};
+
+const queueOfflineTicket = (ticketData: Partial<Ticket>, reason: OfflineTicketQueueItem['reason']) => {
+  const queuedAt = new Date().toISOString();
+  const queueItem: OfflineTicketQueueItem = {
+    id: `offline-ticket-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    queuedAt,
+    reason,
+    ticketData,
+  };
+
+  const queue = getOfflineTicketQueue();
+  queue.push(queueItem);
+  setOfflineTicketQueue(queue);
+
+  const queuedTicket: Ticket & {
+    local_id: string;
+    sync_status: 'queued';
+    queued_at: string;
+  } = {
+    ticket_id: queueItem.id,
+    status: 'Pending Sync',
+    createdAt: queuedAt,
+    priority: ((ticketData.priority as Ticket['priority'] | undefined) ?? 'Low') as Ticket['priority'],
+    category: ticketData.category || 'Unclassified',
+    summary: ticketData.summary || ticketData.description || '',
+    description: ticketData.description,
+    assigned_team: ticketData.assigned_team,
+    company: ticketData.company,
+    messages: [
+      {
+        sender: 'user',
+        message: ticketData.description || ticketData.summary || '',
+        timestamp: queuedAt,
+      },
+    ],
+    local_id: queueItem.id,
+    sync_status: 'queued',
+    queued_at: queuedAt,
+  };
+
+  return queuedTicket;
+};
+
+export const syncQueuedTicketPayloads = async (): Promise<Ticket[]> => {
+  if (isMockMode() || !hasBrowserStorage() || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
+    return [];
+  }
+
+  const queue = getOfflineTicketQueue();
+  if (!queue.length) return [];
+
+  const remainingQueue: OfflineTicketQueueItem[] = [];
+  const syncedTickets: Ticket[] = [];
+
+  for (const item of queue) {
+    try {
+      const response = await apiClient.post('/tickets/save', item.ticketData);
+      const created = response?.data?.data ?? response?.data;
+      if (created) {
+        syncedTickets.push(created);
+      }
+    } catch (error) {
+      if (isNetworkFailure(error)) {
+        remainingQueue.push(item);
+        continue;
+      }
+
+      console.warn('[Offline Queue] Failed to sync queued ticket payload:', error);
+      remainingQueue.push(item);
+    }
+  }
+
+  setOfflineTicketQueue(remainingQueue);
+  return syncedTickets;
+};
+
+const ensureOfflineSyncListener = () => {
+  if (!hasBrowserStorage() || offlineSyncListenerRegistered) return;
+
+  if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') return;
+
+  window.addEventListener('online', () => {
+    void syncQueuedTicketPayloads();
+  });
+  offlineSyncListenerRegistered = true;
+};
+
+ensureOfflineSyncListener();
+
 // Shared mock logic for createTicket (only used when USE_MOCK is explicitly true)
-const createTicketMock = (ticketData) => {
+const createTicketMock = (ticketData: Partial<Ticket>) => {
   const tickets = getStorage('tickets', MOCK_TICKETS);
   const newTicket = {
     ticket_id: "TCKT-" + Math.floor(Math.random() * 10000),
@@ -66,10 +206,11 @@ export const api = {
   // Ensure that no component tries to use api.login or api.signup anymore.
 
   getTickets: async () => {
-    if (USE_MOCK) {
+    if (isMockMode()) {
       await delay(500);
       return getStorage<Ticket[]>('tickets', MOCK_TICKETS as Ticket[]);
     }
+    await syncQueuedTicketPayloads();
     // In production mode, surface backend errors so the UI can show a proper
     // error state rather than silently returning stale mock data that could
     // mislead users into believing they're seeing real tickets.
@@ -84,18 +225,35 @@ export const api = {
   },
 
   createTicket: async (ticketData: Partial<Ticket>): Promise<{ data: Ticket } | undefined> => {
-    if (USE_MOCK) {
+    if (isMockMode()) {
       await delay(800);
       return createTicketMock(ticketData);
     }
-    // In production mode, throw on failure. A silent mock fallback would
-    // create a ticket that appears to have been saved but was never persisted
-    // to the database — users would lose their support request silently.
-    const response = await apiClient.post(`/tickets/save`, ticketData);
-    const created = response?.data;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      await delay(250);
+      return { data: queueOfflineTicket(ticketData, 'offline') };
+    }
 
-    if (created && created.data) return created;
-    return { data: created };
+    await syncQueuedTicketPayloads();
+
+    // In production mode, throw on failure. If the request fails because the
+    // network dropped, keep the payload queued so the user does not lose it.
+    try {
+      const response = await apiClient.post(`/tickets/save`, ticketData);
+      if (!response) return undefined;
+
+      const created = response?.data;
+
+      if (created && created.data) return created;
+      if (created === undefined) return undefined;
+      return { data: created };
+    } catch (error) {
+      if (isNetworkFailure(error)) {
+        console.warn('[Offline Queue] Network failed while creating ticket; caching payload for later sync.');
+        return { data: queueOfflineTicket(ticketData, 'network-error') };
+      }
+      throw error;
+    }
   },
 
   predictTicket: async (issueText: string, imageBase64 = ''): Promise<{ data: AIAnalysisResult }> => {
@@ -169,7 +327,7 @@ export const api = {
     };
   },
 
-  getSlaEstimate: async (ticketId) => {
+  getSlaEstimate: async (ticketId: string) => {
     try {
       const response = await apiClient.get(`/tickets/${ticketId}/sla-estimate`);
       return response.data;

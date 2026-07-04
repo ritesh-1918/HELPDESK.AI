@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ticketService } from '../services/ticketService';
 import useAuthStore from '../store/authStore';
 import useToastStore from '../store/toastStore';
@@ -6,7 +6,14 @@ import { supabase } from '../lib/supabaseClient'; // Only used for removeChannel
 
 export function useAdminTickets(filters: any) {
     const profile = useAuthStore((state: any) => state.profile);
+    const isCheckingSession = useAuthStore((state: any) => state.isCheckingSession);
     const showToast = useToastStore((state: any) => state.showToast);
+    const fetchSignatureRef = useRef<string>('');
+
+    const company = profile?.company ?? '';
+    const role = profile?.role ?? '';
+    const filtersSignature = JSON.stringify(filters ?? {});
+    const fetchSignature = `${company}::${role}::${filtersSignature}`;
 
     const [tickets, setTickets] = useState<any[]>([]);
     const [agents, setAgents] = useState<any[]>([]);
@@ -18,12 +25,12 @@ export function useAdminTickets(filters: any) {
         setLoading(true);
         setError(null);
         try {
-            if (profile?.company) {
-                const agentsData = await ticketService.fetchCompanyAgents(profile.company);
+            if (company) {
+                const agentsData = await ticketService.fetchCompanyAgents(company);
                 setAgents(agentsData);
             }
             const ticketsData = await ticketService.fetchAdminTickets({
-                company: profile?.role === 'admin' ? profile?.company : undefined,
+                company: role === 'admin' ? company : undefined,
                 ...filters
             });
             setTickets(ticketsData);
@@ -32,13 +39,17 @@ export function useAdminTickets(filters: any) {
         } finally {
             setLoading(false);
         }
-    }, [filters, profile]);
+    }, [company, filters, role]);
 
     useEffect(() => {
+        if (isCheckingSession || !profile) return;
+        if (fetchSignatureRef.current === fetchSignature) return;
+        fetchSignatureRef.current = fetchSignature;
+
         fetchInitialData();
         
         const channel = ticketService.subscribeToCompanyTickets(
-            profile?.company,
+            company || undefined,
             {
                 onInsert: (newTicket: any) => {
                     setTickets(prev => [newTicket, ...prev]);
@@ -56,7 +67,7 @@ export function useAdminTickets(filters: any) {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [fetchInitialData, profile, showToast]);
+    }, [company, fetchInitialData, fetchSignature, isCheckingSession, showToast]);
 
     const handleUpdateTicket = async (id: string, updates: any) => {
         setIsUpdating(id);
