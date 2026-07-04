@@ -724,15 +724,73 @@ async def save_ticket(request_body: TicketSaveRequest):
         user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
         logger.info(f"Tenant linkage: user_hash={user_hash}, company_id={final_data.get('company_id')}")
 
-        duplicate_text = (request_body.description or "").strip() or (request_body.subject or "").strip()
-        duplicate_threshold = get_duplicate_threshold(final_data.get("company_id"), 0.85)
-        duplicate_result = {
-            "is_duplicate": False,
-            "duplicate_ticket_id": None,
-            "parent_ticket_id": None,
-            "is_potential_duplicate": False,
-            "similarity": 0.0,
-        }
+        # --- Simple duplicate submission detector ---
+        # Check if the same user has submitted a similar ticket (subject/description) in the last N minutes.
+        N_MINUTES = 5
+        SIMILARITY_THRESHOLD = 0.85
+        
+        # Calculate N minutes ago in UTC
+        time_limit = (datetime.datetime.utcnow() - datetime.timedelta(minutes=N_MINUTES)).isoformat() + "Z"
+        
+        try:
+            recent_tickets_res = (
+                supabase.table("tickets")
+                .select("id, subject, description, created_at")
+                .eq("user_id", request_body.user_id)
+                .gte("created_at", time_limit)
+                .execute()
+            )
+            recent_tickets = recent_tickets_res.data or []
+        except Exception as e:
+            logger.warning(f"Failed to query recent tickets for duplicate checking: {e}")
+            recent_tickets = []
+            
+        incoming_subject = (request_body.subject or "").strip()
+        incoming_description = (request_body.description or "").strip()
+        incoming_text = f"{incoming_subject} {incoming_description}".strip()
+        
+        if recent_tickets and incoming_text:
+            import difflib
+            from sentence_transformers import util
+            
+            for old_ticket in recent_tickets:
+                old_subject = (old_ticket.get("subject") or "").strip()
+                old_description = (old_ticket.get("description") or "").strip()
+                old_text = f"{old_subject} {old_description}".strip()
+                
+                if not old_text:
+                    continue
+                
+                # Check exact case-insensitive match first
+                if incoming_text.lower() == old_text.lower():
+                    logger.warning(f"Duplicate ticket detected (exact match) for user {user_hash}")
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Duplicate ticket submission detected. A similar ticket was submitted recently."
+                    )
+                
+                # Check string similarity
+                string_sim = difflib.SequenceMatcher(None, incoming_text.lower(), old_text.lower()).ratio()
+                
+                # Check semantic similarity if duplicate_service model is loaded
+                sem_sim = 0.0
+                if duplicate_service.is_available() and duplicate_service.model:
+                    try:
+                        new_emb = duplicate_service.model.encode(incoming_text, convert_to_tensor=True)
+                        old_emb = duplicate_service.model.encode(old_text, convert_to_tensor=True)
+                        sem_sim = float(util.cos_sim(new_emb, old_emb).item())
+                    except Exception as sem_err:
+                        logger.warning(f"Error checking semantic similarity: {sem_err}")
+                
+                # Block if similarity is above threshold
+                if max(string_sim, sem_sim) >= SIMILARITY_THRESHOLD:
+                    logger.warning(
+                        f"Duplicate ticket detected (similarity: string={string_sim:.4f}, sem={sem_sim:.4f}) for user {user_hash}"
+                    )
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Duplicate ticket submission detected. A similar ticket was submitted recently."
+                    )
 
         if duplicate_text:
             duplicate_result = detect_semantic_duplicate(
@@ -814,6 +872,8 @@ async def save_ticket(request_body: TicketSaveRequest):
             response["duplicate_index_warning"] = duplicate_index_warning
         return response
 
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
