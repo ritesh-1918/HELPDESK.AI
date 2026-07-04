@@ -25,7 +25,18 @@ import Tesseract from 'tesseract.js';
 import { translateText, SUPPORTED_LANGUAGES } from '../../services/translationService';
 
 const CreateTicket = () => {
-    const [issue, setIssue] = useState('');
+    const [issue, setIssue] = useState(() => {
+        try {
+            const saved = localStorage.getItem('helpdesk_new_ticket_draft');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                return parsed.issue || '';
+            }
+        } catch (e) {
+            console.error('Error reading issue draft', e);
+        }
+        return '';
+    });
     const [file, setFile] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -37,7 +48,18 @@ const CreateTicket = () => {
     const navigate = useNavigate();
     const MAX_CHARS = 1000;
     const supportsSpeech = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
-    const [selectedLanguage, setSelectedLanguage] = useState('en');
+    const [selectedLanguage, setSelectedLanguage] = useState(() => {
+        try {
+            const saved = localStorage.getItem('helpdesk_new_ticket_draft');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                return parsed.selectedLanguage || 'en';
+            }
+        } catch (e) {
+            console.error('Error reading language draft', e);
+        }
+        return 'en';
+    });
     const [isTranslating, setIsTranslating] = useState(false);
     const [isLangOpen, setIsLangOpen] = useState(false);
     const langRef = useRef(null);
@@ -63,6 +85,16 @@ const CreateTicket = () => {
             if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
         };
     }, []);
+
+    // Auto-save draft changes to localStorage
+    useEffect(() => {
+        try {
+            const draft = { issue, selectedLanguage };
+            localStorage.setItem('helpdesk_new_ticket_draft', JSON.stringify(draft));
+        } catch (e) {
+            console.error('Error saving ticket draft', e);
+        }
+    }, [issue, selectedLanguage]);
 
     // Close language dropdown on outside click
     useEffect(() => {
@@ -298,6 +330,13 @@ const CreateTicket = () => {
                     };
                     reader.readAsDataURL(file);
                 });
+            }
+
+            // Clear draft from localStorage on successful submission
+            try {
+                localStorage.removeItem('helpdesk_new_ticket_draft');
+            } catch (err) {
+                console.error('Failed to clear draft from localStorage', err);
             }
 
             // Navigate to AI Processing workflow where the API will be called
