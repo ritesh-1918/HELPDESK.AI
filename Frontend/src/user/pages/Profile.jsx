@@ -21,7 +21,8 @@ import {
     Phone,
     Briefcase,
     Loader2,
-    AlertCircle
+    AlertCircle,
+    Globe
 } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'framer-motion';
@@ -43,7 +44,8 @@ const Profile = () => {
     const [formData, setFormData] = useState({
         full_name: '',
         job_title: '',
-        phone: ''
+        phone: '',
+        timezone: 'UTC'
     });
 
     const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -61,7 +63,8 @@ const Profile = () => {
             setFormData({
                 full_name: profile.full_name || '',
                 job_title: profile.job_title || '',
-                phone: profile.phone || ''
+                phone: profile.phone || '',
+                timezone: profile.timezone || 'UTC'
             });
         }
     }, [profile]);
@@ -284,6 +287,10 @@ const Profile = () => {
                                                         {profile.phone}
                                                     </div>
                                                 )}
+                                                <div className="flex items-center gap-2">
+                                                    <Globe size={16} className="text-teal-500" />
+                                                    {profile.timezone || "UTC"}
+                                                </div>
                                             </div>
                                         </motion.div>
                                     ) : (
@@ -312,7 +319,7 @@ const Profile = () => {
                                                     placeholder="Job Title"
                                                 />
                                             </div>
-                                            <div className="space-y-1 md:col-span-2">
+                                            <div className="space-y-1">
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Comms Channel</label>
                                                 <input
                                                     value={formData.phone}
@@ -320,6 +327,26 @@ const Profile = () => {
                                                     className="w-full bg-slate-50 border-2 border-transparent focus:border-emerald-500 px-4 py-2.5 rounded-2xl text-sm font-bold outline-none transition-all"
                                                     placeholder="Phone Number"
                                                 />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Timezone Preference</label>
+                                                <select
+                                                    value={formData.timezone}
+                                                    onChange={(e) => setFormData({ ...formData, timezone: e.target.value })}
+                                                    className="w-full bg-slate-50 border-2 border-transparent focus:border-emerald-500 px-4 py-2.5 rounded-2xl text-sm font-bold outline-none transition-all cursor-pointer"
+                                                >
+                                                    <option value="UTC">UTC (Coordinated Universal Time)</option>
+                                                    <option value="America/New_York">America/New_York (EST/EDT)</option>
+                                                    <option value="America/Chicago">America/Chicago (CST/CDT)</option>
+                                                    <option value="America/Denver">America/Denver (MST/MDT)</option>
+                                                    <option value="America/Los_Angeles">America/Los_Angeles (PST/PDT)</option>
+                                                    <option value="Europe/London">Europe/London (GMT/BST)</option>
+                                                    <option value="Europe/Paris">Europe/Paris (CET/CEST)</option>
+                                                    <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
+                                                    <option value="Asia/Singapore">Asia/Singapore (SGT)</option>
+                                                    <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
+                                                    <option value="Australia/Sydney">Australia/Sydney (AEST/AEDT)</option>
+                                                </select>
                                             </div>
                                         </motion.div>
                                     )}

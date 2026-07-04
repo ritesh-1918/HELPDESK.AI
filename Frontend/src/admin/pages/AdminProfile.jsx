@@ -16,7 +16,8 @@ const AdminProfile = () => {
     const [profileForm, setProfileForm] = useState({
         name: adminProfile?.full_name || '',
         email: adminProfile?.email || '',
-        profile_picture: adminProfile?.profile_picture || null
+        profile_picture: adminProfile?.profile_picture || null,
+        timezone: adminProfile?.timezone || 'UTC'
     });
 
     useEffect(() => {
@@ -24,7 +25,8 @@ const AdminProfile = () => {
             setProfileForm({
                 name: adminProfile.full_name || '',
                 email: adminProfile.email || '',
-                profile_picture: adminProfile.profile_picture || null
+                profile_picture: adminProfile.profile_picture || null,
+                timezone: adminProfile.timezone || 'UTC'
             });
         }
     }, [adminProfile]);
@@ -86,7 +88,8 @@ const AdminProfile = () => {
         try {
             const { error } = await supabase.from('profiles').update({
                 full_name: profileForm.name, email: profileForm.email,
-                profile_picture: profileForm.profile_picture
+                profile_picture: profileForm.profile_picture,
+                timezone: profileForm.timezone
             }).eq('id', adminProfile.id);
             if (error) throw error;
             setIsEditingProfile(false);
@@ -172,12 +175,29 @@ const AdminProfile = () => {
                                 <div className="space-y-4 max-w-sm mx-auto md:mx-0">
                                     <input type="text" value={profileForm.name} onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-lg font-bold focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none" placeholder="Admin Name" />
                                     <input type="email" value={profileForm.email} onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none" placeholder="Admin Email" />
+                                    <select
+                                        value={profileForm.timezone}
+                                        onChange={(e) => setProfileForm({ ...profileForm, timezone: e.target.value })}
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none cursor-pointer"
+                                    >
+                                        <option value="UTC">UTC (Coordinated Universal Time)</option>
+                                        <option value="America/New_York">America/New_York (EST/EDT)</option>
+                                        <option value="America/Chicago">America/Chicago (CST/CDT)</option>
+                                        <option value="America/Denver">America/Denver (MST/MDT)</option>
+                                        <option value="America/Los_Angeles">America/Los_Angeles (PST/PDT)</option>
+                                        <option value="Europe/London">Europe/London (GMT/BST)</option>
+                                        <option value="Europe/Paris">Europe/Paris (CET/CEST)</option>
+                                        <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
+                                        <option value="Asia/Singapore">Asia/Singapore (SGT)</option>
+                                        <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
+                                        <option value="Australia/Sydney">Australia/Sydney (AEST/AEDT)</option>
+                                    </select>
                                 </div>
                             )}
                         </div>
                         <div className="flex shrink-0 justify-center">
                             {!isEditingProfile ? (
-                                <button onClick={() => { setProfileForm({ name: adminProfile?.full_name || '', email: adminProfile?.email || '', profile_picture: adminProfile?.profile_picture }); setIsEditingProfile(true); }}
+                                <button onClick={() => { setProfileForm({ name: adminProfile?.full_name || '', email: adminProfile?.email || '', profile_picture: adminProfile?.profile_picture, timezone: adminProfile?.timezone || 'UTC' }); setIsEditingProfile(true); }}
                                     style={{ background: '#fff', border: '1.5px solid #d1fae5', color: '#15803d', borderRadius: '10px', fontWeight: 600, fontSize: '13px', padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}>
                                     <Edit2 size={15} /> Edit Profile
                                 </button>
@@ -194,11 +214,12 @@ const AdminProfile = () => {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                         {[
                             { label: 'Email Address', val: adminProfile?.email },
                             { label: 'Company', val: adminProfile?.company || 'Universal Hub' },
-                            { label: 'Last Login', val: user?.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString() : 'Just Now' }
+                            { label: 'Last Login', val: user?.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString() : 'Just Now' },
+                            { label: 'Timezone Preference', val: adminProfile?.timezone || 'UTC' }
                         ].map((m, i) => (
                             <div key={i} style={{ padding: '16px', background: '#f8faf9', border: '1px solid #f0fdf4', borderRadius: '14px' }}>
                                 <label style={{ fontSize: '10px', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>{m.label}</label>
