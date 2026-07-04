@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft, CheckCircle2, Clock, Sparkles, MessageSquare, ShieldCheck } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabase';
 import { COLORS, SHADOWS } from '../../styles/theme';
 
@@ -32,14 +33,28 @@ const TicketTrackingScreen = ({ route }) => {
   }, [ticketId]);
 
   const fetchTicket = async () => {
-    const { data, error } = await supabase
-      .from('tickets')
-      .select('*')
-      .eq('id', ticketId)
-      .single();
-    
-    if (!error) setTicket(data);
-    setLoading(false);
+    try {
+      const { data, error } = await supabase
+        .from('tickets')
+        .select('*')
+        .eq('id', ticketId)
+        .single();
+      
+      if (!error && data) {
+        setTicket(data);
+        await AsyncStorage.setItem(`@ticket_detail:${ticketId}`, JSON.stringify(data));
+      } else {
+        throw error || new Error("Failed to fetch ticket");
+      }
+    } catch (err) {
+      console.log("Error fetching tracking ticket details, loading from AsyncStorage:", err);
+      const cachedTicket = await AsyncStorage.getItem(`@ticket_detail:${ticketId}`);
+      if (cachedTicket) {
+        setTicket(JSON.parse(cachedTicket));
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const Step = ({ title, description, time, isCompleted, isCurrent, icon: Icon, isLast }) => (
