@@ -7,6 +7,7 @@ import { supabase } from "../../lib/supabaseClient";
 import StatCard from "../components/StatCard";
 import TicketTable from "../components/TicketTable";
 import { formatTimelineDate } from "../../utils/dateUtils";
+import VisualScorecard from "../components/VisualScorecard";
 
 // Inline SVG icon components
 const TicketIcon = () => (
@@ -160,6 +161,8 @@ const AdminDashboard = () => {
                     <StatCard label="Escalated Tickets" value={metrics.humanEscalated} color="red" subtitle="Requires support agent" customIcon={<UsersIcon />} />
                 </button>
             </div>
+
+            <VisualScorecard metrics={metrics} />
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
                 {/* Recent Activity */}
