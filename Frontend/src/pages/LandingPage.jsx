@@ -13,47 +13,7 @@ import {
 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import TeamSection from '../components/landing/TeamSection';
-function ScrollToTopButton() {
-    const [show, setShow] = useState(false);
 
-    useEffect(() => {
-        const handleScroll = () => {
-            setShow(window.scrollY > 300);
-        };
-        window.addEventListener("scroll", handleScroll);
-        return () => window.removeEventListener("scroll", handleScroll);
-    }, []);
-
-    const scrollToTop = () => {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-    };
-
-    return (
-        <AnimatePresence>
-            {show && (
-                <motion.button
-                    onClick={scrollToTop}
-                    initial={{ opacity: 0, y: 50 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 50 }}
-                    whileHover={{ scale: 1.08 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="fixed bottom-6 left-6 z-[999] group"
-                >
-                    <div className="relative">
-                        {/* Glow */}
-                        <div className="absolute inset-0 bg-emerald-400 blur-xl opacity-30 group-hover:opacity-50 transition" />
-
-                        {/* Button */}
-                        <div className="relative bg-emerald-900 text-white p-3 rounded-xl shadow-lg border border-emerald-700 group-hover:bg-emerald-800 transition-all flex items-center justify-center">
-                            ↑
-                        </div>
-                    </div>
-                </motion.button>
-            )}
-        </AnimatePresence>
-    );
-}
 // ---- Count-up animation component ----
 function AnimatedStat({ target, suffix = '', prefix = '', label, isWord = false }) {
     const [display, setDisplay] = useState(isWord ? target : '0');
@@ -169,10 +129,8 @@ function DemoModal({ onClose }) {
                             Start Free <ArrowRight className="w-4 h-4 ml-1" />
                         </button>
                     </div>
-                    
                 </div>
             </div>
-            
         </div>
     );
 }
@@ -968,7 +926,6 @@ export default function LandingPage() {
                     </div>
                 </div>
             </footer>
-            <ScrollToTopButton />
         </div>
     );
 }
