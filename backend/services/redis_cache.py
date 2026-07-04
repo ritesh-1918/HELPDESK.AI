@@ -12,10 +12,19 @@ logger = logging.getLogger(__name__)
 
 CLASSIFICATION_PREFIX = "helpdesk:cls:"
 EMBEDDING_PREFIX = "helpdesk:emb:"
+DEFAULT_TTL_SECONDS = 3600
 
 
 def _truthy(value: str | None) -> bool:
     return (value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _parse_ttl_seconds(value: str | None) -> int:
+    try:
+        ttl = int((value or "").strip() or DEFAULT_TTL_SECONDS)
+    except ValueError:
+        return DEFAULT_TTL_SECONDS
+    return ttl if ttl > 0 else DEFAULT_TTL_SECONDS
 
 
 def _text_key(prefix: str, text: str) -> str:
@@ -40,7 +49,7 @@ class RedisInferenceCache:
         self._client: Any | None = None
         self.enabled = _truthy(os.getenv("USE_REDIS_CACHE"))
         self.allow_degraded = _truthy(os.getenv("ALLOW_DEGRADED_STARTUP"))
-        self.ttl_seconds = int(os.getenv("REDIS_CACHE_TTL_SECONDS", "3600"))
+        self.ttl_seconds = _parse_ttl_seconds(os.getenv("REDIS_CACHE_TTL_SECONDS"))
 
     @property
     def available(self) -> bool:
