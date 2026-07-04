@@ -20,6 +20,7 @@ warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
 from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -435,7 +436,8 @@ async def troubleshoot(request: TroubleshootRequest):
             is_final=True
         )
     
-    result = gemini_service.get_troubleshooting_step(
+    result = await run_in_threadpool(
+        gemini_service.get_troubleshooting_step,
         request.text,
         request.history,
         request.category
@@ -460,7 +462,8 @@ async def analyze_bug(request: BugReportAnalysisRequest):
             probable_cause="AI Diagnostics are currently unavailable."
         )
     
-    cause = gemini_service.analyze_bug_report(
+    cause = await run_in_threadpool(
+        gemini_service.analyze_bug_report,
         request.bug_title,
         request.description,
         request.steps_to_reproduce,
