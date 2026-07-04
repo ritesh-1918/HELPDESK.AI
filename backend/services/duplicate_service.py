@@ -1,3 +1,4 @@
+from backend.logger import logger
 """
 DuplicateService — In-memory duplicate ticket detection with idempotent add_ticket.
 
