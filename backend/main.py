@@ -731,10 +731,10 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
             print(f"[AI] OCR added {len(local_ocr_text)} chars to context.")
 
     # Initalize Timeline
-    return await analyze_only(request_body)
+    return await analyze_only(request_body, client_metadata=env_metadata)
 
 @app.post("/ai/analyze")
-async def analyze_only(request_body: TicketRequest):
+async def analyze_only(request_body: TicketRequest, client_metadata: dict = None):
     """
     PERFORMANCE UPGRADE: AI Analysis phase only. 
     Does NOT persist to DB. This allows the user to review the analysis 
@@ -757,6 +757,8 @@ async def analyze_only(request_body: TicketRequest):
         "model_version": "3.0.0-PRO",
         "api_endpoint": "/ai/analyze"
     }
+    if client_metadata:
+        env_metadata.update(client_metadata)
     
     timeline = {"received": get_now_ist()}
 
