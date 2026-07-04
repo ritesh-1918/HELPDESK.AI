@@ -68,32 +68,21 @@ def extract_urls(text: str) -> list[str]:
     return urls
 
 
-def _classify_url(url: str) -> str | None:
-    """Return a reason string if the URL looks suspicious, else None."""
-    try:
-        parsed = urlparse(url)
-    except ValueError:
-        return "Malformed URL"
-
-    host = (parsed.hostname or "").lower()
-    if not host:
-        return "URL missing host"
-
-    if _IP_HOST_RE.match(host):
-        return f"URL uses raw IP address ({host})"
-
-    if host in _URL_SHORTENERS:
-        return f"URL shortener detected ({host})"
-
-    tld = host.rsplit(".", 1)[-1] if "." in host else ""
-    if tld in _SUSPICIOUS_TLDS:
-        return f"Suspicious TLD .{tld} ({host})"
-
-    # "@" inside the authority is a classic phishing trick to hide the real host.
-    if "@" in (parsed.netloc or ""):
-        return f"URL contains embedded credentials ({parsed.netloc})"
-
-    return None
+# Trusted/whitelisted corporate domains that bypass suspicious URL evaluations.
+_TRUSTED_DOMAINS = {
+    "gmail.com",
+    "google.com",
+    "github.com",
+    "microsoft.com",
+    "outlook.com",
+    "yahoo.com",
+    "apple.com",
+    "amazon.com",
+    "salesforce.com",
+    "zoom.us",
+    "slack.com",
+    "helpdesk.ai",
+}
 
 
 class SpamService:
@@ -101,6 +90,52 @@ class SpamService:
 
     # Risk score thresholds — kept on the conservative side.
     SPAM_THRESHOLD = 0.6
+
+    def __init__(self, additional_whitelist: set[str] | None = None):
+        self.whitelist = _TRUSTED_DOMAINS.copy()
+        if additional_whitelist:
+            self.whitelist.update(d.lower() for d in additional_whitelist)
+
+    def _is_whitelisted(self, host: str) -> bool:
+        """Check if the host or a parent domain is in the trusted domains whitelist."""
+        host = host.lower()
+        if host in self.whitelist:
+            return True
+        for trusted in self.whitelist:
+            if host.endswith("." + trusted):
+                return True
+        return False
+
+    def _classify_url(self, url: str) -> str | None:
+        """Return a reason string if the URL looks suspicious, else None."""
+        try:
+            parsed = urlparse(url)
+        except ValueError:
+            return "Malformed URL"
+
+        host = (parsed.hostname or "").lower()
+        if not host:
+            return "URL missing host"
+
+        # Bypass all suspicious heuristic checks for trusted whitelisted domains
+        if self._is_whitelisted(host):
+            return None
+
+        if _IP_HOST_RE.match(host):
+            return f"URL uses raw IP address ({host})"
+
+        if host in _URL_SHORTENERS:
+            return f"URL shortener detected ({host})"
+
+        tld = host.rsplit(".", 1)[-1] if "." in host else ""
+        if tld in _SUSPICIOUS_TLDS:
+            return f"Suspicious TLD .{tld} ({host})"
+
+        # "@" inside the authority is a classic phishing trick to hide the real host.
+        if "@" in (parsed.netloc or ""):
+            return f"URL contains embedded credentials ({parsed.netloc})"
+
+        return None
 
     def check(self, text: str, ocr_text: str = "") -> dict:
         """
@@ -131,7 +166,7 @@ class SpamService:
         suspicious_urls: list[str] = []
         url_reasons: list[str] = []
         for url in extract_urls(combined):
-            reason = _classify_url(url)
+            reason = self._classify_url(url)
             if reason:
                 suspicious_urls.append(url)
                 url_reasons.append(reason)
@@ -154,3 +189,4 @@ class SpamService:
             "suspicious_urls": suspicious_urls,
             "matched_keywords": matched_keywords,
         }
+
