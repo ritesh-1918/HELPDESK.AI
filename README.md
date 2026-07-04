@@ -118,6 +118,7 @@ To support the project and get real-time open-source project updates, please mak
 - [🚀 Deployment & Operations](#-deployment--operations)
 - [🗺️ Roadmap](#%EF%B8%8F-roadmap)
 - [📱 Mobile Ecosystem (V1)](#-mobile-ecosystem-v1)
+- [🗄️ Database Schema](#-database-schema)
 - [👥 Contributors](#-contributors)
 
 ---
@@ -248,6 +249,13 @@ HELPDESK.AI/
 | **utils/** | Common utilities and helper functions |
 | **static/** | Static assets served by the application |
 | **templates/** | HTML/email templates |
+
+---
+
+<h2 id="database-schema">🗄️ Database Schema</h2>
+
+The full table catalog, relationships, and migration-owned schema objects are documented in
+[docs/helpdesk_schema.md](docs/helpdesk_schema.md).
 
 ---
 
