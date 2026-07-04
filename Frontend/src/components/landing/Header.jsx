@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Menu, X, Play } from 'lucide-react';
+import { Menu, X, Play, ArrowRight } from 'lucide-react';
 import ThemeToggle from '../ThemeToggle';
 
 function DemoModal({ onClose }) {
@@ -82,7 +82,7 @@ export default function Header({ setShowDemo = () => {} }) {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     return (
-        <nav className="sticky top-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-gray-100 dark:border-slate-800 shadow-sm transition-colors duration-300">
+        <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-gray-100 dark:border-slate-800 shadow-sm transition-colors duration-300">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center h-16 gap-4">
                     <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={() => navigate('/')}>
