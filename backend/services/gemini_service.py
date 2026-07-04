@@ -1,4 +1,5 @@
 import os
+import asyncio
 import base64
 import io
 import re
@@ -27,7 +28,7 @@ class GeminiService:
         else:
             print("[GeminiService] WARNING: GEMINI_API_KEY not found in environment.")
 
-    def analyze_image(self, image_base64: str) -> dict:
+    async def analyze_image(self, image_base64: str) -> dict:
         """
         Perform OCR and image analysis using Gemini logic.
         """
@@ -55,7 +56,8 @@ class GeminiService:
                 "Problem: <problem>"
             )
 
-            response = self.client.models.generate_content(
+            response = await asyncio.to_thread(
+                self.client.models.generate_content,
                 model=self.model_name,
                 contents=[prompt, img]
             )
@@ -79,7 +81,7 @@ class GeminiService:
                 "detected_problem": ""
             }
 
-    def get_summary(self, ticket_text: str) -> str:
+    async def get_summary(self, ticket_text: str) -> str:
         """
         Generate a concise, one-line summary of the ticket text.
         """
@@ -93,7 +95,8 @@ class GeminiService:
                 "that captures the technical essence. NO intro, NO filler, just the core problem headline. "
                 f"Ticket: '{ticket_text}'"
             )
-            response = self.client.models.generate_content(
+            response = await asyncio.to_thread(
+                self.client.models.generate_content,
                 model=self.model_name,
                 contents=prompt
             )
@@ -102,7 +105,7 @@ class GeminiService:
             print(f"[GeminiService] Summarization Error: {e}")
             return ticket_text[:100] + ("…" if len(ticket_text) > 100 else "")
 
-    def get_reasoning(self, ticket_text: str, category: str, team: str) -> dict:
+    async def get_reasoning(self, ticket_text: str, category: str, team: str) -> dict:
         """
         Get a deeper AI explanation and key takeaways for the ticket.
         """
@@ -120,7 +123,8 @@ class GeminiService:
                 "REASONING: <text>\n"
                 "HIGHLIGHTS: <point1> | <point2> | <point3>"
             )
-            response = self.client.models.generate_content(
+            response = await asyncio.to_thread(
+                self.client.models.generate_content,
                 model=self.model_name,
                 contents=prompt
             )
@@ -141,7 +145,7 @@ class GeminiService:
             print(f"[GeminiService] Reasoning Error: {e}")
             return {"reasoning": "", "highlights": []}
 
-    def get_troubleshooting_step(self, ticket_text: str, history: list[dict], category: str) -> dict:
+    async def get_troubleshooting_step(self, ticket_text: str, history: list[dict], category: str) -> dict:
         """
         Get the next troubleshooting step from Gemini based on conversation history.
         """
@@ -171,7 +175,8 @@ class GeminiService:
                 "FINAL: <True/False>"
             )
 
-            response = self.client.models.generate_content(
+            response = await asyncio.to_thread(
+                self.client.models.generate_content,
                 model=self.model_name,
                 contents=prompt
             )
@@ -194,7 +199,7 @@ class GeminiService:
                 "is_final": False
             }
 
-    def analyze_bug_report(self, bug_title: str, description: str, steps: str, errors: list) -> str:
+    async def analyze_bug_report(self, bug_title: str, description: str, steps: str, errors: list) -> str:
         """
         Analyze a bug report and captured console errors to generate a Probable Cause.
         """
@@ -214,7 +219,8 @@ class GeminiService:
                 "Do not include pleasantries. Do not say 'The probable cause is', just state the technical theory."
             )
 
-            response = self.client.models.generate_content(
+            response = await asyncio.to_thread(
+                self.client.models.generate_content,
                 model=self.model_name,
                 contents=prompt
             )

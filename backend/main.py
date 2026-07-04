@@ -435,7 +435,7 @@ async def troubleshoot(request: TroubleshootRequest):
             is_final=True
         )
     
-    result = gemini_service.get_troubleshooting_step(
+    result = await gemini_service.get_troubleshooting_step(
         request.text,
         request.history,
         request.category
@@ -460,7 +460,7 @@ async def analyze_bug(request: BugReportAnalysisRequest):
             probable_cause="AI Diagnostics are currently unavailable."
         )
     
-    cause = gemini_service.analyze_bug_report(
+    cause = await gemini_service.analyze_bug_report(
         request.bug_title,
         request.description,
         request.steps_to_reproduce,
@@ -766,7 +766,7 @@ async def analyze_only(request_body: TicketRequest):
     if request_body.image_base64 and not gemini_analysis["ocr_text"]:
         try:
             print("[AI] Detecting visual context via Gemini...")
-            vision_result = gemini_service.analyze_image(request_body.image_base64, text)
+            vision_result = await gemini_service.analyze_image(request_body.image_base64, text)
             gemini_analysis.update(vision_result)
         except Exception as e:
             print(f"[VISION ERROR] {e}")
@@ -861,7 +861,7 @@ async def analyze_only(request_body: TicketRequest):
     
     # --- Gemini Summary ---
     if gemini_service and gemini_service._initialized:
-        summary = gemini_service.get_summary(text)
+        summary = await gemini_service.get_summary(text)
     
     # Convert priority to SLA breached timestamp (for preview)
     hours_map = {"Critical": 2, "High": 8, "Medium": 24, "Low": 72}
@@ -920,7 +920,7 @@ async def analyze_stream(request_body: TicketRequest):
         gemini_analysis = {"ocr_text": request_body.image_text or "", "image_description": ""}
         if request_body.image_base64 and not gemini_analysis["ocr_text"]:
             try:
-                vision_result = gemini_service.analyze_image(request_body.image_base64, text)
+            vision_result = await gemini_service.analyze_image(request_body.image_base64, text)
                 gemini_analysis.update(vision_result)
             except Exception as e:
                 pass
@@ -1009,7 +1009,7 @@ async def analyze_stream(request_body: TicketRequest):
         timeline["routed"] = get_now_ist()
 
         if gemini_service and gemini_service._initialized:
-            summary = gemini_service.get_summary(text)
+        summary = await gemini_service.get_summary(text)
         
         hours_map = {"Critical": 2, "High": 8, "Medium": 24, "Low": 72}
         sla_hours = hours_map.get(classification["priority"], 72)
