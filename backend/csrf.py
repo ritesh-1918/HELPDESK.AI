@@ -61,6 +61,7 @@ def set_csrf_cookie(response: Response) -> str:
         value=token,
         max_age=CSRF_COOKIE_MAX_AGE,
         secure=True,
+        httponly=True,
         samesite="strict",
         path="/",
     )
