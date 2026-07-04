@@ -1,0 +1,122 @@
+{
+  "name": "@supabase/supabase-js",
+  "version": "2.98.0",
+  "description": "Isomorphic Javascript SDK for Supabase",
+  "keywords": [
+    "javascript",
+    "typescript",
+    "supabase"
+  ],
+  "homepage": "https://github.com/supabase/supabase-js/tree/master/packages/core/supabase-js",
+  "bugs": "https://github.com/supabase/supabase-js/issues",
+  "license": "MIT",
+  "author": "Supabase",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.cts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./cors": {
+      "import": {
+        "types": "./dist/cors.d.mts",
+        "default": "./dist/cors.mjs"
+      },
+      "require": {
+        "types": "./dist/cors.d.cts",
+        "default": "./dist/cors.cjs"
+      }
+    },
+    "./dist/*": "./dist/*",
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/supabase/supabase-js.git",
+    "directory": "packages/core/supabase-js"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "build:watch": "tsdown --watch",
+    "test": "npm run test:types && npm run test:run",
+    "test:all": "npm run test:types && npm run test:run && npm run test:integration && npm run test:integration:browser",
+    "test:run": "jest --runInBand --detectOpenHandles",
+    "test:unit": "jest --runInBand --detectOpenHandles test/unit",
+    "test:coverage": "jest --runInBand --coverage --testPathIgnorePatterns=\"test/integration|test/deno\"",
+    "test:integration": "jest --runInBand --detectOpenHandles test/integration.test.ts",
+    "test:integration:browser": "deno test --allow-all test/integration.browser.test.ts",
+    "test:edge-functions": "cd test/deno && npm run test:edge-functions",
+    "test:deno": "cd test/deno && npm run test",
+    "test:watch": "jest --watch --verbose false --silent false",
+    "test:node:playwright": "cd test/integration/node-browser && npm install && cp ../../../dist/umd/supabase.js . && npm run test",
+    "test:bun": "cd test/integration/bun && bun install && bun test",
+    "test:expo": "cd test/integration/expo && npm test",
+    "test:next": "cd test/integration/next && npm test",
+    "test:types": "tsd --files test/types/index.test-d.ts && tsd --typings dist/cors.d.cts --files test/types/cors.test-d.ts && jsr publish --dry-run --allow-dirty",
+    "test:exports": "attw --pack . --ignore-rules no-resolution",
+    "test:esm": "node test/module-resolution.test.mjs && node test/module-resolution-cors.test.mjs",
+    "test:cjs": "node test/module-resolution.test.cjs && node test/module-resolution-cors.test.cjs",
+    "test:module-resolution": "npm run test:exports && npm run test:esm && npm run test:cjs",
+    "docs": "typedoc --entryPoints src/index.ts --entryPoints src/cors.ts --out docs/v2",
+    "docs:json": "typedoc --entryPoints src/index.ts --entryPoints src/cors.ts --json docs/v2/spec.json --excludeExternals",
+    "serve:coverage": "npx nx test:coverage supabase-js && npx --yes serve test/coverage",
+    "update:test-deps": "npm run update:test-deps:expo && npm run update:test-deps:next && npm run update:test-deps:deno && npm run update:test-deps:bun",
+    "update:test-deps:expo": "cd test/integration/expo && npm install",
+    "update:test-deps:next": "cd test/integration/next && npm install",
+    "update:test-deps:deno": "cd test/deno && npm install",
+    "update:test-deps:bun": "cd test/integration/bun && bun install"
+  },
+  "dependencies": {
+    "@supabase/auth-js": "2.98.0",
+    "@supabase/functions-js": "2.98.0",
+    "@supabase/postgrest-js": "2.98.0",
+    "@supabase/realtime-js": "2.98.0",
+    "@supabase/storage-js": "2.98.0"
+  },
+  "devDependencies": {
+    "jsr": "^0.13.5",
+    "puppeteer": "^24.9.0"
+  },
+  "jsdelivr": "dist/umd/supabase.js",
+  "unpkg": "dist/umd/supabase.js",
+  "nx": {
+    "targets": {
+      "test:integration:browser": {
+        "dependsOn": [
+          {
+            "projects": [
+              "storage-js"
+            ],
+            "target": "build"
+          }
+        ]
+      },
+      "test:edge-functions": {
+        "dependsOn": [
+          {
+            "projects": [
+              "storage-js"
+            ],
+            "target": "build"
+          }
+        ]
+      }
+    }
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
