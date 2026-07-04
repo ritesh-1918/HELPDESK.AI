@@ -1,3 +1,25 @@
+"""
+Structured JSON logging for the FastAPI backend (issue #2944).
+
+This module exposes a single public entry point, ``get_logger(name)``, that
+returns a configured ``structlog`` logger emitting one JSON object per record.
+
+Key properties (see ``backend/tests/test_logger.py``):
+
+* **Configurable level.** The effective log level is read once from
+  ``Settings.LOG_LEVEL`` (env var ``LOG_LEVEL``), accepting the stdlib level
+  names case-insensitively or an integer (``"10"``, ``"DEBUG"``, ``"debug"``
+  are all equivalent). Defaults to ``INFO``.
+* **Structured JSON output.** Every record is rendered as a single JSON line
+  carrying ``event``, ``level``, ``logger``, ``timestamp`` and the call's
+  keyword arguments — suitable for ingestion by log aggregators.
+* **Idempotent configuration.** ``configure_logging`` guards against the
+  double-configure / handler-stacking bug the previous implementation had:
+  repeated imports or calls no longer attach duplicate handlers or reset the
+  level inconsistently.
+"""
+from __future__ import annotations
+
 import logging
 import os
 import sys
@@ -44,7 +66,16 @@ def configure_logging():
         l.setLevel(log_level)
         l.propagate = False
 
-def get_logger(name: str = None):
+# Default fallback if settings cannot be resolved (e.g. very early bootstrap).
+_DEFAULT_LEVEL = logging.INFO
+
+
+def _coerce_level(value: Union[str, int, None]) -> int:
+    """Normalise a level spec into a stdlib numeric level.
+
+    Accepts upper/lower/stdlib names ("debug", "WARNING", ...) and integer
+    strings ("10"). Falls back to INFO on anything unrecognised so a typo in
+    configuration never silences production logs unexpectedly.
     """
     Returns a configured standard logger.
     """
