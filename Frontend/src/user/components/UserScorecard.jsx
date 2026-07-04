@@ -3,6 +3,7 @@ import { Activity, RefreshCw, AlertTriangle } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import { API_CONFIG } from '../../config';
 import AgentScorecard from '../../admin/components/AgentScorecard';
+import PullToRefresh from '../../components/shared/PullToRefresh';
 
 const BACKEND = API_CONFIG.BACKEND_URL;
 
@@ -82,6 +83,7 @@ const UserScorecard = () => {
   if (!data) return null;
 
   return (
+    <PullToRefresh onRefresh={load}>
     <div style={{ fontFamily: 'Inter, sans-serif' }}>
       {/* Section heading */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -116,6 +118,7 @@ const UserScorecard = () => {
         insufficientData={data.insufficient_data}
       />
     </div>
+    </PullToRefresh>
   );
 };
 
