@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+﻿import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity } from 'lucide-react';
+import { Activity, Info } from 'lucide-react';
 
 import useAuthStore from "../../store/authStore";
 import { supabase } from "../../lib/supabaseClient";
@@ -148,16 +148,16 @@ const AdminDashboard = () => {
             {/* KPIs */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <button onClick={() => navigate('/admin/tickets')} className="text-left group focus:outline-none">
-                    <StatCard label="Total Tickets" value={metrics.total} color="indigo" subtitle="Lifetime generated" customIcon={<TicketIcon />} />
+                    <StatCard label="Total Tickets" value={metrics.total} color="indigo" title="Total tickets created since system launch"\n                    subtitle={<div className="flex items-center gap-1.5"><span>Lifetime generated</span><Info size={10} className="text-gray-400 cursor-help" /></div> customIcon={<TicketIcon />} />
                 </button>
                 <button onClick={() => navigate('/admin/tickets')} className="text-left group focus:outline-none">
-                    <StatCard label="Active Tickets" value={metrics.active} color="amber" subtitle="Need attention" customIcon={<ActivityIcon />} />
+                    <StatCard label="Active Tickets" value={metrics.active} color="amber" title="Tickets currently open or in progress that require agent action"\n                    subtitle={<div className="flex items-center gap-1.5"><span>Need attention</span><Info size={10} className="text-gray-400 cursor-help" /></div> customIcon={<ActivityIcon />} />
                 </button>
                 <button onClick={() => navigate('/admin/tickets?filter=auto')} className="text-left group focus:outline-none">
-                    <StatCard label="AI Auto-Resolved" value={metrics.autoResolved} color="emerald" subtitle="Resolved by AI" customIcon={<CpuIcon />} />
+                    <StatCard label="AI Auto-Resolved" value={metrics.autoResolved} color="emerald" title="Tickets automatically resolved by the AI classifier engine without human intervention"\n                    subtitle={<div className="flex items-center gap-1.5"><span>Resolved by AI</span><Info size={10} className="text-gray-400 cursor-help" /></div> customIcon={<CpuIcon />} />
                 </button>
                 <button onClick={() => navigate('/admin/tickets?filter=human')} className="text-left group focus:outline-none">
-                    <StatCard label="Escalated Tickets" value={metrics.humanEscalated} color="red" subtitle="Requires support agent" customIcon={<UsersIcon />} />
+                    <StatCard label="Escalated Tickets" value={metrics.humanEscalated} color="red" title="Tickets escalated to human support agents for manual resolution"\n                    subtitle={<div className="flex items-center gap-1.5"><span>Requires support agent</span><Info size={10} className="text-gray-400 cursor-help" /></div> customIcon={<UsersIcon />} />
                 </button>
             </div>
 
