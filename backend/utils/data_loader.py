@@ -20,7 +20,9 @@ def load_json_data(file_path: str) -> List[Any]:
 def save_json_data(file_path: str, data: Any) -> bool:
     """Save data to a JSON file safely."""
     try:
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        directory = os.path.dirname(file_path)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
         return True
