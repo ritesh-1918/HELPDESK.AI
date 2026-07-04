@@ -21,6 +21,8 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
+from backend.security_middleware import SecurityHeadersMiddleware
+app.add_middleware(SecurityHeadersMiddleware)
 app.include_router(upload_router.router)
 app.add_middleware(CSRFTokenMiddleware)
 app.include_router(metrics_router.router)

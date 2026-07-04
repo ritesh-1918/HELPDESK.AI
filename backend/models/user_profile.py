@@ -5,8 +5,8 @@ Logs every encrypt/decrypt operation to encryption_audit_logs table.
 
 import logging
 from datetime import datetime
-from backend.models.encryption import encrypt_pii, decrypt_pii
-from backend.models.encryption_key_lo import EncryptionAuditLog
+from backend.utils.encryption import encrypt_pii, decrypt_pii
+from backend.models.encryption_key_log import EncryptionAuditLog
 
 logger = logging.getLogger(__name__)
 
