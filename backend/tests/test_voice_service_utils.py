@@ -5,6 +5,7 @@ import pytest
 from backend.services.voice_service_utils import (
     AudioTooLargeError,
     DEFAULT_MAX_MB,
+    EmptyAudioError,
     SUPPORTED_FORMATS,
     UnsupportedFormatError,
     assert_valid_audio,
@@ -50,12 +51,16 @@ def test_validate_audio_format_rejects_missing_or_unsupported_extensions(filenam
     assert validate_audio_format(filename) is False
 
 
-def test_validate_audio_size_accepts_empty_and_exact_limit_payloads():
+def test_validate_audio_size_accepts_exact_limit_payloads():
     max_mb = 1
     limit_bytes = max_mb * 1024 * 1024
 
-    assert validate_audio_size(b"", max_mb=max_mb) is True
     assert validate_audio_size(bytearray(limit_bytes), max_mb=max_mb) is True
+
+
+def test_validate_audio_size_rejects_empty_payloads():
+    assert validate_audio_size(b"", max_mb=1) is False
+    assert validate_audio_size(bytearray(), max_mb=1) is False
 
 
 def test_validate_audio_size_rejects_payloads_over_limit():
@@ -63,6 +68,13 @@ def test_validate_audio_size_rejects_payloads_over_limit():
     over_limit = b"x" * (max_mb * 1024 * 1024 + 1)
 
     assert validate_audio_size(over_limit, max_mb=max_mb) is False
+
+
+def test_assert_valid_audio_raises_empty_audio_error():
+    with pytest.raises(EmptyAudioError) as exc_info:
+        assert_valid_audio("call.wav", b"", max_mb=1)
+
+    assert "empty" in str(exc_info.value).lower()
 
 
 def test_assert_valid_audio_allows_supported_audio_under_limit():

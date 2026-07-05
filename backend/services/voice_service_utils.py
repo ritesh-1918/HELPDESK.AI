@@ -72,6 +72,13 @@ class UnsupportedFormatError(AudioValidationError):
         )
 
 
+class EmptyAudioError(AudioValidationError):
+    """Raised when the submitted audio file has no content."""
+
+    def __init__(self) -> None:
+        super().__init__("Audio file is empty.")
+
+
 class AudioTooLargeError(AudioValidationError):
     """
     Raised when the submitted audio file exceeds the allowed size limit.
@@ -118,14 +125,14 @@ def validate_audio_format(filename: str) -> bool:
 
 def validate_audio_size(file_bytes: Union[bytes, bytearray], max_mb: int = DEFAULT_MAX_MB) -> bool:
     """
-    Return True if the file size is within the allowed limit.
+    Return True if the file size is non-empty and within the allowed limit.
 
     Args:
         file_bytes: Raw bytes of the audio file.
         max_mb:     Maximum allowed size in megabytes (default: DEFAULT_MAX_MB).
 
     Returns:
-        True if len(file_bytes) <= max_mb * 1024 * 1024, False otherwise.
+        True if 0 < len(file_bytes) <= max_mb * 1024 * 1024, False otherwise.
 
     Examples:
         >>> validate_audio_size(b"small", max_mb=1)
@@ -133,7 +140,7 @@ def validate_audio_size(file_bytes: Union[bytes, bytearray], max_mb: int = DEFAU
         >>> validate_audio_size(b"x" * (26 * 1024 * 1024), max_mb=25)
         False
     """
-    return len(file_bytes) <= max_mb * 1024 * 1024
+    return 0 < len(file_bytes) <= max_mb * 1024 * 1024
 
 
 def assert_valid_audio(filename: str, file_bytes: Union[bytes, bytearray],
@@ -151,6 +158,7 @@ def assert_valid_audio(filename: str, file_bytes: Union[bytes, bytearray],
 
     Raises:
         UnsupportedFormatError: Extension is not in SUPPORTED_FORMATS.
+        EmptyAudioError:        File has no content.
         AudioTooLargeError:     File exceeds max_mb limit.
 
     Examples:
@@ -163,6 +171,9 @@ def assert_valid_audio(filename: str, file_bytes: Union[bytes, bytearray],
     if not validate_audio_format(filename):
         ext = pathlib.Path(filename).suffix.lower()
         raise UnsupportedFormatError(ext)
+
+    if not file_bytes:
+        raise EmptyAudioError()
 
     limit_bytes = max_mb * 1024 * 1024
     if len(file_bytes) > limit_bytes:
