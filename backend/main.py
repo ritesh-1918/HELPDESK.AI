@@ -45,7 +45,7 @@ import asyncio
 import redis
 
 from pathlib import Path
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 from dotenv import load_dotenv
 import ipaddress
 
@@ -631,17 +631,53 @@ class TicketRequest(BaseModel):
             raise ValueError(f"Value must be between 0.0 and 1.0, got {v}")
         return v
 
-class TicketSaveRequest(BaseModel):
-    model_config = {"extra": "allow"}
+_ALLOWED_CATEGORIES = {
+    "Hardware", "Software", "Network", "Security", "Access",
+    "Email", "Account", "Billing", "Other"
+}
+_ALLOWED_PRIORITIES = {"Low", "Medium", "High", "Critical"}
+_ALLOWED_TEAMS = {
+    "Hardware Support", "Software Support", "Network Support",
+    "Security Support", "Access Support", "Email Support",
+    "Account Support", "Billing Support", "General Support"
+}
+_ALLOWED_STATUSES = {"Open", "In Progress", "Resolved", "Closed", "Escalated"}
 
-    user_id: str
-    subject: str
-    description: str
-    category: str
-    subcategory: str
-    priority: str
-    assigned_team: str
-    status: str
+_STRIP_HTML = re.compile(r"<[^>]*>")
+
+
+class TicketSaveRequest(BaseModel):
+    user_id: str = Field(..., min_length=1, max_length=256)
+    subject: str = Field(..., min_length=1, max_length=500)
+    description: str = Field(..., min_length=1, max_length=10000)
+    category: str = Field(..., min_length=1, max_length=50)
+    subcategory: str = Field("", max_length=100)
+    priority: str = Field(..., min_length=1, max_length=20)
+    assigned_team: str = Field(..., min_length=1, max_length=50)
+    status: str = Field(..., min_length=1, max_length=30)
+
+    @field_validator("subject", "description", mode="before")
+    @classmethod
+    def strip_xss(cls, v):
+        if isinstance(v, str):
+            return _STRIP_HTML.sub("", v).strip()
+        return v
+
+    @field_validator("category", "priority", "assigned_team", "status", mode="after")
+    @classmethod
+    def validate_enum_fields(cls, v, info):
+        field_name = info.field_name
+        allowed = {
+            "category": _ALLOWED_CATEGORIES,
+            "priority": _ALLOWED_PRIORITIES,
+            "assigned_team": _ALLOWED_TEAMS,
+            "status": _ALLOWED_STATUSES,
+        }.get(field_name)
+        if allowed and v not in allowed:
+            raise ValueError(
+                f"Invalid {field_name}: '{v}'. Must be one of: {', '.join(sorted(allowed))}"
+            )
+        return v
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
