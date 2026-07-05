@@ -25,6 +25,7 @@ import os
 import sys
 import json
 from datetime import datetime
+from typing import Union
 
 class JSONFormatter(logging.Formatter):
     """
@@ -77,6 +78,19 @@ def _coerce_level(value: Union[str, int, None]) -> int:
     strings ("10"). Falls back to INFO on anything unrecognised so a typo in
     configuration never silences production logs unexpectedly.
     """
-    Returns a configured standard logger.
-    """
+    if value is None:
+        return _DEFAULT_LEVEL
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        if value.isdigit():
+            return int(value)
+        level = getattr(logging, value.upper(), None)
+        if isinstance(level, int):
+            return level
+    return _DEFAULT_LEVEL
+
+
+def get_logger(name: str) -> logging.Logger:
+    """Returns a configured standard logger."""
     return logging.getLogger(name)

@@ -11,14 +11,16 @@ load_dotenv(dotenv_path=env_path)
 
 try:
     from supabase import create_client, Client
-    from backend.config import settings
     url = settings.SUPABASE_URL
     key = settings.SUPABASE_SERVICE_KEY
     if not url or not key:
         logger.error("SUPABASE_URL or SUPABASE_SERVICE_KEY not set in backend/.env")
         supabase = None
-else:
-    logger.error("SUPABASE_URL or SUPABASE_SERVICE_KEY not set in backend/.env")
+    else:
+        supabase = create_client(url, key)
+except Exception as e:
+    logger.error("Failed to initialize Supabase: %s", e)
+    supabase = None
 
 def get_system_settings(company_id: str) -> dict:
     defaults = {
