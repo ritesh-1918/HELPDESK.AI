@@ -206,6 +206,48 @@ async def analyze_only(request_body: TicketRequest, user: dict = Depends(get_cur
     confidence_threshold = settings["ai_confidence_threshold"]
     duplicate_sensitivity = settings["duplicate_sensitivity"]
     enable_auto_resolve = settings["enable_auto_resolve"]
+    enable_translation = settings.get("enable_translation", True)  # Translation enabled by default
+    
+    # --- Language Detection and Translation ---
+    from backend.services.translation_service import detect_language, translate_text
+    
+    detected_language = None
+    original_text = text
+    translation_info = None
+    
+    if enable_translation and text.strip():
+        try:
+            print("[AI] Detecting language...")
+            detected_language = detect_language(text)
+            print(f"[AI] Detected language: {detected_language}")
+            
+            # Translate non-English tickets to English for classification
+            if detected_language and detected_language != 'en':
+                print(f"[AI] Translating from {detected_language} to English...")
+                translation_result = translate_text(
+                    text=text,
+                    target_lang='en',
+                    source_lang=detected_language
+                )
+                
+                if translation_result.get('translated') and translation_result['translated'] != text:
+                    translated_text = translation_result['translated']
+                    text = translated_text  # Use translated text for classification
+                    translation_info = {
+                        'original_language': detected_language,
+                        'original_text': original_text,
+                        'translated_text': translated_text,
+                        'translation_confidence': translation_result.get('confidence', 0.0)
+                    }
+                    print(f"[AI] Translation successful. Using translated text for classification.")
+                else:
+                    print("[AI] Translation returned same text, using original.")
+            else:
+                print("[AI] Text is in English, no translation needed.")
+        except Exception as e:
+            print(f"[AI] Language detection/translation error: {e}")
+            # Continue with original text if translation fails
+            detected_language = 'en'
     
     # --- Context & Environment ---
     import datetime
@@ -215,7 +257,8 @@ async def analyze_only(request_body: TicketRequest, user: dict = Depends(get_cur
     env_metadata = {
         "timestamp": get_now_ist(),
         "model_version": "3.0.0-PRO",
-        "api_endpoint": "/analyze"
+        "api_endpoint": "/analyze",
+        "detected_language": detected_language or 'en'
     }
     
     timeline = {"received": get_now_ist()}
@@ -358,7 +401,12 @@ async def analyze_only(request_body: TicketRequest, user: dict = Depends(get_cur
         env_metadata=env_metadata,
         sla_breach_at=sla_breach_dt.isoformat() + "Z",
         rag_suggestions=rag_suggestions,
-        rag_recommendations=rag_recommendations
+        rag_recommendations=rag_recommendations,
+        # Translation info
+        detected_language=translation_info.get('original_language') if translation_info else None,
+        original_text=translation_info.get('original_text') if translation_info else None,
+        translated_text=translation_info.get('translated_text') if translation_info else None,
+        translation_confidence=translation_info.get('translation_confidence') if translation_info else None
     )
 
 @router.post("/analyze_stream")
