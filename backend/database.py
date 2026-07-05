@@ -14,11 +14,14 @@ try:
     from backend.config import settings
     url = settings.SUPABASE_URL
     key = settings.SUPABASE_SERVICE_KEY
-    if not url or not key:
+    if url and key:
+        supabase = create_client(url, key)
+    else:
         logger.error("SUPABASE_URL or SUPABASE_SERVICE_KEY not set in backend/.env")
         supabase = None
-else:
-    logger.error("SUPABASE_URL or SUPABASE_SERVICE_KEY not set in backend/.env")
+except Exception:
+    logger.error("Failed to initialize Supabase client")
+    supabase = None
 
 def get_system_settings(company_id: str) -> dict:
     defaults = {
