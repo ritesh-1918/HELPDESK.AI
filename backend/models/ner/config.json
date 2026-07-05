@@ -1,0 +1,53 @@
+{
+  "activation": "gelu",
+  "architectures": [
+    "DistilBertForTokenClassification"
+  ],
+  "attention_dropout": 0.1,
+  "bos_token_id": null,
+  "dim": 768,
+  "dropout": 0.1,
+  "dtype": "float32",
+  "eos_token_id": null,
+  "hidden_dim": 3072,
+  "id2label": {
+    "0": "B-B-APP_NAME",
+    "1": "B-B-DEVICE_NAME",
+    "2": "B-B-ERROR_CODE",
+    "3": "B-B-NETWORK_NAME",
+    "4": "B-B-USERNAME",
+    "5": "I-B-APP_NAME",
+    "6": "I-B-DEVICE_NAME",
+    "7": "I-B-ERROR_CODE",
+    "8": "I-B-NETWORK_NAME",
+    "9": "I-B-USERNAME",
+    "10": "O"
+  },
+  "initializer_range": 0.02,
+  "label2id": {
+    "B-B-APP_NAME": 0,
+    "B-B-DEVICE_NAME": 1,
+    "B-B-ERROR_CODE": 2,
+    "B-B-NETWORK_NAME": 3,
+    "B-B-USERNAME": 4,
+    "I-B-APP_NAME": 5,
+    "I-B-DEVICE_NAME": 6,
+    "I-B-ERROR_CODE": 7,
+    "I-B-NETWORK_NAME": 8,
+    "I-B-USERNAME": 9,
+    "O": 10
+  },
+  "max_position_embeddings": 512,
+  "model_type": "distilbert",
+  "n_heads": 12,
+  "n_layers": 6,
+  "pad_token_id": 0,
+  "qa_dropout": 0.1,
+  "seq_classif_dropout": 0.2,
+  "sinusoidal_pos_embds": false,
+  "tie_weights_": true,
+  "tie_word_embeddings": true,
+  "transformers_version": "5.0.0",
+  "use_cache": false,
+  "vocab_size": 30522
+}

@@ -1,0 +1,24 @@
+[
+  {
+    "ticket_id": "617326",
+    "original_text": "User unresponsive; investigate potential connectivity/session timeout issue.",
+    "ocr_text": "",
+    "original_prediction": {
+      "category": "General",
+      "subcategory": "Incomplete Information",
+      "priority": "Low",
+      "assigned_team": "IT Service Desk"
+    },
+    "corrected_prediction": {
+      "category": "Access",
+      "subcategory": "Incomplete Information",
+      "priority": "Low",
+      "assigned_team": "IT Service Desk"
+    },
+    "changed_fields": [
+      "category"
+    ],
+    "confidence": 0.0,
+    "timestamp": "2026-02-24T18:49:25.804911Z"
+  }
+]

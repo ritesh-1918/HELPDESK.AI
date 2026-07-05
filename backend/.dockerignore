@@ -1,0 +1,17 @@
+venv/
+backend/venv/
+**/__pycache__/
+*.pyc
+.git/
+.github/
+Frontend/
+Model/
+supabase/
+README.md
+LICENSE
+.env
+data/
+training/
+*.csv
+# If models are truly huge we could ignore them and download them in the dockerfile, 
+# but for now let's just ignore the venv and other bloat.

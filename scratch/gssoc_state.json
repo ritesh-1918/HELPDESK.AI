@@ -1,0 +1,362 @@
+{
+  "profile_bonuses": {
+    "github_profile": true,
+    "bio_filled": true,
+    "linkedin_profile": true,
+    "discord_linked": true
+  },
+  "community_bounties": {
+    "cloudinary_c2c": true,
+    "substack_subscribe": true,
+    "twitter_follow": true,
+    "instagram_follow": true
+  },
+  "one_time_forms": {
+    "contributor": {
+      "submitted": true,
+      "role_base": 50,
+      "ai_track": true,
+      "os_track": true,
+      "both_tracks": true
+    },
+    "mentor": {
+      "submitted": true,
+      "role_base": 80,
+      "years_experience": 3,
+      "portfolio_links": true,
+      "mentored_before": true,
+      "expertise_areas_3plus": true,
+      "hours_per_week_10plus": true
+    },
+    "project_admin": {
+      "submitted": true,
+      "role_base": 100,
+      "has_beginner_issues": true,
+      "excellent_readme": true,
+      "good_readme": false,
+      "expected_contributors_5plus": true,
+      "prior_program_experience": true,
+      "open_github_issues_count": 26,
+      "good_first_issues_count": 0
+    }
+  },
+  "weeks": [
+    {
+      "contributor_prs": 0,
+      "mentor_reviews": 1,
+      "project_admin_actions": 1,
+      "ambassador_active": false
+    },
+    {
+      "contributor_prs": 0,
+      "mentor_reviews": 27,
+      "project_admin_actions": 29,
+      "ambassador_active": false
+    },
+    {
+      "contributor_prs": 0,
+      "mentor_reviews": 18,
+      "project_admin_actions": 35,
+      "ambassador_active": false
+    }
+  ],
+  "contributor_prs": [],
+  "mentor_prs": [
+    {
+      "number": 114,
+      "contributor": "zzy83113117",
+      "difficulty": "level:critical",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 112,
+      "contributor": "saij3b",
+      "difficulty": "level:critical",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 165,
+      "contributor": "zxy0314-work",
+      "difficulty": "level:critical",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 164,
+      "contributor": "Hobie1Kenobi",
+      "difficulty": "level:critical",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 163,
+      "contributor": "Hobie1Kenobi",
+      "difficulty": "level:critical",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 162,
+      "contributor": "Hobie1Kenobi",
+      "difficulty": "level:critical",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 160,
+      "contributor": "rishab11250",
+      "difficulty": "level:critical",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 158,
+      "contributor": "rishab11250",
+      "difficulty": "level:critical",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 154,
+      "contributor": "Hobie1Kenobi",
+      "difficulty": "level:critical",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 153,
+      "contributor": "Hobie1Kenobi",
+      "difficulty": "level:critical",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 152,
+      "contributor": "rishab11250",
+      "difficulty": "level:critical",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 148,
+      "contributor": "harshitanagpal05",
+      "difficulty": "level:critical",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 141,
+      "contributor": "priyanshi-coder-2",
+      "difficulty": "level:critical",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 124,
+      "contributor": "namann5",
+      "difficulty": "level:critical",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 118,
+      "contributor": "SarthakKharche",
+      "difficulty": "level:critical",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 116,
+      "contributor": "namann5",
+      "difficulty": "level:critical",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 115,
+      "contributor": "SarthakKharche",
+      "difficulty": "level:critical",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 113,
+      "contributor": "rishab11250",
+      "difficulty": "level:critical",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 104,
+      "contributor": "harshitanagpal05",
+      "difficulty": "level:critical",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 103,
+      "contributor": "rishab11250",
+      "difficulty": "level:critical",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 99,
+      "contributor": "harshitanagpal05",
+      "difficulty": "level:intermediate",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 94,
+      "contributor": "namann5",
+      "difficulty": "level:advanced",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 91,
+      "contributor": "saurabhhhcodes",
+      "difficulty": "level:advanced",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 90,
+      "contributor": "saurabhhhcodes",
+      "difficulty": "level:advanced",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 88,
+      "contributor": "saurabhhhcodes",
+      "difficulty": "level:intermediate",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 87,
+      "contributor": "saurabhhhcodes",
+      "difficulty": "level:beginner",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 84,
+      "contributor": "namann5",
+      "difficulty": "level:beginner",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 83,
+      "contributor": "mkcash",
+      "difficulty": "level:critical",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 82,
+      "contributor": "harshitanagpal05",
+      "difficulty": "level:advanced",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 79,
+      "contributor": "Alb3e3",
+      "difficulty": "level:critical",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 78,
+      "contributor": "harshitanagpal05",
+      "difficulty": "level:critical",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 77,
+      "contributor": "namann5",
+      "difficulty": "level:advanced",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 76,
+      "contributor": "harshitanagpal05",
+      "difficulty": "level:advanced",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 68,
+      "contributor": "namann5",
+      "difficulty": "level:advanced",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 66,
+      "contributor": "varshini-nandula",
+      "difficulty": "level:advanced",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 65,
+      "contributor": "Ishita-varshney",
+      "difficulty": "level:beginner",
+      "quality": "quality:clean"
+    },
+    {
+      "number": 64,
+      "contributor": "Aryan1092raj",
+      "difficulty": "level:intermediate",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 61,
+      "contributor": "Ranjit1401",
+      "difficulty": "level:beginner",
+      "quality": "quality:clean"
+    },
+    {
+      "number": 60,
+      "contributor": "harshitanagpal05",
+      "difficulty": "level:advanced",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 59,
+      "contributor": "ayushi2577",
+      "difficulty": "level:advanced",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 56,
+      "contributor": "ayushi2577",
+      "difficulty": "level:intermediate",
+      "quality": "quality:clean"
+    },
+    {
+      "number": 53,
+      "contributor": "Ak-47klr",
+      "difficulty": "level:intermediate",
+      "quality": "quality:clean"
+    },
+    {
+      "number": 45,
+      "contributor": "harshitanagpal05",
+      "difficulty": "level:intermediate",
+      "quality": "quality:clean"
+    },
+    {
+      "number": 42,
+      "contributor": "sanjayrk2007",
+      "difficulty": "level:advanced",
+      "quality": "quality:clean"
+    },
+    {
+      "number": 37,
+      "contributor": "DHEVIKA",
+      "difficulty": "level:intermediate",
+      "quality": "quality:clean"
+    },
+    {
+      "number": 34,
+      "contributor": "sriram687",
+      "difficulty": "level:intermediate",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 33,
+      "contributor": "saurabhhhcodes",
+      "difficulty": "level:intermediate",
+      "quality": "quality:exceptional"
+    },
+    {
+      "number": 29,
+      "contributor": "harshitanagpal05",
+      "difficulty": "level:intermediate",
+      "quality": "quality:exceptional"
+    }
+  ],
+  "project_admin_actions": {
+    "merge_gssoc_pr": 46,
+    "label_issue_difficulty_and_type": 18,
+    "label_issue_difficulty_only": 1,
+    "open_issue_beginner_friendly": 0,
+    "open_issue_any": 12,
+    "issue_resolution_avg_days": 1.2
+  }
+}

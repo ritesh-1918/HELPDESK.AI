@@ -1,0 +1,10 @@
+node_modules/
+.git/
+.github/
+Frontend/node_modules/
+Frontend/dist/
+venv/
+.env
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
