@@ -1,5 +1,18 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Dict, Any
+from backend.sanitization import sanitize_text
+
+_ALLOWED_CATEGORIES = {
+    "Hardware", "Software", "Network", "Security", "Access",
+    "Email", "Account", "Billing", "Other"
+}
+_ALLOWED_PRIORITIES = {"Low", "Medium", "High", "Critical"}
+_ALLOWED_TEAMS = {
+    "Hardware Support", "Software Support", "Network Support",
+    "Security Support", "Access Support", "Email Support",
+    "Account Support", "Billing Support", "General Support"
+}
+_ALLOWED_STATUSES = {"Open", "In Progress", "Resolved", "Closed", "Escalated"}
 class TicketRequest(BaseModel):
     text: str
     image_base64: str = ""
@@ -11,27 +24,50 @@ class TicketRequest(BaseModel):
     duplicate_sensitivity: float = 0.85
 
 class TicketSaveRequest(BaseModel):
-    user_id: str
-    subject: str
-    description: str
-    category: str
-    subcategory: str
-    priority: str
-    assigned_team: str
-    status: str
-    auto_resolve: bool
-    is_duplicate: bool
-    confidence: float
-    image_url: str | None = None
-    company: str | None = None
-    company_id: str | None = None
-    sla_breach_at: str
-    metadata: dict
-    entities: list = []
-    solution_steps: list = []
-    ocr_text: str = ""
+    user_id: str = Field(..., min_length=1, max_length=256)
+    subject: str = Field(..., min_length=1, max_length=500)
+    description: str = Field(..., min_length=1, max_length=10000)
+    category: str = Field(..., min_length=1, max_length=50)
+    subcategory: str = Field("", max_length=100)
+    priority: str = Field(..., min_length=1, max_length=20)
+    assigned_team: str = Field(..., min_length=1, max_length=50)
+    status: str = Field(..., min_length=1, max_length=30)
+    auto_resolve: bool = False
+    is_duplicate: bool = False
+    confidence: float = Field(..., ge=0.0, le=1.0)
+    image_url: str | None = Field(None, max_length=2048)
+    company: str | None = Field(None, max_length=256)
+    company_id: str | None = Field(None, max_length=64)
+    sla_breach_at: str = Field(..., max_length=64)
+    metadata: dict = Field(default_factory=dict)
+    entities: list = Field(default_factory=list)
+    solution_steps: list = Field(default_factory=list)
+    ocr_text: str = Field("", max_length=5000)
     needs_review: bool = False
-    routing_confidence: float
+    routing_confidence: float = Field(..., ge=0.0, le=1.0)
+
+    @field_validator("subject", "description", "ocr_text", mode="before")
+    @classmethod
+    def strip_xss(cls, v):
+        if isinstance(v, str):
+            return sanitize_text(v, strip_html=True, max_length=10000)
+        return v
+
+    @field_validator("category", "priority", "assigned_team", "status", mode="after")
+    @classmethod
+    def validate_enum_fields(cls, v, info):
+        field_name = info.field_name
+        allowed = {
+            "category": _ALLOWED_CATEGORIES,
+            "priority": _ALLOWED_PRIORITIES,
+            "assigned_team": _ALLOWED_TEAMS,
+            "status": _ALLOWED_STATUSES,
+        }.get(field_name)
+        if allowed and v not in allowed:
+            raise ValueError(
+                f"Invalid {field_name}: '{v}'. Must be one of: {', '.join(sorted(allowed))}"
+            )
+        return v
 
 
 class DuplicateInfo(BaseModel):
