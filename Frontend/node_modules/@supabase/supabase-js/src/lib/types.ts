@@ -1,0 +1,173 @@
+import { GoTrueClientOptions } from '@supabase/auth-js'
+import { RealtimeClientOptions } from '@supabase/realtime-js'
+import { PostgrestError } from '@supabase/postgrest-js'
+import type { StorageClientOptions } from '@supabase/storage-js'
+import type {
+  GenericSchema,
+  GenericRelationship,
+  GenericTable,
+  GenericUpdatableView,
+  GenericNonUpdatableView,
+  GenericView,
+  GenericFunction,
+} from './rest/types/common/common'
+export type {
+  GenericSchema,
+  GenericRelationship,
+  GenericTable,
+  GenericUpdatableView,
+  GenericNonUpdatableView,
+  GenericView,
+  GenericFunction,
+}
+
+export interface SupabaseAuthClientOptions extends GoTrueClientOptions {}
+
+export type Fetch = typeof fetch
+
+export type SupabaseClientOptions<SchemaName> = {
+  /**
+   * The Postgres schema which your tables belong to. Must be on the list of exposed schemas in Supabase. Defaults to `public`.
+   */
+  db?: {
+    schema?: SchemaName
+    /**
+     * Optional timeout in milliseconds for PostgREST requests.
+     * When set, requests will automatically abort after this duration to prevent indefinite hangs.
+     *
+     * @example
+     * ```ts
+     * const supabase = createClient(url, key, {
+     *   db: { timeout: 30000 } // 30 second timeout
+     * })
+     * ```
+     */
+    timeout?: number
+    /**
+     * Maximum URL length in characters before warnings/errors are triggered.
+     * Defaults to 8000 characters. Used to provide helpful hints when URLs
+     * exceed server limits.
+     *
+     * @example
+     * ```ts
+     * const supabase = createClient(url, key, {
+     *   db: { urlLengthLimit: 10000 } // Custom limit
+     * })
+     * ```
+     */
+    urlLengthLimit?: number
+  }
+
+  auth?: {
+    /**
+     * Automatically refreshes the token for logged-in users. Defaults to true.
+     */
+    autoRefreshToken?: boolean
+    /**
+     * Optional key name used for storing tokens in local storage.
+     */
+    storageKey?: string
+    /**
+     * Whether to persist a logged-in session to storage. Defaults to true.
+     */
+    persistSession?: boolean
+    /**
+     * Detect a session from the URL. Used for OAuth login callbacks. Defaults to true.
+     *
+     * Can be set to a function to provide custom logic for determining if a URL contains
+     * a Supabase auth callback. The function receives the current URL and parsed parameters,
+     * and should return true if the URL should be processed as a Supabase auth callback.
+     *
+     * This is useful when your app uses other OAuth providers (e.g., Facebook Login) that
+     * also return access_token in the URL fragment, which would otherwise be incorrectly
+     * intercepted by Supabase Auth.
+     *
+     * @example
+     * ```ts
+     * detectSessionInUrl: (url, params) => {
+     *   // Ignore Facebook OAuth redirects
+     *   if (url.pathname === '/facebook/redirect') return false
+     *   // Use default detection for other URLs
+     *   return Boolean(params.access_token || params.error_description)
+     * }
+     * ```
+     */
+    detectSessionInUrl?: boolean | ((url: URL, params: { [parameter: string]: string }) => boolean)
+    /**
+     * A storage provider. Used to store the logged-in session.
+     */
+    storage?: SupabaseAuthClientOptions['storage']
+    /**
+     * A storage provider to store the user profile separately from the session.
+     * Useful when you need to store the session information in cookies,
+     * without bloating the data with the redundant user object.
+     *
+     * @experimental
+     */
+    userStorage?: SupabaseAuthClientOptions['userStorage']
+    /**
+     * OAuth flow to use - defaults to implicit flow. PKCE is recommended for mobile and server-side applications.
+     */
+    flowType?: SupabaseAuthClientOptions['flowType']
+    /**
+     * If debug messages for authentication client are emitted. Can be used to inspect the behavior of the library.
+     */
+    debug?: SupabaseAuthClientOptions['debug']
+    /**
+     * Provide your own locking mechanism based on the environment. By default no locking is done at this time.
+     *
+     * @experimental
+     */
+    lock?: SupabaseAuthClientOptions['lock']
+    /**
+     * If there is an error with the query, throwOnError will reject the promise by
+     * throwing the error instead of returning it as part of a successful response.
+     */
+    throwOnError?: SupabaseAuthClientOptions['throwOnError']
+  }
+  /**
+   * Options passed to the realtime-js instance
+   */
+  realtime?: RealtimeClientOptions
+  storage?: StorageClientOptions
+  global?: {
+    /**
+     * A custom `fetch` implementation.
+     */
+    fetch?: Fetch
+    /**
+     * Optional headers for initializing the client.
+     */
+    headers?: Record<string, string>
+  }
+  /**
+   * Optional function for using a third-party authentication system with
+   * Supabase. The function should return an access token or ID token (JWT) by
+   * obtaining it from the third-party auth SDK. Note that this
+   * function may be called concurrently and many times. Use memoization and
+   * locking techniques if this is not supported by the SDKs.
+   *
+   * When set, the `auth` namespace of the Supabase client cannot be used.
+   * Create another client if you wish to use Supabase Auth and third-party
+   * authentications concurrently in the same application.
+   */
+  accessToken?: () => Promise<string | null>
+}
+
+/**
+ * Helper types for query results.
+ */
+export type QueryResult<T> = T extends PromiseLike<infer U> ? U : never
+export type QueryData<T> = T extends PromiseLike<{ data: infer U }> ? Exclude<U, null> : never
+export type QueryError = PostgrestError
+
+/**
+ * Strips internal Supabase metadata from Database types.
+ * Useful for libraries defining generic constraints on Database types.
+ *
+ * @example
+ * ```typescript
+ * type CleanDB = DatabaseWithoutInternals<Database>
+ * ```
+ */
+export type DatabaseWithoutInternals<DB> = Omit<DB, '__InternalSupabase'>

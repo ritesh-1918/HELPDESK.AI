@@ -1,0 +1,10 @@
+import * as React from 'react';
+import { useForceUpdate } from './useForceUpdate';
+export const useSyncState = initialValue => {
+  const ref = React.useRef(initialValue);
+  const [, forceUpdate] = useForceUpdate();
+  return [() => ref.current, newValue => {
+    ref.current = newValue;
+    forceUpdate();
+  }];
+};

@@ -1,0 +1,363 @@
+import type {
+  PostgrestSingleResponse,
+  PostgrestResponseSuccess,
+  CheckMatchingArrayTypes,
+  MergePartialResult,
+  IsValidResultOverride,
+} from './types/types'
+import { ClientServerOptions, Fetch } from './types/common/common'
+import PostgrestError from './PostgrestError'
+import { ContainsNull } from './select-query-parser/types'
+
+export default abstract class PostgrestBuilder<
+  ClientOptions extends ClientServerOptions,
+  Result,
+  ThrowOnError extends boolean = false,
+> implements
+    PromiseLike<
+      ThrowOnError extends true ? PostgrestResponseSuccess<Result> : PostgrestSingleResponse<Result>
+    >
+{
+  protected method: 'GET' | 'HEAD' | 'POST' | 'PATCH' | 'DELETE'
+  protected url: URL
+  protected headers: Headers
+  protected schema?: string
+  protected body?: unknown
+  protected shouldThrowOnError = false
+  protected signal?: AbortSignal
+  protected fetch: Fetch
+  protected isMaybeSingle: boolean
+  protected urlLengthLimit: number
+
+  /**
+   * Creates a builder configured for a specific PostgREST request.
+   *
+   * @example
+   * ```ts
+   * import PostgrestQueryBuilder from '@supabase/postgrest-js'
+   *
+   * const builder = new PostgrestQueryBuilder(
+   *   new URL('https://xyzcompany.supabase.co/rest/v1/users'),
+   *   { headers: new Headers({ apikey: 'public-anon-key' }) }
+   * )
+   * ```
+   */
+  constructor(builder: {
+    method: 'GET' | 'HEAD' | 'POST' | 'PATCH' | 'DELETE'
+    url: URL
+    headers: HeadersInit
+    schema?: string
+    body?: unknown
+    shouldThrowOnError?: boolean
+    signal?: AbortSignal
+    fetch?: Fetch
+    isMaybeSingle?: boolean
+    urlLengthLimit?: number
+  }) {
+    this.method = builder.method
+    this.url = builder.url
+    this.headers = new Headers(builder.headers)
+    this.schema = builder.schema
+    this.body = builder.body
+    this.shouldThrowOnError = builder.shouldThrowOnError ?? false
+    this.signal = builder.signal
+    this.isMaybeSingle = builder.isMaybeSingle ?? false
+    this.urlLengthLimit = builder.urlLengthLimit ?? 8000
+
+    if (builder.fetch) {
+      this.fetch = builder.fetch
+    } else {
+      this.fetch = fetch
+    }
+  }
+
+  /**
+   * If there's an error with the query, throwOnError will reject the promise by
+   * throwing the error instead of returning it as part of a successful response.
+   *
+   * {@link https://github.com/supabase/supabase-js/issues/92}
+   */
+  throwOnError(): this & PostgrestBuilder<ClientOptions, Result, true> {
+    this.shouldThrowOnError = true
+    return this as this & PostgrestBuilder<ClientOptions, Result, true>
+  }
+
+  /**
+   * Set an HTTP header for the request.
+   */
+  setHeader(name: string, value: string): this {
+    this.headers = new Headers(this.headers)
+    this.headers.set(name, value)
+    return this
+  }
+
+  then<
+    TResult1 = ThrowOnError extends true
+      ? PostgrestResponseSuccess<Result>
+      : PostgrestSingleResponse<Result>,
+    TResult2 = never,
+  >(
+    onfulfilled?:
+      | ((
+          value: ThrowOnError extends true
+            ? PostgrestResponseSuccess<Result>
+            : PostgrestSingleResponse<Result>
+        ) => TResult1 | PromiseLike<TResult1>)
+      | undefined
+      | null,
+    onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null
+  ): PromiseLike<TResult1 | TResult2> {
+    // https://postgrest.org/en/stable/api.html#switching-schemas
+    if (this.schema === undefined) {
+      // skip
+    } else if (['GET', 'HEAD'].includes(this.method)) {
+      this.headers.set('Accept-Profile', this.schema)
+    } else {
+      this.headers.set('Content-Profile', this.schema)
+    }
+    if (this.method !== 'GET' && this.method !== 'HEAD') {
+      this.headers.set('Content-Type', 'application/json')
+    }
+
+    // NOTE: Invoke w/o `this` to avoid illegal invocation error.
+    // https://github.com/supabase/postgrest-js/pull/247
+    const _fetch = this.fetch
+    let res = _fetch(this.url.toString(), {
+      method: this.method,
+      headers: this.headers,
+      body: JSON.stringify(this.body),
+      signal: this.signal,
+    }).then(async (res) => {
+      let error = null
+      let data = null
+      let count: number | null = null
+      let status = res.status
+      let statusText = res.statusText
+
+      if (res.ok) {
+        if (this.method !== 'HEAD') {
+          const body = await res.text()
+          if (body === '') {
+            // Prefer: return=minimal
+          } else if (this.headers.get('Accept') === 'text/csv') {
+            data = body
+          } else if (
+            this.headers.get('Accept') &&
+            this.headers.get('Accept')?.includes('application/vnd.pgrst.plan+text')
+          ) {
+            data = body
+          } else {
+            data = JSON.parse(body)
+          }
+        }
+
+        const countHeader = this.headers.get('Prefer')?.match(/count=(exact|planned|estimated)/)
+        const contentRange = res.headers.get('content-range')?.split('/')
+        if (countHeader && contentRange && contentRange.length > 1) {
+          count = parseInt(contentRange[1])
+        }
+
+        // Temporary partial fix for https://github.com/supabase/postgrest-js/issues/361
+        // Issue persists e.g. for `.insert([...]).select().maybeSingle()`
+        if (this.isMaybeSingle && this.method === 'GET' && Array.isArray(data)) {
+          if (data.length > 1) {
+            error = {
+              // https://github.com/PostgREST/postgrest/blob/a867d79c42419af16c18c3fb019eba8df992626f/src/PostgREST/Error.hs#L553
+              code: 'PGRST116',
+              details: `Results contain ${data.length} rows, application/vnd.pgrst.object+json requires 1 row`,
+              hint: null,
+              message: 'JSON object requested, multiple (or no) rows returned',
+            }
+            data = null
+            count = null
+            status = 406
+            statusText = 'Not Acceptable'
+          } else if (data.length === 1) {
+            data = data[0]
+          } else {
+            data = null
+          }
+        }
+      } else {
+        const body = await res.text()
+
+        try {
+          error = JSON.parse(body)
+
+          // Workaround for https://github.com/supabase/postgrest-js/issues/295
+          if (Array.isArray(error) && res.status === 404) {
+            data = []
+            error = null
+            status = 200
+            statusText = 'OK'
+          }
+        } catch {
+          // Workaround for https://github.com/supabase/postgrest-js/issues/295
+          if (res.status === 404 && body === '') {
+            status = 204
+            statusText = 'No Content'
+          } else {
+            error = {
+              message: body,
+            }
+          }
+        }
+
+        if (error && this.isMaybeSingle && error?.details?.includes('0 rows')) {
+          error = null
+          status = 200
+          statusText = 'OK'
+        }
+
+        if (error && this.shouldThrowOnError) {
+          throw new PostgrestError(error)
+        }
+      }
+
+      const postgrestResponse = {
+        error,
+        data,
+        count,
+        status,
+        statusText,
+      }
+
+      return postgrestResponse
+    })
+    if (!this.shouldThrowOnError) {
+      res = res.catch((fetchError) => {
+        // Build detailed error information including cause if available
+        // Note: We don't populate code/hint for client-side network errors since those
+        // fields are meant for upstream service errors (PostgREST/PostgreSQL)
+        let errorDetails = ''
+        let hint = ''
+        let code = ''
+
+        // Add cause information if available (e.g., DNS errors, network failures)
+        const cause = fetchError?.cause
+        if (cause) {
+          const causeMessage = cause?.message ?? ''
+          const causeCode = cause?.code ?? ''
+
+          errorDetails = `${fetchError?.name ?? 'FetchError'}: ${fetchError?.message}`
+          errorDetails += `\n\nCaused by: ${cause?.name ?? 'Error'}: ${causeMessage}`
+          if (causeCode) {
+            errorDetails += ` (${causeCode})`
+          }
+          if (cause?.stack) {
+            errorDetails += `\n${cause.stack}`
+          }
+        } else {
+          // No cause available, just include the error stack
+          errorDetails = fetchError?.stack ?? ''
+        }
+
+        // Get URL length for potential hints
+        const urlLength = this.url.toString().length
+
+        // Handle AbortError specially with helpful hints
+        if (fetchError?.name === 'AbortError' || fetchError?.code === 'ABORT_ERR') {
+          code = ''
+          hint = 'Request was aborted (timeout or manual cancellation)'
+
+          if (urlLength > this.urlLengthLimit) {
+            hint += `. Note: Your request URL is ${urlLength} characters, which may exceed server limits. If selecting many fields, consider using views. If filtering with large arrays (e.g., .in('id', [many IDs])), consider using an RPC function to pass values server-side.`
+          }
+        }
+        // Handle HeadersOverflowError from undici (Node.js fetch implementation)
+        else if (
+          cause?.name === 'HeadersOverflowError' ||
+          cause?.code === 'UND_ERR_HEADERS_OVERFLOW'
+        ) {
+          code = ''
+          hint = 'HTTP headers exceeded server limits (typically 16KB)'
+
+          if (urlLength > this.urlLengthLimit) {
+            hint += `. Your request URL is ${urlLength} characters. If selecting many fields, consider using views. If filtering with large arrays (e.g., .in('id', [200+ IDs])), consider using an RPC function instead.`
+          }
+        }
+
+        return {
+          error: {
+            message: `${fetchError?.name ?? 'FetchError'}: ${fetchError?.message}`,
+            details: errorDetails,
+            hint: hint,
+            code: code,
+          },
+          data: null,
+          count: null,
+          status: 0,
+          statusText: '',
+        }
+      })
+    }
+
+    return res.then(onfulfilled, onrejected)
+  }
+
+  /**
+   * Override the type of the returned `data`.
+   *
+   * @typeParam NewResult - The new result type to override with
+   * @deprecated Use overrideTypes<yourType, { merge: false }>() method at the end of your call chain instead
+   */
+  returns<NewResult>(): PostgrestBuilder<
+    ClientOptions,
+    CheckMatchingArrayTypes<Result, NewResult>,
+    ThrowOnError
+  > {
+    /* istanbul ignore next */
+    return this as unknown as PostgrestBuilder<
+      ClientOptions,
+      CheckMatchingArrayTypes<Result, NewResult>,
+      ThrowOnError
+    >
+  }
+
+  /**
+   * Override the type of the returned `data` field in the response.
+   *
+   * @typeParam NewResult - The new type to cast the response data to
+   * @typeParam Options - Optional type configuration (defaults to { merge: true })
+   * @typeParam Options.merge - When true, merges the new type with existing return type. When false, replaces the existing types entirely (defaults to true)
+   * @example
+   * ```typescript
+   * // Merge with existing types (default behavior)
+   * const query = supabase
+   *   .from('users')
+   *   .select()
+   *   .overrideTypes<{ custom_field: string }>()
+   *
+   * // Replace existing types completely
+   * const replaceQuery = supabase
+   *   .from('users')
+   *   .select()
+   *   .overrideTypes<{ id: number; name: string }, { merge: false }>()
+   * ```
+   * @returns A PostgrestBuilder instance with the new type
+   */
+  overrideTypes<
+    NewResult,
+    Options extends { merge?: boolean } = { merge: true },
+  >(): PostgrestBuilder<
+    ClientOptions,
+    IsValidResultOverride<Result, NewResult, false, false> extends true
+      ? // Preserve the optionality of the result if the overriden type is an object (case of chaining with `maybeSingle`)
+        ContainsNull<Result> extends true
+        ? MergePartialResult<NewResult, NonNullable<Result>, Options> | null
+        : MergePartialResult<NewResult, Result, Options>
+      : CheckMatchingArrayTypes<Result, NewResult>,
+    ThrowOnError
+  > {
+    return this as unknown as PostgrestBuilder<
+      ClientOptions,
+      IsValidResultOverride<Result, NewResult, false, false> extends true
+        ? // Preserve the optionality of the result if the overriden type is an object (case of chaining with `maybeSingle`)
+          ContainsNull<Result> extends true
+          ? MergePartialResult<NewResult, NonNullable<Result>, Options> | null
+          : MergePartialResult<NewResult, Result, Options>
+        : CheckMatchingArrayTypes<Result, NewResult>,
+      ThrowOnError
+    >
+  }
+}

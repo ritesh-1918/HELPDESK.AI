@@ -1,0 +1,53 @@
+Metadata-Version: 2.4
+Name: storage3
+Version: 2.30.0
+Summary: Supabase Storage client for Python.
+Author: Joel Lee, Leon Fedden, Daniel Reinón García, Leynier Gutiérrez González, Anand Krishna
+Author-email: Joel Lee <joel@joellee.org>, Leon Fedden <leonfedden@gmail.com>, Daniel Reinón García <danielreinon@outlook.com>, Leynier Gutiérrez González <leynier41@gmail.com>, Anand Krishna <anand2312@proton.me>
+License-Expression: MIT
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Dist: httpx[http2]>=0.26,<0.29
+Requires-Dist: deprecation>=2.1.0
+Requires-Dist: pydantic>=2.11.7
+Requires-Dist: yarl>=1.20.1
+Requires-Dist: pyiceberg>=0.10.0
+Maintainer: Leonardo Santiago
+Maintainer-email: Leonardo Santiago <leonardo.santiago@supabase.io>
+Requires-Python: >=3.9
+Project-URL: changelog, https://github.com/supabase/supabase-py/tree/main/CHANGELOG.md
+Project-URL: documentation, https://supabase.github.io/storage-py
+Project-URL: homepage, https://supabase.github.io/storage-py
+Project-URL: repository, https://github.com/supabase/supabase-py
+Description-Content-Type: text/markdown
+
+# Storage-py
+
+Python Client library to interact with Supabase Storage.
+
+## How to use
+
+As it takes some effort to get the headers. We suggest that you use the storage functionality through the main [Supabase Python Client](https://github.com/supabase-community/supabase-py)
+
+
+```python3
+from storage3 import AsyncStorageClient
+
+url = "https://<your_supabase_id>.supabase.co/storage/v1"
+key = "<your api key>"
+headers = {"apiKey": key, "Authorization": f"Bearer {key}"}
+
+storage_client = AsyncStorageClient(url, headers)
+
+async def get_buckets():
+  await storage_client.list_buckets()
+```
+
+### Uploading files
+When uploading files, make sure to set the correct mimetype by using the `file_options` argument:
+```py
+async def file_upload():
+  await storage_client.from_("bucket").upload("/folder/file.png", file_object, {"content-type": "image/png"})
+```
+If no mime type is given, the default `text/plain` will be used.
