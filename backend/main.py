@@ -1151,7 +1151,8 @@ class SignupBody(BaseModel):
     company: str | None = None
 
 @app.post("/auth/login")
-async def auth_login(body: LoginBody, response: Response):
+@limiter.limit("10/minute")
+async def auth_login(body: LoginBody, request: Request, response: Response):
     if not supabase:
         raise HTTPException(status_code=503, detail="Database connection offline")
     try:
@@ -1171,7 +1172,8 @@ async def auth_login(body: LoginBody, response: Response):
     return {"user": user_payload, "message": "Session cookies set"}
 
 @app.post("/auth/signup")
-async def auth_signup(body: SignupBody, response: Response):
+@limiter.limit("5/minute")
+async def auth_signup(body: SignupBody, request: Request, response: Response):
     if not supabase:
         raise HTTPException(status_code=503, detail="Database connection offline")
     metadata = {}
@@ -1208,4 +1210,3 @@ async def auth_logout(response: Response):
 @app.get("/auth/me")
 async def auth_me(user: dict = Depends(get_current_user)):
     return {"user": user}
-
