@@ -24,6 +24,10 @@ node_modules/
 dist/
 .vercel
 *.local
+.npm-cache/
+.npm/
+.vscode/
+!.vscode/extensions.json
 
 # Docs / Artifacts
 docs/helpdesk*.pdf
