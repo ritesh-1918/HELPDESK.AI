@@ -72,6 +72,12 @@ except ImportError:
 
 limiter = Limiter(key_func=get_remote_address)
 
+
+def get_supabase_admin():
+    """Return the shared Supabase admin client, if configured."""
+    return supabase
+
+
 def get_system_settings(company_id: str) -> dict:
     defaults = {
         "ai_confidence_threshold": 0.80,
