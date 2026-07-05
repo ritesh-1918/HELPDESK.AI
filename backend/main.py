@@ -283,8 +283,8 @@ app.add_middleware(
         "http://localhost:3000",
     ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 
@@ -1208,4 +1208,3 @@ async def auth_logout(response: Response):
 @app.get("/auth/me")
 async def auth_me(user: dict = Depends(get_current_user)):
     return {"user": user}
-
