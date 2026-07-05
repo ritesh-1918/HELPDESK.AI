@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import Constants from 'expo-constants';
 import { supabase } from '../../lib/supabase';
 import { COLORS, SHADOWS } from '../../styles/theme';
 import { 
@@ -14,7 +15,10 @@ import {
 import * as Haptics from 'expo-haptics';
 import axios from 'axios';
 
-const BACKEND_URL = 'https://ritesh19180-ai-helpdesk-api.hf.space';
+const BACKEND_URL =
+  Constants.expoConfig?.extra?.backendUrl ||
+  Constants.manifest2?.extra?.expoClient?.extra?.backendUrl ||
+  'https://ritesh19180-ai-helpdesk-api.hf.space';
 
 const AIProcessingScreen = () => {
   const navigation = useNavigation();

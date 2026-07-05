@@ -44,6 +44,7 @@
       "url": "https://u.expo.dev/a5830464-58a7-4737-9cc9-e5ecad2e4acf"
     },
     "extra": {
+      "backendUrl": "https://ritesh19180-ai-helpdesk-api.hf.space",
       "eas": {
         "projectId": "a5830464-58a7-4737-9cc9-e5ecad2e4acf"
       }
