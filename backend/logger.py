@@ -25,6 +25,7 @@ import os
 import sys
 import json
 from datetime import datetime
+from typing import Union
 
 class JSONFormatter(logging.Formatter):
     """
@@ -71,12 +72,18 @@ _DEFAULT_LEVEL = logging.INFO
 
 
 def _coerce_level(value: Union[str, int, None]) -> int:
-    """Normalise a level spec into a stdlib numeric level.
+    if value is None:
+        return logging.INFO
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        if value.isdigit():
+            return int(value)
+        level = getattr(logging, value.upper(), None)
+        if isinstance(level, int):
+            return level
+    return logging.INFO
 
-    Accepts upper/lower/stdlib names ("debug", "WARNING", ...) and integer
-    strings ("10"). Falls back to INFO on anything unrecognised so a typo in
-    configuration never silences production logs unexpectedly.
-    """
-    Returns a configured standard logger.
-    """
+
+def get_logger(name: str) -> logging.Logger:
     return logging.getLogger(name)
