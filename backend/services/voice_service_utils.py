@@ -133,6 +133,8 @@ def validate_audio_size(file_bytes: Union[bytes, bytearray], max_mb: int = DEFAU
         >>> validate_audio_size(b"x" * (26 * 1024 * 1024), max_mb=25)
         False
     """
+    if max_mb <= 0:
+        return False
     return len(file_bytes) <= max_mb * 1024 * 1024
 
 
@@ -165,7 +167,7 @@ def assert_valid_audio(filename: str, file_bytes: Union[bytes, bytearray],
         raise UnsupportedFormatError(ext)
 
     limit_bytes = max_mb * 1024 * 1024
-    if len(file_bytes) > limit_bytes:
+    if max_mb <= 0 or len(file_bytes) > limit_bytes:
         raise AudioTooLargeError(len(file_bytes), limit_bytes)
 
 

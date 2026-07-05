@@ -58,6 +58,11 @@ def test_validate_audio_size_accepts_empty_and_exact_limit_payloads():
     assert validate_audio_size(bytearray(limit_bytes), max_mb=max_mb) is True
 
 
+
+def test_validate_audio_size_rejects_non_positive_limits():
+    assert validate_audio_size(b"", max_mb=0) is False
+    assert validate_audio_size(b"audio", max_mb=-1) is False
+
 def test_validate_audio_size_rejects_payloads_over_limit():
     max_mb = 1
     over_limit = b"x" * (max_mb * 1024 * 1024 + 1)
@@ -95,6 +100,13 @@ def test_assert_valid_audio_raises_audio_too_large_with_size_details():
     assert exc_info.value.limit_bytes == max_mb * 1024 * 1024
     assert "Audio file too large" in str(exc_info.value)
 
+
+
+def test_assert_valid_audio_rejects_non_positive_size_limit():
+    with pytest.raises(AudioTooLargeError) as exc_info:
+        assert_valid_audio("call.wav", b"", max_mb=0)
+
+    assert exc_info.value.limit_bytes == 0
 
 def test_get_supported_formats_returns_sorted_defensive_copy():
     formats = get_supported_formats()
