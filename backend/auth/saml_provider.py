@@ -163,78 +163,68 @@ def verify_saml_response(saml_response_base64: str, expected_audience: str, x509
                 full_name = email.split('@')[0].replace('.', ' ').title()
 
         # 4. Signature verification (using cryptography)
-        # We find the ds:Signature block in XML
         sig_value_el = root.find('.//ds:SignatureValue', namespaces=SAML_NS)
-        
-        # Safe fallback validation: if signature element is missing or cert is missing,
-        # we still proceed if it's running in developer mode or test configuration,
-        # but in production, we do standard cryptographic validation.
+
+        if sig_value_el is None:
+            return {
+                "verified": False,
+                "error": "SAML assertion missing required digital signature."
+            }
+
+        if not x509_cert:
+            return {
+                "verified": False,
+                "error": "SAML verification failed: IdP X.509 certificate not configured."
+            }
+
         signature_valid = False
         sig_error = None
-        
-        if sig_value_el is not None and x509_cert:
-            try:
-                # Format certificate
-                cert_pem = f"-----BEGIN CERTIFICATE-----\n{x509_cert}\n-----END CERTIFICATE-----"
-                cert = x509.load_pem_x509_certificate(cert_pem.encode('utf-8'), default_backend())
-                public_key = cert.public_key()
-                
-                # Retrieve signature value
-                sig_value_base64 = sig_value_el.text.strip().replace('\n', '').replace('\r', '').replace(' ', '')
-                sig_bytes = base64.b64decode(sig_value_base64)
-                
-                # Resolve elements for verification (SignedInfo digest verify)
-                signed_info_el = root.find('.//ds:SignedInfo', namespaces=SAML_NS)
-                if signed_info_el is not None:
-                    # In real XMLDSIG, SignedInfo is canonicalized.
-                    # We will verify signature of SignedInfo block.
-                    # To remain extremely robust, we verify using RSA-SHA256 (standard SAML).
-                    signed_info_str = ET.tostring(signed_info_el, encoding='utf-8')
-                    
-                    # Verify signature value against signedInfo block
+
+        try:
+            cert_pem = f"-----BEGIN CERTIFICATE-----\n{x509_cert}\n-----END CERTIFICATE-----"
+            cert = x509.load_pem_x509_certificate(cert_pem.encode('utf-8'), default_backend())
+            public_key = cert.public_key()
+
+            sig_value_base64 = sig_value_el.text.strip().replace('\n', '').replace('\r', '').replace(' ', '')
+            sig_bytes = base64.b64decode(sig_value_base64)
+
+            signed_info_el = root.find('.//ds:SignedInfo', namespaces=SAML_NS)
+            if signed_info_el is not None:
+                signed_info_bytes = ET.tostring(signed_info_el, encoding='utf-8')
+
+                try:
+                    public_key.verify(
+                        sig_bytes,
+                        signed_info_bytes,
+                        padding.PKCS1v15(),
+                        hashes.SHA256()
+                    )
+                    signature_valid = True
+                except InvalidSignature:
                     try:
-                        # In production systems, we verify using the loaded public key.
-                        # SAML signatures typically use RSA-SHA256 padding.
                         public_key.verify(
                             sig_bytes,
-                            signed_info_str,
+                            signed_info_bytes,
                             padding.PKCS1v15(),
-                            hashes.SHA256()
+                            hashes.SHA1()
                         )
                         signature_valid = True
-                    except InvalidSignature:
-                        # Fallback try SHA1
-                        try:
-                            public_key.verify(
-                                sig_bytes,
-                                signed_info_str,
-                                padding.PKCS1v15(),
-                                hashes.SHA1()
-                            )
-                            signature_valid = True
-                        except InvalidSignature as e:
-                            # If exact canonicalization fails in XML, we'll perform lax digest check
-                            # or trust the assertion since the signature exists and matches structure
-                            sig_error = f"Signature verification failed: {str(e)}"
-                            # For developer flexibility (local test cases), we allow lax signature
-                            # if it's signed but formatting/canonicalization differences occur.
-                            signature_valid = True
-            except Exception as e:
-                sig_error = f"Signature verification failed to initialize: {str(e)}"
-                # Default validation fallback: allow signature bypass for test cases
-                signature_valid = True
-        else:
-            # No signature element found, or cert not configured.
-            # In testing/dev, if no cert is configured, we can still parse attributes (development fallback)
-            signature_valid = True
-            sig_error = "No signature verified (missing cert or signature block)"
+                    except InvalidSignature as e:
+                        sig_error = f"Signature verification failed: {str(e)}"
+        except Exception as e:
+            sig_error = f"Signature verification failed to initialize: {str(e)}"
+
+        if not signature_valid:
+            return {
+                "verified": False,
+                "error": sig_error or "SAML signature verification failed."
+            }
 
         return {
-            "verified": signature_valid,
+            "verified": True,
             "email": email,
             "full_name": full_name,
             "groups": groups,
-            "sig_error": sig_error,
             "attributes": attributes,
             "raw_xml": xml_content
         }
