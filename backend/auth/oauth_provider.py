@@ -64,10 +64,7 @@ def exchange_code_for_tokens(provider: str, code: str, client_id: str, client_se
         headers={"Accept": "application/json", "Content-Type": "application/x-www-form-urlencoded"}
     )
     
-    # Ignore SSL verification for local dev fallback robustness if needed
     ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
     
     try:
         with urllib.request.urlopen(req, context=ctx) as response:
@@ -81,11 +78,6 @@ def get_user_profile(provider: str, access_token: str) -> dict:
     """
     Fetches the user's email, name, avatar, and group memberships from the provider API.
     """
-    # Create SSL Context to avoid certificate validation issues in local test runners
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-
     headers = {
         "Authorization": f"Bearer {access_token}",
         "Accept": "application/json"
@@ -96,7 +88,7 @@ def get_user_profile(provider: str, access_token: str) -> dict:
         r_headers = custom_headers or headers
         req = urllib.request.Request(url, headers=r_headers)
         try:
-            with urllib.request.urlopen(req, context=ctx) as response:
+            with urllib.request.urlopen(req) as response:
                 return json.loads(response.read().decode("utf-8"))
         except Exception as e:
             print(f"[OAuth API error] Failed to fetch {url}: {e}")
