@@ -1,0 +1,73 @@
+markdown
+# Security Policy
+
+## Supported Versions
+
+We release security updates for the following versions:
+
+| Version | Supported          |
+| ------- | ------------------ |
+| Latest  | :white_check_mark: |
+| < Latest| :x:                |
+
+## Reporting a Vulnerability
+
+We take the security of HELPDESK.AI seriously. If you believe you have found a security vulnerability, please report it to us as described below.
+
+### Reporting Process
+
+**Please do not report security vulnerabilities through public GitHub issues.**
+
+Instead, please report them via email to the project maintainer:
+
+- **Contact Method**: Email security concerns to [ritesh1908@example.com](mailto:ritesh1908@example.com) (replace with actual security contact)
+- **Response Time**: We will acknowledge receipt of your report within **48 hours**.
+- **Information Required**: Please include the following details in your report:
+  - Description of the vulnerability
+  - Affected versions
+  - Steps to reproduce the issue
+  - Potential impact
+  - Any suggested fixes (if available)
+
+### Disclosure Policy
+
+- **Coordinated Disclosure**: We follow a coordinated disclosure process. We request that you allow us **90 days** from the time of reporting to address the vulnerability before any public disclosure.
+- **Embargo Period**: We maintain a 90-day embargo period to allow time for a fix to be developed and deployed.
+
+## Security Updates
+
+- **Notification**: Security updates are announced via:
+  - GitHub Release Notes
+  - GitHub Security Advisories
+- **Update Frequency**: Security patches are released as needed based on severity (Critical, High, Medium, Low).
+
+## Scope
+
+### In Scope
+- All production systems and code within the HELPDESK.AI repository
+- Authentication and authorization mechanisms
+- Data storage and processing components
+- API endpoints and integrations
+
+### Out of Scope
+- Third-party services and dependencies (report issues to respective maintainers)
+- Physical security of infrastructure
+- Social engineering attacks
+- Denial of service attacks
+- Issues requiring physical access
+
+## Recognition
+
+- **Bug Bounty**: We do not currently operate a formal bug bounty program.
+- **Acknowledgement**: Valid security researchers who report vulnerabilities will be acknowledged in our Hall of Fame (upon request).
+
+## Legal
+
+- **Terms**: By participating in security research, you agree to comply with all applicable laws and regulations.
+- **Safe Harbor**: We will not pursue legal action against individuals who:
+  - Make a good-faith effort to comply with this policy
+  - Report vulnerabilities promptly
+  - Do not exploit vulnerabilities beyond what is necessary to demonstrate the issue
+  - Do not access or modify data beyond what is necessary to demonstrate the issue
+
+## Process Flow

@@ -1,0 +1,141 @@
+name: Performance Load Testing
+
+on:
+  schedule:
+    # Run nightly at 02:00 UTC against staging
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    # Allow manual trigger with parameters
+    inputs:
+      target_url:
+        description: 'Target URL for load testing'
+        required: false
+        default: 'https://staging.example.com'
+      users:
+        description: 'Number of simulated concurrent users'
+        required: false
+        default: '50'
+      run_time:
+        description: 'Test duration (e.g., 5m, 10m)'
+        required: false
+        default: '5m'
+      spawn_rate:
+        description: 'User spawn rate per second'
+        required: false
+        default: '5'
+
+# Allow workflow to write summary check runs
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+jobs:
+  load-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install locust
+
+      - name: Run Load Test (Headless)
+        id: load_test
+        timeout-minutes: 20
+        env:
+          PERFORMANCE_BUDGET: ${{ vars.PERFORMANCE_BUDGET || 'crud_p50=200,crud_p95=500,crud_p99=1000,ai_p50=500,ai_p95=1500,ai_p99=3000,error_rate=0.1' }}
+          LOAD_TEST_REPORT_DIR: load_test_reports
+        run: |
+          TARGET_URL="${{ github.event.inputs.target_url || 'https://staging.example.com' }}"
+          USERS="${{ github.event.inputs.users || '50' }}"
+          RUN_TIME="${{ github.event.inputs.run_time || '5m' }}"
+          SPAWN_RATE="${{ github.event.inputs.spawn_rate || '5' }}"
+
+          echo "🔧 Target: $TARGET_URL"
+          echo "🔧 Users: $USERS"
+          echo "🔧 Duration: $RUN_TIME"
+          echo "🔧 Spawn rate: $SPAWN_RATE/s"
+          echo "🔧 Budget: $PERFORMANCE_BUDGET"
+
+          mkdir -p load_test_reports
+
+          cd backend/tests/load
+
+          locust \
+            --headless \
+            --host "$TARGET_URL" \
+            --users "$USERS" \
+            --spawn-rate "$SPAWN_RATE" \
+            --run-time "$RUN_TIME" \
+            --html "${{ github.workspace }}/load_test_reports/locust_report.html" \
+            --csv "${{ github.workspace }}/load_test_reports/locust_stats" \
+            --only-summary
+
+      - name: Generate Benchmark Report
+        id: benchmark_report
+        if: always()
+        run: |
+          python backend/tests/load/generate_report.py \
+            --summary ${{ github.workspace }}/load_test_reports/summary.json \
+            --html ${{ github.workspace }}/load_test_reports/benchmark_report.html
+
+      - name: Upload Report Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-test-reports
+          path: load_test_reports/
+          retention-days: 30
+
+      - name: Add PR Comment with Results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const summaryPath = '${{ github.workspace }}/load_test_reports/summary.json';
+            if (!fs.existsSync(summaryPath)) {
+              console.log('No summary file found');
+              return;
+            }
+            const summary = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
+            const slaEmoji = summary.sla_passed ? '✅' : '❌';
+            const body = `## 🏋️ Load Test Results\n\n` +
+              `| Metric | Value |\n|--------|-------|\n` +
+              `| **Requests** | ${summary.total_requests.toLocaleString()} |\n` +
+              `| **Fail Ratio** | ${(summary.fail_ratio * 100).toFixed(3)}% |\n` +
+              `| **Avg Response Time** | ${summary.avg_response_time_ms.toFixed(0)} ms |\n` +
+              `| **Throughput** | ${summary.requests_per_second.toFixed(1)} req/s |\n` +
+              `| **SLA Result** | ${slaEmoji} ${summary.sla_passed ? 'PASS' : summary.sla_violations + ' violations'} |\n\n` +
+              `[View full report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: Check SLA Thresholds
+        if: always()
+        run: |
+          python -c "
+          import json
+          with open('${{ github.workspace }}/load_test_reports/summary.json') as f:
+              s = json.load(f)
+          if s.get('sla_passed', False):
+              print('✅ All SLA thresholds passed')
+          else:
+              print(f'❌ {s.get(\"sla_violations\", 0)} SLA violations')
+              exit(1)
+          "

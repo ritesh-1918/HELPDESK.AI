@@ -11,6 +11,52 @@ import { Ticket, Clock, CheckCircle2, AlertTriangle, ChevronRight, Inbox } from 
 
 const FILTERS = ['All', 'Active', 'Resolved'];
 
+const getStatusConfig = (status) => {
+  switch (status) {
+    case 'resolved': return { color: COLORS.success, label: 'RESOLVED', icon: CheckCircle2 };
+    case 'in_progress': return { color: '#3b82f6', label: 'IN PROGRESS', icon: Clock };
+    case 'pending_human': return { color: '#f59e0b', label: 'ESCALATED', icon: AlertTriangle };
+    default: return { color: '#f59e0b', label: 'PENDING', icon: Clock };
+  }
+};
+
+const TicketItem = React.memo(({ item, onPress }) => {
+  const config = getStatusConfig(item.status);
+  const StatusIcon = config.icon;
+
+  return (
+    <TouchableOpacity
+      style={styles.ticketCard}
+      onPress={() => onPress(item.id)}
+      activeOpacity={0.8}
+    >
+      <View style={[styles.cardStripe, { backgroundColor: config.color }]} />
+      <View style={styles.cardBody}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.ticketSubject} numberOfLines={1}>{item.subject || 'Untitled Request'}</Text>
+          <View style={[styles.badge, { backgroundColor: config.color + '15' }]}>
+            <StatusIcon size={10} color={config.color} />
+            <Text style={[styles.badgeText, { color: config.color }]}>{config.label}</Text>
+          </View>
+        </View>
+        <Text style={styles.ticketDesc} numberOfLines={2}>
+          {item.description || 'No details provided.'}
+        </Text>
+        <View style={styles.cardFooter}>
+          <Text style={styles.ticketId}>#{item.id?.slice(0, 6).toUpperCase()}</Text>
+          <View style={styles.dateRow}>
+            <Clock size={12} color={COLORS.textMuted} />
+            <Text style={styles.dateText}>
+              {new Date(item.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+            </Text>
+          </View>
+        </View>
+      </View>
+      <ChevronRight size={18} color={COLORS.textMuted} style={{ alignSelf: 'center', marginRight: 16 }} />
+    </TouchableOpacity>
+  );
+});
+
 const TicketsListScreen = () => {
   const navigation = useNavigation();
   const [tickets, setTickets] = useState([]);
@@ -67,51 +113,13 @@ const TicketsListScreen = () => {
     return true;
   });
 
-  const getStatusConfig = (status) => {
-    switch (status) {
-      case 'resolved': return { color: COLORS.success, label: 'RESOLVED', icon: CheckCircle2 };
-      case 'in_progress': return { color: '#3b82f6', label: 'IN PROGRESS', icon: Clock };
-      case 'pending_human': return { color: '#f59e0b', label: 'ESCALATED', icon: AlertTriangle };
-      default: return { color: '#f59e0b', label: 'PENDING', icon: Clock };
-    }
-  };
+  const handleTicketPress = useCallback((ticketId) => {
+    navigation.navigate('TicketTracking', { ticketId });
+  }, [navigation]);
 
-  const renderTicket = ({ item }) => {
-    const config = getStatusConfig(item.status);
-    const StatusIcon = config.icon;
-
-    return (
-      <TouchableOpacity
-        style={styles.ticketCard}
-        onPress={() => navigation.navigate('TicketTracking', { ticketId: item.id })}
-        activeOpacity={0.8}
-      >
-        <View style={[styles.cardStripe, { backgroundColor: config.color }]} />
-        <View style={styles.cardBody}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.ticketSubject} numberOfLines={1}>{item.subject || 'Untitled Request'}</Text>
-            <View style={[styles.badge, { backgroundColor: config.color + '15' }]}>
-              <StatusIcon size={10} color={config.color} />
-              <Text style={[styles.badgeText, { color: config.color }]}>{config.label}</Text>
-            </View>
-          </View>
-          <Text style={styles.ticketDesc} numberOfLines={2}>
-            {item.description || 'No details provided.'}
-          </Text>
-          <View style={styles.cardFooter}>
-            <Text style={styles.ticketId}>#{item.id?.slice(0, 6).toUpperCase()}</Text>
-            <View style={styles.dateRow}>
-              <Clock size={12} color={COLORS.textMuted} />
-              <Text style={styles.dateText}>
-                {new Date(item.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-              </Text>
-            </View>
-          </View>
-        </View>
-        <ChevronRight size={18} color={COLORS.textMuted} style={{ alignSelf: 'center', marginRight: 16 }} />
-      </TouchableOpacity>
-    );
-  };
+  const renderTicket = useCallback(({ item }) => (
+    <TicketItem item={item} onPress={handleTicketPress} />
+  ), [handleTicketPress]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
