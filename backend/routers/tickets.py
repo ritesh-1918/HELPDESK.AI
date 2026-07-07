@@ -2,15 +2,45 @@
 import logging
 import hashlib
 import traceback
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException
 from backend.auth_cookie import get_current_user
 from backend.dependencies import supabase, duplicate_service
-from backend.models import TicketSaveRequest, TicketRecord, TICKETS_DB
+from backend.schemas import TicketSaveRequest
 from backend.sanitization import sanitize_ticket_data
+
+# NOTE (Issue #3212 -> #3380): `TicketRecord` / `TICKETS_DB` previously
+# imported from `backend.models` did not exist anywhere in this codebase.
+# Issue #3212 temporarily stubbed them locally just to restore importability.
+# Issue #3380 replaces that stub entirely: the legacy in-memory endpoints
+# below (POST /tickets, PATCH /tickets/{id}) now persist to Supabase via the
+# same tested helpers used elsewhere in the app, instead of mutating a
+# process-local list that is not thread-safe and is wiped on every restart.
+from backend.services.supabase_utils import (
+    create_ticket as _supabase_create_ticket,
+    update_ticket as _supabase_update_ticket,
+)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
+
+
+def _rollback_ticket_insert(ticket_id, log) -> bool:
+    """
+    Compensating rollback (Issue #3212): supabase-py has no native multi-table
+    transaction support, so a failure in a step AFTER the initial `tickets`
+    row insert (categorization/duplicate indexing, or the initial system
+    message) must be compensated for manually, or the ticket row is left as
+    an orphaned, inconsistent record with no messages/indexing.
+    """
+    try:
+        supabase.table("tickets").delete().eq("id", ticket_id).execute()
+        log.warning(f"Rolled back ticket insert for ticket_id={ticket_id} after downstream failure.")
+        return True
+    except Exception as rollback_error:
+        log.error(f"CRITICAL: Failed to roll back orphaned ticket_id={ticket_id}: {rollback_error}")
+        return False
 @router.get("")
 async def get_tickets(company_id: str | None = None, user: dict = Depends(get_current_user)):
     """Fetch persistent tickets from Supabase."""
@@ -128,46 +158,58 @@ async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_
             
         ticket_id = res.data[0]["id"]
 
-        duplicate_indexed = True
-        duplicate_index_warning = None
-        description_text = (request_body.description or "").strip()
-        subject_text = (request_body.subject or "").strip()
-        duplicate_text = description_text or subject_text
-        if duplicate_text:
-            try:
+        # Everything below this point has already written the `tickets` row.
+        # Issue #3212: if any of these subsequent steps fail, that row must
+        # be rolled back (deleted) rather than left as an orphaned record
+        # with no categorization index and no initial message.
+        try:
+            duplicate_indexed = True
+            duplicate_index_warning = None
+            description_text = (request_body.description or "").strip()
+            subject_text = (request_body.subject or "").strip()
+            duplicate_text = description_text or subject_text
+            if duplicate_text:
                 duplicate_service.add_ticket(str(ticket_id), duplicate_text)
                 try:
                     from backend.services.jaccard_duplicate_filter import jaccard_filter
                     jaccard_filter.add_ticket(str(ticket_id), duplicate_text)
                 except Exception as jf_add_err:
+                    # Auxiliary/secondary duplicate signal - soft-fail on its own,
+                    # unlike the primary duplicate_service call above.
                     logger.warning(f"Failed to add ticket to Jaccard filter: {jf_add_err}")
-            except Exception as index_error:
+            else:
                 duplicate_indexed = False
-                duplicate_index_warning = "Duplicate index update failed."
-                print(f"[WARNING] {duplicate_index_warning} ticket_id={ticket_id} error={index_error}")
-        else:
-            duplicate_indexed = False
-            duplicate_index_warning = "Duplicate index update skipped: no description or subject text was provided."
-            print(f"[WARNING] {duplicate_index_warning}")
-        
-        # Add initial system diagnostic message
-        msg = "Our Neural Engine has successfully triaged your issue and routed it to the designated team."
-        if final_data["auto_resolve"]:
-            msg = "AI Auto-Resolution active: A verified solution has been identified. Please review the attached resolution steps."
+                duplicate_index_warning = "Duplicate index update skipped: no description or subject text was provided."
+                print(f"[WARNING] {duplicate_index_warning}")
 
-        supabase.table("ticket_messages").insert({
-            "ticket_id": ticket_id,
-            "sender_id": "00000000-0000-0000-0000-000000000000", # System ID
-            "sender_name": "AI Assistant",
-            "sender_role": "admin",
-            "message": msg
-        }).execute()
-        
+            # Add initial system diagnostic message
+            msg = "Our Neural Engine has successfully triaged your issue and routed it to the designated team."
+            if final_data["auto_resolve"]:
+                msg = "AI Auto-Resolution active: A verified solution has been identified. Please review the attached resolution steps."
+
+            supabase.table("ticket_messages").insert({
+                "ticket_id": ticket_id,
+                "sender_id": "00000000-0000-0000-0000-000000000000", # System ID
+                "sender_name": "AI Assistant",
+                "sender_role": "admin",
+                "message": msg
+            }).execute()
+
+        except Exception as post_insert_error:
+            logger.error(f"Post-insert step failed for ticket_id={ticket_id}: {post_insert_error}")
+            _rollback_ticket_insert(ticket_id, logger)
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to fully create ticket; the operation was rolled back. Please try again."
+            ) from post_insert_error
+
         response = {"status": "success", "ticket_id": ticket_id, "duplicate_indexed": duplicate_indexed}
         if duplicate_index_warning:
             response["duplicate_index_warning"] = duplicate_index_warning
         return response
 
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
         logger.error("Failed to create ticket", exc_info=e)
@@ -185,33 +227,47 @@ async def get_ticket_by_id(ticket_id: str, user: dict = Depends(get_current_user
     return res.data
 
 
-@router.post("", response_model=TicketRecord)
-async def create_ticket(ticket: TicketRecord, user: dict = Depends(get_current_user)):
-    """Save a new ticket into the system."""
-    ticket_dict = sanitize_ticket_data(ticket.dict())
-    ticket = TicketRecord(**ticket_dict)
-    # Check for duplicates before adding
-    existing = next((t for t in TICKETS_DB if t.ticket_id == ticket.ticket_id), None)
-    if existing:
-        return existing
-        
-    TICKETS_DB.append(ticket)
-    print(f"[DB] Ticket #{ticket.ticket_id} created for user {ticket.owner_id}")
-    return ticket
+@router.post("")
+async def create_ticket(ticket: dict, user: dict = Depends(get_current_user)):
+    """
+    Persist a new ticket (Issue #3380).
+
+    Previously appended to an in-memory `TICKETS_DB` list - not thread-safe,
+    and every ticket created through this endpoint was silently lost on the
+    next restart/redeploy. Now delegates to the same tested Supabase
+    persistence layer (backend.services.supabase_utils) used elsewhere.
+
+    Accepts a generic dict body rather than the old rigid TicketRecord
+    schema (summary/owner_id/timeline/...) - no real caller of this endpoint
+    was found using that schema; field names should match the actual
+    `tickets` table columns (see POST /tickets/save for the canonical shape
+    used by the rest of the app).
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    sanitized = sanitize_ticket_data(ticket)
+    created = _supabase_create_ticket(supabase, sanitized)
+    if not created:
+        raise HTTPException(status_code=500, detail="Failed to create ticket.")
+    return created
 
 
-@router.patch("/{ticket_id}", response_model=TicketRecord)
+@router.patch("/{ticket_id}")
 async def update_ticket(ticket_id: str, updates: dict, user: dict = Depends(get_current_user)):
-    """Partially update a ticket's fields (e.g., status, viewed_at)."""
+    """
+    Partially update a ticket's fields (Issue #3380).
+
+    Previously mutated an in-memory `TICKETS_DB` list - now persists via
+    Supabase directly, matching the real `tickets` table used everywhere
+    else in the app.
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+
     sanitized_updates = sanitize_ticket_data(updates)
-    for i, ticket in enumerate(TICKETS_DB):
-        if str(ticket.ticket_id) == str(ticket_id):
-            # Convert to dict, update, then back to model
-            ticket_dict = ticket.dict()
-            ticket_dict.update(sanitized_updates)
-            updated_ticket = TicketRecord(**ticket_dict)
-            TICKETS_DB[i] = updated_ticket
-            return updated_ticket
-    
-    raise HTTPException(status_code=404, detail="Ticket not found")
+    updated = _supabase_update_ticket(supabase, ticket_id, sanitized_updates)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    return updated
 
