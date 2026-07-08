@@ -2,6 +2,36 @@ import urllib.request
 import urllib.parse
 import json
 import ssl
+import os
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def _create_ssl_context() -> ssl.SSLContext:
+    """
+    Creates a secure SSL context with full certificate verification enabled.
+
+    SSL verification is ALWAYS enforced in production.
+    Set OAUTH_DISABLE_SSL_VERIFY=1 ONLY for local development/testing — never in production.
+    """
+    ctx = ssl.create_default_context()
+
+    # Safety valve for local dev only — never set in production
+    if os.getenv("OAUTH_DISABLE_SSL_VERIFY", "0") == "1":
+        logger.warning(
+            "[OAuth] SSL verification is DISABLED via OAUTH_DISABLE_SSL_VERIFY=1. "
+            "This must NEVER be set in production."
+        )
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+    else:
+        # Enforce strict SSL — default secure behavior
+        ctx.check_hostname = True
+        ctx.verify_mode = ssl.CERT_REQUIRED
+
+    return ctx
+
 
 def get_authorization_url(provider: str, client_id: str, redirect_uri: str, state: str) -> str:
     """
@@ -13,7 +43,7 @@ def get_authorization_url(provider: str, client_id: str, redirect_uri: str, stat
         "response_type": "code",
         "state": state
     }
-    
+
     if provider == "google":
         url = "https://accounts.google.com/o/oauth2/v2/auth"
         params.update({
@@ -33,12 +63,20 @@ def get_authorization_url(provider: str, client_id: str, redirect_uri: str, stat
         })
     else:
         raise ValueError(f"Unsupported OAuth provider: {provider}")
-        
+
     return f"{url}?{urllib.parse.urlencode(params)}"
 
-def exchange_code_for_tokens(provider: str, code: str, client_id: str, client_secret: str, redirect_uri: str) -> dict:
+
+def exchange_code_for_tokens(
+    provider: str,
+    code: str,
+    client_id: str,
+    client_secret: str,
+    redirect_uri: str
+) -> dict:
     """
     Exchanges the authorization code for an access token.
+    SSL verification is always enforced unless OAUTH_DISABLE_SSL_VERIFY=1 (dev only).
     """
     if provider == "google":
         url = "https://oauth2.googleapis.com/token"
@@ -48,7 +86,7 @@ def exchange_code_for_tokens(provider: str, code: str, client_id: str, client_se
         url = "https://github.com/login/oauth/access_token"
     else:
         raise ValueError(f"Unsupported OAuth provider: {provider}")
-        
+
     payload = {
         "client_id": client_id,
         "client_secret": client_secret,
@@ -56,42 +94,40 @@ def exchange_code_for_tokens(provider: str, code: str, client_id: str, client_se
         "redirect_uri": redirect_uri,
         "grant_type": "authorization_code"
     }
-    
+
     data = urllib.parse.urlencode(payload).encode("utf-8")
     req = urllib.request.Request(
         url,
         data=data,
-        headers={"Accept": "application/json", "Content-Type": "application/x-www-form-urlencoded"}
+        headers={
+            "Accept": "application/json",
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
     )
-    
-    # Ignore SSL verification for local dev fallback robustness if needed
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-    
+
+    ctx = _create_ssl_context()
+
     try:
         with urllib.request.urlopen(req, context=ctx) as response:
             res_body = response.read().decode("utf-8")
             return json.loads(res_body)
     except Exception as e:
-        print(f"[OAuth exchange error] {provider} exchange failed: {e}")
+        logger.error(f"[OAuth] {provider} token exchange failed: {e}")
         return {"error": str(e)}
+
 
 def get_user_profile(provider: str, access_token: str) -> dict:
     """
     Fetches the user's email, name, avatar, and group memberships from the provider API.
+    SSL verification is always enforced unless OAUTH_DISABLE_SSL_VERIFY=1 (dev only).
     """
-    # Create SSL Context to avoid certificate validation issues in local test runners
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
+    ctx = _create_ssl_context()
 
     headers = {
         "Authorization": f"Bearer {access_token}",
         "Accept": "application/json"
     }
-    
-    # Stub response handler helper
+
     def fetch_api(url, custom_headers=None):
         r_headers = custom_headers or headers
         req = urllib.request.Request(url, headers=r_headers)
@@ -99,39 +135,34 @@ def get_user_profile(provider: str, access_token: str) -> dict:
             with urllib.request.urlopen(req, context=ctx) as response:
                 return json.loads(response.read().decode("utf-8"))
         except Exception as e:
-            print(f"[OAuth API error] Failed to fetch {url}: {e}")
+            logger.error(f"[OAuth] Failed to fetch {url}: {e}")
             return None
 
     email = None
     full_name = None
     avatar_url = None
     groups = []
-    
+
     if provider == "google":
-        # Get standard profile info
         profile = fetch_api("https://www.googleapis.com/oauth2/v3/userinfo")
         if profile:
             email = profile.get("email")
             full_name = profile.get("name")
             avatar_url = profile.get("picture")
-            
+
     elif provider == "microsoft":
-        # Get Microsoft Graph profile info
         profile = fetch_api("https://graph.microsoft.com/v1.0/me")
         if profile:
             email = profile.get("mail") or profile.get("userPrincipalName")
             full_name = profile.get("displayName")
-            
-            # Fetch Microsoft Graph groups
+
             groups_data = fetch_api("https://graph.microsoft.com/v1.0/me/transitiveMemberOf")
             if groups_data and "value" in groups_data:
                 for grp in groups_data["value"]:
-                    # Look for group displayName
                     if grp.get("@odata.type") == "#microsoft.graph.group":
                         groups.append(grp.get("displayName"))
-                        
+
     elif provider == "github":
-        # Get GitHub user profile
         gh_headers = {
             "Authorization": f"token {access_token}",
             "Accept": "application/json",
@@ -141,24 +172,22 @@ def get_user_profile(provider: str, access_token: str) -> dict:
         if profile:
             full_name = profile.get("name") or profile.get("login")
             avatar_url = profile.get("avatar_url")
-            
-            # Fetch emails (as user:email scope gives private emails)
+
             emails = fetch_api("https://api.github.com/user/emails", custom_headers=gh_headers)
             if emails:
                 primary = next((e for e in emails if e.get("primary")), None)
                 email = primary.get("email") if primary else emails[0].get("email")
             else:
                 email = profile.get("email")
-                
-            # Fetch GitHub Orgs/Teams as Groups
+
             orgs = fetch_api("https://api.github.com/user/orgs", custom_headers=gh_headers)
             if orgs:
                 for org in orgs:
                     groups.append(org.get("login"))
-                    
+
     if not email:
         return {"status": "error", "message": "Failed to retrieve user email from OAuth provider."}
-        
+
     return {
         "status": "success",
         "email": email,
