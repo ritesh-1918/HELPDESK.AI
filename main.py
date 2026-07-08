@@ -26,6 +26,14 @@ app.add_middleware(SecurityHeadersMiddleware)
 app.include_router(upload_router.router)
 app.add_middleware(PayloadLimitMiddleware)
 app.add_middleware(CSRFTokenMiddleware)
+
+# Issue #3374: this middleware already existed fully implemented but was
+# never actually registered with the app - administrative/tenant-management
+# actions (and auth, tickets, log_correction) were never being audit-logged
+# as a result.
+from backend.middleware.audit_logger import AuditLoggerMiddleware
+app.add_middleware(AuditLoggerMiddleware)
+
 app.include_router(metrics_router.router)
 
 from backend.config import settings
