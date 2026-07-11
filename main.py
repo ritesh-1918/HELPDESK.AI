@@ -1,4 +1,5 @@
 import logging
+import uuid
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
@@ -61,6 +62,37 @@ app.include_router(weekly_digest.router)
 async def health_check():
     """Public health / readiness probe — no authentication required."""
     return {"status": "ok"}
+
+
+# ---------------------------------------------------------------------------
+# Global exception handler (prevents internal error leakage)
+# ---------------------------------------------------------------------------
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Return a sanitized 500 response for any unhandled exception.
+
+    The real traceback is logged server-side with a correlation ``error_id``
+    so operators can investigate without exposing implementation details to
+    clients (closes the "error leakage" gap flagged for admin.py).
+    """
+    error_id = uuid.uuid4().hex
+    logger.error(
+        "Unhandled exception [%s] on %s %s: %s",
+        error_id,
+        request.method,
+        request.url.path,
+        exc,
+        exc_info=True,
+    )
+    return JSONResponse(
+        status_code=500,
+        content={
+            "status": "error",
+            "message": "An unexpected internal error occurred. The incident has been logged.",
+            "error_id": error_id,
+        },
+    )
 
 
 # ---------------------------------------------------------------------------
