@@ -4,6 +4,7 @@ Handles token generation, hashing, expiry enforcement, and revocation.
 Tokens are stored as SHA-256 hashes; the plaintext is shown only once.
 """
 from __future__ import annotations
+import logging
 
 import hashlib
 import ipaddress
@@ -22,6 +23,9 @@ from backend.models.api_token import (
 # Raw token format:  hd_<32-hex-chars>
 _TOKEN_PREFIX_CHARS = "hd_"
 _SECRET_BYTES = 32
+
+
+logger = logging.getLogger(__name__)
 
 
 def _generate_raw_token() -> str:

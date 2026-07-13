@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { FixedSizeList as List } from 'react-window';
 import {
     ShieldCheck, Zap, Activity, Clock, Search, Download, CheckCircle2,
     AlertTriangle, FileText, Lock, RefreshCw, Key, ArrowRight, User, Globe, Info, Calendar, X, Eye
@@ -8,6 +9,56 @@ import useAuthStore from "../../store/authStore";
 import useToastStore from '../../store/toastStore';
 import { Card } from "../../components/ui/card";
 import { API_CONFIG } from '../../config';
+
+
+const LOG_ROW_HEIGHT = 96;       // px, must stay fixed for FixedSizeList windowing
+const LOG_LIST_HEIGHT = 640;     // px, scrollable viewport height for the virtualized list
+
+// Extracted + memoized so react-window doesn't re-render every row on every scroll tick
+const LogRow = React.memo(({ index, style, data }) => {
+    const { logs, onSelectLog } = data;
+    const log = logs[index];
+    const logDate = new Date(log.timestamp);
+    const isFailed = log.status === 'failure' || log.action === 'failed_login_attempt';
+
+    return (
+        <div
+            style={style}
+            className="px-6 border-b border-slate-100 hover:bg-slate-50/50 transition-colors flex items-center justify-between gap-6 cursor-pointer"
+            onClick={() => onSelectLog(log)}
+        >
+            <div className="flex items-center gap-4 min-w-0">
+                {/* Action Indicator Icon */}
+                <div className={`p-3 rounded-xl shrink-0 border ${isFailed ? 'bg-red-50 text-red-500 border-red-100' : 'bg-indigo-50 text-indigo-600 border-indigo-100'}`}>
+                    {log.action.includes('login') ? <Key size={18} /> : log.action.includes('ticket') ? <FileText size={18} /> : <Activity size={18} />}
+                </div>
+
+                <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-black text-slate-800 uppercase italic tracking-tight truncate">
+                            {log.action.replace(/_/g, ' ')}
+                        </span>
+                        <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border shrink-0 ${isFailed ? 'bg-red-50 text-red-600 border-red-200' : 'bg-emerald-50 text-emerald-600 border-emerald-200'}`}>
+                            {log.status}
+                        </span>
+                    </div>
+
+                    <div className="flex items-center gap-4 text-[10px] text-slate-400 font-bold mt-1.5 truncate">
+                        <span className="flex items-center gap-1 shrink-0"><User size={10} /> User: {log.user_id ? log.user_id.slice(0, 8) + '...' : 'System'}</span>
+                        <span className="flex items-center gap-1 shrink-0"><Globe size={10} /> IP: {log.ip_address || 'n/a'}</span>
+                        <span className="flex items-center gap-1 shrink-0"><Calendar size={10} /> {logDate.toLocaleString()}</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* View Details CTA */}
+            <button className="flex items-center gap-1 bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-100 hover:bg-indigo-50 text-[10px] font-black uppercase tracking-widest py-2 px-3 rounded-xl shadow-sm transition-all shrink-0">
+                <Eye size={12} /> Details
+            </button>
+        </div>
+    );
+});
+LogRow.displayName = 'LogRow';
 
 const AuditLogViewer = () => {
     const { profile } = useAuthStore();
@@ -381,7 +432,7 @@ const AuditLogViewer = () => {
                         </div>
                     </Card>
 
-                    {/* Timeline List */}
+                    {/* Timeline List - virtualized for performance with large log volumes (Issue #3216) */}
                     <div className="bg-white border border-slate-200 rounded-[2.5rem] shadow-2xl overflow-hidden">
                         <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/20">
                             <h3 className="text-sm font-black text-slate-800 uppercase italic tracking-wider flex items-center gap-2">
@@ -392,51 +443,17 @@ const AuditLogViewer = () => {
                             </span>
                         </div>
 
-                        <div className="divide-y divide-slate-100">
-                            {filteredLogs.map((log) => {
-                                const logDate = new Date(log.timestamp);
-                                const isFailed = log.status === 'failure' || log.action === 'failed_login_attempt';
-                                
-                                return (
-                                    <div 
-                                        key={log.id} 
-                                        className="p-6 hover:bg-slate-50/50 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-6 cursor-pointer"
-                                        onClick={() => setSelectedLog(log)}
-                                    >
-                                        <div className="flex items-start gap-4">
-                                            {/* Action Indicator Icon */}
-                                            <div className={`p-3 rounded-xl shrink-0 border ${isFailed ? 'bg-red-50 text-red-500 border-red-100' : 'bg-indigo-50 text-indigo-600 border-indigo-100'}`}>
-                                                {log.action.includes('login') ? <Key size={18} /> : log.action.includes('ticket') ? <FileText size={18} /> : <Activity size={18} />}
-                                            </div>
-                                            
-                                            <div>
-                                                <div className="flex flex-wrap items-center gap-2">
-                                                    <span className="text-sm font-black text-slate-800 uppercase italic tracking-tight">
-                                                        {log.action.replace(/_/g, ' ')}
-                                                    </span>
-                                                    <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${isFailed ? 'bg-red-50 text-red-600 border-red-200' : 'bg-emerald-50 text-emerald-600 border-emerald-200'}`}>
-                                                        {log.status}
-                                                    </span>
-                                                </div>
-                                                
-                                                <div className="flex flex-wrap items-center gap-4 text-[10px] text-slate-400 font-bold mt-1.5">
-                                                    <span className="flex items-center gap-1"><User size={10} /> User: {log.user_id ? log.user_id.slice(0, 8) + '...' : 'System'}</span>
-                                                    <span className="flex items-center gap-1"><Globe size={10} /> IP: {log.ip_address || 'n/a'}</span>
-                                                    <span className="flex items-center gap-1"><Calendar size={10} /> {logDate.toLocaleString()}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* View Details CTA */}
-                                        <button className="flex items-center gap-1 bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-100 hover:bg-indigo-50 text-[10px] font-black uppercase tracking-widest py-2 px-3 rounded-xl shadow-sm transition-all shrink-0">
-                                            <Eye size={12} /> Details
-                                        </button>
-                                    </div>
-                                );
-                            })}
-                        </div>
-
-                        {filteredLogs.length === 0 && (
+                        {filteredLogs.length > 0 ? (
+                            <List
+                                height={Math.min(LOG_LIST_HEIGHT, filteredLogs.length * LOG_ROW_HEIGHT)}
+                                itemCount={filteredLogs.length}
+                                itemSize={LOG_ROW_HEIGHT}
+                                width="100%"
+                                itemData={{ logs: filteredLogs, onSelectLog: setSelectedLog }}
+                            >
+                                {LogRow}
+                            </List>
+                        ) : (
                             <div className="py-24 text-center">
                                 <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-200 mx-auto mb-4">
                                     <Activity size={32} />

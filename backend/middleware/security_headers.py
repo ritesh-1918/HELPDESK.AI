@@ -27,9 +27,8 @@ def _build_csp(report_only: bool = False) -> str:
     """
     directives = [
         "default-src 'self'",
-        # Allow scripts only from the application origin and the Tailwind CDN
-        # used by the backend landing page.
-        "script-src 'self' cdn.tailwindcss.com",
+        # Allow scripts only from the application origin and the specific whitelisted swagger/redoc resources
+        "script-src 'self' https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js https://cdn.jsdelivr.net/npm/redoc@next/bundles/redoc.standalone.js",
         # Images may be loaded over HTTPS from any domain (avatars, screenshots).
         "img-src 'self' https: data:",
         # Inline styles required by Tailwind; no external style-sheet CDNs.

@@ -5,7 +5,7 @@ const validatePassword = (password) => {
   if (!/[0-9]/.test(password)) return 'Password must contain one number.';
   return null;
 };
-
+import { broadcastAuthEvent, TAB_SYNC_EVENTS } from '../hooks/useTabSync';
 import { create } from 'zustand';
 import { supabase } from '../lib/supabaseClient';
 import { API_CONFIG } from '../config';
@@ -194,7 +194,7 @@ const useAuthStore = create(
                         set({ user: null, profile: null });
                         throw new Error("Please verify your email address before continuing. Check your inbox.");
                     }
-
+                    broadcastAuthEvent(TAB_SYNC_EVENTS.LOGGED_IN, { user, profile });
                     return { user, profile };
                 } catch (error) {
                     throw error;
@@ -359,6 +359,7 @@ const useAuthStore = create(
 
                     const { error } = await supabase.auth.signOut();
                     if (error) throw error;
+                    broadcastAuthEvent(TAB_SYNC_EVENTS.LOGGED_OUT);
                     set({ user: null, profile: null });
                     // Clear persisted ticket state to prevent cross-user data leakage
                     useTicketStore.getState().clearTicket?.();
@@ -427,6 +428,10 @@ const useAuthStore = create(
                     if (error) throw error;
                     if (data) {
                         set({ profile: data });
+                        broadcastAuthEvent(TAB_SYNC_EVENTS.PROFILE_UPDATED, {
+                          profile: data,
+                          userId: data.id,
+                        });
                         return data;
                     }
                 } catch (err) {

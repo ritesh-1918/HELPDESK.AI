@@ -4,7 +4,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from backend.services.redis_cache import RedisInferenceCache, _text_key, CLASSIFICATION_PREFIX, EMBEDDING_PREFIX
+from backend.services.redis_cache import (
+    CLASSIFICATION_PREFIX,
+    DEFAULT_TTL_SECONDS,
+    EMBEDDING_PREFIX,
+    RedisInferenceCache,
+    _parse_ttl_seconds,
+    _text_key,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -25,6 +32,19 @@ def test_cache_disabled_by_default():
     cache.connect()
     assert cache.available is False
     assert cache.get_classification("ticket") is None
+
+
+def test_invalid_ttl_env_falls_back_to_default(monkeypatch):
+    monkeypatch.setenv("REDIS_CACHE_TTL_SECONDS", "not-a-number")
+
+    cache = RedisInferenceCache()
+
+    assert cache.ttl_seconds == DEFAULT_TTL_SECONDS
+
+
+def test_non_positive_ttl_values_fall_back_to_default():
+    assert _parse_ttl_seconds("0") == DEFAULT_TTL_SECONDS
+    assert _parse_ttl_seconds("-30") == DEFAULT_TTL_SECONDS
 
 
 def test_classification_roundtrip(monkeypatch):

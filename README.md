@@ -1,4 +1,4 @@
----
+﻿---
 title: HelpDesk AI Backend
 emoji: 🤖
 colorFrom: green
@@ -118,6 +118,7 @@ To support the project and get real-time open-source project updates, please mak
 - [🚀 Deployment & Operations](#-deployment--operations)
 - [🗺️ Roadmap](#%EF%B8%8F-roadmap)
 - [📱 Mobile Ecosystem (V1)](#-mobile-ecosystem-v1)
+- [🗄️ Database Schema](#-database-schema)
 - [👥 Contributors](#-contributors)
 
 ---
@@ -251,6 +252,13 @@ HELPDESK.AI/
 
 ---
 
+<h2 id="database-schema">🗄️ Database Schema</h2>
+
+The full table catalog, relationships, and migration-owned schema objects are documented in
+[docs/helpdesk_schema.md](docs/helpdesk_schema.md).
+
+---
+
 <h2 id="the-ai-neural-pipeline">🧠 The AI Neural Pipeline</h2>
 
 Under the hood, Helpdesk.ai leverages a custom suite of high speed models.
@@ -284,6 +292,31 @@ VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 VITE_SUPABASE_ANON_KEY=your_key
 VITE_STRIPE_GROWTH_LINK=your_stripe_link
 VITE_BACKEND_URL=http://localhost:8000
+```
+
+#### Backend Environment Variables
+
+Copy `backend/.env.example` to `backend/.env` and fill in your values:
+
+```bash
+cd backend
+cp .env.example .env
+```
+
+| Variable | Description | Example |
+|---|---|---|
+| `SUPABASE_URL` | Your Supabase project URL | `https://xxx.supabase.co` |
+| `SUPABASE_SERVICE_KEY` | Service role key (keep secret!) | `eyJhbGciOiJIUzI1NiIs...` |
+| `ALLOW_DEGRADED_STARTUP` | Allow startup even if models fail | `0` (strict) or `1` (lenient) |
+| `SENTENCE_TRANSFORMER_MODEL_PATH` | Local model path (optional) | `./models/all-MiniLM-L6-v2` |
+| `REQUIRE_SUPABASE` | Include Supabase in readiness gate | `false` or `true` |
+
+**Notes:**
+
+- `SUPABASE_SERVICE_KEY` is the **service role** key (not the anon key). Find it in Supabase Dashboard > Project Settings > API.
+- If `ALLOW_DEGRADED_STARTUP=1`, the backend starts even if model downloads fail.
+- `SENTENCE_TRANSFORMER_MODEL_PATH` avoids HuggingFace downloads. Download models manually first, then set the path.
+- `REQUIRE_SUPABASE=true` makes the readiness check fail if Supabase is unreachable.
 ```
 
 ### Local Installation

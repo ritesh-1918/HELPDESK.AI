@@ -82,10 +82,10 @@ services:
     networks:
       - helpdesk_net
 
-  # ── PostgreSQL Database (local sandbox) ──────────────────────────────────────
-  postgres:
-    image: postgres:15-alpine
-    container_name: helpdesk_postgres
+  # ── Database: PostgreSQL with pgvector ─────────────────────────────────────
+  db:
+    image: pgvector/pgvector:pg15
+    container_name: helpdesk_db
     restart: unless-stopped
     ports:
       - "5432:5432"
@@ -94,7 +94,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-helpdesk_local_pass}
       POSTGRES_DB: ${POSTGRES_DB:-helpdesk}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - pg_data:/var/lib/postgresql/data
       - ./schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-helpdesk}"]
@@ -107,11 +107,29 @@ services:
     networks:
       - helpdesk_net
 
+  # ── API: PostgREST for direct DB access ────────────────────────────────────
+  api:
+    image: postgrest/postgrest:latest
+    container_name: helpdesk_api
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      PGRST_DB_URI: postgres://${POSTGRES_USER:-helpdesk}:${POSTGRES_PASSWORD:-helpdesk_local_pass}@db:5432/${POSTGRES_DB:-helpdesk}
+      PGRST_DB_SCHEMA: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${PGRST_JWT_SECRET}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - helpdesk_net
+
 volumes:
   model_cache:
   ticket_data:
   redis_data:
-  postgres_data:
+  pg_data:
 
 networks:
   helpdesk_net:

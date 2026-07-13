@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useMemo } from "react";
 
 /**
  * ThemeContext — provides dark/light mode toggle across the entire app.
@@ -50,8 +50,10 @@ export function ThemeProvider({ children }) {
   const toggleTheme = () =>
     setTheme((current) => (current === "dark" ? "light" : "dark"));
 
+  const value = useMemo(() => ({ theme, toggleTheme }), [theme]);
+
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );

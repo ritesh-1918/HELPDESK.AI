@@ -241,7 +241,7 @@ function ScorecardCard({ data, rank }) {
 // Main page
 // ---------------------------------------------------------------------------
 
-const AdminScorecard = () => {
+const AdminScorecardOld = () => {
     const { profile } = useAuthStore();
     const [scorecards, setScorecards] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -389,6 +389,7 @@ import useAuthStore from '../../store/authStore';
 import { API_CONFIG } from '../../config';
 import AgentLeaderboard from '../../components/AgentLeaderboard';
 import AgentScorecard from '../../components/AgentScorecard';
+import PullToRefresh from '../../components/shared/PullToRefresh';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const BACKEND = API_CONFIG.BACKEND_URL;
@@ -431,6 +432,7 @@ const AdminScorecard = () => {
   const agents = data?.agents || [];
 
   return (
+    <PullToRefresh onRefresh={load}>
     <div
       id="admin-scorecard-page"
       style={{ background: '#f8faf9', minHeight: '100vh', paddingBottom: 80, fontFamily: 'Inter, sans-serif' }}
@@ -593,6 +595,7 @@ const AdminScorecard = () => {
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
+    </PullToRefresh>
   );
 };
 

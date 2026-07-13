@@ -6,7 +6,13 @@ global.window = {
     hostname: 'localhost',
     origin: 'http://localhost:3000',
   },
+  addEventListener: vi.fn(),
 };
+
+Object.defineProperty(global, 'navigator', {
+  value: { onLine: true },
+  writable: true,
+});
 
 // 2. Setup localStorage mock before import
 let localStore = {};
@@ -37,6 +43,7 @@ console.warn = vi.fn();
 // 3. Dynamically import target module to prevent hoisting issues
 const { api, setUseMock } = await import('./api');
 const { MOCK_TICKETS } = await import('./mockData');
+const mockedApiClient = (await import('./apiClient')).default;
 
 describe('Frontend API Service - getTickets and createTicket (Mock Mode)', () => {
   beforeEach(() => {
@@ -46,9 +53,12 @@ describe('Frontend API Service - getTickets and createTicket (Mock Mode)', () =>
     mockLocalStorage.clear.mockClear();
     mockLocalStorage.removeItem.mockClear();
     console.warn.mockClear();
+    mockedApiClient.get.mockClear();
+    mockedApiClient.post.mockClear();
     
     // Always reset USE_MOCK to true for default mock mode tests
     setUseMock(true);
+    navigator.onLine = true;
 
     vi.useFakeTimers();
   });
@@ -220,6 +230,62 @@ describe('Frontend API Service - getTickets and createTicket (Mock Mode)', () =>
 
       expect(getResult).toBeUndefined();
       expect(createResult).toBeUndefined();
+    });
+  });
+
+  describe('offline ticket queue', () => {
+    it('queues a ticket locally when offline and returns a pending sync ticket', async () => {
+      setUseMock(false);
+      navigator.onLine = false;
+
+      const ticketData = {
+        title: 'Offline printer issue',
+        description: 'Printer is down on floor 3.',
+        priority: 'High',
+        category: 'Hardware'
+      };
+
+      const responsePromise = api.createTicket(ticketData);
+      await vi.runAllTimersAsync();
+      const response = await responsePromise;
+
+      const queue = JSON.parse(localStore['helpdesk-offline-ticket-queue']);
+      expect(queue).toHaveLength(1);
+      expect(queue[0].ticketData).toMatchObject(ticketData);
+      expect(response.data.status).toBe('Pending Sync');
+      expect(response.data.sync_status).toBe('queued');
+      expect(mockedApiClient.post).not.toHaveBeenCalled();
+    });
+
+    it('flushes queued tickets when back online before fetching tickets', async () => {
+      setUseMock(false);
+      navigator.onLine = true;
+
+      localStore['helpdesk-offline-ticket-queue'] = JSON.stringify([
+        {
+          id: 'offline-ticket-1',
+          queuedAt: '2026-06-28T10:00:00.000Z',
+          reason: 'offline',
+          ticketData: {
+            title: 'Queued VPN issue',
+            description: 'VPN disconnected',
+            priority: 'Medium',
+            category: 'Network'
+          }
+        }
+      ]);
+
+      mockedApiClient.post.mockResolvedValueOnce({ data: { id: 'srv-1', ticket_id: 'srv-1' } });
+      mockedApiClient.get.mockResolvedValueOnce({ data: [] });
+
+      const tickets = await api.getTickets();
+
+      expect(mockedApiClient.post).toHaveBeenCalledWith('/tickets/save', expect.objectContaining({
+        title: 'Queued VPN issue',
+        description: 'VPN disconnected',
+      }));
+      expect(localStore['helpdesk-offline-ticket-queue']).toBe(JSON.stringify([]));
+      expect(Array.isArray(tickets)).toBe(true);
     });
   });
 });

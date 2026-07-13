@@ -71,6 +71,13 @@ class TestParseLimit(unittest.TestCase):
                 "5/minute",
             )
 
+    def test_zero_count_falls_back(self):
+        with mock.patch.dict(os.environ, {"X_RATE_TEST": "0/minute"}, clear=False):
+            self.assertEqual(
+                rlc._parse_limit("X_RATE_TEST", "5/minute"),
+                "5/minute",
+            )
+
     def test_extra_slash_falls_back(self):
         with mock.patch.dict(os.environ, {"X_RATE_TEST": "10/minute/extra"}, clear=False):
             self.assertEqual(

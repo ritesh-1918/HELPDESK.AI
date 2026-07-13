@@ -100,6 +100,7 @@ class TicketResponse(BaseModel):
     reasoning: str = ""
     decision_factors: list[str] = []
     spam_check: SpamCheck = SpamCheck()
+    sla_breach_at: str | None = None
     version: str = "2.1.0-Neural-Diagnostic"
 
 

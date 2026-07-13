@@ -3,11 +3,11 @@ scorecard_router.py — Agent performance scorecard endpoints
 Issue #774
 """
 import os
-from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Header, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from supabase import create_client
 
+from auth_cookie import get_current_user
 from agent_scorecard import get_company_scorecard, refresh_agent_scorecard
 
 router = APIRouter(prefix="/api/scorecard", tags=["scorecard"])
@@ -25,28 +25,36 @@ def _get_sb():
     return _sb
 
 
-def _require_auth(authorization: Optional[str]) -> None:
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    token = authorization[7:]
+def _resolve_company(user: dict) -> str | None:
+    """Resolve the authenticated user's company_id from the profiles table."""
     sb = _get_sb()
-    if sb:
-        try:
-            sb.auth.get_user(token)
-        except Exception:
-            raise HTTPException(status_code=401, detail="Invalid or expired token")
+    if not sb:
+        return None
+    user_id = user.get("id") or user.get("sub")
+    if not user_id:
+        return None
+    try:
+        res = sb.table("profiles").select("company_id").eq("id", user_id).single().execute()
+        return res.data.get("company_id") if res.data else None
+    except Exception:
+        return None
 
 
 @router.get("/company/{company_id}")
 async def company_scorecard(
     company_id: str,
     days: int = Query(default=30, ge=1, le=365),
-    authorization: Optional[str] = Header(None),
+    user: dict = Depends(get_current_user),
 ):
     """Get ranked performance scorecard for all agents in a company."""
-    _require_auth(authorization)
     if not company_id or len(company_id) > 100:
         raise HTTPException(status_code=400, detail="Invalid company_id")
+
+    # Tenant isolation: verify caller belongs to the requested company
+    user_company = _resolve_company(user)
+    if user_company and str(user_company) != company_id:
+        raise HTTPException(status_code=403, detail="Access denied: you do not belong to this company")
+
     data = get_company_scorecard(company_id, days=days)
     return {"success": True, "agents": data, "total": len(data)}
 
@@ -56,10 +64,14 @@ async def agent_scorecard(
     agent_id: str,
     company_id: str,
     days: int = Query(default=30, ge=1, le=365),
-    authorization: Optional[str] = Header(None),
+    user: dict = Depends(get_current_user),
 ):
     """Get individual agent scorecard with metrics + score + AI coaching tip."""
-    _require_auth(authorization)
+    # Tenant isolation: verify caller belongs to the requested company
+    user_company = _resolve_company(user)
+    if user_company and str(user_company) != company_id:
+        raise HTTPException(status_code=403, detail="Access denied: you do not belong to this company")
+
     data = refresh_agent_scorecard(agent_id, company_id, days=days)
     if not data["metrics"]["has_data"]:
         return {
@@ -77,9 +89,13 @@ async def refresh_scorecard(
     company_id: str,
     agent_name: str = "Agent",
     days: int = Query(default=30, ge=1, le=365),
-    authorization: Optional[str] = Header(None),
+    user: dict = Depends(get_current_user),
 ):
     """Force-refresh an agent's scorecard (recomputes from latest Supabase data)."""
-    _require_auth(authorization)
+    # Tenant isolation: verify caller belongs to the requested company
+    user_company = _resolve_company(user)
+    if user_company and str(user_company) != company_id:
+        raise HTTPException(status_code=403, detail="Access denied: you do not belong to this company")
+
     data = refresh_agent_scorecard(agent_id, company_id, agent_name, days=days)
     return {"success": True, **data}

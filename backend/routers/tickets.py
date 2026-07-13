@@ -17,12 +17,25 @@ async def get_tickets(company_id: str | None = None, user: dict = Depends(get_cu
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
     
+    from backend.services.redis_cache import redis_cache
+    
+    cache_key = f"helpdesk:tickets:list:{company_id or 'all'}"
+    if redis_cache.available:
+        cached_data = redis_cache.get_json(cache_key)
+        if cached_data is not None:
+            return cached_data
+
     query = supabase.table("tickets").select("*").order("created_at", desc=True)
     if company_id:
         query = query.eq("company_id", company_id)
         
     res = query.execute()
-    return res.data
+    data = res.data
+    
+    if redis_cache.available:
+        redis_cache.set_json(cache_key, data, ttl=300)
+        
+    return data
 
 @router.post("/save")
 async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_current_user)):
@@ -81,6 +94,33 @@ async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_
         logger.info(f"Tenant linkage: user_hash={user_hash}, company_id={final_data.get('company_id')}")
 
 
+        # ── Jaccard keyword duplicate gate (Issue #3228) ────────────────
+        # Fast pre-filter: check for near-duplicate submissions using
+        # keyword-based Jaccard similarity within a 24-hour window.
+        try:
+            from backend.services.jaccard_duplicate_filter import jaccard_filter
+            dup_text = (
+                (request_body.description or "").strip()
+                + " "
+                + (request_body.subject or "").strip()
+            ).strip()
+            if dup_text:
+                dup_check = jaccard_filter.check_duplicate(dup_text)
+                if dup_check.get("is_duplicate"):
+                    raise HTTPException(
+                        status_code=409,
+                        detail={
+                            "message": "Duplicate ticket detected",
+                            "duplicate_ticket_id": dup_check["duplicate_ticket_id"],
+                            "similarity": dup_check["similarity"],
+                        },
+                    )
+        except HTTPException:
+            raise
+        except Exception as jf_err:
+            logger.warning(f"Jaccard filter check skipped: {jf_err}")
+        # ── End Jaccard gate ──────────────────────────────────────────
+
         res = supabase.table("tickets").insert(final_data).execute()
         
         if not res.data:
@@ -96,6 +136,11 @@ async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_
         if duplicate_text:
             try:
                 duplicate_service.add_ticket(str(ticket_id), duplicate_text)
+                try:
+                    from backend.services.jaccard_duplicate_filter import jaccard_filter
+                    jaccard_filter.add_ticket(str(ticket_id), duplicate_text)
+                except Exception as jf_add_err:
+                    logger.warning(f"Failed to add ticket to Jaccard filter: {jf_add_err}")
             except Exception as index_error:
                 duplicate_indexed = False
                 duplicate_index_warning = "Duplicate index update failed."

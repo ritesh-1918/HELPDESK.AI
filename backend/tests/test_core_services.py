@@ -386,6 +386,24 @@ class TestSpamServiceCheck:
         result = self.svc.check("VERIFY YOUR ACCOUNT immediately")
         assert len(result["matched_keywords"]) >= 1
 
+    def test_whitelisted_domain_bypasses_suspicious_checks(self):
+        result = self.svc.check("Visit https://github.com/profile")
+        assert len(result["suspicious_urls"]) == 0
+        assert result["is_spam"] is False
+
+        result = self.svc.check("Visit https://sub.google.com/auth")
+        assert len(result["suspicious_urls"]) == 0
+        assert result["is_spam"] is False
+
+    def test_custom_additional_whitelist(self):
+        result = self.svc.check("Visit http://my-test-site.xyz")
+        assert len(result["suspicious_urls"]) == 1
+
+        custom_svc = SpamService(additional_whitelist={"my-test-site.xyz"})
+        result_custom = custom_svc.check("Visit http://my-test-site.xyz")
+        assert len(result_custom["suspicious_urls"]) == 0
+
+
 
 # ---------------------------------------------------------------------------
 # rate_limit_config tests
