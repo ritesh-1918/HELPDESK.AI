@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import {
   StyleSheet, View, Text, TextInput, TouchableOpacity,
   FlatList, ActivityIndicator, StatusBar,
@@ -8,10 +8,10 @@ import { supabase } from '../../lib/supabase';
 import { COLORS, SHADOWS } from '../../styles/theme';
 import { Search, BookOpen, ChevronRight, ArrowLeft, HelpCircle } from 'lucide-react-native';
 
-const ArticleItem = React.memo(({ item, onPress }) => (
-  <TouchableOpacity 
+const ArticleCard = memo(({ item }) => (
+  <TouchableOpacity
     style={styles.articleCard}
-    onPress={onPress}
+    onPress={() => {/* Show article detail modal or screen */}}
   >
     <View style={styles.articleIcon}>
       <BookOpen size={20} color={COLORS.primary} />
@@ -71,13 +71,9 @@ const KnowledgeBaseScreen = ({ navigation }) => {
     }
   };
 
-  const handleArticlePress = useCallback(() => {
-    /* Show article detail modal or screen */
-  }, []);
-
   const renderArticle = useCallback(({ item }) => (
-    <ArticleItem item={item} onPress={handleArticlePress} />
-  ), [handleArticlePress]);
+    <ArticleCard item={item} />
+  ), []);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
