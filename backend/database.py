@@ -9,16 +9,24 @@ from backend.config import settings
 env_path = Path(__file__).parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
+supabase = None
 try:
     from supabase import create_client, Client
-    from backend.config import settings
     url = settings.SUPABASE_URL
     key = settings.SUPABASE_SERVICE_KEY
     if not url or not key:
         logger.error("SUPABASE_URL or SUPABASE_SERVICE_KEY not set in backend/.env")
-        supabase = None
-else:
-    logger.error("SUPABASE_URL or SUPABASE_SERVICE_KEY not set in backend/.env")
+    else:
+        # NOTE (Issue #3374 prerequisite fix): this call was previously
+        # missing entirely - the client was never created even when
+        # credentials WERE present, and the preceding `try/else` (with no
+        # `except`) was a SyntaxError that blocked this whole module -
+        # and therefore backend/routers/admin.py, which imports `supabase`
+        # from here - from importing at all.
+        supabase = create_client(url, key)
+except Exception as e:
+    logger.exception("Failed to initialize Supabase client: %s", e)
+    supabase = None
 
 def get_system_settings(company_id: str) -> dict:
     defaults = {
