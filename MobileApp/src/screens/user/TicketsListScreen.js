@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, memo } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, FlatList,
   ActivityIndicator, RefreshControl, StatusBar,
@@ -20,7 +20,7 @@ const getStatusConfig = (status) => {
   }
 };
 
-const TicketItem = React.memo(({ item, onPress }) => {
+const TicketCard = memo(({ item, onPress }) => {
   const config = getStatusConfig(item.status);
   const StatusIcon = config.icon;
 
@@ -47,7 +47,7 @@ const TicketItem = React.memo(({ item, onPress }) => {
           <View style={styles.dateRow}>
             <Clock size={12} color={COLORS.textMuted} />
             <Text style={styles.dateText}>
-              {new Date(item.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+              {item.created_at ? new Date(item.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''}
             </Text>
           </View>
         </View>
@@ -118,7 +118,7 @@ const TicketsListScreen = () => {
   }, [navigation]);
 
   const renderTicket = useCallback(({ item }) => (
-    <TicketItem item={item} onPress={handleTicketPress} />
+    <TicketCard item={item} onPress={handleTicketPress} />
   ), [handleTicketPress]);
 
   return (
