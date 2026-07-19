@@ -920,7 +920,7 @@ async def analyze_stream(request_body: TicketRequest):
         gemini_analysis = {"ocr_text": request_body.image_text or "", "image_description": ""}
         if request_body.image_base64 and not gemini_analysis["ocr_text"]:
             try:
-            vision_result = gemini_service.analyze_image(request_body.image_base64, text)
+                vision_result = gemini_service.analyze_image(request_body.image_base64, text)
                 gemini_analysis.update(vision_result)
             except Exception as e:
                 pass
