@@ -1,265 +1,243 @@
 """
-WebSocket Connection Manager — heartbeat, connection pooling, and company-scoped broadcast.
+WebSocket Manager for Real-Time Communication
 
-Features:
-  - connect(websocket, client_id, company_id) — adds to pool, starts heartbeat
-  - disconnect(client_id) — removes from pool, cancels heartbeat
-  - send_personal(message, client_id) — sends JSON to a specific client
-  - broadcast(message, company_id=None) — broadcast to all or company-scoped clients
-  - heartbeat_task — sends ping every 30s, disconnects if no pong within 10s
-  - eviction_sweep — background task removes dead connections every 60s
-  - Pool limits: max 100 total, max 20 per company
-
-Thread/async safety: all mutations use asyncio.Lock.
+Manages WebSocket connections, broadcasts ticket updates, and handles live chat messages.
 """
 
-import asyncio
 import json
 import logging
-import time
-from dataclasses import dataclass, field
-from typing import Optional
-
-from fastapi import WebSocket
+from typing import Dict, Set, Optional
+from datetime import datetime
+from fastapi import WebSocket, WebSocketDisconnect
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Configuration
-# ---------------------------------------------------------------------------
-MAX_TOTAL_CONNECTIONS = 100
-MAX_PER_COMPANY = 20
-HEARTBEAT_INTERVAL_S = 30
-PONG_TIMEOUT_S = 10
-EVICTION_INTERVAL_S = 60
-
-
-@dataclass
-class _Connection:
-    websocket: WebSocket
-    client_id: str
-    company_id: Optional[str]
-    connected_at: float = field(default_factory=time.monotonic)
-    last_pong_at: float = field(default_factory=time.monotonic)
-    alive: bool = True
-    heartbeat_task: Optional[asyncio.Task] = None
-
 
 class ConnectionManager:
-    """Manages WebSocket connections with heartbeat and company-scoped broadcast."""
+    """Manages WebSocket connections for real-time communication."""
 
     def __init__(self):
-        self._connections: dict[str, _Connection] = {}
-        self._lock = asyncio.Lock()
-        self._eviction_task: Optional[asyncio.Task] = None
-
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
+        # Active connections by user_id
+        self.active_connections: Dict[str, Set[WebSocket]] = {}
+        
+        # Connections by ticket_id for ticket-specific updates
+        self.ticket_subscriptions: Dict[str, Set[WebSocket]] = {}
+        
+        # Connection metadata (user_id, company_id, role)
+        self.connection_metadata: Dict[WebSocket, dict] = {}
 
     async def connect(
-        self,
-        websocket: WebSocket,
-        client_id: str,
-        company_id: Optional[str] = None,
-    ) -> bool:
-        """
-        Accept a WebSocket connection and add it to the pool.
-
-        Returns:
-            True if accepted; False if pool is full.
-        """
-        await websocket.accept()
-
-        async with self._lock:
-            if len(self._connections) >= MAX_TOTAL_CONNECTIONS:
-                await websocket.close(code=1008, reason="Connection pool full")
-                logger.warning(f"[WS] Rejected {client_id}: global pool limit reached")
-                return False
-
-            company_count = sum(
-                1 for c in self._connections.values()
-                if c.company_id == company_id and company_id is not None
-            )
-            if company_id and company_count >= MAX_PER_COMPANY:
-                await websocket.close(code=1008, reason="Company connection limit reached")
-                logger.warning(f"[WS] Rejected {client_id}: company {company_id} limit reached")
-                return False
-
-            conn = _Connection(
-                websocket=websocket,
-                client_id=client_id,
-                company_id=company_id,
-            )
-            self._connections[client_id] = conn
-
-        # Start heartbeat outside the lock
-        task = asyncio.create_task(self._heartbeat_task(client_id))
-        async with self._lock:
-            if client_id in self._connections:
-                self._connections[client_id].heartbeat_task = task
-
-        # Start eviction sweep if not already running
-        if self._eviction_task is None or self._eviction_task.done():
-            self._eviction_task = asyncio.create_task(self._eviction_sweep())
-
-        logger.info(f"[WS] Connected: {client_id} (company={company_id}). "
-                    f"Pool size: {len(self._connections)}")
-        return True
-
-    async def disconnect(self, client_id: str):
-        """Remove a client from the pool and cancel its heartbeat task."""
-        async with self._lock:
-            conn = self._connections.pop(client_id, None)
-
-        if conn:
-            conn.alive = False
-            if conn.heartbeat_task and not conn.heartbeat_task.done():
-                conn.heartbeat_task.cancel()
-            try:
-                await conn.websocket.close()
-            except Exception:
-                pass
-            logger.info(f"[WS] Disconnected: {client_id}. Pool size: {len(self._connections)}")
-
-    async def send_personal(self, message: dict | str, client_id: str) -> bool:
-        """
-        Send a message to a specific client.
-
-        Returns:
-            True if sent successfully; False if client not found or send failed.
-        """
-        async with self._lock:
-            conn = self._connections.get(client_id)
-
-        if not conn or not conn.alive:
-            return False
-
-        try:
-            payload = json.dumps(message) if isinstance(message, dict) else message
-            await conn.websocket.send_text(payload)
-            return True
-        except Exception as exc:
-            logger.warning(f"[WS] send_personal to {client_id} failed: {exc}")
-            await self.disconnect(client_id)
-            return False
-
-    async def broadcast(
-        self,
-        message: dict | str,
-        company_id: Optional[str] = None,
+        self, 
+        websocket: WebSocket, 
+        user_id: str, 
+        company_id: str,
+        role: str = "user"
     ):
-        """
-        Broadcast a message to all connected clients, optionally filtered by company.
-        Dead connections are evicted automatically.
-        """
-        payload = json.dumps(message) if isinstance(message, dict) else message
+        """Accept and register a new WebSocket connection."""
+        await websocket.accept()
+        
+        # Register connection
+        if user_id not in self.active_connections:
+            self.active_connections[user_id] = set()
+        self.active_connections[user_id].add(websocket)
+        
+        # Store metadata
+        self.connection_metadata[websocket] = {
+            "user_id": user_id,
+            "company_id": company_id,
+            "role": role,
+            "connected_at": datetime.utcnow().isoformat()
+        }
+        
+        logger.info(f"WebSocket connected: user={user_id}, company={company_id}, role={role}")
+        
+        # Send welcome message
+        await self.send_personal_message({
+            "type": "connection_established",
+            "user_id": user_id,
+            "timestamp": datetime.utcnow().isoformat()
+        }, websocket)
 
-        async with self._lock:
-            targets = [
-                conn for conn in self._connections.values()
-                if conn.alive and (company_id is None or conn.company_id == company_id)
-            ]
+    def disconnect(self, websocket: WebSocket):
+        """Remove a WebSocket connection."""
+        metadata = self.connection_metadata.get(websocket)
+        
+        if metadata:
+            user_id = metadata["user_id"]
+            
+            # Remove from active connections
+            if user_id in self.active_connections:
+                self.active_connections[user_id].discard(websocket)
+                if not self.active_connections[user_id]:
+                    del self.active_connections[user_id]
+            
+            # Remove from ticket subscriptions
+            for ticket_id, connections in list(self.ticket_subscriptions.items()):
+                connections.discard(websocket)
+                if not connections:
+                    del self.ticket_subscriptions[ticket_id]
+            
+            # Remove metadata
+            del self.connection_metadata[websocket]
+            
+            logger.info(f"WebSocket disconnected: user={user_id}")
 
-        dead_ids = []
-        for conn in targets:
-            try:
-                await conn.websocket.send_text(payload)
-            except Exception as exc:
-                logger.warning(f"[WS] broadcast to {conn.client_id} failed: {exc}")
-                dead_ids.append(conn.client_id)
+    async def subscribe_to_ticket(self, websocket: WebSocket, ticket_id: str):
+        """Subscribe a connection to ticket-specific updates."""
+        if ticket_id not in self.ticket_subscriptions:
+            self.ticket_subscriptions[ticket_id] = set()
+        self.ticket_subscriptions[ticket_id].add(websocket)
+        
+        metadata = self.connection_metadata.get(websocket, {})
+        logger.info(f"User {metadata.get('user_id')} subscribed to ticket {ticket_id}")
+        
+        await self.send_personal_message({
+            "type": "ticket_subscribed",
+            "ticket_id": ticket_id,
+            "timestamp": datetime.utcnow().isoformat()
+        }, websocket)
 
-        for cid in dead_ids:
-            await self.disconnect(cid)
+    async def unsubscribe_from_ticket(self, websocket: WebSocket, ticket_id: str):
+        """Unsubscribe a connection from ticket-specific updates."""
+        if ticket_id in self.ticket_subscriptions:
+            self.ticket_subscriptions[ticket_id].discard(websocket)
+            if not self.ticket_subscriptions[ticket_id]:
+                del self.ticket_subscriptions[ticket_id]
 
-    def connection_count(self, company_id: Optional[str] = None) -> int:
-        """Return the current number of connections (optionally filtered by company)."""
-        if company_id is None:
-            return len(self._connections)
-        return sum(1 for c in self._connections.values() if c.company_id == company_id)
-
-    def is_connected(self, client_id: str) -> bool:
-        """Return whether a client ID is currently connected."""
-        return client_id in self._connections
-
-    # ------------------------------------------------------------------
-    # Internal tasks
-    # ------------------------------------------------------------------
-
-    async def _heartbeat_task(self, client_id: str):
-        """
-        Send a ping every HEARTBEAT_INTERVAL_S seconds.
-        Disconnect the client if no pong is received within PONG_TIMEOUT_S.
-        """
+    async def send_personal_message(self, message: dict, websocket: WebSocket):
+        """Send a message to a specific WebSocket connection."""
         try:
-            while True:
-                await asyncio.sleep(HEARTBEAT_INTERVAL_S)
+            await websocket.send_json(message)
+        except Exception as e:
+            logger.error(f"Error sending personal message: {e}")
 
-                async with self._lock:
-                    conn = self._connections.get(client_id)
-
-                if not conn or not conn.alive:
-                    break
-
-                # Check time since last pong
-                elapsed = time.monotonic() - conn.last_pong_at
-                if elapsed > HEARTBEAT_INTERVAL_S + PONG_TIMEOUT_S:
-                    logger.warning(f"[WS] Heartbeat timeout for {client_id}; disconnecting.")
-                    asyncio.create_task(self.disconnect(client_id))
-                    break
-
-                # Send ping
+    async def send_to_user(self, message: dict, user_id: str):
+        """Send a message to all connections of a specific user."""
+        if user_id in self.active_connections:
+            disconnected = set()
+            for connection in self.active_connections[user_id]:
                 try:
-                    await conn.websocket.send_text(json.dumps({"type": "ping"}))
-                except Exception as exc:
-                    logger.warning(f"[WS] Ping failed for {client_id}: {exc}")
-                    asyncio.create_task(self.disconnect(client_id))
-                    break
+                    await connection.send_json(message)
+                except Exception as e:
+                    logger.error(f"Error sending to user {user_id}: {e}")
+                    disconnected.add(connection)
+            
+            # Clean up disconnected connections
+            for conn in disconnected:
+                self.disconnect(conn)
 
-        except asyncio.CancelledError:
-            pass
-        except Exception as exc:
-            logger.error(f"[WS] Heartbeat task error for {client_id}: {exc}")
+    async def broadcast_ticket_update(
+        self,
+        ticket_id: str,
+        update_type: str,
+        data: dict,
+        company_id: str
+    ):
+        """Broadcast ticket update to subscribed connections and company members."""
+        message = {
+            "type": "ticket_update",
+            "update_type": update_type,
+            "ticket_id": ticket_id,
+            "data": data,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+        # Send to ticket subscribers
+        if ticket_id in self.ticket_subscriptions:
+            disconnected = set()
+            for connection in self.ticket_subscriptions[ticket_id]:
+                try:
+                    await connection.send_json(message)
+                except Exception as e:
+                    logger.error(f"Error broadcasting to ticket {ticket_id}: {e}")
+                    disconnected.add(connection)
+            
+            # Clean up disconnected connections
+            for conn in disconnected:
+                self.disconnect(conn)
+        
+        # Also send to all company members who are not subscribed to this specific ticket
+        for websocket, metadata in self.connection_metadata.items():
+            if (metadata["company_id"] == company_id and 
+                websocket not in self.ticket_subscriptions.get(ticket_id, set())):
+                try:
+                    await websocket.send_json(message)
+                except Exception:
+                    pass
 
-    async def handle_pong(self, client_id: str):
-        """Call this when a pong message is received from a client."""
-        async with self._lock:
-            conn = self._connections.get(client_id)
-            if conn:
-                conn.last_pong_at = time.monotonic()
+    async def send_chat_message(
+        self,
+        ticket_id: str,
+        sender_id: str,
+        sender_name: str,
+        message_text: str,
+        company_id: str
+    ):
+        """Send a chat message to all participants in a ticket conversation."""
+        message = {
+            "type": "chat_message",
+            "ticket_id": ticket_id,
+            "sender_id": sender_id,
+            "sender_name": sender_name,
+            "message": message_text,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+        # Send to ticket subscribers
+        if ticket_id in self.ticket_subscriptions:
+            disconnected = set()
+            for connection in self.ticket_subscriptions[ticket_id]:
+                metadata = self.connection_metadata.get(connection, {})
+                # Don't send back to sender
+                if metadata.get("user_id") != sender_id:
+                    try:
+                        await connection.send_json(message)
+                    except Exception as e:
+                        logger.error(f"Error sending chat message: {e}")
+                        disconnected.add(connection)
+            
+            # Clean up disconnected connections
+            for conn in disconnected:
+                self.disconnect(conn)
 
-    async def _eviction_sweep(self):
-        """
-        Background task that periodically removes dead connections.
-        Runs every EVICTION_INTERVAL_S seconds.
-        """
-        try:
-            while True:
-                await asyncio.sleep(EVICTION_INTERVAL_S)
+    async def broadcast_to_company(self, message: dict, company_id: str, exclude_user: Optional[str] = None):
+        """Broadcast a message to all users in a company."""
+        disconnected = set()
+        
+        for websocket, metadata in self.connection_metadata.items():
+            if metadata["company_id"] == company_id:
+                if exclude_user and metadata["user_id"] == exclude_user:
+                    continue
+                
+                try:
+                    await websocket.send_json(message)
+                except Exception as e:
+                    logger.error(f"Error broadcasting to company {company_id}: {e}")
+                    disconnected.add(websocket)
+        
+        # Clean up disconnected connections
+        for conn in disconnected:
+            self.disconnect(conn)
 
-                async with self._lock:
-                    dead_ids = [
-                        cid for cid, conn in self._connections.items()
-                        if not conn.alive
-                    ]
-                    # Also evict connections that have been silent too long
-                    now = time.monotonic()
-                    for cid, conn in self._connections.items():
-                        if (now - conn.last_pong_at) > (HEARTBEAT_INTERVAL_S + PONG_TIMEOUT_S) * 2:
-                            if cid not in dead_ids:
-                                dead_ids.append(cid)
+    def get_active_users(self, company_id: Optional[str] = None) -> Set[str]:
+        """Get list of currently active user IDs, optionally filtered by company."""
+        if company_id:
+            return {
+                metadata["user_id"]
+                for metadata in self.connection_metadata.values()
+                if metadata["company_id"] == company_id
+            }
+        return set(self.active_connections.keys())
 
-                for cid in dead_ids:
-                    await self.disconnect(cid)
-
-                if dead_ids:
-                    logger.info(f"[WS] Eviction sweep removed {len(dead_ids)} dead connections.")
-
-        except asyncio.CancelledError:
-            pass
-        except Exception as exc:
-            logger.error(f"[WS] Eviction sweep error: {exc}")
+    def get_connection_count(self, company_id: Optional[str] = None) -> int:
+        """Get total number of active connections, optionally filtered by company."""
+        if company_id:
+            return sum(
+                1 for metadata in self.connection_metadata.values()
+                if metadata["company_id"] == company_id
+            )
+        return len(self.connection_metadata)
 
 
-# Singleton instance
+# Global connection manager instance
 manager = ConnectionManager()
