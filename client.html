@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Secure Message Form</title>
+</head>
+<body>
+  <h1>Send a Secure Message</h1>
+  <form id="messageForm">
+    <label for="message">Message:</label>
+    <textarea id="message" name="message" required></textarea>
+    <button type="submit">Submit</button>
+  </form>
+  <div id="status"></div>
+
+  <script>
+    async function fetchPublicKey() {
+      try {
+        const response = await fetch('/public-key');
+        const { publicKey } = await response.json();
+        return publicKey;
+      } catch (error) {
+        console.error('Failed to fetch public key:', error);
+        document.getElementById('status').textContent = 'Failed to fetch public key. Please try again later.';
+        throw error;
+      }
+    }
+
+    async function encryptMessage(message, publicKey) {
+      const encoder = new TextEncoder();
+      const encodedMessage = encoder.encode(message);
+
+      const importedKey = await crypto.subtle.importKey(
+        'spki',
+        base64ToArrayBuffer(publicKey),
+        { name: 'RSA-OAEP', hash: 'SHA-256' },
+        false,
+        ['encrypt']
+      );
+
+      const encryptedData = await crypto.subtle.encrypt(
+        { name: 'RSA-OAEP' },
+        importedKey,
+        encodedMessage
+      );
+
+      return Array.from(new Uint8Array(encryptedData)).map(byte => String.fromCharCode(byte)).join('');
+    }
+
+    async function postEncryptedMessage(encryptedMessage) {
+      try {
+        const response = await fetch('/submit-message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ encryptedMessage })
+        });
+
+        if (response.ok) {
+          document.getElementById('status').textContent = 'Message sent successfully!';
+        } else {
+          const { error } = await response.json();
+          document.getElementById('status').textContent = `Failed to send message: ${error}`;
+        }
+      } catch (error) {
+        console.error('Failed to post encrypted message:', error);
+        document.getElementById('status').textContent = 'Failed to send message. Please try again later.';
+      }
+    }
+
+    function base64ToArrayBuffer(base64) {
+      const binaryString = window.atob(base64);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      return bytes.buffer;
+    }
+
+    document.getElementById('messageForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const message = document.getElementById('message').value;
+      if (!message) {
+        document.getElementById('status').textContent = 'Please enter a message.';
+        return;
+      }
+
+      try {
+        const publicKey = await fetchPublicKey();
+        const encryptedMessage = await encryptMessage(message, publicKey);
+        await postEncryptedMessage(encryptedMessage);
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    });
+  </script>
+</body>
+</html>
