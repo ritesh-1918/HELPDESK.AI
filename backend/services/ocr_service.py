@@ -37,6 +37,13 @@ OCR_TIMEOUT_SECONDS = 60                        # kill OCR/PDF extraction if it 
 # Lazy import: easyocr is only imported on first use (heavy initialization ~3-5 s)
 _reader = None
 
+# Security Safeguards
+MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB
+MAX_IMAGE_PIXELS = 16000000  # e.g., 4000x4000
+ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP"}
+
+Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
+
 
 def _get_reader():
     """Lazy-initialize EasyOCR reader in CPU-only mode."""
