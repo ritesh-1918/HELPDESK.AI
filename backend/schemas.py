@@ -71,6 +71,11 @@ class TicketResponse(BaseModel):
     version: str = "2.1.0-Neural-Diagnostic"
     rag_suggestions: list = []
     rag_recommendations: list = []
+    # Translation fields
+    detected_language: str | None = None
+    original_text: str | None = None
+    translated_text: str | None = None
+    translation_confidence: float | None = None
 
 
 # ─── Profile update schema (closes #2894) ──────────────────────────────────
