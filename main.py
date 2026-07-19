@@ -36,6 +36,18 @@ app.add_middleware(AuditLoggerMiddleware)
 
 app.include_router(metrics_router.router)
 
+# Issue #3390: centralized structured request/response logging, replacing
+# scattered print() statements. Ordering matters here - RequestIDMiddleware
+# must be added AFTER (so it becomes the outer layer and sets
+# request.state.request_id before RequestLoggingMiddleware reads it).
+# RequestIDMiddleware already existed in backend/middleware/request_id.py
+# but was never actually wired into the app.
+from backend.middleware.request_logging import add_request_logging_middleware
+from backend.middleware.request_id import add_request_id_middleware
+add_request_logging_middleware(app)
+add_request_id_middleware(app)
+
+app.include_router(metrics_router.router)
 from backend.config import settings
 
 # Initialize Supabase client
