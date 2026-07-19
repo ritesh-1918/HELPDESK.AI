@@ -90,17 +90,20 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local_dev_db_pass}
+      POSTGRES_USER: ${POSTGRES_USER:-helpdesk}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-helpdesk_local_pass}
       POSTGRES_DB: ${POSTGRES_DB:-helpdesk}
     volumes:
       - pg_data:/var/lib/postgresql/data
-      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-helpdesk}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-helpdesk}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
+    profiles:
+      - local
     networks:
       - helpdesk_net
 
@@ -112,7 +115,7 @@ services:
     ports:
       - "3001:3000"
     environment:
-      PGRST_DB_URI: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-local_dev_db_pass}@db:5432/${POSTGRES_DB:-helpdesk}
+      PGRST_DB_URI: postgres://${POSTGRES_USER:-helpdesk}:${POSTGRES_PASSWORD:-helpdesk_local_pass}@db:5432/${POSTGRES_DB:-helpdesk}
       PGRST_DB_SCHEMA: public
       PGRST_DB_ANON_ROLE: anon
       PGRST_JWT_SECRET: ${PGRST_JWT_SECRET}
