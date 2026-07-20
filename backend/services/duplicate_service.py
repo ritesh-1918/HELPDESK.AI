@@ -77,7 +77,7 @@ class DuplicateService:
                         data = json.load(f)
                         if not isinstance(data, list):
                             data = []
-                    except:
+                    except (json.JSONDecodeError, IOError):
                         data = []
             
             data.append({"ticket_id": ticket_id, "text": text})
