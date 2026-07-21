@@ -12,6 +12,7 @@ import useTicketStore from "./store/ticketStore";
 import Toaster from "./components/shared/Toaster";
 import BugReportWidget from "./components/shared/BugReportWidget";
 import useRealtimeNotifications from "./hooks/useRealtimeNotifications";
+import useTokenRefresh from "./hooks/useTokenRefresh";
 
 // Auth Components
 import Login from "./pages/Login";
@@ -154,6 +155,9 @@ function AppLayout() {
 
   // Initialize Global Realtime Notifications Listener
   useRealtimeNotifications();
+
+  // Silent JWT refresh loop — fires 2 min before access_token expires
+  useTokenRefresh();
 
   useEffect(() => {
     if (!user) return;

@@ -10,6 +10,11 @@ const useAuthStore = create(
             user: null,
             profile: null,
             loading: false,
+            /** Unix timestamp (seconds) when the current access_token expires. */
+            sessionExpiresAt: null,
+
+            /** Called by useTokenRefresh after a successful silent refresh. */
+            setSessionExpiresAt: (expiresAt) => set({ sessionExpiresAt: expiresAt }),
 
             // --- SUPABASE AUTH METHODS ---
 

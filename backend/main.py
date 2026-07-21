@@ -1200,6 +1200,37 @@ async def auth_signup(body: SignupBody, response: Response):
     user_payload = user.model_dump() if user and hasattr(user, "model_dump") else None
     return {"user": user_payload, "message": "Signup complete"}
 
+@app.post("/auth/refresh")
+async def auth_refresh(request: Request, response: Response):
+    """
+    Silent token refresh endpoint.
+    Reads the HttpOnly refresh_token cookie, exchanges it with Supabase for
+    a fresh access_token + refresh_token pair, and rotates the cookies.
+    Called automatically by the Frontend refresh loop before access_token expires.
+    """
+    refresh_token = request.cookies.get(REFRESH_COOKIE)
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="No refresh token cookie present")
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database connection offline")
+
+    try:
+        result = supabase.auth.refresh_session(refresh_token)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=401,
+            detail=f"Token refresh failed: {exc}",
+        ) from exc
+
+    session = getattr(result, "session", None)
+    if not session or not getattr(session, "access_token", None):
+        raise HTTPException(status_code=401, detail="Refresh session returned no valid session")
+
+    _set_session_cookies(response, session)
+
+    expires_at = getattr(session, "expires_at", None)
+    return {"ok": True, "expires_at": expires_at}
+
 @app.post("/auth/logout")
 async def auth_logout(response: Response):
     _clear_session_cookies(response)
