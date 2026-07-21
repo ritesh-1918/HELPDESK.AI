@@ -106,7 +106,7 @@ function MasterAdminDashboard() {
                                 {card.growth}
                             </span>
                         </div>
-                        <h3 className="text-slate-400 text-sm font-medium mb-1">{card.label}</h3>
+                        <h2 className="text-slate-400 text-sm font-medium mb-1">{card.label}</h2>
                         <p className="text-3xl font-bold text-white tabular-nums">
                             {loading ? "..." : card.value}
                         </p>
@@ -123,7 +123,7 @@ function MasterAdminDashboard() {
                         <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
                             <Database className="w-5 h-5" />
                         </div>
-                        <h4 className="text-lg font-bold text-white tracking-tight">Database & Engine Vitals</h4>
+                        <h2 className="text-lg font-bold text-white tracking-tight">Database & Engine Vitals</h2>
                     </div>
 
                     <div className="space-y-4">
@@ -153,7 +153,7 @@ function MasterAdminDashboard() {
                     <div className="w-20 h-20 rounded-3xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-6 shadow-2xl">
                         <Zap className="w-10 h-10" />
                     </div>
-                    <h4 className="text-xl font-bold text-white mb-2">Platform Controls</h4>
+                    <h2 className="text-xl font-bold text-white mb-2">Platform Controls</h2>
                     <p className="text-slate-400 text-sm mb-8 leading-relaxed">
                         Global configuration settings for AI processing and enterprise tenant policies.
                     </p>
