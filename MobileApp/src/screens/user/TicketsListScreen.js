@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, FlatList,
-  ActivityIndicator, RefreshControl, StatusBar,
+  ActivityIndicator, RefreshControl, StatusBar, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -98,6 +98,15 @@ const TicketsListScreen = () => {
           <Text style={styles.ticketDesc} numberOfLines={2}>
             {item.description || 'No details provided.'}
           </Text>
+          {item.image_base64 ? (
+            <View style={styles.thumbnailContainer}>
+              <Image 
+                source={{ uri: `data:image/jpeg;base64,${item.image_base64}` }} 
+                style={styles.thumbnail} 
+                resizeMode="cover"
+              />
+            </View>
+          ) : null}
           <View style={styles.cardFooter}>
             <Text style={styles.ticketId}>#{item.id?.slice(0, 6).toUpperCase()}</Text>
             <View style={styles.dateRow}>
@@ -158,6 +167,10 @@ const TicketsListScreen = () => {
           renderItem={renderTicket}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          initialNumToRender={5}
+          maxToRenderPerBatch={5}
+          windowSize={5}
+          removeClippedSubviews={true}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchTickets(); }} colors={[COLORS.primary]} />
           }
@@ -225,12 +238,26 @@ const styles = StyleSheet.create({
   },
   ticketId: { fontSize: 11, fontWeight: '700', color: COLORS.textMuted, backgroundColor: COLORS.background, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   dateRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  dateText: { fontSize: 12, fontWeight: '600', color: COLORS.textMuted },
+  dateText: { fontSize: 12, color: COLORS.textMuted, fontWeight: '500' },
   // Empty
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyWrap: { alignItems: 'center', paddingTop: 80, gap: 12 },
   emptyTitle: { fontSize: 18, fontWeight: '800', color: COLORS.text },
   emptyMsg: { fontSize: 14, color: COLORS.textLight, textAlign: 'center' },
+  thumbnailContainer: {
+    marginTop: 12,
+    width: 64,
+    height: 64,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#f1f5f9',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  thumbnail: {
+    width: '100%',
+    height: '100%',
+  }
 });
 
 export default TicketsListScreen;
