@@ -18,6 +18,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "../../components/ui/tooltip";
+import SLACountdown from '../../components/SLACountdown';
 
 function MyTickets() {
     const navigate = useNavigate();
@@ -269,6 +270,7 @@ function MyTickets() {
                                     <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-widest">Category</th>
                                     <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-widest">Status</th>
                                     <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-widest">Priority</th>
+                                    <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-widest">SLA</th>
                                     <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-widest">Submitted</th>
                                 </tr>
                             </thead>
@@ -330,6 +332,9 @@ function MyTickets() {
                                                 <span className={`text-sm capitalize ${getPriorityColor(ticket.priority)}`}>
                                                     {ticket.priority || 'medium'}
                                                 </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <SLACountdown createdAt={ticket.created_at || ticket.createdAt} priority={ticket.priority} status={ticket.status} />
                                             </td>
                                              <td className="px-6 py-4">
                                                  <div className="flex flex-col">
