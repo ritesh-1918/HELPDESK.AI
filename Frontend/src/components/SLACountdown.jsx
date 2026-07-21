@@ -14,15 +14,21 @@ const SLACountdown = ({ createdAt, priority, status }) => {
     const [timeLeft, setTimeLeft] = useState('');
     const [statusColor, setStatusColor] = useState('text-slate-500 bg-slate-100 border-slate-200');
     const [isExpired, setIsExpired] = useState(false);
-    const [isResolved, setIsResolved] = useState(false);
+
+    // Derive isResolved during render to prevent cascading renders
+    const isResolved = status?.toLowerCase() === 'resolved' || status?.toLowerCase() === 'closed';
 
     useEffect(() => {
         if (!createdAt) return;
 
-        const resolved = status?.toLowerCase() === 'resolved' || status?.toLowerCase() === 'closed';
-        setIsResolved(resolved);
-
         const createdTime = new Date(createdAt).getTime();
+        
+        // Guard against invalid date values
+        if (isNaN(createdTime)) {
+            setTimeLeft('Invalid Date');
+            setStatusColor('text-slate-500 bg-slate-100 border-slate-200');
+            return;
+        }
         const priorityKey = (priority || 'normal').toLowerCase();
         const hoursAllowed = SLA_HOURS[priorityKey] || 24;
         const targetTime = createdTime + (hoursAllowed * 60 * 60 * 1000);
@@ -56,7 +62,7 @@ const SLACountdown = ({ createdAt, priority, status }) => {
             setTimeLeft(`${h.toString().padStart(2, '0')}h ${m.toString().padStart(2, '0')}m`);
         };
 
-        if (resolved) {
+        if (isResolved) {
             setTimeLeft('Resolved');
             setStatusColor('text-slate-500 bg-slate-50 border-slate-200');
             setIsExpired(false);
@@ -67,7 +73,7 @@ const SLACountdown = ({ createdAt, priority, status }) => {
         const interval = setInterval(calculateTimeLeft, 60000); // update every minute
         return () => clearInterval(interval);
 
-    }, [createdAt, priority, status]);
+    }, [createdAt, priority, isResolved]);
 
     if (!timeLeft) return null;
 
