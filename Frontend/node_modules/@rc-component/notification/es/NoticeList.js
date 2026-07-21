@@ -1,0 +1,141 @@
+function _extends() { _extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return _extends.apply(this, arguments); }
+import React, { useContext, useEffect, useRef, useState } from 'react';
+import { clsx } from 'clsx';
+import { CSSMotionList } from '@rc-component/motion';
+import Notice from "./Notice";
+import { NotificationContext } from "./NotificationProvider";
+import useStack from "./hooks/useStack";
+const NoticeList = props => {
+  const {
+    configList,
+    placement,
+    prefixCls,
+    className,
+    style,
+    motion,
+    onAllNoticeRemoved,
+    onNoticeClose,
+    stack: stackConfig
+  } = props;
+  const {
+    classNames: ctxCls
+  } = useContext(NotificationContext);
+  const dictRef = useRef({});
+  const [latestNotice, setLatestNotice] = useState(null);
+  const [hoverKeys, setHoverKeys] = useState([]);
+  const keys = configList.map(config => ({
+    config,
+    key: String(config.key)
+  }));
+  const [stack, {
+    offset,
+    threshold,
+    gap
+  }] = useStack(stackConfig);
+  const expanded = stack && (hoverKeys.length > 0 || keys.length <= threshold);
+  const placementMotion = typeof motion === 'function' ? motion(placement) : motion;
+
+  // Clean hover key
+  useEffect(() => {
+    if (stack && hoverKeys.length > 1) {
+      setHoverKeys(prev => prev.filter(key => keys.some(({
+        key: dataKey
+      }) => key === dataKey)));
+    }
+  }, [hoverKeys, keys, stack]);
+
+  // Force update latest notice
+  useEffect(() => {
+    if (stack && dictRef.current[keys[keys.length - 1]?.key]) {
+      setLatestNotice(dictRef.current[keys[keys.length - 1]?.key]);
+    }
+  }, [keys, stack]);
+  return /*#__PURE__*/React.createElement(CSSMotionList, _extends({
+    key: placement,
+    className: clsx(prefixCls, `${prefixCls}-${placement}`, ctxCls?.list, className, {
+      [`${prefixCls}-stack`]: !!stack,
+      [`${prefixCls}-stack-expanded`]: expanded
+    }),
+    style: style,
+    keys: keys,
+    motionAppear: true
+  }, placementMotion, {
+    onAllRemoved: () => {
+      onAllNoticeRemoved(placement);
+    }
+  }), ({
+    config,
+    className: motionClassName,
+    style: motionStyle,
+    index: motionIndex
+  }, nodeRef) => {
+    const {
+      key,
+      times
+    } = config;
+    const strKey = String(key);
+    const {
+      className: configClassName,
+      style: configStyle,
+      classNames: configClassNames,
+      styles: configStyles,
+      ...restConfig
+    } = config;
+    const dataIndex = keys.findIndex(item => item.key === strKey);
+
+    // If dataIndex is -1, that means this notice has been removed in data, but still in dom
+    // Should minus (motionIndex - 1) to get the correct index because keys.length is not the same as dom length
+    const stackStyle = {};
+    if (stack) {
+      const index = keys.length - 1 - (dataIndex > -1 ? dataIndex : motionIndex - 1);
+      const transformX = placement === 'top' || placement === 'bottom' ? '-50%' : '0';
+      if (index > 0) {
+        stackStyle.height = expanded ? dictRef.current[strKey]?.offsetHeight : latestNotice?.offsetHeight;
+
+        // Transform
+        let verticalOffset = 0;
+        for (let i = 0; i < index; i++) {
+          verticalOffset += dictRef.current[keys[keys.length - 1 - i].key]?.offsetHeight + gap;
+        }
+        const transformY = (expanded ? verticalOffset : index * offset) * (placement.startsWith('top') ? 1 : -1);
+        const scaleX = !expanded && latestNotice?.offsetWidth && dictRef.current[strKey]?.offsetWidth ? (latestNotice?.offsetWidth - offset * 2 * (index < 3 ? index : 3)) / dictRef.current[strKey]?.offsetWidth : 1;
+        stackStyle.transform = `translate3d(${transformX}, ${transformY}px, 0) scaleX(${scaleX})`;
+      } else {
+        stackStyle.transform = `translate3d(${transformX}, 0, 0)`;
+      }
+    }
+    return /*#__PURE__*/React.createElement("div", {
+      ref: nodeRef,
+      className: clsx(`${prefixCls}-notice-wrapper`, motionClassName, configClassNames?.wrapper),
+      style: {
+        ...motionStyle,
+        ...stackStyle,
+        ...configStyles?.wrapper
+      },
+      onMouseEnter: () => setHoverKeys(prev => prev.includes(strKey) ? prev : [...prev, strKey]),
+      onMouseLeave: () => setHoverKeys(prev => prev.filter(k => k !== strKey))
+    }, /*#__PURE__*/React.createElement(Notice, _extends({}, restConfig, {
+      ref: node => {
+        if (dataIndex > -1) {
+          dictRef.current[strKey] = node;
+        } else {
+          delete dictRef.current[strKey];
+        }
+      },
+      prefixCls: prefixCls,
+      classNames: configClassNames,
+      styles: configStyles,
+      className: clsx(configClassName, ctxCls?.notice),
+      style: configStyle,
+      times: times,
+      key: key,
+      eventKey: key,
+      onNoticeClose: onNoticeClose,
+      hovering: stack && hoverKeys.length > 0
+    })));
+  });
+};
+if (process.env.NODE_ENV !== 'production') {
+  NoticeList.displayName = 'NoticeList';
+}
+export default NoticeList;

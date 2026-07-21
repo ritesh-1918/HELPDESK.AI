@@ -1,0 +1,62 @@
+{
+  "name": "@supabase/storage-js",
+  "version": "2.98.0",
+  "description": "Isomorphic storage client for Supabase.",
+  "keywords": [
+    "javascript",
+    "typescript",
+    "supabase"
+  ],
+  "homepage": "https://github.com/supabase/supabase-js/tree/master/packages/core/storage-js",
+  "bugs": "https://github.com/supabase/supabase-js/issues",
+  "license": "MIT",
+  "author": "Supabase",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.cts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./dist/*": "./dist/*",
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/supabase/supabase-js.git",
+    "directory": "packages/core/storage-js"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "build:watch": "tsdown --watch",
+    "docs": "typedoc --entryPoints src/index.ts --out docs/v2 --entryPoints src/packages/* --excludePrivate --excludeProtected",
+    "docs:json": "typedoc --json docs/v2/spec.json --entryPoints src/index.ts --entryPoints src/packages/* --excludePrivate --excludeExternals --excludeProtected"
+  },
+  "dependencies": {
+    "iceberg-js": "^0.8.1",
+    "tslib": "2.8.1"
+  },
+  "devDependencies": {
+    "form-data": "^4.0.0"
+  },
+  "jsdelivr": "dist/umd/supabase.js",
+  "unpkg": "dist/umd/supabase.js",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

@@ -1,0 +1,128 @@
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.getMultipleSelectorUnit = exports.genOverflowStyle = void 0;
+var _cssinjs = require("@ant-design/cssinjs");
+var _style = require("../../style");
+/**
+ * Get multiple selector needed style. The calculation:
+ *
+ * ContainerPadding = BasePadding - ItemMargin
+ *
+ * Border:                    ╔═══════════════════════════╗                 ┬
+ * ContainerPadding:          ║                           ║                 │
+ *                            ╟───────────────────────────╢     ┬           │
+ * Item Margin:               ║                           ║     │           │
+ *                            ║             ┌──────────┐  ║     │           │
+ * Item(multipleItemHeight):  ║ BasePadding │   Item   │  ║  Overflow  Container(ControlHeight)
+ *                            ║             └──────────┘  ║     │           │
+ * Item Margin:               ║                           ║     │           │
+ *                            ╟───────────────────────────╢     ┴           │
+ * ContainerPadding:          ║                           ║                 │
+ * Border:                    ╚═══════════════════════════╝                 ┴
+ */
+const getMultipleSelectorUnit = token => {
+  const {
+    multipleSelectItemHeight,
+    paddingXXS,
+    lineWidth,
+    INTERNAL_FIXED_ITEM_MARGIN
+  } = token;
+  const basePadding = token.max(token.calc(paddingXXS).sub(lineWidth).equal(), 0);
+  const containerPadding = token.max(token.calc(basePadding).sub(INTERNAL_FIXED_ITEM_MARGIN).equal(), 0);
+  return {
+    basePadding,
+    containerPadding,
+    itemHeight: (0, _cssinjs.unit)(multipleSelectItemHeight),
+    itemLineHeight: (0, _cssinjs.unit)(token.calc(multipleSelectItemHeight).sub(token.calc(token.lineWidth).mul(2)).equal())
+  };
+};
+/**
+ * Get the `@rc-component/overflow` needed style.
+ * It's a share style which means not affected by `size`.
+ */
+exports.getMultipleSelectorUnit = getMultipleSelectorUnit;
+const genOverflowStyle = token => {
+  const {
+    componentCls,
+    iconCls,
+    borderRadiusSM,
+    motionDurationSlow,
+    paddingXS,
+    multipleItemColorDisabled,
+    multipleItemBorderColorDisabled,
+    colorIcon,
+    colorIconHover,
+    INTERNAL_FIXED_ITEM_MARGIN
+  } = token;
+  const selectOverflowPrefixCls = `${componentCls}-selection-overflow`;
+  return {
+    /**
+     * Do not merge `height` & `line-height` under style with `selection` & `search`, since chrome
+     * may update to redesign with its align logic.
+     */
+    // =========================== Overflow ===========================
+    [selectOverflowPrefixCls]: {
+      position: 'relative',
+      display: 'flex',
+      flex: 'auto',
+      flexWrap: 'wrap',
+      maxWidth: '100%',
+      '&-item': {
+        flex: 'none',
+        alignSelf: 'center',
+        // https://github.com/ant-design/ant-design/issues/54179
+        maxWidth: 'calc(100% - 4px)',
+        display: 'inline-flex'
+      },
+      // ======================== Selections ==========================
+      [`${componentCls}-selection-item`]: {
+        display: 'flex',
+        alignSelf: 'center',
+        flex: 'none',
+        boxSizing: 'border-box',
+        maxWidth: '100%',
+        marginBlock: INTERNAL_FIXED_ITEM_MARGIN,
+        borderRadius: borderRadiusSM,
+        cursor: 'default',
+        transition: [`font-size`, `line-height`, `height`].map(prop => `${prop} ${motionDurationSlow}`).join(', '),
+        marginInlineEnd: token.calc(INTERNAL_FIXED_ITEM_MARGIN).mul(2).equal(),
+        paddingInlineStart: paddingXS,
+        paddingInlineEnd: token.calc(paddingXS).div(2).equal(),
+        [`${componentCls}-disabled&`]: {
+          color: multipleItemColorDisabled,
+          borderColor: multipleItemBorderColorDisabled,
+          cursor: 'not-allowed'
+        },
+        // It's ok not to do this, but 24px makes bottom narrow in view should adjust
+        '&-content': {
+          display: 'inline-block',
+          marginInlineEnd: token.calc(paddingXS).div(2).equal(),
+          overflow: 'hidden',
+          whiteSpace: 'pre',
+          // fix whitespace wrapping. custom tags display all whitespace within.
+          textOverflow: 'ellipsis'
+        },
+        '&-remove': {
+          ...(0, _style.resetIcon)(),
+          display: 'inline-flex',
+          alignItems: 'center',
+          color: colorIcon,
+          fontWeight: 'bold',
+          fontSize: 10,
+          lineHeight: 'inherit',
+          cursor: 'pointer',
+          [`> ${iconCls}`]: {
+            verticalAlign: '-0.2em'
+          },
+          '&:hover': {
+            color: colorIconHover
+          }
+        }
+      }
+    }
+  };
+};
+exports.genOverflowStyle = genOverflowStyle;

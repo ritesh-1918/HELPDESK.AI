@@ -1,0 +1,25 @@
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+var React = _interopRequireWildcard(require("react"));
+var _SubnodeOutlined = _interopRequireDefault(require("@ant-design/icons-svg/lib/asn/SubnodeOutlined"));
+var _AntdIcon = _interopRequireDefault(require("../components/AntdIcon"));
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+function _getRequireWildcardCache(e) { if ("function" != typeof WeakMap) return null; var r = new WeakMap(), t = new WeakMap(); return (_getRequireWildcardCache = function (e) { return e ? t : r; })(e); }
+function _interopRequireWildcard(e, r) { if (!r && e && e.__esModule) return e; if (null === e || "object" != typeof e && "function" != typeof e) return { default: e }; var t = _getRequireWildcardCache(r); if (t && t.has(e)) return t.get(e); var n = { __proto__: null }, a = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var u in e) if ("default" !== u && Object.prototype.hasOwnProperty.call(e, u)) { var i = a ? Object.getOwnPropertyDescriptor(e, u) : null; i && (i.get || i.set) ? Object.defineProperty(n, u, i) : n[u] = e[u]; } return n.default = e, t && t.set(e, n), n; }
+function _extends() { _extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return _extends.apply(this, arguments); } // GENERATE BY ./scripts/generate.ts
+// DON NOT EDIT IT MANUALLY
+const SubnodeOutlined = (props, ref) => /*#__PURE__*/React.createElement(_AntdIcon.default, _extends({}, props, {
+  ref: ref,
+  icon: _SubnodeOutlined.default
+}));
+
+/**![subnode](data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNjYWNhY2EiIHZpZXdCb3g9IjY0IDY0IDg5NiA4OTYiIGZvY3VzYWJsZT0iZmFsc2UiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHN0eWxlIC8+PC9kZWZzPjxwYXRoIGQ9Ik02ODggMjQwYy0xMzggMC0yNTIgMTAyLjgtMjY5LjYgMjM2SDI0OWE5NS45MiA5NS45MiAwIDAwLTg5LTYwYy01MyAwLTk2IDQzLTk2IDk2czQzIDk2IDk2IDk2YzQwLjMgMCA3NC44LTI0LjggODktNjBoMTY5LjNDNDM2IDY4MS4yIDU1MCA3ODQgNjg4IDc4NGMxNTAuMiAwIDI3Mi0xMjEuOCAyNzItMjcyUzgzOC4yIDI0MCA2ODggMjQwem0xMjggMjk4YzAgNC40LTMuNiA4LTggOGgtODZ2ODZjMCA0LjQtMy42IDgtOCA4aC01MmMtNC40IDAtOC0zLjYtOC04di04NmgtODZjLTQuNCAwLTgtMy42LTgtOHYtNTJjMC00LjQgMy42LTggOC04aDg2di04NmMwLTQuNCAzLjYtOCA4LThoNTJjNC40IDAgOCAzLjYgOCA4djg2aDg2YzQuNCAwIDggMy42IDggOHY1MnoiIC8+PC9zdmc+) */
+const RefIcon = /*#__PURE__*/React.forwardRef(SubnodeOutlined);
+if (process.env.NODE_ENV !== 'production') {
+  RefIcon.displayName = 'SubnodeOutlined';
+}
+var _default = exports.default = RefIcon;

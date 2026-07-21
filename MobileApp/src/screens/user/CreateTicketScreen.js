@@ -59,6 +59,9 @@ const CreateTicketScreen = () => {
         });
       }
 
+      // Trigger success haptic feedback
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      
       navigation.navigate('AIProcessing', {
         text: description,
         image_base64: base64,
