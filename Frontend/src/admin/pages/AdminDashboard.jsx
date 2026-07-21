@@ -6,6 +6,7 @@ import useAuthStore from "../../store/authStore";
 import { supabase } from "../../lib/supabaseClient";
 import StatCard from "../components/StatCard";
 import TicketTable from "../components/TicketTable";
+import ResolutionAnalyticsChart from "../components/ResolutionAnalyticsChart";
 import { formatTimelineDate } from "../../utils/dateUtils";
 
 // Inline SVG icon components
@@ -172,6 +173,9 @@ const AdminDashboard = () => {
                     </div>
                     <div style={{ background: '#fff', borderRadius: '20px', border: '1px solid #f0fdf4', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
                         <TicketTable tickets={tickets} limit={10} isLoading={isLoading} />
+                    </div>
+                    <div className="mt-6">
+                        <ResolutionAnalyticsChart tickets={tickets} />
                     </div>
                 </div>
 
