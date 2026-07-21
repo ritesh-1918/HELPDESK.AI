@@ -20,13 +20,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+from utils.logger import get_json_logger
 
-handler = logging.StreamHandler()
-formatter = logging.Formatter("[AutoCloseService] %(asctime)s - %(levelname)s - %(message)s")
-handler.setFormatter(formatter)
-logger.addHandler(handler)
+logger = get_json_logger(__name__)
 
 
 class AutoCloseService:
