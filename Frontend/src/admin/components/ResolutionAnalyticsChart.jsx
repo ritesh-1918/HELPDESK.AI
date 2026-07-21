@@ -4,9 +4,6 @@ import { Card } from '@/components/ui/card';
 
 const ResolutionAnalyticsChart = ({ tickets }) => {
     const data = useMemo(() => {
-        if (!tickets || tickets.length === 0) return [];
-        
-        // Days of week initialization
         const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const stats = {
             'Sunday': { totalHours: 0, count: 0 },
@@ -18,6 +15,13 @@ const ResolutionAnalyticsChart = ({ tickets }) => {
             'Saturday': { totalHours: 0, count: 0 },
         };
 
+        if (!tickets || tickets.length === 0) {
+            return days.map(day => ({
+                name: day.substring(0, 3),
+                avgHours: 0
+            }));
+        }
+
         tickets.forEach(t => {
             const isResolved = t.status?.toLowerCase() === 'resolved' || t.status?.toLowerCase() === 'closed';
             if (isResolved) {
@@ -27,7 +31,7 @@ const ResolutionAnalyticsChart = ({ tickets }) => {
                 if (start && end && !isNaN(start.getTime()) && !isNaN(end.getTime())) {
                     const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
                     if (diffHours >= 0) {
-                        const day = days[start.getDay()];
+                        const day = days[end.getDay()];
                         if (day) {
                             stats[day].totalHours += diffHours;
                             stats[day].count += 1;
