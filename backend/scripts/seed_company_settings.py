@@ -33,12 +33,14 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="[SeedCompanySettings] %(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
+import sys
+import os
+
+# Ensure backend root is in sys.path so we can import utils
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils.logger import get_json_logger
+
+logger = get_json_logger(__name__)
 
 
 def seed_company_settings():

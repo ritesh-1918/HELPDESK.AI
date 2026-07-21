@@ -12,6 +12,10 @@ import datetime
 import traceback
 import warnings
 import logging
+from utils.logger import get_json_logger
+
+# Configure root logger to output structured JSON
+get_json_logger()
 import hashlib
 from contextlib import asynccontextmanager
 
