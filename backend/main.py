@@ -59,6 +59,7 @@ from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
+from backend.services.sla_service import SlaCalculator, CalendarConfig
 
 
 # ---------------------------------------------------------------------------
@@ -863,10 +864,11 @@ async def analyze_only(request_body: TicketRequest):
     if gemini_service and gemini_service._initialized:
         summary = gemini_service.get_summary(text)
     
-    # Convert priority to SLA breached timestamp (for preview)
-    hours_map = {"Critical": 2, "High": 8, "Medium": 24, "Low": 72}
-    sla_hours = hours_map.get(classification["priority"], 72)
-    sla_breach_dt = datetime.datetime.utcnow() + datetime.timedelta(hours=sla_hours)
+    # --- Calendar-aware SLA breach timestamp ---
+    sla_breach_dt = SlaCalculator().calculate_breach_at(
+        created_at=datetime.datetime.utcnow(),
+        priority=classification["priority"],
+    )
 
     return TicketResponse(
         ticket_id=str(uuid.uuid4()), # Temporary ID
@@ -1011,9 +1013,11 @@ async def analyze_stream(request_body: TicketRequest):
         if gemini_service and gemini_service._initialized:
             summary = gemini_service.get_summary(text)
         
-        hours_map = {"Critical": 2, "High": 8, "Medium": 24, "Low": 72}
-        sla_hours = hours_map.get(classification["priority"], 72)
-        sla_breach_dt = datetime.datetime.utcnow() + datetime.timedelta(hours=sla_hours)
+        # --- Calendar-aware SLA breach timestamp ---
+        sla_breach_dt = SlaCalculator().calculate_breach_at(
+            created_at=datetime.datetime.utcnow(),
+            priority=classification["priority"],
+        )
 
         ticket_response_dict = {
             "ticket_id": str(uuid.uuid4()),
