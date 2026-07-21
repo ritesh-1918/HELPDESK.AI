@@ -4,7 +4,7 @@ import '@testing-library/cypress/add-commands';
 // require('@testing-library/cypress/add-commands')
 
 Cypress.on('uncaught:exception', (err, runnable) => {
-  // returning false here prevents Cypress from
-  // failing the test
-  return false
+  // e.g. if (err.message.includes('known error')) return false;
+  // returning false here prevents Cypress from failing the test
+  // return false
 })
