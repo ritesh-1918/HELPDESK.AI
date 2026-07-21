@@ -13,6 +13,8 @@ import traceback
 import warnings
 import logging
 import hashlib
+import csv
+import io
 from contextlib import asynccontextmanager
 
 # Suppress harmless PyTorch CPU pin_memory warning
@@ -547,6 +549,51 @@ async def get_tickets(company_id: str | None = None):
         
     res = query.execute()
     return res.data
+
+
+@app.get("/tickets/export")
+async def export_tickets(company_id: str | None = None):
+    """Export tickets to CSV via a streaming response."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+    
+    # Optional filtering by company_id
+    query = supabase.table("tickets").select("*").order("created_at", desc=True)
+    if company_id:
+        query = query.eq("company_id", company_id)
+        
+    res = query.execute()
+    tickets = res.data or []
+
+    def iter_csv():
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Write Headers
+        writer.writerow(["ID", "Subject", "Status", "Priority", "Assigned Team", "Category", "Created At"])
+        yield output.getvalue()
+        output.truncate(0)
+        output.seek(0)
+        
+        # Write Rows
+        for t in tickets:
+            writer.writerow([
+                t.get("id", ""),
+                t.get("subject", ""),
+                t.get("status", ""),
+                t.get("priority", ""),
+                t.get("assigned_team", ""),
+                t.get("category", ""),
+                t.get("created_at", "")
+            ])
+            yield output.getvalue()
+            output.truncate(0)
+            output.seek(0)
+            
+    headers = {
+        "Content-Disposition": "attachment; filename=tickets_export.csv"
+    }
+    return StreamingResponse(iter_csv(), media_type="text/csv", headers=headers)
 
 @app.post("/tickets/save")
 async def save_ticket(request_body: TicketSaveRequest):
