@@ -185,18 +185,29 @@ class TestWebSocketDisconnect:
         # If we reach this line, the server handled the disconnect without crashing.
 
     def test_remaining_agents_unaffected_after_disconnect(self):
-        """After one agent disconnects, remaining agents can still exchange messages."""
+        """
+        After a peer agent disconnects mid-session, the remaining connected agents
+        can still exchange messages without disruption.
+
+        Sequence:
+          1. All three agents (sender, stays, leaves) connect simultaneously.
+          2. agent-leaves disconnects while sender and stays are still active.
+          3. agent-sender broadcasts a message.
+          4. agent-stays should receive it — confirming the room is still functional.
+        """
         payload = {"type": "still_alive", "ticket_id": "t-remaining"}
         room = f"{COMPANY}-room-dc"
 
-        # Step 1: connect a transient agent and disconnect it immediately
-        with client.websocket_connect(f"/ws/{room}/agent-leaves"):
-            pass  # disconnects on __exit__
-
-        # Step 2: two fresh agents establish their own session and exchange messages
         with client.websocket_connect(f"/ws/{room}/agent-sender") as ws_sender:
             with client.websocket_connect(f"/ws/{room}/agent-stays") as ws_stays:
+                # agent-leaves connects then immediately disconnects while the
+                # other two are live — this is the mid-session peer disconnect.
+                with client.websocket_connect(f"/ws/{room}/agent-leaves"):
+                    pass  # disconnects on __exit__ while sender/stays still open
+
+                # Remaining agents should communicate without disruption
                 ws_sender.send_text(json.dumps(payload))
                 received = ws_stays.receive_json()
                 assert received["type"] == payload["type"]
                 assert received["ticket_id"] == payload["ticket_id"]
+
