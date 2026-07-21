@@ -14,6 +14,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 
 // Notification system
 import { NotificationProvider } from './src/components/NotificationProvider';
+import { usePushNotifications } from './src/hooks/usePushNotifications';
 
 // Auth Screens
 import OnboardingScreen from './src/screens/auth/OnboardingScreen';
@@ -77,6 +78,9 @@ const AppContent = () => {
   const insets = useSafeAreaInsets();
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  // Initialize Push Notifications (handles permissions & syncs token to backend)
+  usePushNotifications();
   const [showOnboarding, setShowOnboarding] = useState(null);
   const [userStatus, setUserStatus] = useState(null); // 'active', 'pending_approval', 'rejected'
 
