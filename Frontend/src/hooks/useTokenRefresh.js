@@ -76,37 +76,28 @@ export default function useTokenRefresh() {
     }
   }, [logout, setSessionExpiresAt]);
 
-  /**
-   * Schedule the next refresh cycle based on a given `expires_at` Unix
-   * timestamp (in seconds, as returned by Supabase/backend).
-   */
-  const scheduleNext = useCallback(
-    (expiresAtSeconds) => {
-      clearTimer();
+  const scheduleNextRef = useRef(null);
 
-      if (!expiresAtSeconds) return;
+  scheduleNextRef.current = (expiresAtSeconds) => {
+    clearTimer();
+    if (!expiresAtSeconds) return;
 
-      const nowMs = Date.now();
-      const expiresAtMs = expiresAtSeconds * 1000;
-      const delay = Math.max(expiresAtMs - nowMs - REFRESH_BUFFER_MS, MIN_DELAY_MS);
+    const nowMs = Date.now();
+    const expiresAtMs = expiresAtSeconds * 1000;
+    const delay = Math.max(expiresAtMs - nowMs - REFRESH_BUFFER_MS, MIN_DELAY_MS);
 
-      console.log(
-        `[useTokenRefresh] Next silent refresh in ${Math.round(delay / 1000)}s`
-      );
+    console.log(`[useTokenRefresh] Next silent refresh in ${Math.round(delay / 1000)}s`);
 
-      timerRef.current = setTimeout(async () => {
-        const newExpiresAt = await doRefresh();
-        if (newExpiresAt) {
-          scheduleNext(newExpiresAt);
-        }
-      }, delay);
-    },
-    [clearTimer, doRefresh]
-  );
+    timerRef.current = setTimeout(async () => {
+      const newExpiresAt = await doRefresh();
+      if (newExpiresAt && scheduleNextRef.current) {
+        scheduleNextRef.current(newExpiresAt);
+      }
+    }, delay);
+  };
 
   useEffect(() => {
     if (!user) {
-      // Not logged in — clear any pending timer and stop
       clearTimer();
       return;
     }
@@ -114,12 +105,12 @@ export default function useTokenRefresh() {
     // Bootstrap: read the current session expiry from Supabase client state
     supabase.auth.getSession().then(({ data }) => {
       const expiresAt = data?.session?.expires_at;
-      if (expiresAt) {
+      if (expiresAt && scheduleNextRef.current) {
         setSessionExpiresAt(expiresAt);
-        scheduleNext(expiresAt);
+        scheduleNextRef.current(expiresAt);
       }
     });
 
     return () => clearTimer();
-  }, [user, clearTimer, scheduleNext, setSessionExpiresAt]);
+  }, [user, clearTimer, setSessionExpiresAt]);
 }
