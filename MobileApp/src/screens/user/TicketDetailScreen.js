@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
+import { syncMessages, getLocalMessages, getLocalTicket } from '../../lib/db';
 import { COLORS, SHADOWS } from '../../styles/theme';
 import { ArrowLeft, Send, User, Bot } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -48,17 +49,33 @@ const TicketDetailScreen = ({ route }) => {
   }, [ticketId]);
 
   const fetchTicketDetails = async () => {
+    try {
+      const localData = getLocalTicket(ticketId);
+      if (localData) setTicket(localData);
+    } catch (e) {
+      console.warn("Local DB read failed:", e);
+    }
+
     const { data, error } = await supabase
       .from('tickets')
       .select('*')
       .eq('id', ticketId)
       .single();
     
-    if (!error) setTicket(data);
+    if (!error && data) setTicket(data);
   };
 
   const fetchMessages = async () => {
     try {
+      try {
+        const localMessages = getLocalMessages(ticketId);
+        if (localMessages && localMessages.length > 0) {
+          setMessages(localMessages);
+        }
+      } catch (e) {
+        console.warn("Local DB read failed:", e);
+      }
+
       const { data, error } = await supabase
         .from('ticket_messages')
         .select('*')
@@ -66,7 +83,15 @@ const TicketDetailScreen = ({ route }) => {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setMessages(data || []);
+      
+      if (data) {
+        setMessages(data);
+        try {
+          syncMessages(ticketId, data);
+        } catch (syncErr) {
+          console.warn("Local DB sync failed:", syncErr);
+        }
+      }
     } catch (error) {
       console.error('Error fetching messages:', error);
     } finally {

@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft, CheckCircle2, Clock, Sparkles, MessageSquare, ShieldCheck } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
+import { syncTickets, getLocalTicket } from '../../lib/db';
 import { COLORS, SHADOWS } from '../../styles/theme';
 
 const TicketTrackingScreen = ({ route }) => {
@@ -32,14 +33,34 @@ const TicketTrackingScreen = ({ route }) => {
   }, [ticketId]);
 
   const fetchTicket = async () => {
-    const { data, error } = await supabase
-      .from('tickets')
-      .select('*')
-      .eq('id', ticketId)
-      .single();
-    
-    if (!error) setTicket(data);
-    setLoading(false);
+    try {
+      // Load local data first for fast offline access
+      try {
+        const localData = getLocalTicket(ticketId);
+        if (localData) setTicket(localData);
+      } catch (dbErr) {
+        console.warn('Local DB read failed:', dbErr);
+      }
+
+      const { data, error } = await supabase
+        .from('tickets')
+        .select('*')
+        .eq('id', ticketId)
+        .single();
+        
+      if (!error && data) {
+        setTicket(data);
+        try {
+          syncTickets([data]);
+        } catch (syncErr) {
+          console.warn('Local DB sync failed:', syncErr);
+        }
+      }
+    } catch (err) {
+      console.log('Error:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const Step = ({ title, description, time, isCompleted, isCurrent, icon: Icon, isLast }) => (
