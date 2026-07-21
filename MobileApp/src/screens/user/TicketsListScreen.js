@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../lib/supabase';
+import { syncTickets, getLocalTickets } from '../../lib/db';
 import { COLORS, SHADOWS } from '../../styles/theme';
 import { Ticket, Clock, CheckCircle2, AlertTriangle, ChevronRight, Inbox } from 'lucide-react-native';
 
@@ -22,12 +23,32 @@ const TicketsListScreen = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      // Load from local SQLite cache first for offline access
+      try {
+        const localData = getLocalTickets(user.id);
+        if (localData && localData.length > 0) {
+          setTickets(localData);
+        }
+      } catch (dbErr) {
+        console.warn("Local DB read failed:", dbErr);
+      }
+
       const { data, error } = await supabase
         .from('tickets')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
-      if (!error) setTickets(data || []);
+        
+      if (!error && data) {
+        setTickets(data);
+        // Sync fresh data to local DB
+        try {
+          syncTickets(data);
+        } catch (syncErr) {
+          console.warn("Local DB sync failed:", syncErr);
+        }
+      }
     } catch (e) {
       console.error('Fetch tickets error:', e);
     } finally {
