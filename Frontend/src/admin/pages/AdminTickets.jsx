@@ -609,6 +609,15 @@ const AdminTickets = () => {
         return 'text-slate-500 dark:text-slate-400 bg-slate-50 border-slate-100';
     };
 
+    // Critical / high priority tickets get an animated pulse dot next to their
+    // priority selector so they're instantly noticeable in the dashboard list.
+    const getPriorityPulseClass = (priority) => {
+        const p = String(priority || '').toLowerCase();
+        if (p === 'critical') return 'bg-red-600 priority-dot-pulse-critical';
+        if (p === 'high') return 'bg-orange-500 priority-dot-pulse-high';
+        return null;
+    };
+
     const getConfidenceColor = (conf) => {
         if (conf >= 0.8) return 'bg-emerald-500';
         if (conf >= 0.5) return 'bg-amber-500';
@@ -796,6 +805,23 @@ const AdminTickets = () => {
             )}
 
             {/* 5. High-Density Data Terminal */}
+            <style>{`
+                @keyframes priority-pulse-critical {
+                    0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.55); }
+                    70% { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); }
+                    100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+                }
+                @keyframes priority-pulse-high {
+                    0% { box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.5); }
+                    70% { box-shadow: 0 0 0 6px rgba(234, 88, 12, 0); }
+                    100% { box-shadow: 0 0 0 0 rgba(234, 88, 12, 0); }
+                }
+                .priority-dot-pulse-critical { animation: priority-pulse-critical 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+                .priority-dot-pulse-high { animation: priority-pulse-high 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+                @media (prefers-reduced-motion: reduce) {
+                    .priority-dot-pulse-critical, .priority-dot-pulse-high { animation: none; }
+                }
+            `}</style>
             <div className="bg-white rounded-[2rem] border border-slate-200 shadow-2xl shadow-slate-200/50 overflow-hidden relative min-h-[400px]">
                 {loading && (
                     <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex items-center justify-center">
@@ -950,16 +976,24 @@ const AdminTickets = () => {
 
                                     {/* Priority (Editable) */}
                                     <td className="px-6 py-6">
-                                        <select
-                                            value={String(ticket.priority || 'medium').toLowerCase()}
-                                            onChange={(e) => handleUpdateTicket(ticket.id, { priority: e.target.value })}
-                                            aria-label={`Change priority for ticket ${formatTicketId(ticket.id)}`}
-                                            className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider border outline-none cursor-pointer transition-all flex items-center justify-between ${getPriorityStyle(ticket.priority)}`}
-                                        >
-                                            {priorities.filter(p => p !== 'All').map(p => (
-                                                <option key={p} value={p.toLowerCase()}>{p}</option>
-                                            ))}
-                                        </select>
+                                        <div className="relative inline-flex items-center gap-1.5">
+                                            {getPriorityPulseClass(ticket.priority) && (
+                                                <span
+                                                    className={`w-1.5 h-1.5 rounded-full inline-block flex-shrink-0 ${getPriorityPulseClass(ticket.priority)}`}
+                                                    aria-hidden="true"
+                                                />
+                                            )}
+                                            <select
+                                                value={String(ticket.priority || 'medium').toLowerCase()}
+                                                onChange={(e) => handleUpdateTicket(ticket.id, { priority: e.target.value })}
+                                                aria-label={`Change priority for ticket ${formatTicketId(ticket.id)}`}
+                                                className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider border outline-none cursor-pointer transition-all flex items-center justify-between ${getPriorityStyle(ticket.priority)}`}
+                                            >
+                                                {priorities.filter(p => p !== 'All').map(p => (
+                                                    <option key={p} value={p.toLowerCase()}>{p}</option>
+                                                ))}
+                                            </select>
+                                        </div>
                                     </td>
 
                                     {/* AI Score (Confidence) */}
