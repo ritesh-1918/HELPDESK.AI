@@ -535,15 +535,42 @@ async def log_correction(raw_request: Request):
 # ---------------------------------------------------------------------------
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
+
+async def _require_company(request: Request) -> str:
+    auth = request.headers.get("authorization") or request.headers.get("Authorization")
+    token = None
+    if auth and auth.lower().startswith("bearer "):
+        token = auth.split(" ", 1)[1].strip()
+    if not token:
+        # fallback to cookie if necessary
+        token = request.cookies.get("access_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    try:
+        result = supabase.auth.get_user(token)
+    except Exception as exc:
+        raise HTTPException(status_code=401, detail=f"Invalid session: {exc}")
+    
+    user = getattr(result, "user", None) or (result.get("user") if isinstance(result, dict) else None)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid session")
+        
+    meta = getattr(user, "user_metadata", {}) if hasattr(user, "user_metadata") else user.get("user_metadata", {})
+    company = meta.get("company")
+    if not company:
+        raise HTTPException(status_code=403, detail="User not assigned to a company")
+    return company
+
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None):
+async def get_tickets(request: Request):
     """Fetch persistent tickets from Supabase."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
     
+    company = await _require_company(request)
+    
     query = supabase.table("tickets").select("*").order("created_at", desc=True)
-    if company_id:
-        query = query.eq("company_id", company_id)
+    query = query.eq("company_id", company)
         
     res = query.execute()
     return res.data
