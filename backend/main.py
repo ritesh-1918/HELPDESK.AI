@@ -728,10 +728,11 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
             print(f"[AI] OCR added {len(local_ocr_text)} chars to context.")
 
     # Initalize Timeline
-    return await analyze_only(request_body)
+    return await analyze_only(request_body, request)
 
 @app.post("/ai/analyze")
-async def analyze_only(request_body: TicketRequest):
+@limiter.limit("10/minute")
+async def analyze_only(request_body: TicketRequest, request: Request):
     """
     PERFORMANCE UPGRADE: AI Analysis phase only. 
     Does NOT persist to DB. This allows the user to review the analysis 
@@ -1044,12 +1045,13 @@ async def analyze_stream(request_body: TicketRequest):
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 @app.post("/ai/analyze_ticket/legacy")
-async def legacy_analyze_and_save(request_body: TicketRequest):
+@limiter.limit("10/minute")
+async def legacy_analyze_and_save(request_body: TicketRequest, request: Request):
     """
     BACKWARD COMPATIBILITY: Strictly performs analysis only. 
     Does NOT persist to DB to avoid foreign key violations.
     """
-    return await analyze_only(request_body)
+    return await analyze_only(request_body, request)
 
 @app.post("/ai/analyze-v2")
 async def analyze_ticket_v2(request: TicketRequest):
