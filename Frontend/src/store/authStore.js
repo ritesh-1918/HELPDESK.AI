@@ -271,13 +271,14 @@ const useAuthStore = create(
             },
 
             _initialized: false,
+            _authSubscription: null,
             initialize: () => {
                 if (get()._initialized) return;
                 set({ _initialized: true });
 
                 get().getCurrentUser();
 
-                supabase.auth.onAuthStateChange(async (event, session) => {
+                const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
                     console.log("Auth state change:", event);
                     if (session?.user) {
                         set({ user: session.user });
@@ -287,6 +288,15 @@ const useAuthStore = create(
                     }
                     set({ loading: false });
                 });
+
+                set({ _authSubscription: subscription });
+            },
+            cleanup: () => {
+                const sub = get()._authSubscription;
+                if (sub) {
+                    sub.unsubscribe();
+                    set({ _authSubscription: null, _initialized: false });
+                }
             }
         }),
         {
