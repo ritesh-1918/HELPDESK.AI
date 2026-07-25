@@ -7,7 +7,7 @@ from backend.auth_cookie import get_current_user
 from backend.dependencies import supabase, duplicate_service
 from backend.models import TicketSaveRequest, TicketRecord, TICKETS_DB
 from backend.sanitization import sanitize_ticket_data
-
+from backend.utils.query_sanitizer import sanitize_uuid, sanitize_int
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
@@ -16,9 +16,14 @@ async def get_tickets(company_id: str | None = None, user: dict = Depends(get_cu
     """Fetch persistent tickets from Supabase."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
-    
+
+    try:
+        company_id = sanitize_uuid(company_id, "company_id")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     from backend.services.redis_cache import redis_cache
-    
+
     cache_key = f"helpdesk:tickets:list:{company_id or 'all'}"
     if redis_cache.available:
         cached_data = redis_cache.get_json(cache_key)
@@ -178,7 +183,12 @@ async def get_ticket_by_id(ticket_id: str, user: dict = Depends(get_current_user
     """Fetch single persistent ticket."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
-    
+
+    try:
+        ticket_id = sanitize_uuid(ticket_id, "ticket_id")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Ticket not found")
@@ -203,6 +213,11 @@ async def create_ticket(ticket: TicketRecord, user: dict = Depends(get_current_u
 @router.patch("/{ticket_id}", response_model=TicketRecord)
 async def update_ticket(ticket_id: str, updates: dict, user: dict = Depends(get_current_user)):
     """Partially update a ticket's fields (e.g., status, viewed_at)."""
+    try:
+        ticket_id = sanitize_uuid(ticket_id, "ticket_id")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     sanitized_updates = sanitize_ticket_data(updates)
     for i, ticket in enumerate(TICKETS_DB):
         if str(ticket.ticket_id) == str(ticket_id):
