@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import AdminSidebar from '../components/AdminSidebar';
 import AdminHeader from '../components/AdminHeader';
 import NotificationToast from '../../user/components/NotificationToast';
+import { useTheme } from '../../contexts/ThemeContext';
 
 /**
  * AdminLayout Component
@@ -12,9 +13,10 @@ import NotificationToast from '../../user/components/NotificationToast';
 const AdminLayout = () => {
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const { isDark } = useTheme();
 
     return (
-        <div className="flex h-screen bg-[#f8faf9] overflow-hidden font-sans">
+        <div className={`flex h-screen overflow-hidden font-sans ${isDark ? 'bg-slate-900' : 'bg-[#f8faf9]'}`}>
             {/* Master Navigation Column (Responsive) */}
             <div 
                 className={`hidden md:block flex-shrink-0 relative z-40 transition-all duration-300`}
@@ -33,7 +35,7 @@ const AdminLayout = () => {
                 />
 
                 {/* Operational Workspace */}
-                <main className="flex-1 overflow-x-hidden overflow-y-auto custom-scrollbar relative">
+                <main className={`flex-1 overflow-x-hidden overflow-y-auto custom-scrollbar relative ${isDark ? 'bg-slate-900' : ''}`}>
                     {/* Centered Payload Container */}
                     <div className="max-w-[1280px] w-full mx-auto px-6 md:px-10 py-8 md:py-12 animate-in fade-in slide-in-from-bottom-6 duration-1000">
                         <Outlet />
@@ -47,7 +49,7 @@ const AdminLayout = () => {
             {/* Mobile Nav Overlay (Emergency protocols) */}
             {isMobileNavOpen && (
                 <div
-                    className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 lg:hidden flex transition-opacity duration-300"
+                    className={`fixed inset-0 backdrop-blur-md z-50 lg:hidden flex transition-opacity duration-300 ${isDark ? 'bg-slate-950/80' : 'bg-slate-900/80'}`}
                     onClick={() => setIsMobileNavOpen(false)}
                 >
                     <div

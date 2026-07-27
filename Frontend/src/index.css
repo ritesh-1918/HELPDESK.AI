@@ -46,6 +46,10 @@
     @apply bg-[#f6f8f7] text-slate-900;
   }
 
+  .dark body {
+    @apply bg-slate-900 text-slate-100;
+  }
+
   .dark {
     --background: 224 71.4% 4.1%;
     --foreground: 210 20% 98%;
@@ -88,6 +92,14 @@
 
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #cbd5e1;
+  }
+
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #334155;
+  }
+
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #475569;
   }
 }
 

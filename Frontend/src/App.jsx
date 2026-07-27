@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 import React, { useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
+import { ThemeProvider } from "./contexts/ThemeContext";
 import { NotFound } from "./components/ui/not-found-2";
 import useTicketStore from "./store/ticketStore";
 import Toaster from "./components/shared/Toaster";
@@ -245,6 +246,7 @@ function App() {
   }
 
   return (
+    <ThemeProvider>
     <BrowserRouter>
       <TitleUpdater />
       <ScrollToTop />
@@ -299,6 +301,7 @@ function App() {
         </Route>
       </Routes>
     </BrowserRouter>
+    </ThemeProvider>
   );
 }
 

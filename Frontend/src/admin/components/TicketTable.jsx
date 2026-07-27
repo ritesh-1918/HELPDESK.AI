@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, Clock, ExternalLink } from 'lucide-react';
 import { formatTimelineDate } from '../../utils/dateUtils';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const categoryDotColors = {
     'Hardware': '#f97316',
@@ -14,6 +15,7 @@ const categoryDotColors = {
 
 const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
     const navigate = useNavigate();
+    const { isDark } = useTheme();
 
     const teamMap = {
         'Network': 'Network Services', 'Hardware': 'IT Inventory', 'Software': 'Cloud Apps Team',
@@ -58,9 +60,9 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
         <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full border-collapse">
                 <thead>
-                    <tr style={{ background: '#f8faf9', borderBottom: '1px solid #f0fdf4' }}>
+                    <tr style={{ background: isDark ? '#0f172a' : '#f8faf9', borderBottom: `1px solid ${isDark ? '#334155' : '#f0fdf4'}` }}>
                         {['Ticket ID', 'Ticket Info', 'Category', 'Priority', 'Assigned Team', 'Status'].map((h, i) => (
-                            <th key={i} style={{ padding: '14px 24px', textAlign: 'left', fontSize: '10px', color: '#9ca3af', letterSpacing: '0.1em', fontWeight: 600, textTransform: 'uppercase' }}>{h}</th>
+                            <th key={i} style={{ padding: '14px 24px', textAlign: 'left', fontSize: '10px', color: isDark ? '#64748b' : '#9ca3af', letterSpacing: '0.1em', fontWeight: 600, textTransform: 'uppercase' }}>{h}</th>
                         ))}
                     </tr>
                 </thead>
@@ -92,8 +94,8 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                             <tr
                                 key={ticket.ticket_id || ticket.id}
                                 onClick={() => navigate(`/admin/ticket/${ticket.ticket_id || ticket.id}`)}
-                                className="cursor-pointer group transition-colors hover:bg-[#f0fdf4]"
-                                style={{ borderBottom: '1px solid #f9fafb' }}
+                                className={`cursor-pointer group transition-colors ${isDark ? 'hover:bg-emerald-900/10' : 'hover:bg-[#f0fdf4]'}`}
+                                style={{ borderBottom: `1px solid ${isDark ? '#1e293b' : '#f9fafb'}` }}
                             >
                                 {/* Request Identity */}
                                 <td style={{ padding: '14px 24px' }}>
@@ -126,10 +128,10 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                                             </div>
                                         )}
                                         <div style={{ display: 'flex', flexDirection: 'column', maxWidth: '220px' }}>
-                                            <span style={{ fontSize: '13px', fontWeight: 500, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            <span style={{ fontSize: '13px', fontWeight: 500, color: isDark ? '#e2e8f0' : '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                 {truncSubject}
                                             </span>
-                                            <span style={{ fontSize: '11px', color: '#6b7280' }}>
+                                            <span style={{ fontSize: '11px', color: isDark ? '#94a3b8' : '#6b7280' }}>
                                                 {effectiveCategory || 'General'}
                                             </span>
                                         </div>
@@ -139,7 +141,7 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                                 {/* Category with colored dot */}
                                 <td style={{ padding: '14px 24px' }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, color: '#475569', letterSpacing: '0.06em', textTransform: 'uppercase', width: 'fit-content' }}>
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: isDark ? '#0f172a' : '#F8FAFC', border: `1px solid ${isDark ? '#334155' : '#E2E8F0'}`, borderRadius: '8px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, color: isDark ? '#94a3b8' : '#475569', letterSpacing: '0.06em', textTransform: 'uppercase', width: 'fit-content' }}>
                                             <span style={{ width: 4, height: 4, borderRadius: '50%', background: categoryDotColors[effectiveCategory] || '#6b7280', display: 'inline-block' }}></span>
                                             {effectiveCategory}
                                         </span>
@@ -164,7 +166,7 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                                         <div style={{ width: 28, height: 28, background: '#f0fdf4', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #d1fae5' }}>
                                             <span style={{ fontSize: '10px', fontWeight: 700, color: '#16a34a' }}>{effectiveTeam?.charAt(0)}</span>
                                         </div>
-                                        <span style={{ fontSize: '12px', fontWeight: 500, color: '#374151', whiteSpace: 'nowrap' }}>{effectiveTeam}</span>
+                                        <span style={{ fontSize: '12px', fontWeight: 500, color: isDark ? '#cbd5e1' : '#374151', whiteSpace: 'nowrap' }}>{effectiveTeam}</span>
                                     </div>
                                 </td>
 

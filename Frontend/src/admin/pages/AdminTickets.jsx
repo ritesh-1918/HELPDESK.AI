@@ -223,14 +223,14 @@ const AdminTickets = () => {
             <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-xl shadow-slate-200/50 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                     {/* Search Field */}
-                    <div className="relative group lg:col-span-1">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-emerald-500 transition-colors w-5 h-5" />
-                        <input
-                            type="text"
-                            placeholder="Search..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500 focus:bg-white transition-all text-slate-700 placeholder:text-slate-400"
+                            <div className="relative group lg:col-span-1">
+                                <Search className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors w-5 h-5 ${isDark ? 'text-slate-600 group-focus-within:text-emerald-500' : 'text-slate-300 group-focus-within:text-emerald-500'}`} />
+                                <input
+                                    type="text"
+                                    placeholder="Search..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className={`w-full border rounded-2xl pl-12 pr-4 py-3 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500 transition-all placeholder:text-slate-400 ${isDark ? 'bg-slate-800 border-slate-700 text-slate-200 focus:bg-slate-700' : 'bg-slate-50 border-slate-200 text-slate-700 focus:bg-white'}`}
                         />
                     </div>
 

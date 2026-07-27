@@ -8,10 +8,12 @@ import useAuthStore from '../../store/authStore';
 import useToastStore from '../../store/toastStore';
 import { supabase } from "../../lib/supabaseClient";
 import BugReportWidget from "../../components/shared/BugReportWidget";
+import { useTheme } from '../../contexts/ThemeContext';
 
 const AdminProfile = () => {
     const { user, profile: adminProfile } = useAuthStore();
     const { showToast } = useToastStore();
+    const { isDark } = useTheme();
     const [isEditingProfile, setIsEditingProfile] = useState(false);
     const [profileForm, setProfileForm] = useState({
         name: adminProfile?.full_name || '',
@@ -127,10 +129,10 @@ const AdminProfile = () => {
         finally { setPasswordLoading(false); }
     };
 
-    const cs = { card: { background: '#fff', borderRadius: '24px', border: '1px solid #f0fdf4', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', padding: '36px 40px' } };
+    const cs = { card: { background: isDark ? '#1e293b' : '#fff', borderRadius: '24px', border: `1px solid ${isDark ? '#334155' : '#f0fdf4'}`, boxShadow: isDark ? '0 4px 24px rgba(0,0,0,0.2)' : '0 4px 24px rgba(0,0,0,0.06)', padding: '36px 40px' } };
 
     return (
-        <div style={{ background: '#f8faf9', minHeight: '100vh', paddingBottom: '60px' }} className="max-w-6xl mx-auto py-6 space-y-10 -m-6 p-6 md:-m-10 md:p-10 animate-in fade-in duration-700">
+        <div style={{ background: isDark ? '#0f172a' : '#f8faf9', minHeight: '100vh', paddingBottom: '60px' }} className="max-w-6xl mx-auto py-6 space-y-10 -m-6 p-6 md:-m-10 md:p-10 animate-in fade-in duration-700">
             {/* 1. Profile Hero */}
             <div style={cs.card} className="flex flex-col md:flex-row items-center md:items-start gap-10 relative overflow-hidden">
                 <div className="relative group shrink-0">
@@ -158,7 +160,7 @@ const AdminProfile = () => {
                         <div className="flex-1">
                             {!isEditingProfile ? (
                                 <>
-                                    <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: '26px', fontWeight: 800, color: '#0f1f12', letterSpacing: '-0.02em', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px' }}>
+                                    <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: '26px', fontWeight: 800, color: isDark ? '#e2e8f0' : '#0f1f12', letterSpacing: '-0.02em', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px' }}>
                                         {adminProfile?.full_name || 'Admin Agent'}
                                         <span style={{ background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: '#fff', borderRadius: '100px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', padding: '6px 16px', textTransform: 'uppercase' }}>
                                             {adminProfile?.role === 'master_admin' ? 'Master Admin' : 'Admin'}
@@ -200,9 +202,9 @@ const AdminProfile = () => {
                             { label: 'Company', val: adminProfile?.company || 'Universal Hub' },
                             { label: 'Last Login', val: user?.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString() : 'Just Now' }
                         ].map((m, i) => (
-                            <div key={i} style={{ padding: '16px', background: '#f8faf9', border: '1px solid #f0fdf4', borderRadius: '14px' }}>
-                                <label style={{ fontSize: '10px', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>{m.label}</label>
-                                <span style={{ color: '#111827', fontWeight: 500, fontSize: '14px' }}>{m.val}</span>
+                            <div key={i} style={{ padding: '16px', background: isDark ? '#0f172a' : '#f8faf9', border: `1px solid ${isDark ? '#334155' : '#f0fdf4'}`, borderRadius: '14px' }}>
+                                <label style={{ fontSize: '10px', letterSpacing: '0.12em', color: isDark ? '#64748b' : '#9ca3af', fontWeight: 600, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>{m.label}</label>
+                                <span style={{ color: isDark ? '#e2e8f0' : '#111827', fontWeight: 500, fontSize: '14px' }}>{m.val}</span>
                             </div>
                         ))}
                     </div>
@@ -212,8 +214,8 @@ const AdminProfile = () => {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
                 {/* 2. Security */}
                 <div className="lg:col-span-5 space-y-10">
-                    <div style={{ background: '#fff', borderRadius: '20px', border: '1px solid #f0fdf4', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-                        <div style={{ background: '#0f1f12', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ background: isDark ? '#1e293b' : '#fff', borderRadius: '20px', border: `1px solid ${isDark ? '#334155' : '#f0fdf4'}`, boxShadow: isDark ? '0 2px 16px rgba(0,0,0,0.2)' : '0 2px 16px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+                        <div style={{ background: isDark ? '#0f172a' : '#0f1f12', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <h3 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, color: '#fff', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
                                 <Lock size={16} color="#22c55e" /> SECURITY SETTINGS
                             </h3>
@@ -221,33 +223,33 @@ const AdminProfile = () => {
                         </div>
                         <div style={{ padding: '32px' }} className="space-y-8">
                             {/* Password */}
-                            <div style={{ background: '#f8faf9', borderRadius: '14px', border: '1px solid #e5e7eb', padding: '20px' }} className="space-y-4">
-                                <h4 style={{ fontSize: '11px', fontWeight: 700, color: '#111827', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ background: isDark ? '#0f172a' : '#f8faf9', borderRadius: '14px', border: `1px solid ${isDark ? '#334155' : '#e5e7eb'}`, padding: '20px' }} className="space-y-4">
+                                <h4 style={{ fontSize: '11px', fontWeight: 700, color: isDark ? '#e2e8f0' : '#111827', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <Key size={14} color="#16a34a" /> Password
                                 </h4>
-                                <p style={{ fontSize: '12px', color: '#6b7280' }}>Update your administrative password to keep your account secure.</p>
+                                <p style={{ fontSize: '12px', color: isDark ? '#94a3b8' : '#6b7280' }}>Update your administrative password to keep your account secure.</p>
                                 <button onClick={() => setShowPasswordModal(true)} style={{ width: '100%', padding: '12px', background: '#fff', border: '1.5px solid #d1fae5', color: '#15803d', borderRadius: '10px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}>
                                     <Edit2 size={14} /> Change Password
                                 </button>
                             </div>
                             {/* 2FA */}
-                            <div style={{ background: '#f8faf9', borderRadius: '14px', border: '1px solid #e5e7eb', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+                            <div style={{ background: isDark ? '#0f172a' : '#f8faf9', borderRadius: '14px', border: `1px solid ${isDark ? '#334155' : '#e5e7eb'}`, padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
                                 <div className="space-y-1 flex-1">
-                                    <h4 style={{ fontSize: '11px', fontWeight: 700, color: '#111827', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <h4 style={{ fontSize: '11px', fontWeight: 700, color: isDark ? '#e2e8f0' : '#111827', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <Smartphone size={14} color="#16a34a" /> Two-Factor Authentication (2FA)
                                     </h4>
-                                    <p style={{ fontSize: '11px', color: '#6b7280' }}>Enforce extra verification for secure admin actions.</p>
+                                    <p style={{ fontSize: '11px', color: isDark ? '#94a3b8' : '#6b7280' }}>Enforce extra verification for secure admin actions.</p>
                                 </div>
                                 <button onClick={() => setIsAdmin2FAEnabled(!isAdmin2FAEnabled)} style={{ width: '52px', height: '28px', borderRadius: '100px', position: 'relative', transition: 'all 0.4s', background: isAdmin2FAEnabled ? '#22c55e' : '#d1d5db', border: 'none', cursor: 'pointer', flexShrink: 0 }}>
                                     <div style={{ position: 'absolute', top: '2px', width: '24px', height: '24px', background: '#fff', borderRadius: '50%', transition: 'all 0.4s', boxShadow: '0 1px 3px rgba(0,0,0,0.15)', left: isAdmin2FAEnabled ? '26px' : '2px' }}></div>
                                 </button>
                             </div>
                             {/* Bug Report */}
-                            <div style={{ border: '1px solid #fee2e2', background: '#fff5f5', borderRadius: '14px', padding: '20px' }} className="space-y-4">
-                                <h4 style={{ fontSize: '11px', fontWeight: 700, color: '#991b1b', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ border: `1px solid ${isDark ? '#7f1d1d' : '#fee2e2'}`, background: isDark ? '#450a0a' : '#fff5f5', borderRadius: '14px', padding: '20px' }} className="space-y-4">
+                                <h4 style={{ fontSize: '11px', fontWeight: 700, color: isDark ? '#fca5a5' : '#991b1b', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <AlertCircle size={14} color="#dc2626" /> Bug Report
                                 </h4>
-                                <p style={{ fontSize: '11px', color: '#6b7280' }}>Submit a detailed system bug report with attachments.</p>
+                                <p style={{ fontSize: '11px', color: isDark ? '#94a3b8' : '#6b7280' }}>Submit a detailed system bug report with attachments.</p>
                                 <BugReportWidget advanced={true} customTrigger={
                                     <button style={{ width: '100%', padding: '12px', background: '#fff', border: '1.5px solid #fecaca', color: '#dc2626', borderRadius: '10px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                                         <AlertCircle size={14} /> Report Bug
@@ -264,9 +266,9 @@ const AdminProfile = () => {
 
                 {/* 3. Activity Audit */}
                 <div className="lg:col-span-7">
-                    <div style={{ background: '#fff', borderRadius: '20px', border: '1px solid #f0fdf4', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ padding: '20px 28px', borderBottom: '1px solid #f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <h3 style={{ fontFamily: 'Syne, sans-serif', fontSize: '15px', fontWeight: 700, color: '#0f1f12', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                    <div style={{ background: isDark ? '#1e293b' : '#fff', borderRadius: '20px', border: `1px solid ${isDark ? '#334155' : '#f0fdf4'}`, boxShadow: isDark ? '0 2px 16px rgba(0,0,0,0.2)' : '0 2px 16px rgba(0,0,0,0.05)', overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ padding: '20px 28px', borderBottom: `1px solid ${isDark ? '#334155' : '#f0fdf4'}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <h3 style={{ fontFamily: 'Syne, sans-serif', fontSize: '15px', fontWeight: 700, color: isDark ? '#e2e8f0' : '#0f1f12', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
                                 <History size={18} color="#16a34a" /> ACTIVITY LOG
                             </h3>
                             <button onClick={handleDownloadArchive} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: '#fff', border: '1.5px solid #d1fae5', color: '#15803d', borderRadius: '10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
@@ -276,20 +278,20 @@ const AdminProfile = () => {
                         <div className="flex-1 overflow-x-auto">
                             <table className="w-full border-collapse">
                                 <thead>
-                                    <tr style={{ background: '#f8faf9' }}>
+                                    <tr style={{ background: isDark ? '#0f172a' : '#f8faf9' }}>
                                         {['Action', 'Target', 'Time', 'Status'].map((h, i) => (
-                                            <th key={i} style={{ padding: '14px 24px', textAlign: i === 3 ? 'center' : 'left', fontSize: '10px', color: '#9ca3af', letterSpacing: '0.1em', fontWeight: 600, textTransform: 'uppercase' }}>{h}</th>
+                                            <th key={i} style={{ padding: '14px 24px', textAlign: i === 3 ? 'center' : 'left', fontSize: '10px', color: isDark ? '#64748b' : '#9ca3af', letterSpacing: '0.1em', fontWeight: 600, textTransform: 'uppercase' }}>{h}</th>
                                         ))}
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {activityLog.map((log) => (
-                                        <tr key={log.id} className="hover:bg-[#f0fdf4] transition-colors">
-                                            <td style={{ padding: '16px 24px', fontSize: '13px', fontWeight: 600, color: '#111827' }}>{log.action}</td>
+                                        <tr key={log.id} className={`transition-colors ${isDark ? 'hover:bg-emerald-900/10' : 'hover:bg-[#f0fdf4]'}`}>
+                                            <td style={{ padding: '16px 24px', fontSize: '13px', fontWeight: 600, color: isDark ? '#e2e8f0' : '#111827' }}>{log.action}</td>
                                             <td style={{ padding: '16px 24px' }}>
                                                 <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: 700, color: '#16a34a', background: '#f0fdf4', padding: '4px 8px', borderRadius: '6px' }}>{log.target}</span>
                                             </td>
-                                            <td style={{ padding: '16px 24px', fontSize: '11px', color: '#6b7280' }}>{log.timestamp}</td>
+                                            <td style={{ padding: '16px 24px', fontSize: '11px', color: isDark ? '#94a3b8' : '#6b7280' }}>{log.timestamp}</td>
                                             <td style={{ padding: '16px 24px', textAlign: 'center' }}>
                                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#dcfce7', color: '#15803d', borderRadius: '100px', padding: '4px 10px', fontSize: '10px', fontWeight: 700 }}>
                                                     <CheckCircle2 size={12} /> {log.status}
@@ -300,8 +302,8 @@ const AdminProfile = () => {
                                 </tbody>
                             </table>
                         </div>
-                        <div style={{ padding: '24px', textAlign: 'center', background: '#f8faf9' }}>
-                            <p style={{ fontSize: '10px', color: '#9ca3af', letterSpacing: '0.14em', fontWeight: 600 }}>End of Activity Log</p>
+                        <div style={{ padding: '24px', textAlign: 'center', background: isDark ? '#0f172a' : '#f8faf9' }}>
+                            <p style={{ fontSize: '10px', color: isDark ? '#64748b' : '#9ca3af', letterSpacing: '0.14em', fontWeight: 600 }}>End of Activity Log</p>
                         </div>
                     </div>
                 </div>
@@ -309,9 +311,9 @@ const AdminProfile = () => {
 
             {/* Password Modal */}
             {showPasswordModal && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
-                    <div style={{ background: '#fff', borderRadius: '20px', boxShadow: '0 25px 50px rgba(0,0,0,0.15)', overflow: 'hidden', width: '100%', maxWidth: '400px' }} className="animate-in zoom-in-95 duration-300">
-                        <div style={{ background: '#0f1f12', padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div className="fixed inset-0 backdrop-blur-sm z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300" style={{ background: isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.4)' }}>
+                    <div style={{ background: isDark ? '#1e293b' : '#fff', borderRadius: '20px', boxShadow: '0 25px 50px rgba(0,0,0,0.15)', overflow: 'hidden', width: '100%', maxWidth: '400px' }} className="animate-in zoom-in-95 duration-300">
+                        <div style={{ background: isDark ? '#0f172a' : '#0f1f12', padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <h3 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, color: '#fff', fontSize: '16px', margin: 0 }}>Update Password</h3>
                             <button onClick={() => setShowPasswordModal(false)} style={{ color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
                         </div>

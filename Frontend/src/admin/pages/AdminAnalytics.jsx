@@ -13,11 +13,13 @@ import StatCard from '../components/StatCard';
 import { Card, CardContent } from "../../components/ui/card";
 import useAuthStore from "../../store/authStore";
 import { formatTimelineDate } from "../../utils/dateUtils";
+import { useTheme } from '../../contexts/ThemeContext';
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#a855f7', '#ec4899'];
 
 const AdminAnalytics = () => {
     const { profile } = useAuthStore();
+    const { isDark } = useTheme();
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -175,19 +177,19 @@ const AdminAnalytics = () => {
     if (loading) return (
         <div className="flex flex-col items-center justify-center min-h-[400px]">
             <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mb-4" />
-            <p className="text-slate-400 font-black uppercase tracking-widest italic text-center">Analyzing ticket data...</p>
+            <p className={`font-black uppercase tracking-widest italic text-center ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>Analyzing ticket data...</p>
         </div>
     );
 
     return (
-        <div style={{ background: '#f8faf9', minHeight: '100vh', paddingBottom: '80px' }} className="space-y-10 -m-6 p-6 md:-m-10 md:p-10 animate-in fade-in duration-700">
+        <div style={{ background: isDark ? '#0f172a' : '#f8faf9', minHeight: '100vh', paddingBottom: '80px' }} className="space-y-10 -m-6 p-6 md:-m-10 md:p-10 animate-in fade-in duration-700">
             {/* Header section */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>
-                    <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: '26px', fontWeight: 800, color: '#0f1f12', margin: 0 }}>
+                    <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: '26px', fontWeight: 800, color: isDark ? '#e2e8f0' : '#0f1f12', margin: 0 }}>
                         Analytics
                     </h1>
-                    <p style={{ fontSize: '11px', letterSpacing: '0.14em', color: '#9ca3af', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px', textTransform: 'uppercase' }}>
+                    <p style={{ fontSize: '11px', letterSpacing: '0.14em', color: isDark ? '#64748b' : '#9ca3af', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px', textTransform: 'uppercase' }}>
                         <Activity size={14} color="#16a34a" /> AI & System Insights
                     </p>
                 </div>
@@ -229,9 +231,9 @@ const AdminAnalytics = () => {
                 {/* Main Content (8 cols) */}
                 <div className="lg:col-span-8 space-y-10">
                     {/* Volume Timeline Chart */}
-                    <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #f0fdf4', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', padding: '24px' }}>
+                    <div style={{ background: isDark ? '#1e293b' : '#ffffff', borderRadius: '20px', border: `1px solid ${isDark ? '#334155' : '#f0fdf4'}`, boxShadow: isDark ? '0 2px 16px rgba(0,0,0,0.2)' : '0 2px 16px rgba(0,0,0,0.05)', padding: '24px' }}>
                         <div className="flex items-center justify-between mb-8">
-                            <h3 style={{ fontFamily: 'Syne, sans-serif', fontSize: '16px', fontWeight: 700, color: '#0f1f12', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <h3 style={{ fontFamily: 'Syne, sans-serif', fontSize: '16px', fontWeight: 700, color: isDark ? '#e2e8f0' : '#0f1f12', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" className="shrink-0"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                                 Daily Ticket Volume
                             </h3>
@@ -246,10 +248,10 @@ const AdminAnalytics = () => {
                                                 <stop offset="95%" stopColor="rgba(34,160,69,0.01)" stopOpacity={1}/>
                                             </linearGradient>
                                         </defs>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                        <XAxis dataKey="date" fontSize={10} axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontWeight: 600 }} dy={10} />
-                                        <YAxis fontSize={10} axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontWeight: 600 }} />
-                                        <Tooltip contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #f0fdf4', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }} itemStyle={{ color: '#16a34a', fontWeight: 700 }} />
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#f1f5f9'} />
+                                        <XAxis dataKey="date" fontSize={10} axisLine={false} tickLine={false} tick={{ fill: isDark ? '#64748b' : '#9ca3af', fontWeight: 600 }} dy={10} />
+                                        <YAxis fontSize={10} axisLine={false} tickLine={false} tick={{ fill: isDark ? '#64748b' : '#9ca3af', fontWeight: 600 }} />
+                                        <Tooltip contentStyle={{ backgroundColor: isDark ? '#1e293b' : '#fff', borderRadius: '12px', border: `1px solid ${isDark ? '#334155' : '#f0fdf4'}`, boxShadow: isDark ? '0 4px 12px rgba(0,0,0,0.3)' : '0 4px 12px rgba(0,0,0,0.05)' }} itemStyle={{ color: '#16a34a', fontWeight: 700 }} />
                                         <Area type="monotone" dataKey="count" stroke="#22c55e" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" activeDot={{ r: 6, strokeWidth: 0, fill: '#16a34a' }} />
                                     </AreaChart>
                                 </ResponsiveContainer>
@@ -261,9 +263,9 @@ const AdminAnalytics = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                         {/* Resolution Split Chart */}
-                        <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #f0fdf4', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', padding: '24px' }}>
+                        <div style={{ background: isDark ? '#1e293b' : '#ffffff', borderRadius: '20px', border: `1px solid ${isDark ? '#334155' : '#f0fdf4'}`, boxShadow: isDark ? '0 2px 16px rgba(0,0,0,0.2)' : '0 2px 16px rgba(0,0,0,0.05)', padding: '24px' }}>
                             <div className="mb-8">
-                                <h3 style={{ fontFamily: 'Syne, sans-serif', fontSize: '16px', fontWeight: 700, color: '#0f1f12', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <h3 style={{ fontFamily: 'Syne, sans-serif', fontSize: '16px', fontWeight: 700, color: isDark ? '#e2e8f0' : '#0f1f12', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <Bot size={18} color="#22c55e" /> Resolution Status
                                 </h3>
                             </div>
@@ -276,8 +278,8 @@ const AdminAnalytics = () => {
                                                     <Cell key={index} fill={index === 0 ? '#16a34a' : index === 1 ? '#3b82f6' : '#f59e0b'} cornerRadius={4} />
                                                 ))}
                                             </Pie>
-                                            <Tooltip contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #f0fdf4', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }} />
-                                            <Legend verticalAlign="bottom" height={36} formatter={(value) => <span style={{ fontSize: '12px', color: '#374151', fontWeight: 500 }}>{value}</span>} />
+                                            <Tooltip contentStyle={{ backgroundColor: isDark ? '#1e293b' : '#fff', borderRadius: '12px', border: `1px solid ${isDark ? '#334155' : '#f0fdf4'}`, boxShadow: isDark ? '0 4px 12px rgba(0,0,0,0.3)' : '0 4px 12px rgba(0,0,0,0.05)' }} />
+                                            <Legend verticalAlign="bottom" height={36} formatter={(value) => <span style={{ fontSize: '12px', color: isDark ? '#cbd5e1' : '#374151', fontWeight: 500 }}>{value}</span>} />
                                         </PieChart>
                                     </ResponsiveContainer>
                                 ) : (
@@ -287,9 +289,9 @@ const AdminAnalytics = () => {
                         </div>
 
                         {/* Category Breakdown */}
-                        <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #f0fdf4', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', padding: '24px' }}>
+                        <div style={{ background: isDark ? '#1e293b' : '#ffffff', borderRadius: '20px', border: `1px solid ${isDark ? '#334155' : '#f0fdf4'}`, boxShadow: isDark ? '0 2px 16px rgba(0,0,0,0.2)' : '0 2px 16px rgba(0,0,0,0.05)', padding: '24px' }}>
                             <div className="mb-8">
-                                <h3 style={{ fontFamily: 'Syne, sans-serif', fontSize: '16px', fontWeight: 700, color: '#0f1f12', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <h3 style={{ fontFamily: 'Syne, sans-serif', fontSize: '16px', fontWeight: 700, color: isDark ? '#e2e8f0' : '#0f1f12', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <BarChart3 size={18} color="#22c55e" /> Tickets by Category
                                 </h3>
                             </div>
@@ -303,10 +305,10 @@ const AdminAnalytics = () => {
                                                     <stop offset="100%" stopColor="#16a34a" stopOpacity={1}/>
                                                 </linearGradient>
                                             </defs>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 10, fontWeight: 600 }} />
-                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 10, fontWeight: 600 }} />
-                                            <Tooltip cursor={{ fill: '#f8faf9' }} contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #f0fdf4', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }} />
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#f1f5f9'} />
+                                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: isDark ? '#64748b' : '#9ca3af', fontSize: 10, fontWeight: 600 }} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: isDark ? '#64748b' : '#9ca3af', fontSize: 10, fontWeight: 600 }} />
+                                            <Tooltip cursor={{ fill: isDark ? '#0f172a' : '#f8faf9' }} contentStyle={{ backgroundColor: isDark ? '#1e293b' : '#fff', borderRadius: '12px', border: `1px solid ${isDark ? '#334155' : '#f0fdf4'}`, boxShadow: isDark ? '0 4px 12px rgba(0,0,0,0.3)' : '0 4px 12px rgba(0,0,0,0.05)' }} />
                                             <Bar dataKey="count" fill="url(#colorGreenBar)" radius={[4, 4, 0, 0]} barSize={24} />
                                         </BarChart>
                                     </ResponsiveContainer>
@@ -318,9 +320,9 @@ const AdminAnalytics = () => {
                     </div>
 
                     {/* AI Correction Log */}
-                    <Card className="p-8 border-none shadow-xl shadow-slate-200/50 rounded-[2rem] bg-white">
+                    <Card className={`p-8 border-none shadow-xl rounded-[2rem] ${isDark ? 'bg-slate-800 shadow-slate-900/50' : 'bg-white shadow-slate-200/50'}`}>
                         <div className="mb-8">
-                            <h3 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2 uppercase italic">
+                            <h3 className={`text-lg font-black tracking-tight flex items-center gap-2 uppercase italic ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
                                 <AlertCircle size={18} className="text-amber-500" /> AI Correction Log
                             </h3>
                             <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-1">Categories with manual corrections</p>
@@ -329,10 +331,10 @@ const AdminAnalytics = () => {
                             {aiStats.misclassifiedCategories.length > 0 ? (
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={aiStats.misclassifiedCategories} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 9, fontWeight: 900 }} />
-                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 9 }} allowDecimals={false} />
-                                        <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#f1f5f9'} />
+                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: isDark ? '#94a3b8' : '#64748b', fontSize: 9, fontWeight: 900 }} />
+                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: isDark ? '#64748b' : '#94a3b8', fontSize: 9 }} allowDecimals={false} />
+                                        <Tooltip cursor={{ fill: isDark ? '#0f172a' : '#f8fafc' }} contentStyle={{ backgroundColor: isDark ? '#1e293b' : '#fff', borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
                                         <Bar dataKey="corrections" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={40} />
                                     </BarChart>
                                 </ResponsiveContainer>
@@ -348,8 +350,8 @@ const AdminAnalytics = () => {
 
                 {/* Live Activity (4 cols) */}
                 <div className="lg:col-span-4">
-                    <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #f0fdf4', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ background: '#0f1f12', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ background: isDark ? '#1e293b' : '#ffffff', borderRadius: '20px', border: `1px solid ${isDark ? '#334155' : '#f0fdf4'}`, boxShadow: isDark ? '0 2px 16px rgba(0,0,0,0.2)' : '0 2px 16px rgba(0,0,0,0.05)', height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ background: isDark ? '#0f172a' : '#0f1f12', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <h3 style={{ fontFamily: 'Syne, sans-serif', fontSize: '15px', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px', margin: 0, textTransform: 'uppercase' }}>
                                 <Activity size={16} color="#22c55e" /> Recent Ticket Actions
                             </h3>
@@ -374,7 +376,7 @@ const AdminAnalytics = () => {
                                     }
 
                                     return (
-                                        <div key={idx} style={{ padding: '12px 20px', borderBottom: '1px solid #f9fafb', display: 'flex', gap: '16px' }} className="group">
+                                        <div key={idx} style={{ padding: '12px 20px', borderBottom: `1px solid ${isDark ? '#1e293b' : '#f9fafb'}`, display: 'flex', gap: '16px' }} className="group">
                                             <div className="flex flex-col items-center">
                                                 <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 border-2 border-white shadow-sm z-10 bg-gray-50 text-gray-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors">
                                                     {event.type === 'create' ? <Inbox size={14} /> : event.type === 'resolve' ? <ShieldCheck size={14} /> : <TrendingUp size={14} />}
@@ -394,8 +396,8 @@ const AdminAnalytics = () => {
                                                         {badgeText}
                                                     </span>
                                                 </div>
-                                                <p style={{ fontSize: '13px', fontWeight: 500, color: '#111827', margin: '0 0 2px 0' }}>{event.action}</p>
-                                                <p style={{ fontSize: '11px', color: '#6b7280' }}>{event.user}</p>
+                                                <p style={{ fontSize: '13px', fontWeight: 500, color: isDark ? '#e2e8f0' : '#111827', margin: '0 0 2px 0' }}>{event.action}</p>
+                                                <p style={{ fontSize: '11px', color: isDark ? '#94a3b8' : '#6b7280' }}>{event.user}</p>
                                             </div>
                                         </div>
                                     );
