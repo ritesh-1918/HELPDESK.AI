@@ -1,0 +1,18 @@
+{
+  "user": {
+    "email": "user@test.com",
+    "password": "testpassword123",
+    "fullName": "Test User",
+    "company": "Test Company"
+  },
+  "admin": {
+    "email": "admin@test.com",
+    "password": "testpassword123",
+    "fullName": "Test Admin",
+    "company": "Test Company"
+  },
+  "ticket": {
+    "subject": "E2E Test: Printer not working",
+    "description": "The office printer on floor 3 is not responding to print jobs. It shows a paper jam error but there is no paper jam."
+  }
+}
