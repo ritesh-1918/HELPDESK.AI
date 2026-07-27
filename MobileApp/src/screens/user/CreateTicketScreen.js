@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { COLORS, SPACING, SHADOWS } from '../../styles/theme';
 import { ArrowLeft, Sparkles, Send, Image as ImageIcon, X } from 'lucide-react-native';
@@ -21,6 +21,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 
 const CreateTicketScreen = () => {
+  const insets = useSafeAreaInsets();
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [image, setImage] = useState(null);
@@ -74,7 +75,7 @@ const CreateTicketScreen = () => {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
             <ArrowLeft size={24} color={COLORS.text} />
           </TouchableOpacity>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft, CheckCircle2, Clock, Sparkles, MessageSquare, ShieldCheck } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
@@ -9,6 +9,7 @@ import { COLORS, SHADOWS } from '../../styles/theme';
 const TicketTrackingScreen = ({ route }) => {
   const { ticketId } = route.params || {};
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const [ticket, setTicket] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -101,7 +102,7 @@ const TicketTrackingScreen = ({ route }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <ArrowLeft size={24} color={COLORS.text} />
         </TouchableOpacity>

@@ -3,7 +3,7 @@ import {
   StyleSheet, View, Text, TextInput, TouchableOpacity,
   ScrollView, StatusBar, ActivityIndicator, Modal, Alert, Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { COLORS, SHADOWS } from '../../styles/theme';
 import {
@@ -19,6 +19,7 @@ import { useNotification } from '../../components/NotificationProvider';
 
 const ProfileScreen = () => {
   const { success, error: notifyError } = useNotification();
+  const insets = useSafeAreaInsets();
 
   const [profile, setProfile] = useState(null);
   const [user, setUser] = useState(null);
@@ -213,7 +214,7 @@ const ProfileScreen = () => {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top }]}>
           <Text style={styles.headerLabel}>ACCOUNT</Text>
           <Text style={styles.headerTitle}>Profile</Text>
         </View>
