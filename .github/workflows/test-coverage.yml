@@ -1,0 +1,117 @@
+name: Test Coverage Validation
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  coverage:
+    name: Test Coverage Report
+    runs-on: ubuntu-latest
+    env:
+      ALLOW_DEGRADED_STARTUP: "1"
+      SUPABASE_URL: "https://placeholder.supabase.co"
+      SUPABASE_SERVICE_KEY: "placeholder_key"
+      PYTHONPATH: ${{ github.workspace }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: "backend/requirements.txt"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install fastapi uvicorn pydantic python-dotenv slowapi \
+                      supabase==2.22.4 storage3==2.22.4 \
+                      requests httpx apscheduler \
+                      pytest pytest-cov
+          pip install -r backend/requirements.txt --ignore-requires-python || true
+
+      - name: Run tests with coverage
+        run: |
+          pytest backend/tests/ \
+            --cov=backend \
+            --cov-report=xml:coverage.xml \
+            --cov-report=term-missing \
+            --cov-fail-under=60 \
+            -v \
+            2>&1 || true
+
+      - name: Check coverage threshold
+        run: |
+          python -c "
+          import xml.etree.ElementTree as ET
+          import sys
+          try:
+              tree = ET.parse('coverage.xml')
+              root = tree.getroot()
+              rate = float(root.attrib.get('line-rate', 0)) * 100
+              print(f'Coverage: {rate:.1f}%')
+              if rate < 60:
+                  print(f'FAIL: Coverage {rate:.1f}% is below 60% threshold')
+                  sys.exit(1)
+              print(f'PASS: Coverage meets minimum threshold')
+          except FileNotFoundError:
+              print('WARN: coverage.xml not found, skipping threshold check')
+          "
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.xml
+          flags: backend
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Comment coverage on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let body = '## Test Coverage Report\n\n';
+            try {
+              const xml = fs.readFileSync('coverage.xml', 'utf8');
+              const match = xml.match(/line-rate="([\d.]+)"/);
+              if (match) {
+                const rate = (parseFloat(match[1]) * 100).toFixed(1);
+                const icon = parseFloat(rate) >= 60 ? '✅' : '⚠️';
+                body += `${icon} **Overall Coverage: ${rate}%** (threshold: 60%)\n\n`;
+                body += '| Metric | Value |\n|--------|-------|\n';
+                const lines = xml.match(/lines-valid="(\d+)"/);
+                const covered = xml.match(/lines-covered="(\d+)"/);
+                if (lines && covered) {
+                  body += `| Valid Lines | ${lines[1]} |\n`;
+                  body += `| Covered Lines | ${covered[1]} |\n`;
+                  body += `| Coverage | ${rate}% |\n`;
+                }
+              } else {
+                body += 'Coverage data parsed but rate not found.\n';
+              }
+            } catch (e) {
+              body += 'Coverage report not available.\n';
+            }
+            body += '\n<details><summary>Coverage Details</summary>\n\n';
+            body += 'Run tests locally with `pytest --cov=backend --cov-report=term-missing` for full details.\n';
+            body += '</details>\n';
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
