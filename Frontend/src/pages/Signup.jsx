@@ -99,9 +99,21 @@ function Signup() {
     }
   }, [user, profile, navigate]);
 
+  // Email validation state
+  const [emailError, setEmailError] = useState("");
+
   const handleSignup = async (e) => {
     e.preventDefault();
     setError("");
+
+    // Email format validator
+    const validateEmail = (email) => {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!email) return 'Email is required.';
+      if (!emailRegex.test(email)) return 'Please enter a valid email address.';
+      if (email.length > 254) return 'Email address is too long.';
+      return null;
+    };
 
     // Password complexity validator — mirrors Supabase's policy
     const validatePassword = (pw) => {
@@ -114,6 +126,12 @@ function Signup() {
 
     if (!email || !password || !confirmPassword || !fullName) {
       setError("All fields are required.");
+      return;
+    }
+
+    const emailError = validateEmail(email);
+    if (emailError) {
+      setError(emailError);
       return;
     }
 
@@ -316,8 +334,11 @@ function Signup() {
             {/* Email */}
             <div>
               <label className="block mb-2" style={labelStyle}>Email Address</label>
-              <input type="email" placeholder="Enter your system email" style={inputStyle} onFocus={inputFocus} onBlur={inputBlur}
-                value={email} onChange={(e) => { setEmail(e.target.value); setError(""); }} />
+              <input type="email" placeholder="Enter your system email" style={{ ...inputStyle, borderColor: emailError ? '#ef4444' : '#e5e7eb' }} onFocus={inputFocus} onBlur={inputBlur}
+                value={email} onChange={(e) => { setEmail(e.target.value); setError(""); setEmailError(""); }} />
+              {email && !emailError && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && (
+                <p className="text-[11px] mt-1 font-medium" style={{ color: '#16a34a' }}>Valid email format</p>
+              )}
             </div>
 
             {/* Passwords */}

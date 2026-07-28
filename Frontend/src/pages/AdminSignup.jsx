@@ -87,6 +87,16 @@ function AdminSignup() {
                 setError("Please fill in all required personal information.");
                 return;
             }
+            // Email format validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(formData.email)) {
+                setError("Please enter a valid email address.");
+                return;
+            }
+            if (formData.email.length > 254) {
+                setError("Email address is too long.");
+                return;
+            }
             const pwError = validatePassword(formData.password);
             if (pwError) {
                 setError(pwError);
