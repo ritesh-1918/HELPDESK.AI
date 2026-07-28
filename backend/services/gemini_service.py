@@ -1,7 +1,11 @@
 import os
+import json
 import base64
 import io
 import re
+import asyncio
+import logging
+from typing import AsyncGenerator, Optional
 from PIL import Image
 from google import genai
 from dotenv import load_dotenv
@@ -11,12 +15,17 @@ from pathlib import Path
 env_path = Path(__file__).parent.parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
+logger = logging.getLogger(__name__)
+
+STREAM_CHUNK_TIMEOUT_SECONDS = 30  # per-chunk timeout for streaming calls
+
+
 class GeminiService:
     def __init__(self):
         self.api_key = os.getenv("GEMINI_API_KEY")
         self._initialized = False
         self.model_name = 'gemini-2.5-flash'
-        
+
         if self.api_key:
             try:
                 self.client = genai.Client(api_key=self.api_key)
@@ -43,8 +52,6 @@ class GeminiService:
             }
 
         try:
-            # Decode base64 image (actually the new SDK handles base64 easily if we just pass bytes, 
-            # but we can also use PIL if we need to process it)
             image_bytes = base64.b64decode(image_base64)
             img = Image.open(io.BytesIO(image_bytes))
 
@@ -218,8 +225,6 @@ class GeminiService:
                 f"Description: {description}\n"
                 f"Steps to reproduce: {steps}\n"
                 f"Captured Console/Network Errors: \n{errors_schema}\n\n"
-                f"Steps to reproduce: {steps}\n"
-                f"Captured Console/Network Errors: \n{errors_schema}\n\n"
                 f"Based on this exact telemetry and report, provide a concise 'Probable Root Cause' (1-3 sentences maximum). "
                 f"Focus purely on technical inference and what the developer should investigate first. "
                 f"Do not include pleasantries. Do not say 'The probable cause is', just state the technical theory."
@@ -271,17 +276,16 @@ class GeminiService:
                 model=self.model_name,
                 contents=prompt
             )
-            
+
             # Clean response text from markdown code blocks
             clean_text = response.text.strip()
             if clean_text.startswith("```"):
-                # Remove code blocks
                 clean_text = re.sub(r"^```(?:json)?\n|```$", "", clean_text, flags=re.MULTILINE).strip()
-                
+
             result = json.loads(clean_text)
             if isinstance(result, list):
                 return result
-                
+
             return self._fallback_rca_hypotheses(ticket_text, log_telemetry, dependencies)
         except Exception as e:
             print(f"[GeminiService] RCA Hypothesis Generation Error: {e}")
@@ -292,13 +296,11 @@ class GeminiService:
         text_lower = ticket_text.lower()
         hypotheses = []
 
-        # Find logs with error/critical
         err_logs = [l for l in log_telemetry if l.get("level") in ["ERROR", "CRITICAL"]]
         has_db_log = any("db" in l.get("source", "").lower() or "database" in l.get("message", "").lower() for l in err_logs)
         has_auth_log = any("auth" in l.get("source", "").lower() or "authenticate" in l.get("message", "").lower() for l in err_logs)
         has_network_log = any("unreachable" in l.get("message", "").lower() or "timeout" in l.get("message", "").lower() for l in err_logs)
 
-        # 1. Check database connectivity
         if has_db_log or "db" in text_lower or "database" in text_lower or "mysql" in text_lower:
             hypotheses.append({
                 "hypothesis": "Database Cluster Access Failure",
@@ -307,7 +309,6 @@ class GeminiService:
                 "explanation": "Timeout or query execution failure detected on the production database instances."
             })
 
-        # 2. Check Auth service
         if has_auth_log or "auth" in text_lower or "login" in text_lower or "permission" in text_lower:
             hypotheses.append({
                 "hypothesis": "Authentication Service Degraded",
@@ -316,7 +317,6 @@ class GeminiService:
                 "explanation": "Downstream authentication service timeout preventing session creation for active clients."
             })
 
-        # 3. Check Network / Timeout
         if has_network_log or "timeout" in text_lower or "network" in text_lower or "slow" in text_lower:
             hypotheses.append({
                 "hypothesis": "Network Switch Misconfiguration",
@@ -325,7 +325,6 @@ class GeminiService:
                 "explanation": "High packet loss or switch configuration mismatch resulting in peer connectivity drops."
             })
 
-        # 4. Check Printer (Common hardware issue)
         if "printer" in text_lower or "printing" in text_lower:
             hypotheses.append({
                 "hypothesis": "Print Server Spooler Crash",
@@ -334,7 +333,6 @@ class GeminiService:
                 "explanation": "The local print queue host spooler service crashed due to out-of-memory driver errors."
             })
 
-        # Default fallback if empty
         if not hypotheses:
             hypotheses.append({
                 "hypothesis": "General System Dependency Failure",
@@ -345,3 +343,104 @@ class GeminiService:
 
         return hypotheses
 
+    # ------------------------------------------------------------------
+    # NEW: async streaming support with disconnect-safe cleanup.
+    # This did not exist in the original codebase — all methods above are
+    # synchronous single-shot calls. Wire this into a FastAPI route only
+    # if/when you actually add a streaming chat endpoint; it requires the
+    # request object from that route (see usage note below).
+    # ------------------------------------------------------------------
+    async def stream_chat_response(
+        self,
+        is_disconnected,  # pass request.is_disconnected (a callable) from your FastAPI route
+        prompt: str,
+    ) -> AsyncGenerator[str, None]:
+        """
+        Streams a Gemini response chunk-by-chunk as SSE-formatted strings,
+        aborting cleanly if the client disconnects mid-stream.
+
+        Usage from a FastAPI route:
+
+            @router.post("/api/chat/stream")
+            async def chat_stream(request: Request):
+                body = await request.json()
+                return StreamingResponse(
+                    gemini_service.stream_chat_response(
+                        request.is_disconnected, body["prompt"]
+                    ),
+                    media_type="text/event-stream",
+                )
+        """
+        if not self._initialized:
+            yield 'data: {"error": "Gemini API key missing"}\n\n'
+            return
+
+        gemini_stream = None
+        try:
+            gemini_stream = await self.client.aio.models.generate_content_stream(
+                model=self.model_name,
+                contents=prompt,
+            )
+            stream_iter = gemini_stream.__aiter__()
+
+            while True:
+                if await is_disconnected():
+                    logger.info("Client disconnected — aborting Gemini stream.")
+                    break
+
+                get_chunk_task = asyncio.ensure_future(stream_iter.__anext__())
+                disconnect_task = asyncio.ensure_future(is_disconnected())
+
+                done, pending = await asyncio.wait(
+                    {get_chunk_task, disconnect_task},
+                    timeout=STREAM_CHUNK_TIMEOUT_SECONDS,
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+
+                if not done:
+                    logger.warning("Gemini stream chunk timed out.")
+                    get_chunk_task.cancel()
+                    disconnect_task.cancel()
+                    yield 'data: {"error": "stream_timeout"}\n\n'
+                    break
+
+                if disconnect_task in done and disconnect_task.result():
+                    logger.info("Client disconnected mid-chunk — cancelling Gemini task.")
+                    get_chunk_task.cancel()
+                    try:
+                        await get_chunk_task
+                    except (asyncio.CancelledError, Exception):
+                        pass
+                    break
+
+                if not disconnect_task.done():
+                    disconnect_task.cancel()
+
+                try:
+                    chunk = get_chunk_task.result()
+                except StopAsyncIteration:
+                    break
+                except asyncio.CancelledError:
+                    break
+
+                text = getattr(chunk, "text", "") or ""
+                if text:
+                    yield f"data: {text}\n\n"
+
+            yield "data: [DONE]\n\n"
+
+        except asyncio.CancelledError:
+            logger.info("Stream generator task cancelled.")
+            raise
+        except Exception as e:
+            logger.exception("Gemini streaming error: %s", e)
+            yield f'data: {{"error": "{str(e)}"}}\n\n'
+        finally:
+            close = getattr(gemini_stream, "aclose", None) or getattr(gemini_stream, "close", None)
+            if close is not None:
+                try:
+                    result = close()
+                    if asyncio.iscoroutine(result):
+                        await result
+                except Exception:
+                    logger.exception("Error closing Gemini stream handle.")
