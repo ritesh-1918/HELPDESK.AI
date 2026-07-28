@@ -1209,3 +1209,25 @@ async def auth_logout(response: Response):
 async def auth_me(user: dict = Depends(get_current_user)):
     return {"user": user}
 
+class ResetPasswordRequest(BaseModel):
+    email: str
+
+@app.post("/auth/reset-password")
+@limiter.limit("5/hour")
+async def reset_password(request: Request, body: ResetPasswordRequest):
+    """
+    Rate-limited password reset endpoint.
+    Rejects client requests exceeding 5 calls per hour with 429.
+    """
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database connection offline")
+    try:
+        supabase.auth.reset_password_for_email(
+            body.email,
+            options={"redirectTo": os.environ.get("PASSWORD_RESET_REDIRECT_URL", "http://localhost:5173/reset-password")}
+        )
+    except Exception as exc:
+        # Don't reveal whether the email exists
+        pass
+    return {"message": "If an account with that email exists, a password reset link has been sent."}
+
