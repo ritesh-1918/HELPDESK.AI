@@ -114,6 +114,17 @@ class TicketSaveRequest(BaseModel):
     needs_review: bool = False
     routing_confidence: float
 
+    VALID_CATEGORIES = {"Access", "Network", "Software", "Hardware", "Unknown"}
+    VALID_PRIORITIES = {"Critical", "High", "Medium", "Low"}
+
+    def validate_fields(self):
+        errors = []
+        if self.category not in self.VALID_CATEGORIES:
+            errors.append(f"Invalid category '{self.category}'. Must be one of: {', '.join(sorted(self.VALID_CATEGORIES))}")
+        if self.priority not in self.VALID_PRIORITIES:
+            errors.append(f"Invalid priority '{self.priority}'. Must be one of: {', '.join(sorted(self.VALID_PRIORITIES))}")
+        return errors
+
 
 class DuplicateInfo(BaseModel):
     is_duplicate: bool
@@ -556,6 +567,11 @@ async def save_ticket(request_body: TicketSaveRequest):
     """
     if not supabase:
         raise HTTPException(status_code=500, detail="Supabase connection not initialized.")
+
+    # Validate category and priority against schema
+    validation_errors = request_body.validate_fields()
+    if validation_errors:
+        raise HTTPException(status_code=400, detail={"errors": validation_errors})
 
     logger = logging.getLogger(__name__)
     try:
