@@ -5,6 +5,7 @@ GET  /health             →  service health check
 """
 
 import os
+import re
 import sys
 import uuid
 import json
@@ -1150,6 +1151,14 @@ class SignupBody(BaseModel):
     role: str | None = "user"
     company: str | None = None
 
+class PasswordValidationRequest(BaseModel):
+    password: str
+
+class PasswordValidationResponse(BaseModel):
+    valid: bool
+    score: int
+    errors: list[str]
+
 @app.post("/auth/login")
 async def auth_login(body: LoginBody, response: Response):
     if not supabase:
@@ -1208,4 +1217,44 @@ async def auth_logout(response: Response):
 @app.get("/auth/me")
 async def auth_me(user: dict = Depends(get_current_user)):
     return {"user": user}
+
+@app.post("/auth/validate-password", response_model=PasswordValidationResponse)
+async def validate_password(body: PasswordValidationRequest):
+    """
+    Evaluate candidate passwords for GSSoC security constraints.
+    Returns validation result with score and specific error messages.
+    """
+    errors = []
+    score = 0
+
+    if len(body.password) < 8:
+        errors.append("Password must be at least 8 characters long.")
+    else:
+        score += 25
+
+    if not re.search(r'[a-z]', body.password):
+        errors.append("Password must contain at least one lowercase letter (a-z).")
+    else:
+        score += 25
+
+    if not re.search(r'[A-Z]', body.password):
+        errors.append("Password must contain at least one uppercase letter (A-Z).")
+    else:
+        score += 25
+
+    if not re.search(r'[0-9]', body.password):
+        errors.append("Password must contain at least one number (0-9).")
+    else:
+        score += 25
+
+    if len(body.password) >= 12:
+        score = min(100, score + 10)
+    if re.search(r'[!@#$%^&*(),.?":{}|<>]', body.password):
+        score = min(100, score + 10)
+
+    return PasswordValidationResponse(
+        valid=len(errors) == 0,
+        score=score,
+        errors=errors,
+    )
 
