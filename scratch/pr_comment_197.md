@@ -3,6 +3,7 @@ Hi @saurabhhhcodes! :raised_hands:
 Thank you for this important security fix explicitly ignoring all nested `.env` files in `.gitignore`! Preventing accidental secret commits is a critical hygiene practice for any production repository.
 
 **Review Notes:**
+
 - Explicitly listing patterns for all common env file variants (`.env`, `.env.*`, `**/.env`) is thorough and comprehensive.
 - Adding this without touching application logic keeps the change minimal and safe.
 - A `.env.example` template with placeholder values only is the industry best practice.
@@ -19,10 +20,11 @@ Please complete the onboarding steps below to get dashboard access and full cont
 6. **Access Approved**: Ritesh will add your username to the system so you can test the application.
 
 ### :star: Project Support and Networking Campaign
+
 1. **Star this repository**: [Star here](https://github.com/ritesh-1918/HELPDESK.AI)
 2. **Fork this repository**: [Fork here](https://github.com/ritesh-1918/HELPDESK.AI/fork)
 3. **Follow @ritesh-1918 on GitHub**: [Follow here](https://github.com/ritesh-1918)
 4. **Connect on LinkedIn**: [Connect on LinkedIn](https://www.linkedin.com/in/ritesh1908/)
 5. **Reach out via Email**: `bonthalamadhavi1@gmail.com`
 
-*Note: Ensure your PR targets the `gssoc` branch (not `main`). Clean and important security fix!* :rocket::computer:
+_Note: Ensure your PR targets the `gssoc` branch (not `main`). Clean and important security fix!_ :rocket::computer:

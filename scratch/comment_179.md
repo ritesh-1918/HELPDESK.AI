@@ -5,6 +5,7 @@ Thank you for your interest in contributing to **HELPDESK.AI** under GSSoC 2026!
 If you'd like to be assigned to fix the ticket store ordering and ID handling bugs, please drop a comment here with your proposal.
 
 ### Technical Scope:
+
 1. Fix ticket prepending so new tickets appear at the top of the list.
 2. Fix `updateTicket` to correctly identify tickets by ID regardless of type (`string` vs `number`).
 3. Ensure the ticket store state is consistent after create/update operations.
@@ -20,12 +21,13 @@ Here is the mandatory onboarding process to get dashboard and testing access:
 6. **Access Approved**: Ritesh will add your username to the system so you can test the application.
 
 ### :star: Project Support and Networking Campaign
+
 1. **Star this repository**: [Star here](https://github.com/ritesh-1918/HELPDESK.AI)
 2. **Fork this repository**: [Fork here](https://github.com/ritesh-1918/HELPDESK.AI/fork)
 3. **Follow @ritesh-1918 on GitHub**: [Follow here](https://github.com/ritesh-1918)
 4. **Connect on LinkedIn**: [Connect on LinkedIn](https://www.linkedin.com/in/ritesh1908/)
 5. **Reach out via Email**: `bonthalamadhavi1@gmail.com`
 
-*Note: Strictly one active issue per contributor.*
+_Note: Strictly one active issue per contributor._
 
 Looking forward to your contribution! Happy coding! :rocket::computer:

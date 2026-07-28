@@ -1,32 +1,35 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
-    // Handle CORS preflight requests
-    if (req.method === 'OPTIONS') {
-        return new Response(null, { status: 204, headers: corsHeaders });
+  // Handle CORS preflight requests
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
+
+  try {
+    const { userId, email, name, company } = await req.json();
+
+    if (!email) {
+      throw new Error("Email is required");
     }
 
-    try {
-        const { userId, email, name, company } = await req.json();
+    // Initialize Resend or another mail provider (Assuming user configures this later)
+    // const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+    // Currently simulating a successfully sent email.
 
-        if (!email) {
-            throw new Error('Email is required');
-        }
+    console.log(
+      `Sending approval email to ${email} for user ${name} in company ${company}...`,
+    );
 
-        // Initialize Resend or another mail provider (Assuming user configures this later)
-        // const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-        // Currently simulating a successfully sent email.
-
-        console.log(`Sending approval email to ${email} for user ${name} in company ${company}...`);
-
-        // The email content could be sent via Resend:
-        /*
+    // The email content could be sent via Resend:
+    /*
         const res = await fetch('https://api.resend.com/emails', {
             method: 'POST',
             headers: {
@@ -47,23 +50,20 @@ serve(async (req) => {
         });
         */
 
-        return new Response(
-            JSON.stringify({
-                success: true,
-                message: `Approval email simulated for ${email}`
-            }),
-            {
-                status: 200,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            }
-        );
-    } catch (error) {
-        return new Response(
-            JSON.stringify({ error: error.message }),
-            {
-                status: 400,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            }
-        );
-    }
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: `Approval email simulated for ${email}`,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 });

@@ -9,12 +9,13 @@ model:
 system_messages:
   - You are the evaluation engine for Helpdesk.AI's categorization module.
   - Given a user IT ticket, your task is to predict the Category, Subcategory, and Priority based on the Helpdesk.AI mapping.
-  - Return the JSON format: {"category": "...", "subcategory": "...", "priority": "..."}
+  - Return the JSON format:
+      { "category": "...", "subcategory": "...", "priority": "..." }
 prompts:
   evaluate_ticket:
     description: Evaluate a single IT support ticket.
     text: |
       User Ticket: "{{ticket_description}}"
-      
+
       Determine the best category out of [Access, Software, Hardware, Network, General].
       Determine the priority out of [Low, Medium, High, Critical].

@@ -17,7 +17,8 @@
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "https://helpdeskaiv1.vercel.app",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, x-client-info",
+  "Access-Control-Allow-Headers":
+    "Content-Type, Authorization, apikey, x-client-info",
 };
 
 // Key pools — pulled from Supabase Secrets (env vars, never shipped to browser)
@@ -78,50 +79,65 @@ Deno.serve(async (req) => {
       const requestModel = model || "gemma-3-27b-it";
       const contents = messages ?? [{ parts: [{ text: prompt }] }];
 
-      upstreamResponse = await tryWithFailover(GEMINI_KEYS, (key) =>
-        new Request(
-          `https://generativelanguage.googleapis.com/v1beta/models/${requestModel}:generateContent?key=${key}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ contents }),
-          }
-        )
+      upstreamResponse = await tryWithFailover(
+        GEMINI_KEYS,
+        (key) =>
+          new Request(
+            `https://generativelanguage.googleapis.com/v1beta/models/${requestModel}:generateContent?key=${key}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ contents }),
+            },
+          ),
       );
     }
 
     // ── OpenRouter ────────────────────────────────────────────────────────
     else if (provider === "openrouter") {
-      upstreamResponse = await tryWithFailover(OPENROUTER_KEYS, (key) =>
-        new Request("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${key}`,
-          },
-          body: JSON.stringify({ model: model || "google/gemma-3-27b-it:free", messages }),
-        })
+      upstreamResponse = await tryWithFailover(
+        OPENROUTER_KEYS,
+        (key) =>
+          new Request("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${key}`,
+            },
+            body: JSON.stringify({
+              model: model || "google/gemma-3-27b-it:free",
+              messages,
+            }),
+          }),
       );
     }
 
     // ── Groq ──────────────────────────────────────────────────────────────
     else if (provider === "groq") {
-      upstreamResponse = await tryWithFailover(GROQ_KEYS, (key) =>
-        new Request("https://api.groq.com/openai/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${key}`,
-          },
-          body: JSON.stringify({ model: model || "llama3-8b-8192", messages }),
-        })
+      upstreamResponse = await tryWithFailover(
+        GROQ_KEYS,
+        (key) =>
+          new Request("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${key}`,
+            },
+            body: JSON.stringify({
+              model: model || "llama3-8b-8192",
+              messages,
+            }),
+          }),
       );
-    }
-
-    else {
+    } else {
       return new Response(
-        JSON.stringify({ error: `Unknown provider: "${provider}". Use gemini | openrouter | groq` }),
-        { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+        JSON.stringify({
+          error: `Unknown provider: "${provider}". Use gemini | openrouter | groq`,
+        }),
+        {
+          status: 400,
+          headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+        },
       );
     }
 
@@ -130,11 +146,15 @@ Deno.serve(async (req) => {
       status: upstreamResponse.status,
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
     });
-
   } catch (err) {
     return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : "Proxy error" }),
-      { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+      JSON.stringify({
+        error: err instanceof Error ? err.message : "Proxy error",
+      }),
+      {
+        status: 500,
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      },
     );
   }
 });

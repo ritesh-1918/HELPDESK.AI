@@ -15,9 +15,7 @@
       "priority": "Low",
       "assigned_team": "IT Service Desk"
     },
-    "changed_fields": [
-      "category"
-    ],
+    "changed_fields": ["category"],
     "confidence": 0.0,
     "timestamp": "2026-02-24T18:49:25.804911Z"
   }

@@ -36,7 +36,6 @@ export const api = {
   // Login and Signup have been fully migrated to Supabase via authStore.js
   // Ensure that no component tries to use api.login or api.signup anymore.
 
-
   getTickets: async () => {
     if (USE_MOCK) {
       await delay(500);
@@ -49,7 +48,7 @@ export const api = {
       await delay(800);
       const tickets = getStorage('tickets', MOCK_TICKETS);
       const newTicket = {
-        ticket_id: "TCKT-" + Math.floor(Math.random() * 10000),
+        ticket_id: 'TCKT-' + Math.floor(Math.random() * 10000),
         status: 'Open',
         createdAt: new Date().toISOString(),
         ...ticketData,
@@ -57,9 +56,9 @@ export const api = {
           {
             sender: 'user',
             message: ticketData.description || ticketData.summary || '',
-            timestamp: new Date().toISOString()
-          }
-        ]
+            timestamp: new Date().toISOString(),
+          },
+        ],
       };
       tickets.unshift(newTicket); // Add to beginning
       setStorage('tickets', tickets);
@@ -67,13 +66,13 @@ export const api = {
     }
   },
 
-  predictTicket: async (issueText, imageBase64 = "") => {
+  predictTicket: async (issueText, imageBase64 = '') => {
     try {
       // ALWAYS call the real backend for prediction if possible
       const response = await axios.post(`${API_BASE_URL}/ai/analyze_ticket`, {
         text: issueText,
         image_base64: imageBase64,
-        image_text: ""
+        image_text: '',
       });
 
       const result = response.data;
@@ -81,7 +80,7 @@ export const api = {
       // Map backend response to frontend format
       return {
         data: {
-          ticket_id: "TCKT-" + Math.floor(Math.random() * 10000),
+          ticket_id: 'TCKT-' + Math.floor(Math.random() * 10000),
           category: result.category,
           subcategory: result.subcategory,
           priority: result.priority,
@@ -95,25 +94,25 @@ export const api = {
           reasoning: result.reasoning,
           decision_factors: result.decision_factors,
           image_description: result.image_description,
-          ocr_text: result.ocr_text
-        }
+          ocr_text: result.ocr_text,
+        },
       };
     } catch (error) {
-      console.error("AI Backend Error, falling back to mock:", error);
+      console.error('AI Backend Error, falling back to mock:', error);
       // Fallback to mock logic if backend fails
       await delay(1000);
       return {
         data: {
-          ticket_id: "TCKT-MOCK-" + Math.floor(Math.random() * 10000),
-          category: "Hardware",
-          priority: "Medium",
-          assigned_team: "Hardware Support",
+          ticket_id: 'TCKT-MOCK-' + Math.floor(Math.random() * 10000),
+          category: 'Hardware',
+          priority: 'Medium',
+          assigned_team: 'Hardware Support',
           auto_resolve: false,
           routing_confidence: 0.5,
           duplicate_probability: 0.0,
-          summary: issueText.substring(0, 50) + "...",
-          entities: []
-        }
+          summary: issueText.substring(0, 50) + '...',
+          entities: [],
+        },
       };
     }
   },
@@ -123,7 +122,7 @@ export const api = {
       await axios.post(`${API_BASE_URL}/ai/log_correction`, correctionPayload);
     } catch (error) {
       // Non-fatal: log but don't break the UI flow
-      console.warn("[Correction Log] Failed to save correction:", error);
+      console.warn('[Correction Log] Failed to save correction:', error);
     }
-  }
+  },
 };

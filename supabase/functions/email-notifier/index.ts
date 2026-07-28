@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.42.0"
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.42.0";
 
 // Standard Supabase Secrets
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
@@ -24,7 +24,8 @@ serve(async (req: Request) => {
 
     // 1. Resolve Recipient from Record if available
     if (record?.user_id && !email) {
-      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(record.user_id);
+      const { data: userData, error: userError } =
+        await supabase.auth.admin.getUserById(record.user_id);
       if (!userError && userData?.user?.email) {
         recipientEmail = userData.user.email;
       }
@@ -37,33 +38,36 @@ serve(async (req: Request) => {
       templateData = {
         title: "Ticket Received",
         badge: "✨ Request Captured",
-        mainText: "Your support request has been successfully captured. Our AI is currently analyzing your issue.",
+        mainText:
+          "Your support request has been successfully captured. Our AI is currently analyzing your issue.",
         refLabel: "Tracking Reference",
         refValue: `#${ticketId}`,
         ctaText: "View Ticket Status",
-        ctaUrl: `https://helpdeskaiv1.vercel.app/ticket/${record.id}`
+        ctaUrl: `https://helpdeskaiv1.vercel.app/ticket/${record.id}`,
       };
     } else if (type === "OTP") {
       subject = "[HELPDESK.AI] Your Recovery Code";
       templateData = {
         title: "Security Verification",
         badge: "🔐 Recovery Protocol",
-        mainText: "You requested a password reset. Use the following 6-digit code to continue.",
+        mainText:
+          "You requested a password reset. Use the following 6-digit code to continue.",
         refLabel: "Verification Code",
         refValue: code,
         ctaText: "Continue Reset",
-        ctaUrl: "https://helpdeskaiv1.vercel.app/forgot-password"
+        ctaUrl: "https://helpdeskaiv1.vercel.app/forgot-password",
       };
     } else if (type === "MAGIC_LINK") {
       subject = "[HELPDESK.AI] Login Link";
       templateData = {
         title: "Instant Access",
         badge: "🚀 Magic Link",
-        mainText: "Click the button below to sign in instantly without a password.",
+        mainText:
+          "Click the button below to sign in instantly without a password.",
         refLabel: "Login Request",
         refValue: "Valid for 60 mins",
         ctaText: "Sign In Now",
-        ctaUrl: link
+        ctaUrl: link,
       };
     }
 
@@ -126,7 +130,7 @@ serve(async (req: Request) => {
     const resendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${RESEND_API_KEY}`,
+        Authorization: `Bearer ${RESEND_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -139,8 +143,9 @@ serve(async (req: Request) => {
 
     const data = await resendRes.json();
     return new Response(JSON.stringify(data), { status: resendRes.status });
-
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+    });
   }
 });

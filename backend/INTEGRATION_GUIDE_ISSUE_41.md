@@ -24,6 +24,7 @@ supabase db pull
 ```
 
 **Migration files to run:**
+
 - `supabase/migrations/20260531_add_company_settings.sql` — Creates system_settings table with RLS policies
 - `supabase/migrations/20260531_update_tickets_auto_close.sql` — Adds auto-close columns to tickets table
 
@@ -42,6 +43,7 @@ python scripts/seed_company_settings.py
 ```
 
 This script creates a default system_settings record for each company in the database with:
+
 - `auto_close_enabled: true`
 - `auto_close_days: 7` (default 7-day inactivity before auto-close)
 - `email_notifications: true`
@@ -90,11 +92,11 @@ Update the lifespan context manager to register the cron job (example around lin
 async def startup():
     # Initialize scheduler
     scheduler = AsyncIOScheduler()
-    
+
     # Register auto-close job
     auto_close_service = AutoCloseService.load()
     cron_schedule = os.getenv("AUTO_CLOSE_CRON_SCHEDULE", "0 2 * * *")  # 2 AM UTC daily
-    
+
     scheduler.add_job(
         auto_close_service.run,
         "cron",
@@ -103,7 +105,7 @@ async def startup():
         name="Ticket Auto-Close Job",
         replace_existing=True
     )
-    
+
     scheduler.start()
     logger.info(f"Auto-close cron job registered with schedule: {cron_schedule}")
 
@@ -146,6 +148,7 @@ NOTIFICATION_ROUTING_LOG_LEVEL=info
 ```
 
 **Variable Descriptions:**
+
 - `AUTO_CLOSE_ENABLED` (bool): Enable/disable the auto-close feature globally
 - `AUTO_CLOSE_DAYS` (int): Default number of days before a resolved ticket is auto-closed (can be overridden per company in DB)
 - `AUTO_CLOSE_CRON_SCHEDULE` (cron string): Schedule for auto-close job (default: "0 2 * * *" = 2 AM UTC daily)
@@ -162,12 +165,14 @@ import { NotificationRoutingMiddleware } from "../services/notification_routing.
 
 export async function sendDailyDigest(companyId: string, userEmails: string[]) {
   const routing = NotificationRoutingMiddleware.load();
-  
+
   if (!routing.should_send_email_notification(companyId, "daily_digest")) {
-    console.log(`Digest email skipped for company ${companyId}: notifications disabled`);
+    console.log(
+      `Digest email skipped for company ${companyId}: notifications disabled`,
+    );
     return { status: "skipped" };
   }
-  
+
   // Send email...
 }
 ```
@@ -223,6 +228,7 @@ print(f"Job results: {stats}")
 ### Log Patterns to Look For
 
 **Auto-Close Service:**
+
 ```
 [AutoCloseService] ... - Starting auto-close job...
 [AutoCloseService] ... - Found 42 resolved tickets
@@ -231,6 +237,7 @@ print(f"Job results: {stats}")
 ```
 
 **Notification Routing:**
+
 ```
 [NotificationRouting] ... - Notification sent | company=xyz | type=daily_digest
 [NotificationRouting] ... - Notification skipped | company=xyz | type=admin_alert | reason=admin_alerts_disabled
@@ -274,22 +281,28 @@ Before deploying to production:
 ## Part 6: Common Issues & Troubleshooting
 
 ### Issue: "Failed to fetch system settings"
+
 **Cause:** `system_settings` table doesn't exist or RLS policies are blocking access
 **Solution:**
+
 1. Verify migrations ran: `SELECT COUNT(*) FROM system_settings;`
 2. Check RLS policies: `SELECT * FROM pg_policies WHERE tablename = 'system_settings';`
 3. Ensure service role key has permissions
 
 ### Issue: Auto-close job doesn't run on schedule
+
 **Cause:** APScheduler not properly initialized or cron schedule is invalid
 **Solution:**
+
 1. Check backend logs for "Auto-close cron job registered" message
 2. Verify cron schedule format: "minute hour day month weekday"
 3. Ensure backend is actually running (not in development with auto-reload conflicts)
 
 ### Issue: Tickets not closing even though they're old
+
 **Cause:** `auto_close_enabled=false` for that company or `updated_at` is recent
 **Solution:**
+
 1. Check system_settings: `SELECT auto_close_enabled, auto_close_days FROM system_settings WHERE company_id = 'xyz';`
 2. Check ticket timestamps: `SELECT id, updated_at, created_at FROM tickets WHERE status='resolved' LIMIT 1;`
 3. Run manual test: `service.run()` and check logs

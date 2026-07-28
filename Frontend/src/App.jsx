@@ -1,93 +1,86 @@
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  Navigate,
-  useLocation
-} from "react-router-dom";
-import React, { useEffect } from "react";
-import { AnimatePresence } from "framer-motion";
-import { NotFound } from "./components/ui/not-found-2";
-import useTicketStore from "./store/ticketStore";
-import Toaster from "./components/shared/Toaster";
-import BugReportWidget from "./components/shared/BugReportWidget";
-import useRealtimeNotifications from "./hooks/useRealtimeNotifications";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { AnimatePresence } from 'framer-motion';
+import { NotFound } from './components/ui/not-found-2';
+import useTicketStore from './store/ticketStore';
+import Toaster from './components/shared/Toaster';
+import BugReportWidget from './components/shared/BugReportWidget';
+import useRealtimeNotifications from './hooks/useRealtimeNotifications';
 
 // Auth Components
-import Login from "./pages/Login";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import Signup from "./pages/Signup";
-import AdminSignup from "./pages/AdminSignup";
-import AdminLobby from "./pages/AdminLobby";
-import UserLobby from "./pages/UserLobby";
-import LandingPage from "./pages/LandingPage";
-import ContactSales from "./pages/ContactSales";
+import Login from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import Signup from './pages/Signup';
+import AdminSignup from './pages/AdminSignup';
+import AdminLobby from './pages/AdminLobby';
+import UserLobby from './pages/UserLobby';
+import LandingPage from './pages/LandingPage';
+import ContactSales from './pages/ContactSales';
 
 // Legacy components
-import DuplicateDetection from "./user/pages/DuplicateDetection";
-import AutoResolveChat from "./user/pages/AutoResolveChat";
-import Resolved from "./user/pages/Resolved";
-import TicketTracking from "./user/pages/TicketTracking";
+import DuplicateDetection from './user/pages/DuplicateDetection';
+import AutoResolveChat from './user/pages/AutoResolveChat';
+import Resolved from './user/pages/Resolved';
+import TicketTracking from './user/pages/TicketTracking';
 // Layouts
-import UserLayout from "./user/UserLayout";
-import AdminLayout from "./admin/layout/AdminLayout";
+import UserLayout from './user/UserLayout';
+import AdminLayout from './admin/layout/AdminLayout';
 
 // User Pages
-import Dashboard from "./user/pages/Dashboard";
-import CreateTicket from "./user/pages/CreateTicket";
-import MyTickets from "./user/pages/MyTickets";
-import TicketResult from "./user/pages/TicketResult";
-import Profile from "./user/pages/Profile";
-import TicketDetail from "./user/pages/TicketDetail";
-import TicketProcessing from "./user/pages/AIProcessing"; // Renamed generic import just in case, but keeping AIProcessing
-import AIProcessing from "./user/pages/AIProcessing";
-import AIUnderstanding from "./user/pages/AIUnderstanding";
-import Notifications from "./user/pages/Notifications";
-import Help from "./user/pages/Help";
-import DocsPortal from "./docs/pages/DocsPortal";
+import Dashboard from './user/pages/Dashboard';
+import CreateTicket from './user/pages/CreateTicket';
+import MyTickets from './user/pages/MyTickets';
+import TicketResult from './user/pages/TicketResult';
+import Profile from './user/pages/Profile';
+import TicketDetail from './user/pages/TicketDetail';
+import TicketProcessing from './user/pages/AIProcessing'; // Renamed generic import just in case, but keeping AIProcessing
+import AIProcessing from './user/pages/AIProcessing';
+import AIUnderstanding from './user/pages/AIUnderstanding';
+import Notifications from './user/pages/Notifications';
+import Help from './user/pages/Help';
+import DocsPortal from './docs/pages/DocsPortal';
 
 // New Showcase Pages
-import ApiReference from "./pages/ApiReference";
-import Changelog from "./pages/Changelog";
-import StatusPage from "./pages/StatusPage";
-import AboutUs from "./pages/AboutUs";
-import Careers from "./pages/Careers";
-import CookiePolicy from "./pages/legal/CookiePolicy";
+import ApiReference from './pages/ApiReference';
+import Changelog from './pages/Changelog';
+import StatusPage from './pages/StatusPage';
+import AboutUs from './pages/AboutUs';
+import Careers from './pages/Careers';
+import CookiePolicy from './pages/legal/CookiePolicy';
 
 // NEW Admin Pages (Refactored)
-import AdminDashboard from "./admin/pages/AdminDashboard";
-import AdminTickets from "./admin/pages/AdminTickets";
-import AdminTicketDetail from "./admin/pages/AdminTicketDetail";
-import AdminUsers from "./admin/pages/AdminUsers";
-import AdminAnalytics from "./admin/pages/AdminAnalytics";
-import AdminProfile from "./admin/pages/AdminProfile";
-import AdminSettings from "./admin/pages/AdminSettings";
-import MasterBugReports from "./master-admin/pages/MasterBugReports";
+import AdminDashboard from './admin/pages/AdminDashboard';
+import AdminTickets from './admin/pages/AdminTickets';
+import AdminTicketDetail from './admin/pages/AdminTicketDetail';
+import AdminUsers from './admin/pages/AdminUsers';
+import AdminAnalytics from './admin/pages/AdminAnalytics';
+import AdminProfile from './admin/pages/AdminProfile';
+import AdminSettings from './admin/pages/AdminSettings';
+import MasterBugReports from './master-admin/pages/MasterBugReports';
 
 // Feature Pages
-import AutoCategorizationFeature from "./pages/features/AutoCategorizationFeature";
-import PriorityDetectionFeature from "./pages/features/PriorityDetectionFeature";
-import SmartResolutionFeature from "./pages/features/SmartResolutionFeature";
+import AutoCategorizationFeature from './pages/features/AutoCategorizationFeature';
+import PriorityDetectionFeature from './pages/features/PriorityDetectionFeature';
+import SmartResolutionFeature from './pages/features/SmartResolutionFeature';
 
 // Legal Pages
-import TermsOfService from "./pages/legal/TermsOfService";
-import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
-import Security from "./pages/legal/Security";
-import AdminProtectedRoute from "./components/shared/AdminProtectedRoute";
-import MasterAdminProtectedRoute from "./components/shared/MasterAdminProtectedRoute";
-import ProtectedRoute from "./components/shared/ProtectedRoute";
-import useAuthStore from "./store/authStore";
-import NotApproved from "./pages/NotApproved";
+import TermsOfService from './pages/legal/TermsOfService';
+import PrivacyPolicy from './pages/legal/PrivacyPolicy';
+import Security from './pages/legal/Security';
+import AdminProtectedRoute from './components/shared/AdminProtectedRoute';
+import MasterAdminProtectedRoute from './components/shared/MasterAdminProtectedRoute';
+import ProtectedRoute from './components/shared/ProtectedRoute';
+import useAuthStore from './store/authStore';
+import NotApproved from './pages/NotApproved';
 
 // Master Admin Components
-import MasterAdminLogin from "./pages/MasterAdminLogin";
-import MasterAdminLayout from "./master-admin/layout/MasterAdminLayout";
-import MasterAdminDashboard from "./master-admin/pages/MasterAdminDashboard";
-import PendingAdminRequests from "./master-admin/pages/PendingAdminRequests";
-import AllCompanies from "./master-admin/pages/AllCompanies";
-import AllAdmins from "./master-admin/pages/AllAdmins";
-
+import MasterAdminLogin from './pages/MasterAdminLogin';
+import MasterAdminLayout from './master-admin/layout/MasterAdminLayout';
+import MasterAdminDashboard from './master-admin/pages/MasterAdminDashboard';
+import PendingAdminRequests from './master-admin/pages/PendingAdminRequests';
+import AllCompanies from './master-admin/pages/AllCompanies';
+import AllAdmins from './master-admin/pages/AllAdmins';
 
 function TitleUpdater() {
   const location = useLocation();
@@ -106,10 +99,12 @@ function TitleUpdater() {
     else if (path.startsWith('/admin/settings')) title = 'Settings | Admin';
     // Master Admin Routes
     else if (path.startsWith('/master-admin/dashboard')) title = 'Master Dashboard';
-    else if (path.startsWith('/master-admin/admin-requests')) title = 'Pending Requests | Master Admin';
+    else if (path.startsWith('/master-admin/admin-requests'))
+      title = 'Pending Requests | Master Admin';
     else if (path.startsWith('/master-admin/companies')) title = 'Companies | Master Admin';
     else if (path.startsWith('/master-admin/all-admins')) title = 'All Admins | Master Admin';
-    else if (path.startsWith('/master-admin/bug-reports')) title = 'System Bug Radar | Master Admin';
+    else if (path.startsWith('/master-admin/bug-reports'))
+      title = 'System Bug Radar | Master Admin';
     // User Routes
     else if (path.startsWith('/ticket/')) title = 'Ticket Detail';
     else if (path.startsWith('/ai-understanding')) title = 'AI Understanding';
@@ -170,51 +165,58 @@ function AppLayout() {
   return (
     <>
       <Routes>
-        <Route path="/knowledge-check" element={<DuplicateDetection />} />
-        <Route path="/auto-resolve" element={<AutoResolveChat />} />
-        <Route path="/resolved" element={<Resolved />} />
+        <Route path='/knowledge-check' element={<DuplicateDetection />} />
+        <Route path='/auto-resolve' element={<AutoResolveChat />} />
+        <Route path='/resolved' element={<Resolved />} />
 
         {/* --- User Portal --- */}
-        <Route element={
-          profile?.role === 'master_admin' ? <Navigate to="/master-admin/dashboard" replace /> :
-            (profile?.role === 'admin' || profile?.role === 'super_admin') ? <Navigate to="/admin/dashboard" replace /> :
-              profile?.status === 'pending_approval' ? <Navigate to="/user-lobby" replace /> :
-                profile?.status === 'rejected' ? <Navigate to="/not-approved" replace /> :
-                  <UserLayout />
-        }>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/create-ticket" element={<CreateTicket />} />
-          <Route path="/my-tickets" element={<MyTickets />} />
-          <Route path="/ticket/:ticket_id" element={<TicketDetail />} />
-          <Route path="/ai-processing" element={<AIProcessing />} />
-          <Route path="/ai-understanding" element={<AIUnderstanding />} />
-          <Route path="/ticket-tracking" element={<TicketTracking />} />
-          <Route path="/ticket-result" element={<TicketResult />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/help" element={<Help />} />
-          <Route path="/notifications" element={<Notifications />} />
+        <Route
+          element={
+            profile?.role === 'master_admin' ? (
+              <Navigate to='/master-admin/dashboard' replace />
+            ) : profile?.role === 'admin' || profile?.role === 'super_admin' ? (
+              <Navigate to='/admin/dashboard' replace />
+            ) : profile?.status === 'pending_approval' ? (
+              <Navigate to='/user-lobby' replace />
+            ) : profile?.status === 'rejected' ? (
+              <Navigate to='/not-approved' replace />
+            ) : (
+              <UserLayout />
+            )
+          }
+        >
+          <Route path='/dashboard' element={<Dashboard />} />
+          <Route path='/create-ticket' element={<CreateTicket />} />
+          <Route path='/my-tickets' element={<MyTickets />} />
+          <Route path='/ticket/:ticket_id' element={<TicketDetail />} />
+          <Route path='/ai-processing' element={<AIProcessing />} />
+          <Route path='/ai-understanding' element={<AIUnderstanding />} />
+          <Route path='/ticket-tracking' element={<TicketTracking />} />
+          <Route path='/ticket-result' element={<TicketResult />} />
+          <Route path='/profile' element={<Profile />} />
+          <Route path='/help' element={<Help />} />
+          <Route path='/notifications' element={<Notifications />} />
         </Route>
 
         {/* --- Admin Portal (Protected) --- */}
         <Route element={<AdminProtectedRoute />}>
           <Route element={<AdminLayout />}>
-            <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            <Route path="/admin/tickets" element={<AdminTickets />} />
-            <Route path="/admin/ticket/:ticket_id" element={<AdminTicketDetail />} />
-            <Route path="/admin/users" element={<AdminUsers />} />
-            <Route path="/admin/analytics" element={<AdminAnalytics />} />
-            <Route path="/admin/profile" element={<AdminProfile />} />
-            <Route path="/admin/settings" element={<AdminSettings />} />
+            <Route path='/admin' element={<Navigate to='/admin/dashboard' replace />} />
+            <Route path='/admin/dashboard' element={<AdminDashboard />} />
+            <Route path='/admin/tickets' element={<AdminTickets />} />
+            <Route path='/admin/ticket/:ticket_id' element={<AdminTicketDetail />} />
+            <Route path='/admin/users' element={<AdminUsers />} />
+            <Route path='/admin/analytics' element={<AdminAnalytics />} />
+            <Route path='/admin/profile' element={<AdminProfile />} />
+            <Route path='/admin/settings' element={<AdminSettings />} />
           </Route>
         </Route>
 
-        <Route path="*" element={<NotFound />} />
+        <Route path='*' element={<NotFound />} />
       </Routes>
     </>
   );
 }
-
 
 function App() {
   const { initialize } = useAuthStore();
@@ -233,12 +235,12 @@ function App() {
         <Toaster />
         <BugReportWidget />
         <Routes>
-          <Route path="/" element={<DocsPortal />} />
-          <Route path="/docs" element={<Navigate to="/" replace />} />
-          <Route path="/api-reference" element={<ApiReference />} />
-          <Route path="/changelog" element={<Changelog />} />
-          <Route path="/status" element={<StatusPage />} />
-          <Route path="*" element={<DocsPortal />} />
+          <Route path='/' element={<DocsPortal />} />
+          <Route path='/docs' element={<Navigate to='/' replace />} />
+          <Route path='/api-reference' element={<ApiReference />} />
+          <Route path='/changelog' element={<Changelog />} />
+          <Route path='/status' element={<StatusPage />} />
+          <Route path='*' element={<DocsPortal />} />
         </Routes>
       </BrowserRouter>
     );
@@ -252,50 +254,50 @@ function App() {
       <BugReportWidget />
       <Routes>
         {/* Public */}
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/admin-signup" element={<AdminSignup />} />
-        <Route path="/admin-lobby" element={<AdminLobby />} />
-        <Route path="/user-lobby" element={<UserLobby />} />
-        <Route path="/not-approved" element={<NotApproved />} />
-        <Route path="/contact-sales" element={<ContactSales />} />
-        <Route path="/docs" element={<DocsPortal />} />
-        <Route path="/api-reference" element={<ApiReference />} />
-        <Route path="/changelog" element={<Changelog />} />
-        <Route path="/status" element={<StatusPage />} />
-        <Route path="/about" element={<AboutUs />} />
-        <Route path="/careers" element={<Careers />} />
-        <Route path="/cookie-policy" element={<CookiePolicy />} />
+        <Route path='/' element={<LandingPage />} />
+        <Route path='/login' element={<Login />} />
+        <Route path='/forgot-password' element={<ForgotPassword />} />
+        <Route path='/reset-password' element={<ResetPassword />} />
+        <Route path='/signup' element={<Signup />} />
+        <Route path='/admin-signup' element={<AdminSignup />} />
+        <Route path='/admin-lobby' element={<AdminLobby />} />
+        <Route path='/user-lobby' element={<UserLobby />} />
+        <Route path='/not-approved' element={<NotApproved />} />
+        <Route path='/contact-sales' element={<ContactSales />} />
+        <Route path='/docs' element={<DocsPortal />} />
+        <Route path='/api-reference' element={<ApiReference />} />
+        <Route path='/changelog' element={<Changelog />} />
+        <Route path='/status' element={<StatusPage />} />
+        <Route path='/about' element={<AboutUs />} />
+        <Route path='/careers' element={<Careers />} />
+        <Route path='/cookie-policy' element={<CookiePolicy />} />
 
         {/* Feature Pages */}
-        <Route path="/features/categorization" element={<AutoCategorizationFeature />} />
-        <Route path="/features/priority" element={<PriorityDetectionFeature />} />
-        <Route path="/features/resolution" element={<SmartResolutionFeature />} />
+        <Route path='/features/categorization' element={<AutoCategorizationFeature />} />
+        <Route path='/features/priority' element={<PriorityDetectionFeature />} />
+        <Route path='/features/resolution' element={<SmartResolutionFeature />} />
 
         {/* Legal Pages */}
-        <Route path="/terms" element={<TermsOfService />} />
-        <Route path="/privacy" element={<PrivacyPolicy />} />
-        <Route path="/security" element={<Security />} />
+        <Route path='/terms' element={<TermsOfService />} />
+        <Route path='/privacy' element={<PrivacyPolicy />} />
+        <Route path='/security' element={<Security />} />
 
         {/* Master Admin Portal */}
-        <Route path="/master-admin-login" element={<MasterAdminLogin />} />
+        <Route path='/master-admin-login' element={<MasterAdminLogin />} />
 
         <Route element={<MasterAdminProtectedRoute />}>
           <Route element={<MasterAdminLayout />}>
-            <Route path="/master-admin/dashboard" element={<MasterAdminDashboard />} />
-            <Route path="/master-admin/admin-requests" element={<PendingAdminRequests />} />
-            <Route path="/master-admin/companies" element={<AllCompanies />} />
-            <Route path="/master-admin/all-admins" element={<AllAdmins />} />
-            <Route path="/master-admin/bug-reports" element={<MasterBugReports />} />
+            <Route path='/master-admin/dashboard' element={<MasterAdminDashboard />} />
+            <Route path='/master-admin/admin-requests' element={<PendingAdminRequests />} />
+            <Route path='/master-admin/companies' element={<AllCompanies />} />
+            <Route path='/master-admin/all-admins' element={<AllAdmins />} />
+            <Route path='/master-admin/bug-reports' element={<MasterBugReports />} />
           </Route>
         </Route>
 
         {/* Protected */}
         <Route element={<ProtectedRoute />}>
-          <Route path="/*" element={<AppLayout />} />
+          <Route path='/*' element={<AppLayout />} />
         </Route>
       </Routes>
     </BrowserRouter>
@@ -303,4 +305,3 @@ function App() {
 }
 
 export default App;
-

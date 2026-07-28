@@ -37,7 +37,9 @@
 <br><br>
 
 > [!IMPORTANT]
+>
 > ### Transparent Scalability
+>
 > We didn't just build a smart backend; we paired it with a sleek UI that uses rich emeralds and deep indigos to ease eye strain. Designed for enterprise orchestration.
 
 <p align="center">

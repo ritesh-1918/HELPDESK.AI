@@ -1,8 +1,6 @@
 {
   "activation": "gelu",
-  "architectures": [
-    "DistilBertForTokenClassification"
-  ],
+  "architectures": ["DistilBertForTokenClassification"],
   "attention_dropout": 0.1,
   "bos_token_id": null,
   "dim": 768,

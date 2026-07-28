@@ -17,6 +17,7 @@ supabase migration up
 ```
 
 This creates:
+
 - `system_settings` table (stores per-company system configuration and notification preferences)
 - `closed_at` and `auto_closed` columns on tickets table
 - Performance indexes
@@ -29,6 +30,7 @@ python scripts/seed_company_settings.py
 ```
 
 Creates default settings for all existing companies:
+
 - Auto-close enabled, 7-day inactivity threshold
 - `email_notifications` enabled
 - `admin_alerts` enabled
@@ -54,6 +56,7 @@ NOTIFICATION_ROUTING_LOG_LEVEL=info
 ### 5. Restart Backend
 
 Backend will automatically:
+
 - Load auto-close service
 - Register cron job on startup
 - Initialize notification routing middleware
@@ -92,15 +95,15 @@ Proceed or skip notification
 
 ## Files Created
 
-| File | Purpose |
-|------|---------|
-| `backend/services/auto_close_service.py` | Background job service for auto-closing tickets |
-| `backend/services/notification_routing.py` | Middleware for notification gating |
-| `supabase/migrations/20260531_add_company_settings.sql` | Database schema: system_settings table |
-| `supabase/migrations/20260531_update_tickets_auto_close.sql` | Database schema: auto-close columns on tickets |
-| `backend/scripts/seed_company_settings.py` | Script to initialize default system settings |
-| `backend/INTEGRATION_GUIDE_ISSUE_41.md` | Full integration instructions |
-| `backend/ISSUE_41_README.md` | This file |
+| File                                                         | Purpose                                         |
+| ------------------------------------------------------------ | ----------------------------------------------- |
+| `backend/services/auto_close_service.py`                     | Background job service for auto-closing tickets |
+| `backend/services/notification_routing.py`                   | Middleware for notification gating              |
+| `supabase/migrations/20260531_add_company_settings.sql`      | Database schema: system_settings table          |
+| `supabase/migrations/20260531_update_tickets_auto_close.sql` | Database schema: auto-close columns on tickets  |
+| `backend/scripts/seed_company_settings.py`                   | Script to initialize default system settings    |
+| `backend/INTEGRATION_GUIDE_ISSUE_41.md`                      | Full integration instructions                   |
+| `backend/ISSUE_41_README.md`                                 | This file                                       |
 
 ## Usage Examples
 
@@ -158,35 +161,35 @@ Backend logs will show:
 
 ### Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `AUTO_CLOSE_ENABLED` | `true` | Enable/disable auto-close feature |
-| `AUTO_CLOSE_DAYS` | `7` | Default days before auto-close (overridable per company) |
-| `AUTO_CLOSE_CRON_SCHEDULE` | `0 2 * * *` | Cron schedule for job (2 AM UTC daily) |
-| `NOTIFICATION_ROUTING_LOG_LEVEL` | `info` | Logging level (debug, info, warning) |
+| Variable                         | Default     | Description                                              |
+| -------------------------------- | ----------- | -------------------------------------------------------- |
+| `AUTO_CLOSE_ENABLED`             | `true`      | Enable/disable auto-close feature                        |
+| `AUTO_CLOSE_DAYS`                | `7`         | Default days before auto-close (overridable per company) |
+| `AUTO_CLOSE_CRON_SCHEDULE`       | `0 2 * * *` | Cron schedule for job (2 AM UTC daily)                   |
+| `NOTIFICATION_ROUTING_LOG_LEVEL` | `info`      | Logging level (debug, info, warning)                     |
 
 ### System Settings (Database)
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `company_id` | UUID | (unique) | Company identifier (unique)
-| `ai_confidence_threshold` | float | `0.80` | Threshold for AI confidence
-| `duplicate_sensitivity` | float | `0.85` | Duplicate detection sensitivity
-| `enable_auto_resolve` | bool | `false` | Allow AI auto-resolve suggestions
-| `auto_close_enabled` | bool | `true` | Enable auto-close for this company |
-| `auto_close_days` | int | `7` | Days of inactivity before closing |
-| `email_notifications` | bool | `true` | Allow email notifications |
-| `admin_alerts` | bool | `true` | Allow admin alerts |
-| `digest_frequency` | enum | `daily` | Email digest frequency (daily, weekly, disabled) |
+| Field                     | Type  | Default  | Description                                      |
+| ------------------------- | ----- | -------- | ------------------------------------------------ |
+| `company_id`              | UUID  | (unique) | Company identifier (unique)                      |
+| `ai_confidence_threshold` | float | `0.80`   | Threshold for AI confidence                      |
+| `duplicate_sensitivity`   | float | `0.85`   | Duplicate detection sensitivity                  |
+| `enable_auto_resolve`     | bool  | `false`  | Allow AI auto-resolve suggestions                |
+| `auto_close_enabled`      | bool  | `true`   | Enable auto-close for this company               |
+| `auto_close_days`         | int   | `7`      | Days of inactivity before closing                |
+| `email_notifications`     | bool  | `true`   | Allow email notifications                        |
+| `admin_alerts`            | bool  | `true`   | Allow admin alerts                               |
+| `digest_frequency`        | enum  | `daily`  | Email digest frequency (daily, weekly, disabled) |
 
 ## Troubleshooting
 
-| Issue | Cause | Solution |
-|-------|-------|----------|
-| Auto-close job not running | APScheduler not started or invalid cron | Check backend logs, verify cron format |
-| Tickets not closing | `auto_close_enabled=false` for company | Update system_settings table |
-| Notifications still sending when disabled | Cache not invalidated | Call `routing.invalidate_cache(company_id)` |
-| Missing system_settings records | Didn't run seed script | Run `python scripts/seed_company_settings.py` |
+| Issue                                     | Cause                                   | Solution                                      |
+| ----------------------------------------- | --------------------------------------- | --------------------------------------------- |
+| Auto-close job not running                | APScheduler not started or invalid cron | Check backend logs, verify cron format        |
+| Tickets not closing                       | `auto_close_enabled=false` for company  | Update system_settings table                  |
+| Notifications still sending when disabled | Cache not invalidated                   | Call `routing.invalidate_cache(company_id)`   |
+| Missing system_settings records           | Didn't run seed script                  | Run `python scripts/seed_company_settings.py` |
 
 ## Next Steps
 
@@ -200,6 +203,7 @@ Backend logs will show:
 ## Support
 
 For questions or issues:
+
 1. Check logs for error messages
 2. Review INTEGRATION_GUIDE_ISSUE_41.md troubleshooting section
 3. Test manually with provided examples

@@ -18,6 +18,7 @@ This PR implements two critical features for the HELPDESK.AI helpdesk system:
 ### Feature 1: Auto-Close Cron Job
 
 **What it does:**
+
 - Runs on a configurable schedule (default: 2 AM UTC daily)
 - Queries all tickets with `status='resolved'`
 - Groups tickets by company, checks each company's `auto_close_days` setting (default: 7)
@@ -26,12 +27,14 @@ This PR implements two critical features for the HELPDESK.AI helpdesk system:
 - Logs all actions for auditing
 
 **Key features:**
+
 - Company-level configuration (configurable per company in database)
 - Graceful degradation (falls back to defaults if company settings missing)
 - Full error handling and logging
 - Environment-configurable cron schedule (not hardcoded)
 
 **Files created:**
+
 - `backend/services/auto_close_service.py` (315 lines) — Implements the auto-close logic
 - `supabase/migrations/20260531_add_company_settings.sql` — Creates system_settings table
 - `supabase/migrations/20260531_update_tickets_auto_close.sql` — Adds closed_at and auto_closed columns
@@ -40,6 +43,7 @@ This PR implements two critical features for the HELPDESK.AI helpdesk system:
 ### Feature 2: Notification Routing Middleware
 
 **What it does:**
+
 - Provides reusable `should_send_email_notification()`, `should_send_admin_alert()`, `should_send_push_notification()` methods
 - Gates notifications based on system settings: `email_notifications`, `admin_alerts`, `digest_frequency`
 - Implements settings caching to reduce database queries
@@ -47,6 +51,7 @@ This PR implements two critical features for the HELPDESK.AI helpdesk system:
 - Fail-open design: allows notifications if settings unavailable (conservative approach)
 
 **Key features:**
+
 - Centralized gating logic for all notification types
 - Per-company configuration
 - Audit logging with timestamps and reasons
@@ -54,6 +59,7 @@ This PR implements two critical features for the HELPDESK.AI helpdesk system:
 - Easy integration with existing notification code
 
 **Files created:**
+
 - `backend/services/notification_routing.py` (300 lines) — Implements notification routing logic
 
 ### Supporting Files
@@ -133,9 +139,10 @@ NOTIFICATION_ROUTING_LOG_LEVEL=info  # Logging level
 ### Manual Testing
 
 1. **Auto-Close Service**:
+
    ```python
    from backend.services.auto_close_service import AutoCloseService
-   
+
    service = AutoCloseService.load()
    stats = service.run()  # Returns {"closed_count": 5, "skipped_count": 10, ...}
    ```
@@ -143,9 +150,9 @@ NOTIFICATION_ROUTING_LOG_LEVEL=info  # Logging level
 2. **Notification Routing**:
    ```python
    from backend.services.notification_routing import NotificationRoutingMiddleware, NotificationType
-   
+
    routing = NotificationRoutingMiddleware.load()
-   
+
    # Should return True if company allows emails
    allow = routing.should_send_email_notification(company_id, NotificationType.DAILY_DIGEST)
    ```
@@ -183,6 +190,7 @@ NOTIFICATION_ROUTING_LOG_LEVEL=info  # Logging level
 If issues arise:
 
 1. **Disable auto-close** (without rollback):
+
    ```bash
    # Set environment variable
    AUTO_CLOSE_ENABLED=false
@@ -190,6 +198,7 @@ If issues arise:
    ```
 
 2. **Full rollback**:
+
    ```bash
    # Revert migrations (if needed)
    supabase migration down
@@ -200,7 +209,7 @@ If issues arise:
 
 3. **Data recovery** (if tickets incorrectly closed):
    ```sql
-   UPDATE tickets SET status='resolved', auto_closed=false, closed_at=NULL 
+   UPDATE tickets SET status='resolved', auto_closed=false, closed_at=NULL
    WHERE auto_closed=true AND closed_at > NOW() - INTERVAL '1 day';
    ```
 

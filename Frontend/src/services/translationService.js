@@ -7,18 +7,18 @@
 
 // Supported language codes
 export const SUPPORTED_LANGUAGES = [
-    { code: 'en', label: '🇬🇧 English', nativeName: 'English' },
-    { code: 'hi', label: '🇮🇳 Hindi', nativeName: 'हिन्दी' },
-    { code: 'te', label: '🇮🇳 Telugu', nativeName: 'తెలుగు' },
-    { code: 'ta', label: '🇮🇳 Tamil', nativeName: 'தமிழ்' },
-    { code: 'kn', label: '🇮🇳 Kannada', nativeName: 'ಕನ್ನಡ' },
-    { code: 'ml', label: '🇮🇳 Malayalam', nativeName: 'മലയാളം' },
-    { code: 'mr', label: '🇮🇳 Marathi', nativeName: 'मराठी' },
-    { code: 'bn', label: '🇮🇳 Bengali', nativeName: 'বাংলা' },
-    { code: 'fr', label: '🇫🇷 French', nativeName: 'Français' },
-    { code: 'de', label: '🇩🇪 German', nativeName: 'Deutsch' },
-    { code: 'es', label: '🇪🇸 Spanish', nativeName: 'Español' },
-    { code: 'ar', label: '🇸🇦 Arabic', nativeName: 'العربية' },
+  { code: 'en', label: '🇬🇧 English', nativeName: 'English' },
+  { code: 'hi', label: '🇮🇳 Hindi', nativeName: 'हिन्दी' },
+  { code: 'te', label: '🇮🇳 Telugu', nativeName: 'తెలుగు' },
+  { code: 'ta', label: '🇮🇳 Tamil', nativeName: 'தமிழ்' },
+  { code: 'kn', label: '🇮🇳 Kannada', nativeName: 'ಕನ್ನಡ' },
+  { code: 'ml', label: '🇮🇳 Malayalam', nativeName: 'മലയാളം' },
+  { code: 'mr', label: '🇮🇳 Marathi', nativeName: 'मराठी' },
+  { code: 'bn', label: '🇮🇳 Bengali', nativeName: 'বাংলা' },
+  { code: 'fr', label: '🇫🇷 French', nativeName: 'Français' },
+  { code: 'de', label: '🇩🇪 German', nativeName: 'Deutsch' },
+  { code: 'es', label: '🇪🇸 Spanish', nativeName: 'Español' },
+  { code: 'ar', label: '🇸🇦 Arabic', nativeName: 'العربية' },
 ];
 
 /**
@@ -29,23 +29,23 @@ export const SUPPORTED_LANGUAGES = [
  * @returns {Promise<string>} - Translated text
  */
 export async function translateText(text, fromLang = 'en', toLang = 'en') {
-    if (!text?.trim() || fromLang === toLang) return text;
+  if (!text?.trim() || fromLang === toLang) return text;
 
-    try {
-        const langPair = `${fromLang}|${toLang}`;
-        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langPair}`;
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`Translation API error: ${response.status}`);
+  try {
+    const langPair = `${fromLang}|${toLang}`;
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langPair}`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Translation API error: ${response.status}`);
 
-        const data = await response.json();
+    const data = await response.json();
 
-        if (data.responseStatus === 200) {
-            return data.responseData.translatedText;
-        }
-        throw new Error(data.responseDetails || 'Translation failed');
-    } catch (err) {
-        console.error('[translationService] Translation error:', err);
-        // Graceful degradation — return original text on failure
-        return text;
+    if (data.responseStatus === 200) {
+      return data.responseData.translatedText;
     }
+    throw new Error(data.responseDetails || 'Translation failed');
+  } catch (err) {
+    console.error('[translationService] Translation error:', err);
+    // Graceful degradation — return original text on failure
+    return text;
+  }
 }
