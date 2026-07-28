@@ -1,0 +1,94 @@
+name: "[AI] Bi-Weekly Classifier Retraining — Issue #1933"
+
+on:
+  schedule:
+    - cron: "0 2 */14 * 0"   # every other Sunday 02:00 UTC
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (skip actual training)"
+        required: false
+        default: "false"
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  retrain:
+    name: "Active Learning — Retrain & Validate"
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: Install Backend Dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Prepare Training Dataset
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          python -c "
+          import sys, os
+          sys.path.insert(0, os.getcwd())
+          from backend.services.active_learning_service import active_learning_service
+          summary = active_learning_service.prepare_training_dataset()
+          print('Dataset summary:', summary)
+          if summary.get('total_samples', 0) < 10:
+              print('::warning::Insufficient samples. Retraining skipped.')
+              sys.exit(0)
+          "
+
+      - name: Run Retraining Pipeline
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          DRY_RUN="${{ github.event.inputs.dry_run || 'false' }}"
+          ARGS=""
+          [ "$DRY_RUN" = "true" ] && ARGS="--dry-run" && echo "DRY RUN mode"
+          python -m backend.training.retraining_pipeline $ARGS
+
+      - name: Commit Artefacts
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backend/data/model_registry.json \
+                  backend/data/active_learning_dataset.json \
+                  backend/models/classifier-candidate/al_meta.json || true
+          git diff --cached --quiet || git commit -m \
+            "chore(ml): update model registry and AL dataset [skip ci]"
+          git push || true
+
+      - name: Job Summary
+        if: always()
+        run: |
+          python -c "
+          import json, sys, os
+          sys.path.insert(0, os.getcwd())
+          try:
+              from backend.services.active_learning_service import active_learning_service
+              reg = active_learning_service.get_registry()
+              cur = active_learning_service.get_current_version()
+              print('## Retraining Summary')
+              print(f'**Current model:** {reg.get(\"current_version\", \"none\")}')
+              if cur:
+                  print(f'**Accuracy:** {cur.get(\"accuracy\", 0):.4f}')
+                  print(f'**Training samples:** {cur.get(\"training_samples\", 0)}')
+          except Exception as e:
+              print(f'Could not generate summary: {e}')
+          " >> \$GITHUB_STEP_SUMMARY

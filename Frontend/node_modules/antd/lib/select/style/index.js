@@ -1,0 +1,146 @@
+"use strict";
+
+var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault").default;
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+var _style = require("../../style");
+var _compactItem = require("../../style/compact-item");
+var _internal = require("../../theme/internal");
+var _dropdown = _interopRequireDefault(require("./dropdown"));
+var _selectInput = _interopRequireDefault(require("./select-input"));
+var _token = require("./token");
+// =============================== Base ===============================
+const genBaseStyle = token => {
+  const {
+    antCls,
+    componentCls,
+    motionDurationMid,
+    inputPaddingHorizontalBase
+  } = token;
+  const hoverShowClearStyle = {
+    [`${componentCls}-clear`]: {
+      opacity: 1,
+      background: token.colorBgBase,
+      borderRadius: '50%'
+    }
+  };
+  return {
+    [componentCls]: {
+      ...(0, _style.resetComponent)(token),
+      // ======================== Selection ========================
+      [`${componentCls}-selection-item`]: {
+        flex: 1,
+        fontWeight: 'normal',
+        position: 'relative',
+        userSelect: 'none',
+        ..._style.textEllipsis,
+        // https://github.com/ant-design/ant-design/issues/40421
+        [`> ${antCls}-typography`]: {
+          display: 'inline'
+        }
+      },
+      // ========================= Prefix ==========================
+      [`${componentCls}-prefix`]: {
+        flex: 'none',
+        marginInlineEnd: token.selectAffixPadding
+      },
+      // ========================== Clear ==========================
+      [`${componentCls}-clear`]: {
+        position: 'absolute',
+        top: '50%',
+        insetInlineStart: 'auto',
+        insetInlineEnd: inputPaddingHorizontalBase,
+        zIndex: 1,
+        display: 'inline-block',
+        width: token.fontSizeIcon,
+        height: token.fontSizeIcon,
+        marginTop: token.calc(token.fontSizeIcon).mul(-1).div(2).equal(),
+        color: token.colorTextQuaternary,
+        fontSize: token.fontSizeIcon,
+        fontStyle: 'normal',
+        lineHeight: 1,
+        textAlign: 'center',
+        textTransform: 'none',
+        cursor: 'pointer',
+        opacity: 0,
+        transition: ['color', 'opacity'].map(prop => `${prop} ${motionDurationMid} ease`).join(', '),
+        textRendering: 'auto',
+        // https://github.com/ant-design/ant-design/issues/54205
+        // Force GPU compositing on Safari to prevent flickering on opacity/transform transitions
+        transform: 'translateZ(0)',
+        '&:before': {
+          display: 'block'
+        },
+        '&:hover': {
+          color: token.colorIcon
+        }
+      },
+      '@media(hover:none)': hoverShowClearStyle,
+      '&:hover': hoverShowClearStyle
+    },
+    // ========================= Feedback ==========================
+    [`${componentCls}-status`]: {
+      '&-error, &-warning, &-success, &-validating': {
+        [`&${componentCls}-has-feedback`]: {
+          [`${componentCls}-clear`]: {
+            insetInlineEnd: token.calc(inputPaddingHorizontalBase).add(token.fontSize).add(token.paddingXS).equal()
+          }
+        }
+      }
+    }
+  };
+};
+// ============================== Styles ==============================
+const genSelectStyle = token => {
+  const {
+    componentCls
+  } = token;
+  return [{
+    [componentCls]: {
+      // ==================== In Form ====================
+      [`&${componentCls}-in-form-item`]: {
+        width: '100%'
+      }
+    }
+  },
+  // =====================================================
+  // ==                       LTR                       ==
+  // =====================================================
+  // Base
+  genBaseStyle(token),
+  // Dropdown
+  (0, _dropdown.default)(token),
+  // =====================================================
+  // ==                       RTL                       ==
+  // =====================================================
+  {
+    [`${componentCls}-rtl`]: {
+      direction: 'rtl'
+    }
+  },
+  // =====================================================
+  // ==             Space Compact                       ==
+  // =====================================================
+  (0, _compactItem.genCompactItemStyle)(token, {
+    focusElCls: `${componentCls}-focused`
+  })];
+};
+// ============================== Export ==============================
+var _default = exports.default = (0, _internal.genStyleHooks)('Select', (token, {
+  rootPrefixCls
+}) => {
+  const selectToken = (0, _internal.mergeToken)(token, {
+    rootPrefixCls,
+    inputPaddingHorizontalBase: token.calc(token.paddingSM).sub(token.lineWidth).equal(),
+    multipleSelectItemHeight: token.multipleItemHeight,
+    selectHeight: token.controlHeight
+  });
+  return [genSelectStyle(selectToken), (0, _selectInput.default)(selectToken)];
+}, _token.prepareComponentToken, {
+  unitless: {
+    optionLineHeight: true,
+    optionSelectedFontWeight: true
+  }
+});

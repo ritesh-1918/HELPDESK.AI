@@ -1,0 +1,29 @@
+🔒 **SECURITY FIX: IDOR and Missing Authentication on Ticket Endpoints**
+
+This PR addresses the critical security vulnerability reported in Issue #1669, where the `/tickets` endpoints lacked authentication and tenant isolation, potentially leading to cross-tenant data breaches.
+
+**Changes Implemented in `backend/main.py`:**
+1.  **Moved Authentication Block:** Repositioned the `get_current_user` and related authentication helpers above the API routes to ensure they can be used as dependencies (`Depends`) without raising `NameError`.
+2.  **Fixed Syntax Error:** Corrected a missing `Response` import from `fastapi` which was preventing the application from starting when calling auth endpoints.
+3.  **Secured `GET /tickets`:**
+    *   Added `Depends(get_current_user)` to enforce authentication.
+    *   Fetches the authenticated user's `company_id` from the `profiles` table.
+    *   Restricts the Supabase query to only return tickets matching the user's `company_id` (Tenant Isolation).
+4.  **Secured `GET /tickets/{ticket_id}`:**
+    *   Added `Depends(get_current_user)`.
+    *   Validates that the requested ticket's `company_id` matches the authenticated user's `company_id`. Raises `403 Forbidden` if there is a mismatch, preventing IDOR.
+5.  **Secured `POST /tickets/save`:**
+    *   Added `Depends(get_current_user)` to enforce authentication.
+    *   Overrides the `request_body.user_id` with the authenticated user's ID (`user["id"]`) to prevent attackers from assigning tickets to arbitrary users.
+
+**Updates based on CodeRabbit AI Review:**
+*   **Consistency in `POST /tickets/save`:** Adjusted tenant validation and logging to consistently use `authenticated_user_id` and corrected `elif` to `else`.
+*   **Robust Profile Lookups:** Replaced `.single()` with `.maybe_single()` in profile lookups (`get_tickets`, `get_ticket_by_id`, `save_ticket`) to gracefully handle cases where a profile might not be found.
+*   **`get_current_user` Validation:** Added explicit validation to `get_current_user` to ensure the `user` object contains `id` and `email` fields, improving type safety and preventing potential downstream errors.
+
+**Verification:**
+- Wrote and executed automated tests using `TestClient` to verify that unauthenticated requests now return `401 Unauthorized`.
+- Verified that cross-tenant access to `GET /tickets/{ticket_id}` returns `403 Forbidden`.
+- Confirmed that `POST /tickets/save` strictly uses the authenticated user's ID.
+
+Closes #1669

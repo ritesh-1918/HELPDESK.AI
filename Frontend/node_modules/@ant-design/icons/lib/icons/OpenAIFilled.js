@@ -1,0 +1,25 @@
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+var React = _interopRequireWildcard(require("react"));
+var _OpenAIFilled = _interopRequireDefault(require("@ant-design/icons-svg/lib/asn/OpenAIFilled"));
+var _AntdIcon = _interopRequireDefault(require("../components/AntdIcon"));
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+function _getRequireWildcardCache(e) { if ("function" != typeof WeakMap) return null; var r = new WeakMap(), t = new WeakMap(); return (_getRequireWildcardCache = function (e) { return e ? t : r; })(e); }
+function _interopRequireWildcard(e, r) { if (!r && e && e.__esModule) return e; if (null === e || "object" != typeof e && "function" != typeof e) return { default: e }; var t = _getRequireWildcardCache(r); if (t && t.has(e)) return t.get(e); var n = { __proto__: null }, a = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var u in e) if ("default" !== u && Object.prototype.hasOwnProperty.call(e, u)) { var i = a ? Object.getOwnPropertyDescriptor(e, u) : null; i && (i.get || i.set) ? Object.defineProperty(n, u, i) : n[u] = e[u]; } return n.default = e, t && t.set(e, n), n; }
+function _extends() { _extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return _extends.apply(this, arguments); } // GENERATE BY ./scripts/generate.ts
+// DON NOT EDIT IT MANUALLY
+const OpenAIFilled = (props, ref) => /*#__PURE__*/React.createElement(_AntdIcon.default, _extends({}, props, {
+  ref: ref,
+  icon: _OpenAIFilled.default
+}));
+
+/**![open-a-i](data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNjYWNhY2EiIGZpbGwtcnVsZT0iZXZlbm9kZCIgdmlld0JveD0iNjQgNjQgODk2IDg5NiIgZm9jdXNhYmxlPSJmYWxzZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNNDc1LjYgMTEyYy03NC4wMyAwLTEzOS43MiA0Mi4zOC0xNzIuOTIgMTA0LjU4djIzNy4yOGw5Mi4yNyA1Ni40OCAzLjM4LTIzNS43IDE4OS0xMjcuNDVBMTk0LjMzIDE5NC4zMyAwIDAwNDc1LjYgMTEybTIwMi45IDYyLjI1Yy0xMy4xNyAwLTI2LjA1IDEuNzYtMzguOCA0LjM2TDQ1My4yIDMwNC4zNmwtMS4zNyA5Ni4xNSAxODYuNTgtMTI1LjI1IDIzMS4yMiAxMzcuMjhhMTk1LjUgMTk1LjUgMCAwMDQuODctNDIuMzNjMC0xMDguMDQtODcuOTMtMTk1Ljk2LTE5NS45OS0xOTUuOTZNMjQ3LjM0IDI2NkMxNjcuMzQgMjkwLjcgMTA5IDM2NS4yMiAxMDkgNDUzLjJjMCAyNy45MiA1LjkgNTQuODMgMTYuNzkgNzkuMzZsMjQ1LjQ4IDEzOS43NyA5MC41OC01Ni4xMi0yMTQuNS0xMzEuMzh6bTM5Mi44OCA3NC42N2wtNzIuNyA0OC44NUw3NzEuNSA1MTcuNTggNzk3LjMgNzUzQzg2Ny40MSA3MjMuMTEgOTE2IDY1My45NyA5MTYgNTczLjFjMC0yNy41NS01Ljg2LTU0LjEyLTE2LjU3LTc4LjUzem0tMTIzIDgyLjZsLTY2LjM2IDQ0LjU2LTEuMDUgNzYuMTIgNjQuNyAzOS42NiA2OS41NC00My4wNC0xLjg0LTc2LjQ4em0xMjEuMiA3Ni4xMmw1Ljg3IDI0OC4zNEw0NDMgODY2LjlBMTk1LjY1IDE5NS42NSAwIDAwNTY3Ljg0IDkxMmM3OS4yMiAwIDE0Ny44LTQ2LjUyIDE3OC42Mi0xMTQuOTlMNzE5LjQgNTUwLjIyem0tNTIuODYgMTA1LjNMMzcyLjQzIDczNi42OCAxNjkuNTYgNjIxLjE1YTE5NS4zNSAxOTUuMzUgMCAwMC01LjIyIDQ0LjE2YzAgMTAyLjk0IDc5Ljg0IDE4Ny40MSAxODAuODEgMTk1LjE4TDU4OC4yIDcxNi42eiIgLz48L3N2Zz4=) */
+const RefIcon = /*#__PURE__*/React.forwardRef(OpenAIFilled);
+if (process.env.NODE_ENV !== 'production') {
+  RefIcon.displayName = 'OpenAIFilled';
+}
+var _default = exports.default = RefIcon;

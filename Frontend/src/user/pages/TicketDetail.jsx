@@ -5,7 +5,7 @@ import {
     ShieldCheck, Calendar, Zap, Image as ImageIcon, MessageSquare,
     RotateCcw, Loader2, CheckCircle2, History
 } from 'lucide-react';
-import { formatFullTimestamp } from '../../utils/dateUtils';
+import { formatFullTimestamp, formatRelativeTime } from '../../utils/dateUtils';
 import { supabase } from "../../lib/supabaseClient";
 import { Card } from "../../components/ui/card";
 import TicketStatusBadge from "../components/TicketStatusBadge";
@@ -276,7 +276,13 @@ const TicketDetail = () => {
                     {/* Card 4: Screenshot */}
                         <div className="p-6 bg-emerald-900 rounded-2xl border border-emerald-800 text-center shadow-xl">
                             <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em] mb-2">Registration Timestamp</p>
-                            <p className="text-sm font-bold text-white leading-relaxed">
+                            <p
+                                className="text-sm font-bold text-white leading-relaxed"
+                                title={formatFullTimestamp(ticket.created_at)}
+                            >
+                                {formatRelativeTime(ticket.created_at)}
+                            </p>
+                            <p className="text-[10px] text-emerald-500/70 font-medium mt-1">
                                 {formatFullTimestamp(ticket.created_at)}
                             </p>
                         </div>

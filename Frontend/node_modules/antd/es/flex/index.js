@@ -1,0 +1,62 @@
+"use client";
+
+import React from 'react';
+import { omit } from '@rc-component/util';
+import { clsx } from 'clsx';
+import { isPresetSize } from '../_util/gapSize';
+import { useOrientation } from '../_util/hooks';
+import isNonNullable from '../_util/isNonNullable';
+import { ConfigContext } from '../config-provider';
+import useStyle from './style';
+import createFlexClassNames from './utils';
+const Flex = /*#__PURE__*/React.forwardRef((props, ref) => {
+  const {
+    prefixCls: customizePrefixCls,
+    rootClassName,
+    className,
+    style,
+    flex,
+    gap,
+    vertical,
+    orientation,
+    component: Component = 'div',
+    children,
+    ...othersProps
+  } = props;
+  const {
+    flex: ctxFlex,
+    direction: ctxDirection,
+    getPrefixCls
+  } = React.useContext(ConfigContext);
+  const prefixCls = getPrefixCls('flex', customizePrefixCls);
+  const [hashId, cssVarCls] = useStyle(prefixCls);
+  const [, mergedVertical] = useOrientation(orientation, vertical ?? ctxFlex?.vertical);
+  const mergedCls = clsx(className, rootClassName, ctxFlex?.className, prefixCls, hashId, cssVarCls, createFlexClassNames(prefixCls, {
+    ...props,
+    vertical: mergedVertical
+  }), {
+    [`${prefixCls}-rtl`]: ctxDirection === 'rtl',
+    [`${prefixCls}-gap-${gap}`]: isPresetSize(gap),
+    [`${prefixCls}-vertical`]: mergedVertical
+  });
+  const mergedStyle = {
+    ...ctxFlex?.style,
+    ...style
+  };
+  if (isNonNullable(flex)) {
+    mergedStyle.flex = flex;
+  }
+  if (isNonNullable(gap) && !isPresetSize(gap)) {
+    mergedStyle.gap = gap;
+  }
+  return /*#__PURE__*/React.createElement(Component, {
+    ref: ref,
+    className: mergedCls,
+    style: mergedStyle,
+    ...omit(othersProps, ['justify', 'wrap', 'align'])
+  }, children);
+});
+if (process.env.NODE_ENV !== 'production') {
+  Flex.displayName = 'Flex';
+}
+export default Flex;

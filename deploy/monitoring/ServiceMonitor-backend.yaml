@@ -1,0 +1,21 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: helpdesk-backend
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: helpdesk-backend
+  namespaceSelector:
+    matchNames:
+      - default
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 5s
+  # If your Prometheus Operator supports it, you may also need relabeling to set
+  # auth token. This repo’s /metrics uses METRICS_TOKEN header, so token-based
+  # scraping typically requires additional setup (proxy/sidecar) unless Prometheus
+  # is configured with the right headers.

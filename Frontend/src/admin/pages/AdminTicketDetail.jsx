@@ -14,7 +14,7 @@ import { Select } from "../../components/ui/select";
 import TicketChat from "../../components/shared/TicketChat";
 import { formatTicketId } from "../../utils/format";
 import SLABadge from "../components/SLABadge";
-import { formatFullTimestamp } from "../../utils/dateUtils";
+import { formatFullTimestamp, formatRelativeTime } from "../../utils/dateUtils";
 import TicketTimeline from "../../user/components/TicketTimeline";
 
 const AdminTicketDetail = () => {
@@ -302,7 +302,7 @@ const AdminTicketDetail = () => {
                             <h3 style={{ fontSize: '11px', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <MessageSquare size={14} color="#16a34a" /> USER INPUT PAYLOAD
                             </h3>
-                            <span style={{ fontSize: '10px', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase' }}>{formatFullTimestamp(ticket.created_at)}</span>
+                            <span style={{ fontSize: '10px', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase' }} title={formatFullTimestamp(ticket.created_at)}>{formatRelativeTime(ticket.created_at)}</span>
                         </div>
                         <div style={{ padding: '28px' }}>
                             <div style={{ background: 'linear-gradient(135deg, #0f1f12, #1a3320)', color: '#ffffff', borderRadius: '16px', padding: '24px 28px', fontSize: '15px', fontStyle: 'italic', lineHeight: 1.7 }}>

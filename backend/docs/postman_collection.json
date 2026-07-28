@@ -1,0 +1,1377 @@
+{
+  "info": {
+    "name": "HELPDESK.AI API",
+    "description": "Complete API collection for HELPDESK.AI — AI-driven IT support ticket triage, classification, and auto-resolution platform. Base URL: https://helpdesk-ai-backend.onrender.com",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "patch": 0,
+      "identifier": "HELPDESK.AI-backend"
+    }
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "production_url",
+      "value": "https://helpdesk-ai-backend.onrender.com",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "System",
+      "description": "Service health, readiness, landing page, and monitoring endpoints.",
+      "item": [
+        {
+          "name": "Landing Page",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                ""
+              ]
+            },
+            "description": "API landing page with HTML dashboard"
+          }
+        },
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Returns AI model loading status"
+          }
+        },
+        {
+          "name": "Readiness Probe",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/ready",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ready"
+              ]
+            },
+            "description": "Returns ready(200)/not_ready(503) with subsystem checks"
+          }
+        },
+        {
+          "name": "Cache Health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/cache/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cache",
+                "health"
+              ]
+            },
+            "description": "Redis connectivity status"
+          }
+        },
+        {
+          "name": "Metrics (Prometheus)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/metrics",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "metrics"
+              ]
+            },
+            "description": "Prometheus scrape endpoint (IP/token protected)"
+          }
+        },
+        {
+          "name": "Swagger UI Docs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/docs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "docs"
+              ]
+            },
+            "description": "Custom-themed Swagger UI with dark mode support"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI Analysis",
+      "description": "Core NLP endpoints: classification, troubleshooting, bug analysis, duplicate detection, and streaming analysis.",
+      "item": [
+        {
+          "name": "Full AI Ticket Analysis",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/ai/analyze_ticket",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ai",
+                "analyze_ticket"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"My laptop won't connect to WiFi\",\n  \"user_id\": \"test-user\",\n  \"company_id\": \"demo-company\"\n}"
+            },
+            "description": "Full pipeline: NER + classification + duplicate + RAG + Gemini (rate-limited: 10/min)"
+          }
+        },
+        {
+          "name": "AI Streaming Analysis",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/ai/analyze_stream",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ai",
+                "analyze_stream"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Cannot access email\",\n  \"company_id\": \"demo-company\"\n}"
+            },
+            "description": "Server-Sent Events (SSE) streaming analysis endpoint"
+          }
+        },
+        {
+          "name": "AI Analyze V2",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/ai/analyze-v2",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ai",
+                "analyze-v2"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Printer not working\",\n  \"company_id\": \"demo-company\"\n}"
+            },
+            "description": "V2 classifier pipeline with improved accuracy"
+          }
+        },
+        {
+          "name": "AI Troubleshooting",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/ai/troubleshoot",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ai",
+                "troubleshoot"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Cannot connect to VPN\",\n  \"category\": \"Network\",\n  \"history\": []\n}"
+            },
+            "description": "Dynamic troubleshooting wizard via Gemini (rate-limited: 10/min)"
+          }
+        },
+        {
+          "name": "Bug Report Analysis",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/ai/analyze_bug",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ai",
+                "analyze_bug"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bug_title\": \"App crashes on login\",\n  \"description\": \"The application crashes immediately after clicking login\",\n  \"steps_to_reproduce\": \"1. Open app 2. Click login 3. Observe crash\",\n  \"console_errors\": [\"TypeError: undefined is not an object\"]\n}"
+            },
+            "description": "AI-driven bug report analysis via Gemini (rate-limited: 10/min)"
+          }
+        },
+        {
+          "name": "Check Duplicate Ticket",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/ai/check_duplicate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ai",
+                "check_duplicate"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"WiFi not working in meeting room\",\n  \"company_id\": \"demo-company\"\n}"
+            },
+            "description": "Semantic duplicate detection using embeddings"
+          }
+        },
+        {
+          "name": "Reindex Embeddings",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/ai/reindex_embeddings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ai",
+                "reindex_embeddings"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company_id\": \"demo-company\"\n}"
+            },
+            "description": "Admin: reindex all ticket embeddings for semantic search"
+          }
+        },
+        {
+          "name": "Agent Scorecard",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/ai/agent_scorecard?company_id=demo-company",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ai",
+                "agent_scorecard"
+              ]
+            },
+            "description": "AI-powered agent performance scorecard with coaching insights"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tickets",
+      "description": "CRUD operations over support tickets (Supabase + in-memory).",
+      "item": [
+        {
+          "name": "List Tickets",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/tickets?limit=50&offset=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tickets"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "description": "List tickets (supports limit, offset, status filters)"
+          }
+        },
+        {
+          "name": "Create Ticket",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/tickets",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tickets"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subject\": \"Network outage\",\n  \"description\": \"Entire floor has no internet\",\n  \"priority\": \"critical\",\n  \"category\": \"Network\"\n}"
+            },
+            "description": "Create a new support ticket"
+          }
+        },
+        {
+          "name": "Save Ticket (Full)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/tickets/save",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tickets",
+                "save"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"user-123\",\n  \"subject\": \"Email access issue\",\n  \"description\": \"Cannot access Exchange mailbox\",\n  \"category\": \"Email\",\n  \"subcategory\": \"Access\",\n  \"priority\": \"high\",\n  \"assigned_team\": \"IT Support\",\n  \"status\": \"open\"\n}"
+            },
+            "description": "Save a complete ticket with all fields"
+          }
+        },
+        {
+          "name": "Get Ticket",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/tickets/{{ticket_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tickets",
+                "{{ticket_id}}"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "description": "Get a single ticket by ID"
+          }
+        },
+        {
+          "name": "Update Ticket",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{base_url}}/tickets/{{ticket_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tickets",
+                "{{ticket_id}}"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"resolved\",\n  \"priority\": \"medium\"\n}"
+            },
+            "description": "Partially update a ticket (status, priority, assignment, etc.)"
+          }
+        },
+        {
+          "name": "Search Tickets",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/tickets/search?q=network&status=open",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tickets",
+                "search"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "description": "Full-text search across ticket subjects and descriptions"
+          }
+        },
+        {
+          "name": "Bulk Update Tickets",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/tickets/bulk-update",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tickets",
+                "bulk-update"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_ids\": [\"id1\", \"id2\"],\n  \"updates\": {\"status\": \"resolved\", \"assigned_team\": \"Network\"}\n}"
+            },
+            "description": "Bulk update multiple tickets"
+          }
+        },
+        {
+          "name": "Bulk Delete Tickets",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/tickets/bulk-delete",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tickets",
+                "bulk-delete"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_ids\": [\"id1\", \"id2\"]\n}"
+            },
+            "description": "Bulk delete tickets (permanent)"
+          }
+        },
+        {
+          "name": "Rate Ticket",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/tickets/rate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tickets",
+                "rate"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_id\": \"ticket-123\",\n  \"rating\": 4,\n  \"feedback\": \"Quick and helpful resolution\"\n}"
+            },
+            "description": "Submit a rating (1-5) for a resolved ticket"
+          }
+        },
+        {
+          "name": "Get Ticket Rating",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/tickets/{{ticket_id}}/rating",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tickets",
+                "{{ticket_id}}",
+                "rating"
+              ]
+            },
+            "description": "Get rating and feedback for a ticket"
+          }
+        },
+        {
+          "name": "SLA Estimate for Ticket",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/tickets/{{ticket_id}}/sla-estimate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tickets",
+                "{{ticket_id}}",
+                "sla-estimate"
+              ]
+            },
+            "description": "Get estimated SLA breach time for a ticket"
+          }
+        },
+        {
+          "name": "Audit Logs for Ticket",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/tickets/{{ticket_id}}/audit_logs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tickets",
+                "{{ticket_id}}",
+                "audit_logs"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "description": "Get full audit trail for a ticket"
+          }
+        },
+        {
+          "name": "Get Ticket Attachments",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/attachments/{{ticket_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "attachments",
+                "{{ticket_id}}"
+              ]
+            },
+            "description": "List attachments linked to a ticket"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SLA Management",
+      "description": "SLA tracking, breach detection, escalation, and policy configuration.",
+      "item": [
+        {
+          "name": "SLA Statistics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/sla/stats?company_id=demo-company",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "sla",
+                "stats"
+              ]
+            },
+            "description": "Aggregate SLA performance metrics"
+          }
+        },
+        {
+          "name": "SLA Tickets",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/sla/tickets?company_id=demo-company&status=breached",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "sla",
+                "tickets"
+              ]
+            },
+            "description": "List tickets filtered by SLA status"
+          }
+        },
+        {
+          "name": "SLA Escalations",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/sla/escalations?company_id=demo-company",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "sla",
+                "escalations"
+              ]
+            },
+            "description": "List escalated tickets"
+          }
+        },
+        {
+          "name": "SLA Policies",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/sla/policies?company_id=demo-company",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "sla",
+                "policies"
+              ]
+            },
+            "description": "Get SLA policy definitions"
+          }
+        },
+        {
+          "name": "Run SLA Check",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/sla/check",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "sla",
+                "check"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company_id\": \"demo-company\"\n}"
+            },
+            "description": "Trigger SLA breach check manually"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Translation",
+      "description": "Multi-language translation endpoints.",
+      "item": [
+        {
+          "name": "Translate Text",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/translate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "translate"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Bonjour, comment ca va?\",\n  \"target_language\": \"en\"\n}"
+            },
+            "description": "Translate arbitrary text between supported languages"
+          }
+        },
+        {
+          "name": "Translate Ticket",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/translate-ticket",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "translate-ticket"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_id\": \"ticket-123\",\n  \"target_language\": \"en\"\n}"
+            },
+            "description": "Translate an entire ticket to a target language"
+          }
+        },
+        {
+          "name": "Detect Language",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/detect",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "detect"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Hola mundo\"\n}"
+            },
+            "description": "Detect the language of input text"
+          }
+        },
+        {
+          "name": "Supported Languages",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/languages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "languages"
+              ]
+            },
+            "description": "List all supported languages for translation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Voice",
+      "description": "Voice-to-ticket endpoints using speech-to-text.",
+      "item": [
+        {
+          "name": "Transcribe Audio",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/transcribe",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "transcribe"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"audio_base64\": \"<base64-encoded-audio>\",\n  \"format\": \"wav\"\n}"
+            },
+            "description": "Transcribe voice audio to text"
+          }
+        },
+        {
+          "name": "Create Ticket from Voice",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/create-ticket",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "create-ticket"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"audio_base64\": \"<base64-encoded-audio>\",\n  \"company_id\": \"demo-company\"\n}"
+            },
+            "description": "Transcribe voice and create a ticket automatically"
+          }
+        },
+        {
+          "name": "Voice Service Health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/voice/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "voice",
+                "health"
+              ]
+            },
+            "description": "Check voice service availability"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "description": "Internal endpoints for admin operations, CSAT, and knowledge management.",
+      "item": [
+        {
+          "name": "CSAT Report",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/admin/csat?company_id=demo-company",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "csat"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "description": "Customer satisfaction report"
+          }
+        },
+        {
+          "name": "Knowledge Gaps",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/admin/knowledge-gaps",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "knowledge-gaps"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "description": "List identified knowledge base gaps"
+          }
+        },
+        {
+          "name": "Detect Knowledge Gaps",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/admin/knowledge-gaps/detect",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "knowledge-gaps",
+                "detect"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company_id\": \"demo-company\"\n}"
+            },
+            "description": "Trigger knowledge gap detection"
+          }
+        },
+        {
+          "name": "Convert Ticket to KB",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/admin/tickets/{{ticket_id}}/convert-to-kb",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "tickets",
+                "{{ticket_id}}",
+                "convert-to-kb"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"Network\"\n}"
+            },
+            "description": "Convert a resolved ticket into a knowledge base article"
+          }
+        },
+        {
+          "name": "Auto-Resolve Settings",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/admin/settings/auto-resolve?company_id=demo-company",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "settings",
+                "auto-resolve"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "description": "Get auto-resolve configuration"
+          }
+        },
+        {
+          "name": "Security Audit",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/security/audit",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "security",
+                "audit"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "description": "Security audit log endpoint"
+          }
+        },
+        {
+          "name": "Security Report",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/security/report",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "security",
+                "report"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "description": "Security status report"
+          }
+        },
+        {
+          "name": "Log Correction",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/ai/log_correction",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ai",
+                "log_correction"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_id\": \"ticket-123\",\n  \"original_prediction\": {\"category\": \"Hardware\"},\n  \"corrected_prediction\": {\"category\": \"Network\"}\n}"
+            },
+            "description": "Log an admin correction when AI prediction differs from human decision"
+          }
+        }
+      ]
+    },
+    {
+      "name": "System Settings",
+      "description": "Company-level system configuration.",
+      "item": [
+        {
+          "name": "Get System Settings",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/system/settings?company_id=demo-company",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "system",
+                "settings"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "description": "Get system settings for a company"
+          }
+        },
+        {
+          "name": "Update System Settings",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{base_url}}/system/settings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "system",
+                "settings"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company_id\": \"demo-company\",\n  \"enable_auto_resolve\": true,\n  \"ai_confidence_threshold\": 0.85\n}"
+            },
+            "description": "Update system settings (admin)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Other",
+      "description": "Estimator, analytics, users, digest, and WebSocket endpoints.",
+      "item": [
+        {
+          "name": "Estimate Response Time",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/estimate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "estimate"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"priority\": \"high\",\n  \"category\": \"Network\"\n}"
+            },
+            "description": "Estimate response/resolution time"
+          }
+        },
+        {
+          "name": "SLA Targets",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/sla-targets",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "sla-targets"
+              ]
+            },
+            "description": "Get SLA target definitions"
+          }
+        },
+        {
+          "name": "User Profile",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "{{user_id}}"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "description": "Get user profile by ID"
+          }
+        },
+        {
+          "name": "Analytics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/analytics?company_id=demo-company",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "analytics"
+              ]
+            },
+            "description": "Platform analytics endpoint"
+          }
+        },
+        {
+          "name": "Send Digest Now",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/digest/send-now",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "digest",
+                "send-now"
+              ]
+            },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "description": "Manually trigger weekly digest email"
+          }
+        },
+        {
+          "name": "WebSocket Stats",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/ws/stats",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ws",
+                "stats"
+              ]
+            },
+            "description": "Active WebSocket connection statistics"
+          }
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{auth_token}}",
+        "type": "string"
+      }
+    ]
+  }
+}

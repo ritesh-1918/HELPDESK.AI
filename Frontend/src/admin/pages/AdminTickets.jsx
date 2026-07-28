@@ -24,7 +24,7 @@ import {
 import { Select } from "../../components/ui/select";
 import { formatTicketId } from "../../utils/format";
 import SLABadge from "../components/SLABadge";
-import { formatTimelineDate } from "../../utils/dateUtils";
+import { formatTimelineDate, formatRelativeTime } from "../../utils/dateUtils";
 
 const AdminTickets = () => {
     const navigate = useNavigate();
@@ -345,7 +345,7 @@ const AdminTickets = () => {
                                             </span>
                                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                                                 {ticket.category} 
-                                                <span className="text-[9px] font-medium text-slate-300">• {formatTimelineDate(ticket.created_at)}</span>
+                                                <span className="text-[9px] font-medium text-slate-300" title={formatTimelineDate(ticket.created_at)}>• {formatRelativeTime(ticket.created_at)}</span>
                                             </span>
                                         </div>
                                     </td>

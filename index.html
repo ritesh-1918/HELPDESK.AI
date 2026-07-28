@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!--
+      ═══════════════════════════════════════════════════════════════
+      SECURITY HEADERS OVERVIEW
+      ═══════════════════════════════════════════════════════════════
+      This document uses HTTP-Equiv meta tags as a FALLBACK only.
+      The authoritative security headers MUST be enforced server‑side
+      (e.g. FastAPI middleware, reverse proxy). For details see:
+        • CSP → server header (nonce‑based, strict‑dynamic)
+        • HSTS → server header (max‑age=31536000; includeSubDomains; preload)
+        • X‑Frame‑Options → server header (DENY)
+        • X‑Content‑Type‑Options → server header (nosniff)
+        • Permissions‑Policy → server header (camera=(), microphone=(), etc.)
+      ═══════════════════════════════════════════════════════════════
+    -->
+
+    <!--
+      CONTENT SECURITY POLICY (CSP) – Meta tag fallback
+      ═══════════════════════════════════════════════════════════════
+      Production CSP is served via HTTP header. This meta tag covers
+      static environments (e.g. local development, file://). The
+      placeholder __ALLOWED_ORIGINS__ is replaced at build time with a
+      space‑separated list of approved origins.
+
+      Security notes:
+        • 'strict-dynamic' is set; inline scripts MUST use a nonce or hash.
+        • 'unsafe-inline' is omitted; inline styles use nonce parallelism.
+        • frame-ancestors 'none' prevents clickjacking.
+        • upgrade-insecure-requests enforces HTTPS.
+        • report-uri / report-to should be added via server header.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+        default-src 'self';
+        script-src
+            'self'
+            'strict-dynamic'
+            'sha256-+6WnXIl4mbFTCARd8N3COQmT3bJJmoaNQo5fRYT5Y='
+            __ALLOWED_ORIGINS__;
+        style-src
+            'self'
+            'nonce-__SERVER_NONCE__'
+            __ALLOWED_ORIGINS__;
+        connect-src
+            'self'
+            __ALLOWED_ORIGINS__;
+        img-src
+            'self'
+            data:
+            blob:
+            __ALLOWED_ORIGINS__;
+        font-src
+            'self'
+            data:
+            __ALLOWED_ORIGINS__;
+        base-uri 'self';
+        form-action 'self';
+        frame-ancestors 'none';
+        object-src 'none';
+        upgrade-insecure-requests;
+        report-uri /csp-violation;
+    "
+    />
+
+    <!--
+      ADDITIONAL HTTP-EOUIV META TAGS (fallback)
+      ══════════════════════════════════════════════════════
+      Server headers override these; they are provided as a second layer.
+    -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-Frame-Options" content="DENY" />
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta
+      http-equiv="Permissions-Policy"
+      content="camera=(), microphone=(), geolocation=(), interest-cohort=()"
+    />
+
+    <!--
+      HSTS (HTTP Strict Transport Security) is NOT configurable via meta tags.
+      MUST be enforced server‑side:
+        Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+    -->
+
+    <!-- ═══════════ SEO & META ═══════════ -->
+    <title>HelpDesk.AI — Enterprise Support Platform</title>
+    <meta
+      name="description"
+      content="HelpDesk.AI: AI-powered enterprise support desk with real-time ticketing, knowledge base, and multi-channel routing."
+    />
+    <meta name="theme-color" content="#0a0c1a" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://helpdesk.ai/" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="HelpDesk.AI — Enterprise Support Platform" />
+    <meta
+      property="og:description"
+      content="AI-powered enterprise support desk with real-time ticketing, knowledge base, and multi-channel routing."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://helpdesk.ai/" />
+    <meta property="og:image" content="https://helpdesk.ai/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="HelpDesk.AI — Enterprise Support Platform" />
+    <meta
+      name="twitter:description"
+      content="AI-powered enterprise support desk with real-time ticketing, knowledge base, and multi-channel routing."
+    />
+    <meta name="twitter:image" content="https://helpdesk.ai/twitter-card.png" />
+
+    <!-- ═══════════ ICONS & MANIFEST ═══════════ -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- ═══════════ PRELOADS & EARLY HINTS ═══════════ -->
+    <!-- Preconnect to critical origins (must be in CSP connect-src / img-src) -->
+    <link rel="preconnect" href="https://api.helpdesk.ai" crossorigin />
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin />
+
+    <!-- DNS‑prefetch for additional origins -->
+    <link rel="dns-prefetch" href="https://api.helpdesk.ai" />
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+
+    <!-- Preload critical assets -->
+    <link rel="preload" href="/assets/styles.css" as="style" />
+    <link rel="preload" href="/assets/main.js" as="script" crossorigin />
+
+    <!-- ═══════════ STYLESHEETS ═══════════ -->
+    <!--
+      Critical CSS inlined with nonce for CSP compliance.
+      Use the same nonce as the script tag (injected server‑side).
+    -->
+    <style nonce="__SERVER_NONCE__">
+      /* ═══════════════════════════════════════════════════════════════
+         CRITICAL CSS — Inlined for first paint, uses server nonce.
+         ═══════════════════════════════════════════════════════════════ */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html {
+        font-size: 16px;
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+        scroll-behavior: smooth;
+      }
+
+      body {
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        background: #0a0c1a;
+        color: #e4e6ef;
+        line-height: 1.6;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow-x: hidden;
+      }
+
+      #app {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* Skip-to-content link for keyboard users */
+      .skip-link {
+        position: absolute;
+        top: -40px;
+        left: 0;
+        background: #005fcc;
+        color: #fff;
+        padding: 8px 12px;
+        z-index: 1000;
+        transition: top 0.2s ease;
+      }
+
+      .skip-link:focus {
+        top: 0;
+      }
+
+      /* Placeholder for loading state */
+      .loading-indicator {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 60vh;
+        color: #6c7293;
+        font-size: 1.2rem;
+      }
+    </style>
+
+    <!-- Full stylesheet loaded asynchronously (non‑blocking) -->
+    <link
+      rel="stylesheet"
+      href="/assets/styles.css"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript><link rel="stylesheet" href="/assets/styles.css" /></noscript>
+
+    <!-- ═══════════ SCRIPTS ═══════════ -->
+    <!--
+      Inline critical script with server nonce.
+      All inline scripts must use a nonce or a cryptographic hash.
+    -->
+    <script nonce="__SERVER_NONCE__">
+      'use strict';
+
+      (function () {
+        // ── Robust error handling ────────────────────────────────────
+        try {
+          // Early color‑scheme detection
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          document.documentElement.setAttribute('data-color-scheme', prefersDark ? 'dark' : 'light');
+
+          // Log for debugging (remove in production or replace with structured logging)
+          if (window.console && console.info) {
+            console.info('[HelpDesk.AI] Theme initialised:', prefersDark ? 'dark' : 'light');
+          }
+        } catch (error) {
+          // Graceful fallback
+          document.documentElement.setAttribute('data-color-scheme', 'dark');
+          if (window.console && console.warn) {
+            console.warn('[HelpDesk.AI] Theme detection failed, fallback to dark:', error);
+          }
+        }
+      })();
+
+      // ── Global error handler for uncaught exceptions ──────────────
+      window.addEventListener('error', function (event) {
+        try {
+          const log = {
+            message: event.message || 'Unknown error',
+            filename: event.filename || '',
+            lineno: event.lineno || 0,
+            colno: event.colno || 0,
+            error: event.error ? event.error.stack : ''
+          };
+          // Send to telemetry endpoint (fire‑and‑forget)
+          if (navigator.sendBeacon) {
+            navigator.sendBeacon('/api/telemetry/error', JSON.stringify(log));
+          }
+        } catch (e) {
+          // Silently fail – do not interrupt UX
+        }
+      });
+    </script>
+
+    <!-- Main application script (deferred, module) -->
+    <script src="/assets/main.js" type="module" defer></script>
+
+    <!--
+      NOTE: For production, ensure your FastAPI backend serves:
+        - Helmet‑like middleware (e.g. starlette‑middleware‑helmet).
+        - CORS middleware that reads allowed origins from
+          environment variable ALLOWED_ORIGINS (comma‑separated).
+        - CSP, HSTS, X‑Frame‑Options, etc. as HTTP headers.
+      The Vite dev proxy can be configured via
+        `server.headers` in vite.config.js.
+    -->
+  </head>
+
+  <body>
+    <!-- Skip‑to‑content link for keyboard and screen reader users -->
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+
+    <!-- Application root element -->
+    <div id="app" role="application" aria-label="HelpDesk.AI Enterprise Support Platform">
+      <!-- Loading indicator – replaced by framework after hydration -->
+      <div class="loading-indicator" role="status" aria-live="polite">
+        <span aria-hidden="true">Loading HelpDesk.AI…</span>
+      </div>
+    </div>
+
+    <!-- Main content landmark (target for skip link) -->
+    <main id="main-content" tabindex="-1"></main>
+
+    <!-- Footer / fallback content if JS disabled -->
+    <noscript>
+      <div style="padding: 2rem; text-align: center; color: #fff;">
+        <p>JavaScript is required for this application. Please enable JavaScript in your browser.</p>
+      </div>
+    </noscript>
+  </body>
+</html>
