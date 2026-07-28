@@ -1,25 +1,25 @@
-const https = require('https');
+const https = require("https");
 
 const postRequest = (url, payload) => {
   return new Promise((resolve, reject) => {
     const parsedUrl = new URL(url);
     const postData = JSON.stringify(payload);
-    
+
     const options = {
       hostname: parsedUrl.hostname,
       port: 443,
       path: parsedUrl.pathname,
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(postData)
-      }
+        "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(postData),
+      },
     };
 
     const req = https.request(options, (res) => {
-      let data = '';
-      res.on('data', (chunk) => data += chunk);
-      res.on('end', () => {
+      let data = "";
+      res.on("data", (chunk) => (data += chunk));
+      res.on("end", () => {
         try {
           resolve({ status: res.statusCode, data: JSON.parse(data) });
         } catch (e) {
@@ -28,7 +28,7 @@ const postRequest = (url, payload) => {
       });
     });
 
-    req.on('error', reject);
+    req.on("error", reject);
     req.write(postData);
     req.end();
   });
@@ -36,7 +36,7 @@ const postRequest = (url, payload) => {
 
 async function main() {
   const url = "https://ritesh19180-ai-helpdesk-api.hf.space/tickets/save";
-  
+
   // Base fields that are absolutely required and standard
   const basePayload = {
     user_id: "00000000-0000-0000-0000-000000000000",
@@ -54,7 +54,7 @@ async function main() {
     company_id: "11111111-1111-1111-1111-111111111111",
     is_potential_duplicate: false,
     parent_ticket_id: null,
-    metadata: {}
+    metadata: {},
   };
 
   console.log("1. Testing minimal standard payload...");

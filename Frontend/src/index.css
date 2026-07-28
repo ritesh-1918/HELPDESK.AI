@@ -91,16 +91,16 @@
   }
 }
 
-html{
+html {
   overflow-y: scroll;
   scrollbar-width: none; /* Firefox */
 }
 
-html::-webkit-scrollbar{
+html::-webkit-scrollbar {
   width: 0;
   height: 0;
 }
 
-body{
+body {
   overflow-x: hidden;
 }

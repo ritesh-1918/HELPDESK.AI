@@ -109,4 +109,3 @@ The project currently builds the frontend successfully, but the configured front
 - Consider adding CI checks to fail when `ALLOW_DEGRADED_STARTUP` is not set and model assets are missing.
 
 If this looks good I will open a PR with these changes and include a short migration note for API clients.
-

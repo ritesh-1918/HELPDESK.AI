@@ -2,7 +2,7 @@ export const DOCS_CATEGORIES = [
   { id: 'getting-started', title: 'Getting Started', icon: 'Rocket' },
   { id: 'ticket-flow', title: 'Ticket Flow & AI', icon: 'Cpu' },
   { id: 'admin-guide', title: 'Admin & Settings', icon: 'Sliders' },
-  { id: 'troubleshooting', title: 'Troubleshooting', icon: 'AlertTriangle' }
+  { id: 'troubleshooting', title: 'Troubleshooting', icon: 'AlertTriangle' },
 ];
 
 export const DOCS_ARTICLES = [
@@ -23,7 +23,7 @@ HELPDESK.AI classifies, prioritizes, and routes incoming IT queries instantly wi
 2. **NER (Named Entity Recognition)**: Extracts system hostnames, IP addresses, error codes, and library names.
 3. **Automated Triage**: Predicts the ticket category, subcategory, priority level, and routes it to the optimal engineering unit.
 4. **Auto-Resolution (RAG)**: Scans historically solved cases and knowledge articles, prompting users with step-by-step resolution playbooks.
-    `
+    `,
   },
   {
     id: 'access-roles',
@@ -47,13 +47,14 @@ HELPDESK.AI enforces tenant-scoped access mapping across three core authorizatio
 
 ### 👑 3. Master Admin
 * **System Operations**: Complete company registration directories, clearance directories, and system audit logs.
-    `
+    `,
   },
   {
     id: 'ticket-creation',
     categoryId: 'ticket-flow',
     title: 'Ingestion & Speech-to-Text',
-    description: 'How to file tickets, capture details using voice, and extract text from attachments.',
+    description:
+      'How to file tickets, capture details using voice, and extract text from attachments.',
     tags: ['voice', 'ocr', 'tickets'],
     content: `
 # Ingestion & Speech-to-Text
@@ -69,7 +70,7 @@ Click the **Microphone** icon in the **Voice Assistant** panel to dictate your i
 Drag and drop or click to upload a JPEG/PNG screenshot of the system error.
 - The frontend triggers **Tesseract.js** to run optical character recognition locally inside the browser.
 - All extracted text is captured under \`ocr_text\` and sent to the LLM to understand technical signals.
-    `
+    `,
   },
   {
     id: 'system-settings',
@@ -85,7 +86,7 @@ Support agents can tweak active settings on the **System Settings** page to alig
 * **AI Confidence Threshold**: Controls whether a ticket can be automatically resolved or must be reviewed by a human. If the AI's confidence is below this limit, the ticket defaults to a \`pending_human\` review.
 * **Duplicate Sensitivity**: Calibrates the semantic search limits when checking incoming tickets against previous issues. Higher sensitivity matches tickets only with extremely high textual similarity.
 * **Auto-Resolve Toggle**: Enables or completely disables automated closing.
-    `
+    `,
   },
   {
     id: 'troubleshooting-connections',
@@ -105,6 +106,6 @@ If you encounter timeout issues or connection alerts, review the diagnostic guid
 ### 🔴 2. Backend Model degraded startup
 **Symptom**: The AI Ingestion pipeline displays an warning about SentenceTransformer load errors.
 - **Resolution**: The backend includes **self-healing fallback modules** that automatically bypass local ML loading on low-RAM servers, utilizing the API Failover module to ensure 100% platform availability.
-    `
-  }
+    `,
+  },
 ];

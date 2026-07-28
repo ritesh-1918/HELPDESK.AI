@@ -1,18 +1,21 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
 // Load @babel/parser directly from MobileApp/node_modules
-const babelParserPath = path.resolve(__dirname, '../MobileApp/node_modules/@babel/parser');
+const babelParserPath = path.resolve(
+  __dirname,
+  "../MobileApp/node_modules/@babel/parser",
+);
 const parser = require(babelParserPath);
 
 function checkFile(filePath) {
-  const fullPath = path.resolve(__dirname, '..', filePath);
+  const fullPath = path.resolve(__dirname, "..", filePath);
   console.log(`Checking syntax for ${fullPath}...`);
   try {
-    const code = fs.readFileSync(fullPath, 'utf8');
+    const code = fs.readFileSync(fullPath, "utf8");
     parser.parse(code, {
-      sourceType: 'module',
-      plugins: ['jsx', 'flow', 'classProperties']
+      sourceType: "module",
+      plugins: ["jsx", "flow", "classProperties"],
     });
     console.log(`✅ No syntax errors found in ${filePath}!`);
   } catch (err) {
@@ -25,10 +28,10 @@ function checkFile(filePath) {
   }
 }
 
-checkFile('MobileApp/src/screens/user/TicketDetailScreen.js');
-checkFile('MobileApp/src/screens/user/KnowledgeBaseScreen.js');
-checkFile('MobileApp/src/screens/admin/AdminTicketDetailScreen.js');
-checkFile('MobileApp/src/screens/admin/AdminSettingsScreen.js');
-checkFile('MobileApp/src/screens/admin/AdminDashboardScreen.js');
-checkFile('MobileApp/src/screens/admin/AdminTicketsScreen.js');
-checkFile('MobileApp/src/screens/admin/AdminUsersScreen.js');
+checkFile("MobileApp/src/screens/user/TicketDetailScreen.js");
+checkFile("MobileApp/src/screens/user/KnowledgeBaseScreen.js");
+checkFile("MobileApp/src/screens/admin/AdminTicketDetailScreen.js");
+checkFile("MobileApp/src/screens/admin/AdminSettingsScreen.js");
+checkFile("MobileApp/src/screens/admin/AdminDashboardScreen.js");
+checkFile("MobileApp/src/screens/admin/AdminTicketsScreen.js");
+checkFile("MobileApp/src/screens/admin/AdminUsersScreen.js");

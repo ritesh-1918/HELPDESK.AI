@@ -40,7 +40,9 @@ graph TD
 <br><br>
 
 > [!IMPORTANT]
+>
 > ### The AI Neural Pipeline
+>
 > Helpdesk.AI leverages a custom-orchestrated suite of models, natively augmented with GitHub Models integration to separate logic layers.
 
 <table width="100%">

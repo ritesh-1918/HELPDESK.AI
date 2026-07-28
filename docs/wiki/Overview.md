@@ -35,9 +35,10 @@
 <br><br>
 
 > [!IMPORTANT]
+>
 > ### Python Inference Setup
+>
 > Drop this snippet into your core logic code to instantiate the AI engine locally. Requires configured GitHub CLI secrets to execute safely.
-
 
 ```python
 import os

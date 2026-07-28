@@ -16,13 +16,15 @@ Here is the mandatory onboarding process to get dashboard and testing access:
 6. **Access Approved**: Ritesh will add your username to the system so you can test the application.
 
 ### :star: Project Support and Networking Campaign
+
 Please take 30 seconds to support the project and connect:
+
 1. **Star this repository**: [Star here](https://github.com/ritesh-1918/HELPDESK.AI)
 2. **Fork this repository**: [Fork here](https://github.com/ritesh-1918/HELPDESK.AI/fork)
 3. **Follow @ritesh-1918 on GitHub**: [Follow here](https://github.com/ritesh-1918)
 4. **Connect on LinkedIn**: [Connect on LinkedIn](https://www.linkedin.com/in/ritesh1908/)
 5. **Reach out via Email**: `bonthalamadhavi1@gmail.com`
 
-*Note: Ensure all your PRs are branched off and target the `gssoc` branch (not `main`). Strictly one active issue per person.*
+_Note: Ensure all your PRs are branched off and target the `gssoc` branch (not `main`). Strictly one active issue per person._
 
 Looking forward to your contribution! Happy coding! :rocket::computer:

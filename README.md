@@ -7,7 +7,6 @@ sdk: docker
 pinned: false
 ---
 
-
 <div align="center">
 
 <img src="https://img.shields.io/badge/HELPDESK.AI-111827?style=for-the-badge&logo=codeigniter&logoColor=10b981&labelColor=000000" height="60" alt="Logo">
@@ -54,8 +53,10 @@ pinned: false
 <br/><br/>
 </div>
 
-> [!NOTE] 
+> [!NOTE]
+>
 > ### Eliminating the Manual Triage Bottleneck
+>
 > Helpdesk.ai uses deep-learning neural networks and 4-layer enterprise architecture to categorize, prioritize, and resolve IT issues in milliseconds.
 
 <br/>
@@ -64,8 +65,8 @@ pinned: false
 
 ## 📖 Navigation Hub
 
-| 🧩 **Platform Vision** | 🏗️ **Under the Hood** | 🚀 **Next Steps** |
-| :--- | :--- | :--- |
+| 🧩 **Platform Vision**                                                                           | 🏗️ **Under the Hood**                                                                                | 🚀 **Next Steps**                                               |
+| :----------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------- |
 | ➧ [Why Helpdesk.AI?](#why-helpdeskai)<br>➧ [The Enterprise Evolution](#the-enterprise-evolution) | ➧ [System Architecture](#system-architecture)<br>➧ [The AI Neural Pipeline](#the-ai-neural-pipeline) | ➧ [Deployment / Setup](#deploy)<br>➧ [Future Roadmap](#roadmap) |
 
 </div>
@@ -74,9 +75,9 @@ pinned: false
 
 > [!IMPORTANT]
 > <h2 id="why-helpdeskai">🎯 Why Helpdesk.AI?</h2>
-> 
+>
 > Helpdesk.AI is more than just a ticketing tool; it is a **Neural Service Orchestrator** designed for modern enterprises. It provides massive ROI by:
-> 
+>
 > 1.  **Eliminating the Triage Bottleneck**: By using context-aware AI (DistilBERT), it categorizes 100% of tickets in milliseconds, bypassing the L1 support line entirely.
 > 2.  **Proactive Resolution**: Integrated LLMs (GitHub Models/Gemini) analyze issues during creation to suggest "Instant Fixes," severely reducing actual ticket volume.
 > 3.  **Tiered Multi-Tenancy**: Built for true SaaS isolation, it securely isolates completely separate companies within a single Supabase database.
@@ -89,12 +90,12 @@ Helpdesk.ai isn't just a ticketing tool; it's heavily engineered. Built to handl
 
 ### 🏛️ 4-Layer Permission Matrix
 
-| Layer | Audience | Primary Capabilities |
-| :--- | :--- | :--- |
-| **👑 Master Admin** | Global Overseers | Tenant Registration, Company Onboarding, Global Health Monitoring. |
-| **🏢 Company Admin** | IT Management | Org-specific Dashboard, User Auditing, Sentiment Analytics. |
-| **👤 Standard User** | Employees | AI-Powered Ticket Creation, Semantic Search, Real-time Status. |
-| **🌐 Public Layer** | Prospects | Premium journey, Sales Engineering contact, Live Pricing tiers. |
+| Layer                | Audience         | Primary Capabilities                                               |
+| :------------------- | :--------------- | :----------------------------------------------------------------- |
+| **👑 Master Admin**  | Global Overseers | Tenant Registration, Company Onboarding, Global Health Monitoring. |
+| **🏢 Company Admin** | IT Management    | Org-specific Dashboard, User Auditing, Sentiment Analytics.        |
+| **👤 Standard User** | Employees        | AI-Powered Ticket Creation, Semantic Search, Real-time Status.     |
+| **🌐 Public Layer**  | Prospects        | Premium journey, Sales Engineering contact, Live Pricing tiers.    |
 
 ---
 
@@ -145,6 +146,7 @@ Under the hood, Helpdesk.ai leverages a custom suite of high speed models.
 <h2 id="deploy">🚀 Deployment & Operations</h2>
 
 Create a `.env` file in the `/Frontend` directory:
+
 ```bash
 VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 VITE_SUPABASE_ANON_KEY=your_key
@@ -153,6 +155,7 @@ VITE_BACKEND_URL=http://localhost:8000
 ```
 
 ### Local Installation
+
 ```bash
 git clone https://github.com/ritesh-1918/HELPDESK.AI.git
 cd HELPDESK.AI/Frontend

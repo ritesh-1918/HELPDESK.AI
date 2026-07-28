@@ -31,23 +31,25 @@ supabase secrets set GROQ_API_KEY_3=gsk_...
 ## How to call from frontend (replace old SDK calls)
 
 ```javascript
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from "../lib/supabaseClient";
 
 // Instead of calling Gemini SDK directly:
-const { data, error } = await supabase.functions.invoke('ai-proxy', {
+const { data, error } = await supabase.functions.invoke("ai-proxy", {
   body: {
-    provider: 'gemini',         // 'gemini' | 'openrouter' | 'groq'
-    model: 'gemma-3-27b-it',   // optional, uses default if omitted
-    messages: [                 // or use 'prompt' for a simple string
-      { parts: [{ text: 'Summarize this IT ticket: ...' }] }
-    ]
-  }
+    provider: "gemini", // 'gemini' | 'openrouter' | 'groq'
+    model: "gemma-3-27b-it", // optional, uses default if omitted
+    messages: [
+      // or use 'prompt' for a simple string
+      { parts: [{ text: "Summarize this IT ticket: ..." }] },
+    ],
+  },
 });
 
 console.log(data); // Gemini API response
 ```
 
 ## Security model
+
 - Keys stored in Supabase Vault (AES-256 encrypted at rest)
 - Edge Function only accessible with a valid anon key (rate-limited by Supabase)
 - Frontend .env only needs VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY

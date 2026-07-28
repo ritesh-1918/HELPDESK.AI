@@ -5,6 +5,7 @@ Thank you for your interest and enthusiasm in contributing to **HELPDESK.AI** un
 I have officially assigned you to this issue! Adding Ticket Export to PDF and CSV for the Admin Dashboard is a very valuable feature for our enterprise users.
 
 ### Technical Implementation Steps:
+
 1. **PDF Export**: Use a library like `jsPDF` or `react-pdf` to generate a styled ticket report PDF client-side.
 2. **CSV Export**: Implement a utility that converts the tickets array to a CSV string and triggers a browser download.
 3. **Admin Dashboard Integration**: Add Export buttons to the Admin Dashboard toolbar with appropriate icons.
@@ -21,7 +22,9 @@ Here is the mandatory onboarding process to get dashboard and testing access:
 6. **Access Approved**: Ritesh will add your username to the system so you can test the application.
 
 ### :star: Project Support and Networking Campaign
+
 Please take 30 seconds to support the project and connect:
+
 1. **Star this repository**: [Star here](https://github.com/ritesh-1918/HELPDESK.AI)
 2. **Fork this repository**: [Fork here](https://github.com/ritesh-1918/HELPDESK.AI/fork)
 3. **Follow @ritesh-1918 on GitHub**: [Follow here](https://github.com/ritesh-1918)

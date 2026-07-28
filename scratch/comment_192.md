@@ -5,6 +5,7 @@ Thank you for your interest in contributing to **HELPDESK.AI** under GSSoC 2026!
 I have officially assigned you to this issue! The `analyze_image()` signature mismatch is a critical backend bug — fixing it will directly unblock image-upload functionality for all users.
 
 ### Technical Implementation Steps:
+
 1. **Identify the signature**: Check `backend/services/gemini_service.py` — the `analyze_image()` method signature and update all call sites in `main.py` to match.
 2. **Add `context_text` support**: The method should accept optional `context_text` to improve image analysis quality.
 3. **Write a test**: Add a unit test that mocks `gemini_service.analyze_image()` and confirms the call signature is correct.
@@ -20,6 +21,7 @@ Here is the onboarding process to get dashboard and testing access:
 6. **Access Approved**: Ritesh will add your username to the system.
 
 ### :star: Project Support and Networking Campaign
+
 1. **Star this repository**: [Star here](https://github.com/ritesh-1918/HELPDESK.AI)
 2. **Fork this repository**: [Fork here](https://github.com/ritesh-1918/HELPDESK.AI/fork)
 3. **Follow @ritesh-1918 on GitHub**: [Follow here](https://github.com/ritesh-1918)
