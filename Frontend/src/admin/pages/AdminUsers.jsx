@@ -16,6 +16,7 @@ const AdminUsers = () => {
     const navigate = useNavigate();
     const { user: currentUser, profile: currentProfile } = useAuthStore();
     const { showToast } = useToastStore();
+    const { isDark } = useTheme();
 
     // Data State
     const [users, setUsers] = useState([]);
@@ -359,7 +360,7 @@ const AdminUsers = () => {
     if (loading) return (
         <div className="flex flex-col items-center justify-center min-h-[400px]">
             <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mb-4" />
-            <p className="text-slate-400 font-black uppercase tracking-widest italic">Loading directory...</p>
+            <p className={`font-black uppercase tracking-widest italic ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>Loading directory...</p>
         </div>
     );
 
@@ -371,8 +372,8 @@ const AdminUsers = () => {
                     <h2 className="text-[12px] font-black text-indigo-600 uppercase tracking-[0.3em] mb-2 flex items-center gap-2">
                         <ShieldCheck size={12} /> Access Control
                     </h2>
-                    <h1 className="text-4xl font-black text-slate-900 tracking-tight leading-none uppercase italic">User Directory.</h1>
-                    <p className="text-slate-500 font-medium mt-2">Manage your team members and their roles here.</p>
+                    <h1 className={`text-4xl font-black tracking-tight leading-none uppercase italic ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>User Directory.</h1>
+                    <p className={`font-medium mt-2 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Manage your team members and their roles here.</p>
                 </div>
                 <div className="flex gap-2">
                     <button
@@ -412,7 +413,7 @@ const AdminUsers = () => {
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-4 border-b border-slate-200">
+            <div className={`flex gap-4 border-b ${isDark ? 'border-slate-700' : 'border-slate-200'}`}>
                 <button
                     className={`pb-3 px-4 font-bold text-sm tracking-wide transition-colors border-b-2 ${activeTab === 'active' ? 'text-indigo-600 border-indigo-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
                     onClick={() => setActiveTab('active')}
@@ -429,18 +430,18 @@ const AdminUsers = () => {
             </div>
 
             {/* Terminal Interface */}
-            <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl shadow-slate-200/40 overflow-hidden">
+            <div className={`rounded-[2.5rem] border shadow-2xl overflow-hidden ${isDark ? 'bg-slate-800 border-slate-700 shadow-slate-900/40' : 'bg-white border-slate-200 shadow-slate-200/40'}`}>
                 {activeTab === 'active' ? (
                     <>
-                        <div className="p-8 border-b border-slate-100 bg-slate-50/30">
+                        <div className={`p-8 border-b ${isDark ? 'bg-slate-800/30 border-slate-700' : 'bg-slate-50/30 border-slate-100'}`}>
                             <div className="relative group max-w-md">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors w-5 h-5" />
+                                <Search className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors w-5 h-5 ${isDark ? 'text-slate-600 group-focus-within:text-indigo-500' : 'text-slate-300 group-focus-within:text-indigo-600'}`} />
                                 <input
                                     type="text"
                                     placeholder="Search by name, email, or role..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full bg-white border border-slate-200 rounded-2xl pl-12 pr-4 py-3 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600 transition-all text-slate-700"
+                                    className={`w-full border rounded-2xl pl-12 pr-4 py-3 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600 transition-all ${isDark ? 'bg-slate-900 border-slate-700 text-slate-200 focus:bg-slate-800' : 'bg-white border-slate-200 text-slate-700 focus:bg-white'}`}
                                 />
                             </div>
                         </div>
@@ -448,17 +449,17 @@ const AdminUsers = () => {
                         <div className="overflow-x-auto">
                             <table className="w-full border-collapse">
                                 <thead>
-                                    <tr className="bg-slate-50/50">
-                                        <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">User ID</th>
-                                        <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">User</th>
-                                        <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Role</th>
-                                        <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Joined On</th>
-                                        <th className="px-8 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Actions</th>
+                                    <tr className={isDark ? 'bg-slate-900/50' : 'bg-slate-50/50'}>
+                                        <th className={`px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest border-b ${isDark ? 'text-slate-500 border-slate-700' : 'text-slate-400 border-slate-100'}`}>User ID</th>
+                                        <th className={`px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest border-b ${isDark ? 'text-slate-500 border-slate-700' : 'text-slate-400 border-slate-100'}`}>User</th>
+                                        <th className={`px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest border-b ${isDark ? 'text-slate-500 border-slate-700' : 'text-slate-400 border-slate-100'}`}>Role</th>
+                                        <th className={`px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest border-b ${isDark ? 'text-slate-500 border-slate-700' : 'text-slate-400 border-slate-100'}`}>Joined On</th>
+                                        <th className={`px-8 py-5 text-center text-[10px] font-black uppercase tracking-widest border-b ${isDark ? 'text-slate-500 border-slate-700' : 'text-slate-400 border-slate-100'}`}>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
                                     {filteredUsers.map((user) => (
-                                        <tr key={user.id} className="hover:bg-slate-50/50 transition-colors group">
+                                        <tr key={user.id} className={`transition-colors group ${isDark ? 'hover:bg-slate-700/50' : 'hover:bg-slate-50/50'}`}>
                                             <td className="px-8 py-6">
                                                 <div className="flex items-center gap-2">
                                                     <Hash size={12} className="text-slate-300" />
@@ -481,8 +482,8 @@ const AdminUsers = () => {
                                                         </div>
                                                     )}
                                                     <div className="flex flex-col">
-                                                        <span className="text-sm font-black text-slate-800 tracking-tight italic uppercase">{user.full_name || 'Unnamed User'}</span>
-                                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 lowercase">
+                                                        <span className={`text-sm font-black tracking-tight italic uppercase ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>{user.full_name || 'Unnamed User'}</span>
+                                                        <div className={`flex items-center gap-1.5 text-[10px] font-bold lowercase ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
                                                             <Mail size={10} /> {user.email}
                                                         </div>
                                                     </div>
@@ -533,11 +534,11 @@ const AdminUsers = () => {
 
                         {filteredUsers.length === 0 && (
                             <div className="py-24 text-center">
-                                <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-200 mx-auto mb-4">
+                                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 ${isDark ? 'bg-slate-700 text-slate-600' : 'bg-slate-50 text-slate-200'}`}>
                                     <Users size={32} />
                                 </div>
-                                <h3 className="text-lg font-black text-slate-900 uppercase italic">No users found</h3>
-                                <p className="text-sm text-slate-400 font-medium italic mt-1">Adjust search query to find who you're looking for.</p>
+                                <h3 className={`text-lg font-black uppercase italic ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>No users found</h3>
+                                <p className={`text-sm font-medium italic mt-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Adjust search query to find who you're looking for.</p>
                             </div>
                         )}
                     </>
@@ -547,16 +548,16 @@ const AdminUsers = () => {
                         <div className="overflow-x-auto">
                             <table className="w-full border-collapse">
                                 <thead>
-                                    <tr className="bg-slate-50/50">
-                                        <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Request ID</th>
-                                        <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">User</th>
-                                        <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Requested On</th>
-                                        <th className="px-8 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Actions</th>
+                                    <tr className={isDark ? 'bg-slate-900/50' : 'bg-slate-50/50'}>
+                                        <th className={`px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest border-b ${isDark ? 'text-slate-500 border-slate-700' : 'text-slate-400 border-slate-100'}`}>Request ID</th>
+                                        <th className={`px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest border-b ${isDark ? 'text-slate-500 border-slate-700' : 'text-slate-400 border-slate-100'}`}>User</th>
+                                        <th className={`px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest border-b ${isDark ? 'text-slate-500 border-slate-700' : 'text-slate-400 border-slate-100'}`}>Requested On</th>
+                                        <th className={`px-8 py-5 text-center text-[10px] font-black uppercase tracking-widest border-b ${isDark ? 'text-slate-500 border-slate-700' : 'text-slate-400 border-slate-100'}`}>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
                                     {pendingRequests.map((request) => (
-                                        <tr key={request.id} className="hover:bg-slate-50/50 transition-colors group">
+                                        <tr key={request.id} className={`transition-colors group ${isDark ? 'hover:bg-slate-700/50' : 'hover:bg-slate-50/50'}`}>
                                             <td className="px-8 py-6">
                                                 <div className="flex items-center gap-2">
                                                     <Hash size={12} className="text-slate-300" />
@@ -619,11 +620,11 @@ const AdminUsers = () => {
                         </div>
                         {pendingRequests.length === 0 && (
                             <div className="py-24 text-center">
-                                <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-200 mx-auto mb-4">
+                                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 ${isDark ? 'bg-slate-700 text-slate-600' : 'bg-slate-50 text-slate-200'}`}>
                                     <ShieldCheck size={32} />
                                 </div>
-                                <h3 className="text-lg font-black text-slate-900 uppercase italic">Queue is clear</h3>
-                                <p className="text-sm text-slate-400 font-medium italic mt-1">No pending user requests found for your organization.</p>
+                                <h3 className={`text-lg font-black uppercase italic ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>Queue is clear</h3>
+                                <p className={`text-sm font-medium italic mt-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>No pending user requests found for your organization.</p>
                             </div>
                         )}
                     </>
@@ -632,21 +633,21 @@ const AdminUsers = () => {
 
             {/* Profile Detail Modal */}
             {showProfileModal && activeProfile && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex justify-end p-0 md:p-6 animate-in fade-in duration-300">
-                    <div className="w-full md:w-3/4 max-w-2xl bg-white md:rounded-[2.5rem] border-none shadow-2xl h-full flex flex-col animate-in slide-in-from-right-10 duration-300">
-                        <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50 md:rounded-t-[2.5rem]">
+                <div className="fixed inset-0 backdrop-blur-sm z-[100] flex justify-end p-0 md:p-6 animate-in fade-in duration-300" style={{ background: isDark ? 'rgba(15,23,42,0.6)' : 'rgba(15,23,42,0.6)' }}>
+                    <div className={`w-full md:w-3/4 max-w-2xl md:rounded-[2.5rem] border-none shadow-2xl h-full flex flex-col animate-in slide-in-from-right-10 duration-300 ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
+                        <div className={`p-8 border-b flex justify-between items-center md:rounded-t-[2.5rem] ${isDark ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
                             <div className="flex items-center gap-4">
                                 <div className="w-14 h-14 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 border border-indigo-200">
                                     <UserIcon size={28} />
                                 </div>
                                 <div>
-                                    <h3 className="text-2xl font-black text-slate-900 uppercase italic tracking-tight">{activeProfile.full_name}</h3>
-                                    <p className="text-sm font-bold text-slate-500 flex items-center gap-2">
+                                    <h3 className={`text-2xl font-black uppercase italic tracking-tight ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>{activeProfile.full_name}</h3>
+                                    <p className={`text-sm font-bold flex items-center gap-2 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
                                         <Mail size={14} /> {activeProfile.email}
                                     </p>
                                 </div>
                             </div>
-                            <button onClick={() => setShowProfileModal(false)} className="text-slate-400 hover:text-slate-600 bg-white shadow-sm p-3 rounded-xl border border-slate-200 transition-colors">
+                            <button onClick={() => setShowProfileModal(false)} className={`p-3 rounded-xl border transition-colors ${isDark ? 'text-slate-500 hover:text-slate-300 bg-slate-800 border-slate-700' : 'text-slate-400 hover:text-slate-600 bg-white shadow-sm border-slate-200'}`}>
                                 <X size={24} />
                             </button>
                         </div>
@@ -656,22 +657,22 @@ const AdminUsers = () => {
                             <div>
                                 <h4 className="text-[11px] font-black text-indigo-600 uppercase tracking-widest mb-4">Entity Metadata</h4>
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">System Hash / UUID</span>
-                                        <span className="text-[11px] font-mono font-black text-slate-800 break-all">{activeProfile.id}</span>
+                                    <div className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                                        <span className={`text-[10px] font-bold uppercase tracking-widest block mb-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>System Hash / UUID</span>
+                                        <span className={`text-[11px] font-mono font-black break-all ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{activeProfile.id}</span>
                                     </div>
-                                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">Assigned Role</span>
-                                        <span className={`text-xs font-black uppercase tracking-widest ${activeProfile.role === 'admin' ? 'text-indigo-600' : 'text-slate-600'}`}>
+                                    <div className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                                        <span className={`text-[10px] font-bold uppercase tracking-widest block mb-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Assigned Role</span>
+                                        <span className={`text-xs font-black uppercase tracking-widest ${activeProfile.role === 'admin' ? 'text-indigo-600' : (isDark ? 'text-slate-300' : 'text-slate-600')}`}>
                                             {activeProfile.role}
                                         </span>
                                     </div>
-                                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">Joined Terminal</span>
-                                        <span className="text-xs font-black text-slate-800 uppercase italic">{new Date(activeProfile.created_at).toLocaleString()}</span>
+                                    <div className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                                        <span className={`text-[10px] font-bold uppercase tracking-widest block mb-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Joined Terminal</span>
+                                        <span className={`text-xs font-black uppercase italic ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{new Date(activeProfile.created_at).toLocaleString()}</span>
                                     </div>
-                                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">Status</span>
+                                    <div className={`p-4 rounded-2xl border ${isDark ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                                        <span className={`text-[10px] font-bold uppercase tracking-widest block mb-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Status</span>
                                         <span className="text-xs font-black text-emerald-500 uppercase tracking-widest">Authorized</span>
                                     </div>
                                 </div>
@@ -679,7 +680,7 @@ const AdminUsers = () => {
                         </div>
 
                         {/* Profile Actions */}
-                        <div className="p-6 border-t border-slate-100 bg-slate-50 md:rounded-b-[2.5rem] flex gap-3">
+                        <div className={`p-6 border-t md:rounded-b-[2.5rem] flex gap-3 ${isDark ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
                             <button
                                 onClick={() => handleUpdateRole(activeProfile.id, activeProfile.role === 'admin' ? 'user' : 'admin')}
                                 disabled={activeProfile.id === currentUser?.id}
@@ -702,16 +703,16 @@ const AdminUsers = () => {
 
             {/* Delete Confirmation Modal */}
             {showDeleteModal && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] flex items-center justify-center p-6 animate-in fade-in duration-300">
-                    <Card className="w-full max-w-sm bg-white rounded-[2.5rem] border-none shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+                <div className="fixed inset-0 backdrop-blur-sm z-[110] flex items-center justify-center p-6 animate-in fade-in duration-300" style={{ background: isDark ? 'rgba(15,23,42,0.6)' : 'rgba(15,23,42,0.6)' }}>
+                    <Card className={`w-full max-w-sm rounded-[2.5rem] border-none shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
                         <div className="p-8 text-center space-y-6">
                             <div className="w-20 h-20 bg-red-50 rounded-[2rem] flex items-center justify-center text-red-500 mx-auto border-4 border-white shadow-lg ring-8 ring-red-50">
                                 <AlertTriangle size={40} />
                             </div>
 
                             <div className="space-y-2">
-                                <h3 className="text-2xl font-black text-slate-900 uppercase italic tracking-tight">Purge User?</h3>
-                                <p className="text-sm text-slate-500 font-medium px-4 leading-relaxed">
+                                <h3 className={`text-2xl font-black uppercase italic tracking-tight ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>Purge User?</h3>
+                                <p className={`text-sm font-medium px-4 leading-relaxed ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
                                     You are about to permanently delete <span className="font-black text-red-600 italic">@{userToAction?.full_name}</span>. This action remove their profile record from the system.
                                 </p>
                             </div>

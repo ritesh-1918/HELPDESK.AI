@@ -13,6 +13,7 @@ import {
     ChevronRight
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
     const navItems = [
@@ -25,6 +26,7 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
 
     const { logout } = useAuthStore();
     const navigate = useNavigate();
+    const { isDark } = useTheme();
 
     const handleLogout = async () => {
         await logout();
@@ -38,9 +40,9 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
             className={`${isMobile ? 'w-full h-full' : 'fixed left-0 top-0 h-full'} z-40 transition-all duration-300 overflow-hidden flex flex-col`}
             style={{
                 width: isMobile ? '100%' : (isCollapsed ? '80px' : '260px'),
-                background: '#ffffff',
-                borderRight: '1px solid #f0fdf4',
-                boxShadow: '2px 0 12px rgba(0,0,0,0.04)'
+                background: isDark ? '#1e293b' : '#ffffff',
+                borderRight: `1px solid ${isDark ? '#334155' : '#f0fdf4'}`,
+                boxShadow: isDark ? '2px 0 12px rgba(0,0,0,0.1)' : '2px 0 12px rgba(0,0,0,0.04)'
             }}
         >
             {/* Logo Section */}
@@ -85,7 +87,7 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
             {/* Navigation Links */}
             <nav className="flex-1 px-3 py-8 space-y-1.5 overflow-y-auto custom-scrollbar">
                 {showLabels && (
-                    <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#9ca3af', fontWeight: 600, paddingLeft: '14px', marginBottom: '16px' }} className="uppercase">
+                    <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: isDark ? '#64748b' : '#9ca3af', fontWeight: 600, paddingLeft: '14px', marginBottom: '16px' }} className="uppercase">
                         CORE MODULES
                     </p>
                 )}
@@ -103,7 +105,7 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
                             textDecoration: 'none', transition: 'all 0.2s ease',
                             justifyContent: isCollapsed && !isMobile ? 'center' : 'flex-start'
                         })}
-                        className="group hover:bg-gray-50 relative"
+                        className={`group relative ${isDark ? 'hover:bg-slate-700' : 'hover:bg-gray-50'}`}
                     >
                         <item.icon size={20} className="shrink-0 transition-transform group-hover:scale-110" />
                         {showLabels && (
@@ -122,7 +124,7 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
             </nav>
 
             {/* Bottom Profile / Logout Shortcut */}
-            <div className="p-4 border-t border-gray-50 space-y-1.5 pb-8 flex flex-col items-stretch">
+            <div className={`p-4 border-t space-y-1.5 pb-8 flex flex-col items-stretch ${isDark ? 'border-slate-700' : 'border-gray-50'}`}>
                 <NavLink
                     to="/admin/settings"
                     onClick={isMobile ? onClose : undefined}
@@ -135,7 +137,7 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
                         textDecoration: 'none', transition: 'all 0.2s ease',
                         justifyContent: isCollapsed && !isMobile ? 'center' : 'flex-start'
                     })}
-                    className="group hover:bg-gray-50"
+                    className={`group ${isDark ? 'hover:bg-slate-700' : 'hover:bg-gray-50'}`}
                 >
                     <Settings size={20} className="shrink-0 group-hover:rotate-45 transition-transform duration-300" />
                     {showLabels && <span className="text-sm tracking-tight animate-in fade-in duration-300">Settings</span>}
@@ -151,7 +153,7 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
                         transition: 'all 0.2s ease', width: '100%',
                         justifyContent: isCollapsed && !isMobile ? 'center' : 'flex-start'
                     }}
-                    className="group hover:bg-red-50 hover:text-red-600"
+                    className={`group ${isDark ? 'hover:bg-red-900/20 hover:text-red-400' : 'hover:bg-red-50 hover:text-red-600'}`}
                 >
                     <LogOut size={20} className="shrink-0 group-hover:translate-x-1 transition-transform" />
                     {showLabels && <span className="text-sm tracking-tight animate-in fade-in duration-300">Logout</span>}

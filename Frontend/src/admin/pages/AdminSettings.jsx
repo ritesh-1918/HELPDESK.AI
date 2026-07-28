@@ -63,12 +63,12 @@ const AdminSettings = () => {
                                 step="0.05"
                                 value={settings.aiConfidenceThreshold}
                                 onChange={(e) => handleChange('aiConfidenceThreshold', parseFloat(e.target.value))}
-                                className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                                className={`w-full h-2 rounded-lg appearance-none cursor-pointer accent-indigo-600 ${isDark ? 'bg-slate-700' : 'bg-slate-100'}`}
                             />
                         </div>
 
                         {/* Duplicate Detection Sensitivity */}
-                        <div className="space-y-4 pt-4 border-t border-slate-100">
+                        <div className={`space-y-4 pt-4 border-t ${isDark ? 'border-slate-700' : 'border-slate-100'}`}>
                             <div className="flex justify-between items-center">
                                 <label className="text-xs font-black text-slate-700 uppercase tracking-widest">
                                     Duplicate Detection (<span className="text-indigo-600">{(settings.duplicateSensitivity * 100).toFixed(0)}%</span>)
@@ -84,12 +84,12 @@ const AdminSettings = () => {
                                 step="0.05"
                                 value={settings.duplicateSensitivity}
                                 onChange={(e) => handleChange('duplicateSensitivity', parseFloat(e.target.value))}
-                                className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                                className={`w-full h-2 rounded-lg appearance-none cursor-pointer accent-indigo-600 ${isDark ? 'bg-slate-700' : 'bg-slate-100'}`}
                             />
                         </div>
 
                         {/* Auto Resolve Toggle */}
-                        <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                        <div className={`flex items-center justify-between pt-4 border-t ${isDark ? 'border-slate-700' : 'border-slate-100'}`}>
                             <div>
                                 <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest">Enable Auto Resolve</h4>
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Allow AI to close easily solved requests.</p>
