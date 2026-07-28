@@ -218,6 +218,8 @@ except ImportError:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Load all models at startup."""
+    startup_time = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+    print(f"[Startup] Server initialization started at {startup_time}")
     print("[Startup] Loading AI models ...")
     try:
         classifier_service.load()
