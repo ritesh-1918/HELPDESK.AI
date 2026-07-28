@@ -3,12 +3,13 @@ import {
   StyleSheet, View, Text, TextInput, TouchableOpacity,
   FlatList, ActivityIndicator, StatusBar,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { COLORS, SHADOWS } from '../../styles/theme';
 import { Search, BookOpen, ChevronRight, ArrowLeft, HelpCircle } from 'lucide-react-native';
 
 const KnowledgeBaseScreen = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState('');
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -75,7 +76,7 @@ const KnowledgeBaseScreen = ({ navigation }) => {
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" />
       
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <ArrowLeft size={24} color={COLORS.text} />
         </TouchableOpacity>

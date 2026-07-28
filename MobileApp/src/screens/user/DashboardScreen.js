@@ -129,7 +129,7 @@ const DashboardScreen = () => {
         contentContainerStyle={styles.scrollContent}
       >
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
           <View style={{ flex: 1 }}>
             <Text style={styles.greeting}>{getGreeting()},</Text>
             <Text style={styles.userName}>{profile?.full_name || 'User'}</Text>

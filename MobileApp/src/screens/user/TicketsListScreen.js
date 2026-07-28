@@ -3,7 +3,7 @@ import {
   StyleSheet, View, Text, TouchableOpacity, FlatList,
   ActivityIndicator, RefreshControl, StatusBar,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../lib/supabase';
 import { COLORS, SHADOWS } from '../../styles/theme';
@@ -13,6 +13,7 @@ const FILTERS = ['All', 'Active', 'Resolved'];
 
 const TicketsListScreen = () => {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -117,7 +118,7 @@ const TicketsListScreen = () => {
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
 
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <View>
           <Text style={styles.headerLabel}>SUPPORT CENTER</Text>
           <Text style={styles.headerTitle}>My Tickets</Text>
