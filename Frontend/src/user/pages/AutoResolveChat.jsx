@@ -167,6 +167,19 @@ const AutoResolveChat = () => {
 
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
+        if (!file) return;
+        const maxSize = 15 * 1024 * 1024;
+        const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+        if (file.size > maxSize) {
+            showToast(`File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max allowed is 15 MB.`, "error");
+            e.target.value = "";
+            return;
+        }
+        if (!allowedTypes.includes(file.type)) {
+            showToast("Unsupported file type. Allowed: JPEG, PNG, GIF, WEBP.", "error");
+            e.target.value = "";
+            return;
+        }
         if (file) {
             const reader = new FileReader();
             reader.onloadend = () => {

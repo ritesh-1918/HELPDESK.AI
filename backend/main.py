@@ -27,8 +27,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.encoders import jsonable_encoder
 import asyncio
+import base64
+import struct
 from pathlib import Path
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+from typing import Optional
 from dotenv import load_dotenv
 
 # Load environment variables from backend/.env
@@ -81,6 +84,28 @@ def get_system_settings(company_id: str) -> dict:
     except Exception as e:
         print(f"[WARNING] Could not fetch system_settings for company_id={company_id}: {e}")
     return defaults
+MAX_UPLOAD_SIZE = 15 * 1024 * 1024  # 15 MB
+ALLOWED_MIME_SIGNATURES: list[tuple[bytes, str]] = [
+    (b"\xff\xd8\xff", "image/jpeg"),
+    (b"\x89PNG", "image/png"),
+    (b"GIF87a", "image/gif"),
+    (b"GIF89a", "image/gif"),
+    (b"%PDF", "application/pdf"),
+]
+
+def _detect_mime(base64_str: str) -> str | None:
+    """Detect MIME type from base64-encoded data using magic bytes."""
+    try:
+        raw = base64.b64decode(base64_str[:48])
+        for sig, mime in ALLOWED_MIME_SIGNATURES:
+            if len(sig) <= len(raw) and raw.startswith(sig):
+                return mime
+        if raw[:4] == b"RIFF" and raw[8:12] == b"WEBP":
+            return "image/webp"
+        return None
+    except Exception:
+        return None
+
 class TicketRequest(BaseModel):
     text: str
     image_base64: str = ""
@@ -90,6 +115,27 @@ class TicketRequest(BaseModel):
     image_url: str | None = None
     confidence_threshold: float = 0.20
     duplicate_sensitivity: float = 0.85
+
+    @field_validator("image_base64")
+    @classmethod
+    def validate_image(cls, v: str) -> str:
+        if not v:
+            return v
+        try:
+            decoded_len = len(base64.b64decode(v))
+        except Exception as e:
+            raise ValueError(f"Invalid base64 encoding: {e}")
+        if decoded_len > MAX_UPLOAD_SIZE:
+            raise ValueError(
+                f"File too large ({decoded_len / 1024 / 1024:.1f} MB). "
+                f"Maximum allowed is {MAX_UPLOAD_SIZE / 1024 / 1024:.0f} MB."
+            )
+        mime = _detect_mime(v)
+        if mime is None:
+            raise ValueError("Unsupported file type. Allowed: JPEG, PNG, GIF, WEBP, PDF.")
+        if mime == "application/pdf":
+            raise ValueError("PDF uploads are not supported yet. Please use image formats (JPEG, PNG, GIF, WEBP).")
+        return v
 
 class TicketSaveRequest(BaseModel):
     user_id: str
