@@ -37,7 +37,7 @@ const CreateTicket = () => {
     const navigate = useNavigate();
     const MAX_CHARS = 1000;
     const supportsSpeech = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
-    const [selectedLanguage, setSelectedLanguage] = useState('en');
+    const [selectedLanguage, setSelectedLanguage] = useState(() => localStorage.getItem('preferredLanguage') || 'en');
     const [isTranslating, setIsTranslating] = useState(false);
     const [isLangOpen, setIsLangOpen] = useState(false);
     const langRef = useRef(null);

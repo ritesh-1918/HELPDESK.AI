@@ -14,6 +14,8 @@ import useTicketStore from '../../store/ticketStore';
 import { Card, CardContent } from "../../components/ui/card";
 import { askAI } from '../../services/aiAssistant';
 import useToastStore from '../../store/toastStore';
+import LanguageToggle from "../../components/shared/LanguageToggle";
+import { translateText } from '../../services/translationService';
 
 const AutoResolveChat = () => {
     const { aiTicket } = useTicketStore();
@@ -26,6 +28,14 @@ const AutoResolveChat = () => {
     const { showToast } = useToastStore();
     const scrollRef = useRef(null);
     const fileInputRef = useRef(null);
+    const [selectedLanguage, setSelectedLanguage] = useState('en');
+
+    const handleLanguageChange = (langCode) => {
+        setSelectedLanguage(langCode);
+        if (langCode !== 'en') {
+            localStorage.setItem('preferredLanguage', langCode);
+        }
+    };
 
     // Initial Plan Generation
     useEffect(() => {
@@ -238,7 +248,12 @@ const AutoResolveChat = () => {
                         </div>
 
                         {/* "Escalate Anyway" Integrated Option */}
-                        <div className="flex gap-3">
+                        <div className="flex gap-3 items-center">
+                            <LanguageToggle
+                                selectedLanguage={selectedLanguage}
+                                onLanguageChange={handleLanguageChange}
+                                compact
+                            />
                             <button
                                 onClick={() => navigate('/ticket-tracking')}
                                 className="group px-6 py-2.5 bg-slate-900/5 hover:bg-slate-900 text-slate-600 hover:text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all duration-300 flex items-center gap-2 border border-slate-200/50 hover:border-slate-900"
