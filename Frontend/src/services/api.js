@@ -125,5 +125,15 @@ export const api = {
       // Non-fatal: log but don't break the UI flow
       console.warn("[Correction Log] Failed to save correction:", error);
     }
+  },
+
+  extractOCR: async (imageBase64) => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/ai/ocr`, { image_base64: imageBase64 }, { timeout: 30000 });
+      return response.data.text || "";
+    } catch (error) {
+      console.warn("[OCR] Failed to extract text:", error);
+      return "";
+    }
   }
 };
