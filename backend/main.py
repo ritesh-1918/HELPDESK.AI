@@ -91,6 +91,19 @@ class TicketRequest(BaseModel):
     confidence_threshold: float = 0.20
     duplicate_sensitivity: float = 0.85
 
+class OCRRequest(BaseModel):
+    image_base64: str
+
+class OCRQualityResponse(BaseModel):
+    text: str
+    char_count: int
+    word_count: int
+    alpha_ratio: float
+    avg_word_length: float
+    garbled_score: float
+    avg_confidence: float
+    readability_score: float
+
 class TicketSaveRequest(BaseModel):
     user_id: str
     subject: str
@@ -689,6 +702,28 @@ async def update_ticket(ticket_id: str, updates: dict):
             return updated_ticket
     
     raise HTTPException(status_code=404, detail="Ticket not found")
+
+
+# ---------------------------------------------------------------------------
+# OCR Endpoints
+# ---------------------------------------------------------------------------
+@app.post("/ai/ocr", response_model=dict)
+@limiter.limit("30/minute")
+async def extract_ocr(request_body: OCRRequest, request: Request):
+    """Extract text from an image using local OCR."""
+    if not ocr_service:
+        raise HTTPException(status_code=503, detail="OCR service not available")
+    text = ocr_service.extract_text(request_body.image_base64)
+    return {"text": text}
+
+@app.post("/ai/ocr/assess", response_model=OCRQualityResponse)
+@limiter.limit("30/minute")
+async def ocr_assess_quality(request_body: OCRRequest, request: Request):
+    """Extract text from an image and return a full quality assessment."""
+    if not ocr_service:
+        raise HTTPException(status_code=503, detail="OCR service not available")
+    report = ocr_service.assess_quality(request_body.image_base64)
+    return OCRQualityResponse(**report)
 
 
 # ---------------------------------------------------------------------------
