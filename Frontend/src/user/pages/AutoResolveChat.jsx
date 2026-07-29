@@ -13,6 +13,7 @@ import remarkGfm from 'remark-gfm';
 import useTicketStore from '../../store/ticketStore';
 import { Card, CardContent } from "../../components/ui/card";
 import { askAI } from '../../services/aiAssistant';
+import { api } from '../../services/api';
 import useToastStore from '../../store/toastStore';
 
 const AutoResolveChat = () => {
@@ -155,9 +156,16 @@ const AutoResolveChat = () => {
         } catch (error) {
             console.error("Troubleshooting Error:", error);
             const botNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const errorMsg = error.message?.includes('QUOTA_EXCEEDED')
+                ? "All AI services are temporarily unavailable due to rate limits. Please wait a moment and try again."
+                : error.message?.includes('TIMEOUT')
+                    ? "The AI service took too long to respond. Please try again."
+                    : error.message?.includes('Failed to fetch')
+                        ? "Unable to reach the AI service. Check your internet connection."
+                        : "I'm having a bit of trouble concentrating. Could you try sending that again?";
             setMessages(prev => [...prev, {
                 role: 'bot',
-                text: "I'm having a bit of trouble concentrating. Could you try sending that again?",
+                text: errorMsg,
                 timestamp: botNow
             }]);
         } finally {
@@ -165,15 +173,39 @@ const AutoResolveChat = () => {
         }
     };
 
-    const handleFileUpload = (e) => {
+    const handleFileUpload = async (e) => {
         const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                handleSendMessage("I've uploaded a screenshot for you to check.", reader.result);
-            };
-            reader.readAsDataURL(file);
+        if (!file) return;
+        const maxSize = 15 * 1024 * 1024;
+        const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+        if (file.size > maxSize) {
+            showToast(`File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max allowed is 15 MB.`, "error");
+            e.target.value = "";
+            return;
         }
+        if (!allowedTypes.includes(file.type)) {
+            showToast("Unsupported file type. Allowed: JPEG, PNG, GIF, WEBP.", "error");
+            e.target.value = "";
+            return;
+        }
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+            const base64Data = reader.result;
+            setIsThinking(true);
+            let ocrText = "";
+            try {
+                const rawBase64 = base64Data.split(',')[1] || base64Data;
+                ocrText = await api.extractOCR(rawBase64);
+            } catch (ocrError) {
+                console.warn("[Chat OCR] Extraction failed, proceeding without OCR:", ocrError);
+            }
+            const imageMsg = ocrText
+                ? `I've uploaded a screenshot for you to check.\n\nExtracted text from image: "${ocrText}"`
+                : "I've uploaded a screenshot for you to check.";
+            setIsThinking(false);
+            handleSendMessage(imageMsg, base64Data);
+        };
+        reader.readAsDataURL(file);
     };
 
     const toggleMic = () => {

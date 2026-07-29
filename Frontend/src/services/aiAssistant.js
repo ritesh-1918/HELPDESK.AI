@@ -1,6 +1,16 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { API_CONFIG } from "../config";
 
+const AI_TIMEOUT_MS = 30000;
+const RETRY_DELAY_MS = 1500;
+const MAX_RETRIES = 1;
+
+const fetchWithTimeout = (url, options, timeoutMs = AI_TIMEOUT_MS) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timeoutId));
+};
+
 // ============================================================
 // MULTI-API FAILOVER CONFIGURATION
 // Priority: Gemini Keys (1-4) → OpenRouter Keys (1-4) → Groq Keys (1-3)
@@ -83,7 +93,10 @@ const callGemini = async (config, promptText, history, image) => {
         messageParts.push({ inlineData: { mimeType: mime.split(':')[1] || 'image/png', data } });
     }
 
-    const result = await chat.sendMessage(messageParts);
+    const result = await Promise.race([
+        chat.sendMessage(messageParts),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), AI_TIMEOUT_MS))
+    ]);
     return result.response.text();
 };
 
@@ -99,11 +112,11 @@ const callOpenAICompat = async (config, promptText, history, image, baseUrl, ext
 
     messages.push({ role: "user", content: userContent });
 
-    const response = await fetch(`${baseUrl}/chat/completions`, {
+    const response = await fetchWithTimeout(`${baseUrl}/chat/completions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.key}`, ...extraHeaders },
         body: JSON.stringify({ model: config.model, messages, max_tokens: 2048 })
-    });
+    }, AI_TIMEOUT_MS);
 
     if (!response.ok) {
         const err = new Error(`HTTP ${response.status}`);
@@ -115,6 +128,38 @@ const callOpenAICompat = async (config, promptText, history, image, baseUrl, ext
 };
 
 // Core failover runner — shared by both exported functions
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+const tryProvider = async (config, promptText, history, image) => {
+    if (config.provider === 'gemini') {
+        return await callGemini(config, promptText, history, image);
+    } else if (config.provider === 'openrouter') {
+        return await callOpenAICompat(config, promptText, history, image,
+            'https://openrouter.ai/api/v1',
+            { 'HTTP-Referer': API_CONFIG.FRONTEND_URL, 'X-Title': 'AI Helpdesk' }
+        );
+    } else if (config.provider === 'groq') {
+        return await callOpenAICompat(config, promptText, history, null,
+            'https://api.groq.com/openai/v1'
+        );
+    }
+};
+
+const isTransientError = (error) => {
+    const msg = error.message || '';
+    return error.status === 429
+        || error.status === 502
+        || error.status === 503
+        || error.status === 504
+        || msg.includes('429')
+        || msg.includes('quota')
+        || msg.includes('RESOURCE_EXHAUSTED')
+        || msg.includes('rate_limit')
+        || msg.includes('TIMEOUT')
+        || msg.includes('Failed to fetch')
+        || msg.includes('NetworkError');
+};
+
 const runWithFailover = async (promptText, history, image) => {
     const configList = buildConfigList();
     if (configList.length === 0) throw new Error("No AI API keys configured in .env");
@@ -128,41 +173,32 @@ const runWithFailover = async (promptText, history, image) => {
             continue;
         }
 
-        console.log(`[AI Failover] Trying ${i + 1}/${configList.length}: ${config.provider} (${config.model})`);
+        for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+            try {
+                console.log(`[AI Failover] Trying ${i + 1}/${configList.length}: ${config.provider} (${config.model}) attempt ${attempt + 1}`);
+                return await tryProvider(config, promptText, history, image);
+            } catch (error) {
+                const isExpiredOrInvalid = error.message?.includes('API_KEY_INVALID')
+                    || error.message?.includes('API key expired')
+                    || error.message?.includes('invalid')
+                    || error.message?.includes('expired')
+                    || error.status === 401
+                    || error.status === 403;
 
-        try {
-            if (config.provider === 'gemini') {
-                return await callGemini(config, promptText, history, image);
-            } else if (config.provider === 'openrouter') {
-                return await callOpenAICompat(config, promptText, history, image,
-                    'https://openrouter.ai/api/v1',
-                    { 'HTTP-Referer': API_CONFIG.FRONTEND_URL, 'X-Title': 'AI Helpdesk' }
-                );
-            } else if (config.provider === 'groq') {
-                return await callOpenAICompat(config, promptText, history, null, // Groq = text only
-                    'https://api.groq.com/openai/v1'
-                );
+                if (isExpiredOrInvalid) {
+                    blacklistedKeys.add(config.key);
+                    console.warn(`[AI Failover] Blacklisted invalid/expired key for ${config.provider}`);
+                    break;
+                }
+
+                if (attempt < MAX_RETRIES && isTransientError(error)) {
+                    console.warn(`[AI Failover] Retrying ${config.provider} in ${RETRY_DELAY_MS}ms after: ${error.message}`);
+                    await sleep(RETRY_DELAY_MS);
+                    continue;
+                }
+
+                console.warn(`[AI Failover] ❌ ${config.provider} key ${i + 1}: ${error.message}`);
             }
-        } catch (error) {
-            const isRateLimit = error.status === 429
-                || error.message?.includes('429')
-                || error.message?.includes('quota')
-                || error.message?.includes('RESOURCE_EXHAUSTED')
-                || error.message?.includes('rate_limit');
-
-            const isExpiredOrInvalid = error.message?.includes('API_KEY_INVALID')
-                || error.message?.includes('API key expired')
-                || error.message?.includes('invalid')
-                || error.message?.includes('expired')
-                || error.status === 401
-                || error.status === 403;
-
-            if (isExpiredOrInvalid) {
-                blacklistedKeys.add(config.key);
-                console.warn(`[AI Failover] Blacklisted invalid/expired key for ${config.provider}`);
-            }
-
-            console.warn(`[AI Failover] ❌ ${config.provider} key ${i + 1}: ${isRateLimit ? 'Quota exceeded' : error.message}`);
         }
     }
 

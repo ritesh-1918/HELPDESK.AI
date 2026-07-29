@@ -91,6 +91,12 @@ class TicketRequest(BaseModel):
     confidence_threshold: float = 0.20
     duplicate_sensitivity: float = 0.85
 
+class OCRRequest(BaseModel):
+    image_base64: str
+
+class OCRResponse(BaseModel):
+    text: str
+
 class TicketSaveRequest(BaseModel):
     user_id: str
     subject: str
@@ -690,6 +696,18 @@ async def update_ticket(ticket_id: str, updates: dict):
     
     raise HTTPException(status_code=404, detail="Ticket not found")
 
+
+# ---------------------------------------------------------------------------
+# OCR endpoint
+# ---------------------------------------------------------------------------
+@app.post("/ai/ocr", response_model=OCRResponse)
+@limiter.limit("30/minute")
+async def extract_ocr(request_body: OCRRequest, request: Request):
+    """Extract text from an image using local OCR."""
+    if not ocr_service:
+        raise HTTPException(status_code=503, detail="OCR service not available")
+    text = ocr_service.extract_text(request_body.image_base64)
+    return OCRResponse(text=text or "")
 
 # ---------------------------------------------------------------------------
 # Main AI Analyzer endpoint
