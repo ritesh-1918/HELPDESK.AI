@@ -45,6 +45,7 @@ import AIProcessing from "./user/pages/AIProcessing";
 import AIUnderstanding from "./user/pages/AIUnderstanding";
 import Notifications from "./user/pages/Notifications";
 import Help from "./user/pages/Help";
+import DocumentCompare from "./user/pages/DocumentCompare";
 import DocsPortal from "./docs/pages/DocsPortal";
 
 // New Showcase Pages
@@ -193,6 +194,7 @@ function AppLayout() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/help" element={<Help />} />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/document-compare" element={<DocumentCompare />} />
         </Route>
 
         {/* --- Admin Portal (Protected) --- */}
