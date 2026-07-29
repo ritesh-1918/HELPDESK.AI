@@ -125,5 +125,15 @@ export const api = {
       // Non-fatal: log but don't break the UI flow
       console.warn("[Correction Log] Failed to save correction:", error);
     }
+  },
+
+  detectHallucination: async (text, domain = null) => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/ai/detect_hallucination`, { text, domain });
+      return response.data;
+    } catch (error) {
+      console.warn("[Hallucination] Detection failed:", error);
+      return null;
+    }
   }
 };

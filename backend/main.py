@@ -59,6 +59,7 @@ from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
+from backend.services.hallucination_detector import HallucinationDetector
 
 
 # ---------------------------------------------------------------------------
@@ -90,6 +91,42 @@ class TicketRequest(BaseModel):
     image_url: str | None = None
     confidence_threshold: float = 0.20
     duplicate_sensitivity: float = 0.85
+
+class OCRRequest(BaseModel):
+    image_base64: str
+
+class OCRQualityResponse(BaseModel):
+    text: str
+    char_count: int
+    word_count: int
+    alpha_ratio: float
+    avg_word_length: float
+    garbled_score: float
+    avg_confidence: float
+    readability_score: float
+
+class HallucinationRequest(BaseModel):
+    text: str
+    domain: str | None = None
+
+class HallucinationSignal(BaseModel):
+    type: str
+    severity: float
+    detail: str
+
+class HallucinationDetails(BaseModel):
+    vagueness: float
+    specificity_penalty: float
+    citation_score: float
+    confidence_mismatch: float
+    contradiction_risk: float
+
+class HallucinationResponse(BaseModel):
+    hallucination_risk: float
+    confidence_score: float
+    signals: list[HallucinationSignal]
+    domain_relevance: float
+    details: HallucinationDetails
 
 class TicketSaveRequest(BaseModel):
     user_id: str
@@ -689,6 +726,24 @@ async def update_ticket(ticket_id: str, updates: dict):
             return updated_ticket
     
     raise HTTPException(status_code=404, detail="Ticket not found")
+
+
+# ---------------------------------------------------------------------------
+# Hallucination Detection endpoint
+# ---------------------------------------------------------------------------
+@app.post("/ai/detect_hallucination", response_model=HallucinationResponse)
+@limiter.limit("30/minute")
+async def detect_hallucination(request_body: HallucinationRequest, request: Request):
+    """Analyze AI-generated text for hallucination signals and confidence scoring."""
+    result = HallucinationDetector.analyze(request_body.text, domain=request_body.domain)
+    signals = [HallucinationSignal(**s) for s in result["signals"]]
+    return HallucinationResponse(
+        hallucination_risk=result["hallucination_risk"],
+        confidence_score=result["confidence_score"],
+        signals=signals,
+        domain_relevance=result["domain_relevance"],
+        details=HallucinationDetails(**result["details"])
+    )
 
 
 # ---------------------------------------------------------------------------
