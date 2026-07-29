@@ -426,7 +426,8 @@ class TroubleshootResponse(BaseModel):
     is_final: bool
 
 @app.post("/ai/troubleshoot", response_model=TroubleshootResponse)
-async def troubleshoot(request: TroubleshootRequest):
+@limiter.limit("10/minute")
+async def troubleshoot(request_body_trouble: TroubleshootRequest, request: Request):
     """Get dynamic troubleshooting steps from Gemini."""
     if not gemini_service or not gemini_service._initialized:
         return TroubleshootResponse(
@@ -436,9 +437,9 @@ async def troubleshoot(request: TroubleshootRequest):
         )
     
     result = gemini_service.get_troubleshooting_step(
-        request.text,
-        request.history,
-        request.category
+        request_body_trouble.text,
+        request_body_trouble.history,
+        request_body_trouble.category
     )
     return TroubleshootResponse(**result)
 
@@ -453,7 +454,8 @@ class BugReportAnalysisResponse(BaseModel):
     probable_cause: str
 
 @app.post("/ai/analyze_bug", response_model=BugReportAnalysisResponse)
-async def analyze_bug(request: BugReportAnalysisRequest):
+@limiter.limit("10/minute")
+async def analyze_bug(request_body_bug: BugReportAnalysisRequest, request: Request):
     """Analyze a bug report using Gemini to generate a Probable Cause."""
     if not gemini_service or not gemini_service._initialized:
         return BugReportAnalysisResponse(
@@ -461,10 +463,10 @@ async def analyze_bug(request: BugReportAnalysisRequest):
         )
     
     cause = gemini_service.analyze_bug_report(
-        request.bug_title,
-        request.description,
-        request.steps_to_reproduce,
-        request.console_errors
+        request_body_bug.bug_title,
+        request_body_bug.description,
+        request_body_bug.steps_to_reproduce,
+        request_body_bug.console_errors
     )
     return BugReportAnalysisResponse(probable_cause=cause)
 
@@ -728,10 +730,11 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
             print(f"[AI] OCR added {len(local_ocr_text)} chars to context.")
 
     # Initalize Timeline
-    return await analyze_only(request_body)
+    return await analyze_only(request_body, request)
 
 @app.post("/ai/analyze")
-async def analyze_only(request_body: TicketRequest):
+@limiter.limit("10/minute")
+async def analyze_only(request_body: TicketRequest, request: Request):
     """
     PERFORMANCE UPGRADE: AI Analysis phase only. 
     Does NOT persist to DB. This allows the user to review the analysis 
@@ -892,7 +895,8 @@ async def analyze_only(request_body: TicketRequest):
     )
 
 @app.post("/ai/analyze_stream")
-async def analyze_stream(request_body: TicketRequest):
+@limiter.limit("5/minute")
+async def analyze_stream(request_body: TicketRequest, request: Request):
     """
     REAL-TIME SSE ENDPOINT: Streams the AI progress to the frontend dynamically.
     """
@@ -1044,12 +1048,12 @@ async def analyze_stream(request_body: TicketRequest):
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 @app.post("/ai/analyze_ticket/legacy")
-async def legacy_analyze_and_save(request_body: TicketRequest):
+async def legacy_analyze_and_save(request_body: TicketRequest, request: Request):
     """
     BACKWARD COMPATIBILITY: Strictly performs analysis only. 
     Does NOT persist to DB to avoid foreign key violations.
     """
-    return await analyze_only(request_body)
+    return await analyze_only(request_body, request)
 
 @app.post("/ai/analyze-v2")
 async def analyze_ticket_v2(request: TicketRequest):
@@ -1208,4 +1212,26 @@ async def auth_logout(response: Response):
 @app.get("/auth/me")
 async def auth_me(user: dict = Depends(get_current_user)):
     return {"user": user}
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+
+@app.post("/auth/reset-password")
+@limiter.limit("5/hour")
+async def reset_password(request: Request, body: ResetPasswordRequest):
+    """
+    Rate-limited password reset endpoint.
+    Rejects client requests exceeding 5 calls per hour with 429.
+    """
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database connection offline")
+    try:
+        supabase.auth.reset_password_for_email(
+            body.email,
+            options={"redirectTo": os.environ.get("PASSWORD_RESET_REDIRECT_URL", "http://localhost:5173/reset-password")}
+        )
+    except Exception as exc:
+        # Don't reveal whether the email exists
+        pass
+    return {"message": "If an account with that email exists, a password reset link has been sent."}
 
