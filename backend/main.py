@@ -59,6 +59,7 @@ from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
+from backend.services.document_comparison import DocumentComparisonService
 
 
 # ---------------------------------------------------------------------------
@@ -150,6 +151,27 @@ class TicketResponse(BaseModel):
     env_metadata: dict = {} # IP, Hostname, Browser/OS
     sla_breach_at: str | None = None
     version: str = "2.1.0-Neural-Diagnostic"
+
+
+class DocComparisonItem(BaseModel):
+    id: str
+    title: str
+    text: str
+
+
+class DocComparisonRequest(BaseModel):
+    documents: list[DocComparisonItem]
+
+
+class DocComparisonResponse(BaseModel):
+    document_count: int
+    titles: list[str]
+    global_similarity: float
+    pairwise_comparisons: list[dict]
+    key_terms_shared: list[dict]
+    key_terms_unique: list[dict]
+    summary: str
+    ai_analysis: str | None = None
 
 
 # --- Persistence Models ---
@@ -689,6 +711,18 @@ async def update_ticket(ticket_id: str, updates: dict):
             return updated_ticket
     
     raise HTTPException(status_code=404, detail="Ticket not found")
+
+
+# ---------------------------------------------------------------------------
+# Document Comparison endpoint
+# ---------------------------------------------------------------------------
+@app.post("/ai/compare_documents", response_model=DocComparisonResponse)
+@limiter.limit("10/minute")
+async def compare_documents(request_body: DocComparisonRequest, request: Request):
+    """Compare multiple documents and identify similarities and differences."""
+    documents = [d.dict() for d in request_body.documents]
+    result = DocumentComparisonService.compare(documents, gemini_service=gemini_service)
+    return DocComparisonResponse(**result)
 
 
 # ---------------------------------------------------------------------------
