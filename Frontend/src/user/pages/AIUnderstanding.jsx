@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import useTicketStore from "../../store/ticketStore";
 import { Card, CardContent } from "../../components/ui/card";
+import OCRVerification from "../components/OCRVerification";
 
 // ─── Shimmer Skeleton ────────────────────────────────────────────────
 const Shimmer = ({ className = "" }) => (
@@ -374,6 +375,17 @@ const AIUnderstanding = () => {
                         </Card>
                     </div>
                 </div>
+
+                {/* OCR Verification — Side-by-Side */}
+                {(aiTicket.capturedFileBase64 || aiTicket.ocrText) && (
+                    <OCRVerification
+                        imageBase64={aiTicket.capturedFileBase64}
+                        ocrText={aiTicket.ocrText}
+                        onOCRUpdate={(correctedText) => {
+                            setAITicket({ ...aiTicket, ocrText: correctedText });
+                        }}
+                    />
+                )}
 
                 {/* Collapsible: How AI reached this conclusion */}
                 <Card className="rounded-xl border border-gray-100 shadow-sm bg-white overflow-hidden">
