@@ -226,14 +226,22 @@ const CreateTicket = () => {
 
     const handleFileChange = (e) => {
         const selected = e.target.files?.[0];
-        if (selected && (selected.type === 'image/png' || selected.type === 'image/jpeg')) {
+        if (!selected) return;
+        const maxSize = 15 * 1024 * 1024;
+        if (selected.size > maxSize) {
+            setError(`File too large (${(selected.size / 1024 / 1024).toFixed(1)} MB). Max allowed is 15 MB.`);
+            e.target.value = "";
+            return;
+        }
+        const allowed = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+        if (selected && allowed.includes(selected.type)) {
             if (imagePreview) URL.revokeObjectURL(imagePreview);
             setFile(selected);
             setImagePreview(URL.createObjectURL(selected));
             setError('');
             processOCR(selected);
         } else if (selected) {
-            setError('Please upload only PNG or JPG images.');
+            setError('Please upload only PNG, JPG, GIF, or WEBP images.');
         }
     };
 
@@ -517,14 +525,14 @@ const CreateTicket = () => {
                                                         type="file"
                                                         ref={fileInputRef}
                                                         onChange={handleFileChange}
-                                                        accept="image/png, image/jpeg"
+                                                        accept="image/png, image/jpeg, image/gif, image/webp"
                                                         className="hidden"
                                                     />
                                                     <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                                                         <Upload className="text-emerald-500" size={20} />
                                                     </div>
                                                     <p className="text-sm font-semibold text-gray-600">Drag and drop or click to upload</p>
-                                                    <p className="text-xs text-gray-400 mt-1">PNG or JPG up to 10MB</p>
+                                                    <p className="text-xs text-gray-400 mt-1">PNG or JPG up to 15MB</p>
                                                 </motion.div>
                                             ) : (
                                                 <motion.div
