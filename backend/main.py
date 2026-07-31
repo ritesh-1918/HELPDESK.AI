@@ -59,28 +59,20 @@ from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
 from backend.services.security_utils import constant_time_compare, secure_compare_sha256
+from backend.services.cache import CacheLayer
+from backend.services.sla_service import SlaPolicyService
+
+# Redis-backed cache with in-memory fallback for SLA / system config lookups.
+cache_layer = CacheLayer()
+sla_policy_service = SlaPolicyService(cache_layer, supabase)
 
 
 # ---------------------------------------------------------------------------
 # Request / Response models
 # ---------------------------------------------------------------------------
 def get_system_settings(company_id: str) -> dict:
-    defaults = {
-        "ai_confidence_threshold": 0.80,
-        "duplicate_sensitivity": 0.85,
-        "enable_auto_resolve": False
-    }
-    if not supabase or not company_id:
-        return defaults
-    try:
-        res = supabase.table("system_settings").select(
-            "ai_confidence_threshold, duplicate_sensitivity, enable_auto_resolve"
-        ).eq("company_id", company_id).single().execute()
-        if res.data:
-            return {**defaults, **res.data}
-    except Exception as e:
-        print(f"[WARNING] Could not fetch system_settings for company_id={company_id}: {e}")
-    return defaults
+    """Return system settings for a company, served through the SLA cache layer."""
+    return sla_policy_service.get_policy(company_id)
 class TicketRequest(BaseModel):
     text: str = Field(..., min_length=1, max_length=100_000, description="Ticket text to analyze")
     image_base64: str = Field("", max_length=20_000_000)
