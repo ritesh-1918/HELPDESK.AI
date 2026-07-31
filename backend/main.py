@@ -56,7 +56,7 @@ from backend.services.classifier_service import ClassifierService
 from backend.services.classifier_v2 import classifier_v2
 from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
-from backend.services.duplicate_service import DuplicateService
+from backend.services.duplicate_service import DuplicateService, SIMILARITY_THRESHOLD
 from backend.services.rag_service import RagService
 from backend.services.security_utils import constant_time_compare, secure_compare_sha256
 from backend.services.cache import CacheLayer
@@ -91,6 +91,12 @@ class CorrectionLogRequest(BaseModel):
     confidence: float = Field(0.0, ge=0.0, le=1.0)
     original_prediction: dict = Field(default_factory=dict)
     corrected_prediction: dict = Field(default_factory=dict)
+
+class FindDuplicatesRequest(BaseModel):
+    text: str = Field(..., min_length=1, max_length=100_000)
+    top_k: int = Field(5, ge=1, le=20)
+    threshold: float | None = Field(None, ge=0.0, le=1.0)
+    exclude_ticket_id: str | None = None
 
 class TicketSaveRequest(BaseModel):
     user_id: str
@@ -537,6 +543,34 @@ async def log_correction(body: CorrectionLogRequest):
     except Exception as e:
         print(f"[CORRECTION ERROR] Could not save: {e}")
         return {"status": "error", "message": str(e)}
+
+
+# ---------------------------------------------------------------------------
+# NLP embedding-based duplicate detection pipeline
+# ---------------------------------------------------------------------------
+@app.post("/ai/find_duplicates")
+@limiter.limit("10/minute")
+async def find_duplicates(request_body: FindDuplicatesRequest, request: Request):
+    """
+    Rank existing tickets by embedding cosine similarity against the query text.
+
+    Returns the top-k stored tickets with their similarity scores so callers
+    can surface "possible duplicate" candidates to the user.
+    """
+    matches = duplicate_service.find_similar(
+        request_body.text,
+        top_k=request_body.top_k,
+        threshold=request_body.threshold,
+        exclude_ticket_id=request_body.exclude_ticket_id,
+    )
+    active_threshold = request_body.threshold if request_body.threshold is not None else SIMILARITY_THRESHOLD
+    return {
+        "query": request_body.text,
+        "threshold": active_threshold,
+        "count": len(matches),
+        "matches": matches,
+        "index": duplicate_service.index_summary(),
+    }
 
 
 # ---------------------------------------------------------------------------
