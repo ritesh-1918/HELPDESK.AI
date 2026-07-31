@@ -4,9 +4,10 @@ import {
     CheckCircle2, Clock, AlertCircle, User,
     Activity, ShieldCheck, Briefcase, Globe, BarChart3,
     ImageIcon, CornerUpLeft, CheckSquare, XCircle,
-    Cpu, Eye, MessageSquare, MoveRight, Loader2, Star, Eraser
+    Cpu, Eye, MessageSquare, MoveRight, Loader2, Star, Eraser, BookOpen
 } from 'lucide-react';
 import { supabase } from "../../lib/supabaseClient";
+import { API_CONFIG } from "../../config";
 import useAuthStore from "../../store/authStore";
 import useToastStore from "../../store/toastStore";
 import { Card } from "../../components/ui/card";
@@ -34,6 +35,8 @@ const AdminTicketDetail = () => {
     const [imageUrl, setImageUrl] = useState(null);
     const [isUpdating, setIsUpdating] = useState(null);
     const [isLive, setIsLive] = useState(false);
+    const [kbRecs, setKbRecs] = useState(null);
+    const [kbLoading, setKbLoading] = useState(false);
 
     const [correctionForm, setCorrectionForm] = useState({
         category: '',
@@ -118,6 +121,30 @@ const AdminTicketDetail = () => {
         };
      
     }, [ticket_id]);
+
+    const fetchKbRecommendations = async () => {
+        if (!ticket?.id) return;
+        setKbLoading(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            const res = await fetch(`${API_CONFIG.BACKEND_URL}/tickets/${ticket.id}/recommendations`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!res.ok) throw new Error(`RAG request failed (${res.status})`);
+            const payload = await res.json();
+            setKbRecs(payload.recommendations || []);
+        } catch (err) {
+            console.error("KB recommendations error:", err);
+            setKbRecs([]);
+        } finally {
+            setKbLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchKbRecommendations();
+    }, [ticket?.id]);
 
     const handleUpdate = async (updates, actionType) => {
         setIsUpdating(actionType);
@@ -419,6 +446,33 @@ const AdminTicketDetail = () => {
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Neural KB Resolution Recommendations */}
+                    <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #f0fdf4', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+                        <div style={{ background: '#0f1f12', borderRadius: '20px 20px 0 0', color: '#ffffff', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <h3 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '14px', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', textTransform: 'uppercase' }}>
+                                <BookOpen size={16} color="#22c55e" /> KB RESOLUTION
+                            </h3>
+                            {kbLoading && <Loader2 size={14} className="animate-spin" color="#22c55e" />}
+                        </div>
+                        <div style={{ padding: '20px' }} className="space-y-3">
+                            {kbLoading ? (
+                                <p style={{ fontSize: '11px', color: '#6b7280', margin: 0 }}>Querying neural knowledge base...</p>
+                            ) : kbRecs && kbRecs.length > 0 ? (
+                                kbRecs.map((rec) => (
+                                    <div key={rec.id} style={{ border: '1px solid #f0fdf4', borderRadius: '14px', padding: '14px', background: '#fafdfb' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                                            <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#15803d', flex: 1 }}>{rec.title}</span>
+                                            <span style={{ fontSize: '10px', fontWeight: 700, color: '#6b7280', whiteSpace: 'nowrap' }}>{(rec.similarity * 100).toFixed(0)}%</span>
+                                        </div>
+                                        <p style={{ fontSize: '12px', color: '#374151', lineHeight: 1.5, margin: 0 }}>{rec.content}</p>
+                                    </div>
+                                ))
+                            ) : (
+                                <p style={{ fontSize: '11px', color: '#9ca3af', margin: 0 }}>No knowledge base recommendations found for this ticket.</p>
+                            )}
                         </div>
                     </div>
 
