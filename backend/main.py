@@ -12,7 +12,6 @@ import datetime
 import traceback
 import warnings
 import logging
-import hashlib
 from contextlib import asynccontextmanager
 
 # Suppress harmless PyTorch CPU pin_memory warning
@@ -59,6 +58,7 @@ from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
+from backend.services.security_utils import constant_time_compare, secure_compare_sha256
 
 
 # ---------------------------------------------------------------------------
@@ -536,15 +536,18 @@ async def log_correction(raw_request: Request):
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None):
-    """Fetch persistent tickets from Supabase."""
+async def get_tickets(company_id: str | None = None, user: dict = Depends(get_current_user)):
+    """Fetch persistent tickets from Supabase, scoped to the caller's tenant."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
-    
+
+    profile = get_profile_for_user(user)
+    effective_company = enforce_ticket_scope(profile, company_id)
+
     query = supabase.table("tickets").select("*").order("created_at", desc=True)
-    if company_id:
-        query = query.eq("company_id", company_id)
-        
+    if effective_company:
+        query = query.eq("company_id", effective_company)
+
     res = query.execute()
     return res.data
 
@@ -578,7 +581,7 @@ async def save_ticket(request_body: TicketSaveRequest):
             except HTTPException:
                 raise
             except Exception as profile_error:
-                user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+                user_hash = secure_compare_sha256(str(request_body.user_id))
                 logger.error(f"Tenant resolution error for user {user_hash}: {profile_error}")
                 raise HTTPException(status_code=503, detail="Failed to resolve tenant linkage") from profile_error
 
@@ -586,8 +589,10 @@ async def save_ticket(request_body: TicketSaveRequest):
         profile_company_id = profile.get("company_id")
         if final_data.get("company_id"):
             # User provided company_id: verify it matches their profile.
-            if profile_company_id and final_data["company_id"] != profile_company_id:
-                user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+            if profile_company_id and not constant_time_compare(
+                str(final_data["company_id"]), str(profile_company_id)
+            ):
+                user_hash = secure_compare_sha256(str(request_body.user_id))
                 logger.warning(f"Tenant mismatch: user {user_hash} attempted {final_data['company_id']}, assigned to {profile_company_id}")
                 raise HTTPException(status_code=403, detail="User not authorized for this tenant")
         elif profile_company_id:
@@ -601,7 +606,7 @@ async def save_ticket(request_body: TicketSaveRequest):
         if not final_data.get("company") and profile.get("company"):
             final_data["company"] = profile["company"]
 
-        user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+        user_hash = secure_compare_sha256(str(request_body.user_id))
         logger.info(f"Tenant linkage: user_hash={user_hash}, company_id={final_data.get('company_id')}")
 
 
@@ -652,14 +657,23 @@ async def save_ticket(request_body: TicketSaveRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/tickets/{ticket_id}")
-async def get_ticket_by_id(ticket_id: str):
-    """Fetch single persistent ticket."""
+async def get_ticket_by_id(ticket_id: str, user: dict = Depends(get_current_user)):
+    """Fetch single persistent ticket, enforcing tenant scope."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
-    
+
+    profile = get_profile_for_user(user)
+    effective_company = enforce_ticket_scope(profile, None)
+
     res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Ticket not found")
+
+    ticket_company = res.data.get("company_id")
+    if effective_company and ticket_company and not constant_time_compare(
+        str(ticket_company), str(effective_company)
+    ):
+        raise HTTPException(status_code=403, detail="User not authorized for this tenant")
     return res.data
 
 
@@ -1142,6 +1156,46 @@ async def get_current_user(request: Request) -> dict:
 class LoginBody(BaseModel):
     email: str
     password: str
+
+def get_profile_for_user(user: dict) -> dict:
+    """Resolve the caller's company profile (tenant + role) from Supabase."""
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database connection not initialized")
+    user_id = user.get("id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid session payload")
+    try:
+        res = supabase.table("profiles").select("company_id, company, role").eq("id", user_id).single().execute()
+    except Exception as exc:
+        raise HTTPException(status_code=401, detail=f"Profile lookup failed: {exc}") from exc
+    if not res.data:
+        raise HTTPException(status_code=404, detail="User profile not found")
+    return res.data
+
+
+def is_master_admin(profile: dict) -> bool:
+    return str(profile.get("role", "")).lower() == "master_admin"
+
+
+def enforce_ticket_scope(profile: dict, requested_company_id: str | None) -> str | None:
+    """
+    Validate JWT-derived tenant scope for a ticket query.
+
+    Master admins may query any tenant. Regular users are pinned to their
+    profile's company_id and may not request another tenant's scope.
+    """
+    profile_company = profile.get("company_id")
+    if is_master_admin(profile):
+        return requested_company_id or profile_company
+    if requested_company_id is not None:
+        if not profile_company or not constant_time_compare(
+            str(requested_company_id), str(profile_company)
+        ):
+            raise HTTPException(status_code=403, detail="User not authorized for this tenant")
+        return requested_company_id
+    if not profile_company:
+        raise HTTPException(status_code=403, detail="User has no tenant assignment")
+    return profile_company
 
 class SignupBody(BaseModel):
     email: str
