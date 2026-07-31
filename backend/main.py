@@ -61,6 +61,7 @@ from backend.services.rag_service import RagService
 from backend.services.security_utils import constant_time_compare, secure_compare_sha256
 from backend.services.cache import CacheLayer
 from backend.services.sla_service import SlaPolicyService
+from backend.services.sla_escalation_service import sla_escalation_loop
 
 # Redis-backed cache with in-memory fallback for SLA / system config lookups.
 cache_layer = CacheLayer()
@@ -255,7 +256,19 @@ async def lifespan(app: FastAPI):
 
     if strict_mode and not classifier_loaded_flag:
         raise RuntimeError("[Startup-FATAL] Classifier assets not loaded. Set ALLOW_DEGRADED_STARTUP=1 to bypass.")
+
+    # SLA auto-escalation background job (opt-out via SLA_ESCALATION_ENABLED=0).
+    sla_task = None
+    if os.environ.get("SLA_ESCALATION_ENABLED", "1") == "1":
+        sla_task = asyncio.create_task(sla_escalation_loop(supabase))
+
     yield
+    if sla_task:
+        sla_task.cancel()
+        try:
+            await sla_task
+        except asyncio.CancelledError:
+            pass
     print("[Shutdown] Cleaning up ...")
 
 
