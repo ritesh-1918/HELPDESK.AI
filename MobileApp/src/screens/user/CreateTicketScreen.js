@@ -99,7 +99,7 @@ const CreateTicketScreen = () => {
             <TextInput
               style={styles.input}
               placeholder="Describe what's wrong in detail..."
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={COLORS.placeholder}
               multiline
               value={description}
               onChangeText={setDescription}

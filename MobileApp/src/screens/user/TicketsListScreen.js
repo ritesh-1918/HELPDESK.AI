@@ -1,15 +1,18 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-  StyleSheet, View, Text, TouchableOpacity, FlatList,
+  StyleSheet, View, Text, TextInput, TouchableOpacity, FlatList,
   ActivityIndicator, RefreshControl, StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabase';
 import { COLORS, SHADOWS } from '../../styles/theme';
-import { Ticket, Clock, CheckCircle2, AlertTriangle, ChevronRight, Inbox } from 'lucide-react-native';
+import { Ticket, Clock, CheckCircle2, AlertTriangle, ChevronRight, Inbox, Search, X, History } from 'lucide-react-native';
 
 const FILTERS = ['All', 'Active', 'Resolved'];
+const SEARCH_HISTORY_KEY = '@helpdesk_search_history';
+const MAX_HISTORY = 8;
 
 const TicketsListScreen = () => {
   const navigation = useNavigation();
@@ -17,6 +20,49 @@ const TicketsListScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchHistory, setSearchHistory] = useState([]);
+
+  const loadSearchHistory = useCallback(async () => {
+    try {
+      const raw = await AsyncStorage.getItem(SEARCH_HISTORY_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      setSearchHistory(Array.isArray(parsed) ? parsed : []);
+    } catch (e) {
+      console.warn('Failed to load search history:', e);
+    }
+  }, []);
+
+  useEffect(() => { loadSearchHistory(); }, [loadSearchHistory]);
+
+  const saveSearchHistory = useCallback(async (next) => {
+    setSearchHistory(next);
+    try {
+      await AsyncStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(next));
+    } catch (e) {
+      console.warn('Failed to save search history:', e);
+    }
+  }, []);
+
+  const submitSearch = useCallback((query) => {
+    const trimmed = (query || '').trim();
+    setSearchQuery(trimmed);
+    if (!trimmed) return;
+    saveSearchHistory((prev) =>
+      [trimmed, ...prev.filter((q) => q.toLowerCase() !== trimmed.toLowerCase())].slice(0, MAX_HISTORY)
+    );
+  }, [saveSearchHistory]);
+
+  const clearSearch = useCallback(() => setSearchQuery(''), []);
+
+  const clearHistory = useCallback(async () => {
+    setSearchHistory([]);
+    try {
+      await AsyncStorage.removeItem(SEARCH_HISTORY_KEY);
+    } catch (e) {
+      console.warn('Failed to clear search history:', e);
+    }
+  }, []);
 
   const fetchTickets = useCallback(async () => {
     try {
@@ -61,11 +107,22 @@ const TicketsListScreen = () => {
     setup();
   }, [fetchTickets]);
 
-  const filteredTickets = tickets.filter((t) => {
-    if (activeFilter === 'Active') return t.status !== 'resolved';
-    if (activeFilter === 'Resolved') return t.status === 'resolved';
-    return true;
-  });
+  const filteredTickets = tickets
+    .filter((t) => {
+      if (activeFilter === 'Active') return t.status !== 'resolved';
+      if (activeFilter === 'Resolved') return t.status === 'resolved';
+      return true;
+    })
+    .filter((t) => {
+      const q = searchQuery.trim().toLowerCase();
+      if (!q) return true;
+      return (
+        String(t.id || '').toLowerCase().includes(q) ||
+        String(t.subject || '').toLowerCase().includes(q) ||
+        String(t.summary || '').toLowerCase().includes(q) ||
+        String(t.description || '').toLowerCase().includes(q)
+      );
+    });
 
   const getStatusConfig = (status) => {
     switch (status) {
@@ -126,6 +183,44 @@ const TicketsListScreen = () => {
           <Ticket size={16} color={COLORS.primary} />
           <Text style={styles.countText}>{tickets.length}</Text>
         </View>
+      </View>
+
+      {/* Search */}
+      <View style={styles.searchWrap}>
+        <View style={styles.searchBar}>
+          <Search size={18} color={COLORS.textMuted} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search tickets by ID, subject..."
+            placeholderTextColor={COLORS.textMuted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onSubmitEditing={() => submitSearch(searchQuery)}
+            returnKeyType="search"
+            autoCorrect={false}
+            accessibilityLabel="Search tickets"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={clearSearch} hitSlop={8} accessibilityLabel="Clear search" style={styles.searchClear}>
+              <X size={16} color={COLORS.textMuted} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {searchQuery.trim().length === 0 && searchHistory.length > 0 && (
+          <View style={styles.historyRow}>
+            <History size={14} color={COLORS.textMuted} />
+            <Text style={styles.historyLabel}>Recent</Text>
+            {searchHistory.map((q) => (
+              <TouchableOpacity key={q} style={styles.historyChip} onPress={() => submitSearch(q)} activeOpacity={0.8}>
+                <Text style={styles.historyChipText}>{q}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity onPress={clearHistory} hitSlop={8} accessibilityLabel="Clear search history">
+              <X size={14} color={COLORS.textMuted} />
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {/* Filter chips */}
@@ -190,6 +285,21 @@ const styles = StyleSheet.create({
     borderRadius: 14, borderWidth: 1, borderColor: COLORS.primary + '30',
   },
   countText: { fontSize: 16, fontWeight: '900', color: COLORS.primary },
+  // Search
+  searchWrap: { paddingHorizontal: 24, marginBottom: 14 },
+  searchBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#fff', borderRadius: 14, borderWidth: 1.5, borderColor: 'rgba(0,0,0,0.06)',
+    paddingHorizontal: 14, paddingVertical: 10,
+  },
+  searchInput: { flex: 1, fontSize: 14, fontWeight: '600', color: COLORS.text, padding: 0 },
+  searchClear: { padding: 2 },
+  historyRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' },
+  historyLabel: { fontSize: 11, fontWeight: '800', color: COLORS.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
+  historyChip: {
+    backgroundColor: COLORS.primaryLight, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 100,
+  },
+  historyChipText: { fontSize: 12, fontWeight: '700', color: COLORS.primary },
   // Filters
   filterRow: { flexDirection: 'row', paddingHorizontal: 24, gap: 10, marginBottom: 16 },
   chip: {

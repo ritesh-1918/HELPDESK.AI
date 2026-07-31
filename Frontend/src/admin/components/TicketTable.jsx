@@ -92,6 +92,14 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                             <tr
                                 key={ticket.ticket_id || ticket.id}
                                 onClick={() => navigate(`/admin/ticket/${ticket.ticket_id || ticket.id}`)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        navigate(`/admin/ticket/${ticket.ticket_id || ticket.id}`);
+                                    }
+                                }}
+                                role="link"
+                                tabIndex={0}
+                                aria-label={`Open ticket ${ticket.ticket_id || ticket.id}`}
                                 className="cursor-pointer group transition-colors hover:bg-[#f0fdf4]"
                                 style={{ borderBottom: '1px solid #f9fafb' }}
                             >
@@ -100,7 +108,7 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                         <div className="flex items-center gap-2">
                                             <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: 700, color: '#16a34a' }}>#{truncId}</span>
-                                            <div className="opacity-0 group-hover:opacity-100 transition-opacity text-emerald-400">
+                                            <div className="opacity-0 group-hover:opacity-100 transition-opacity text-emerald-400" aria-hidden="true">
                                                 <ExternalLink size={12} />
                                             </div>
                                         </div>
