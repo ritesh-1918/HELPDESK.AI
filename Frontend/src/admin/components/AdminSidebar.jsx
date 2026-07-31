@@ -100,7 +100,7 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
                             color: isActive ? '#15803d' : '#6b7280',
                             background: isActive ? '#f0fdf4' : 'transparent',
                             fontWeight: isActive ? 600 : 500,
-                            textDecoration: 'none', transition: 'all 0.2s ease',
+                            textDecoration: 'none', transition: 'all 0.3s ease-in-out',
                             justifyContent: isCollapsed && !isMobile ? 'center' : 'flex-start'
                         })}
                         className="group hover:bg-gray-50 relative"
@@ -148,7 +148,7 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
                         borderRadius: '10px', padding: isCollapsed && !isMobile ? '10px' : '9px 14px',
                         color: '#6b7280', background: 'transparent',
                         fontWeight: 500, border: 'none', cursor: 'pointer',
-                        transition: 'all 0.2s ease', width: '100%',
+                        transition: 'all 0.3s ease-in-out', width: '100%',
                         justifyContent: isCollapsed && !isMobile ? 'center' : 'flex-start'
                     }}
                     className="group hover:bg-red-50 hover:text-red-600"
