@@ -3,7 +3,7 @@ import { ChevronDown, Check } from 'lucide-react';
  
 import { motion, AnimatePresence } from 'framer-motion';
 
-export const Select = ({ value, onChange, options, placeholder = "Select an option", className = "", buttonClassName = "", disabled = false, ...props }) => {
+export const Select = ({ value, onChange, options, placeholder = "Select an option", className = "", buttonClassName = "", disabled = false, ariaLabel, ...props }) => {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef(null);
 
@@ -23,6 +23,7 @@ export const Select = ({ value, onChange, options, placeholder = "Select an opti
         <div ref={containerRef} className={`relative ${className || 'flex-1'}`} {...props}>
             <button
                 type="button"
+                aria-label={ariaLabel}
                 onClick={() => !disabled && setIsOpen(!isOpen)}
                 disabled={disabled}
                 className={buttonClassName || `w-full flex items-center justify-between pl-4 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 ${disabled ? 'opacity-50 cursor-not-allowed bg-slate-50' : 'hover:bg-slate-50 cursor-pointer text-slate-700'}`}

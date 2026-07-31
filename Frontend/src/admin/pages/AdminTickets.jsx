@@ -240,6 +240,7 @@ const AdminTickets = () => {
                         onChange={(e) => setStatusFilter(e.target.value)}
                         buttonClassName="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 focus:outline-none focus:ring-4 focus:ring-emerald-500/5 transition-all text-left flex justify-between items-center"
                         options={statuses.map(s => ({ value: s, label: s === 'All' ? 'All Statuses' : s }))}
+                        ariaLabel="Filter tickets by status"
                     />
 
                     {/* Category Filter */}
@@ -248,6 +249,7 @@ const AdminTickets = () => {
                         onChange={(e) => setCategoryFilter(e.target.value)}
                         buttonClassName="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 focus:outline-none focus:ring-4 focus:ring-emerald-500/5 transition-all text-left flex justify-between items-center"
                         options={categories.map(c => ({ value: c, label: c === 'All' ? 'All Categories' : c }))}
+                        ariaLabel="Filter tickets by category"
                     />
 
                     {/* Priority Filter */}
@@ -256,6 +258,7 @@ const AdminTickets = () => {
                         onChange={(e) => setPriorityFilter(e.target.value)}
                         buttonClassName="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 focus:outline-none focus:ring-4 focus:ring-emerald-500/5 transition-all text-left flex justify-between items-center"
                         options={priorities.map(p => ({ value: p, label: p === 'All' ? 'All Priorities' : p }))}
+                        ariaLabel="Filter tickets by priority"
                     />
 
                     {/* Team Filter */}
@@ -264,6 +267,7 @@ const AdminTickets = () => {
                         onChange={(e) => setTeamFilter(e.target.value)}
                         buttonClassName="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 focus:outline-none focus:ring-4 focus:ring-emerald-500/5 transition-all text-left flex justify-between items-center"
                         options={teams.map(t => ({ value: t, label: t === 'All' ? 'All Teams' : t }))}
+                        ariaLabel="Filter tickets by team"
                     />
                 </div>
             </div>
@@ -428,6 +432,7 @@ const AdminTickets = () => {
                                                 onChange={(e) => handleUpdateTicket(ticket.id, { status: e.target.value })}
                                                 buttonClassName="bg-transparent text-[10px] font-black text-slate-600 uppercase tracking-widest outline-none cursor-pointer flex justify-between items-center w-full"
                                                 options={statuses.filter(s => s !== 'All').map(s => ({ value: s.toLowerCase(), label: s }))}
+                                                ariaLabel={`Change status for ticket ${ticket.id}`}
                                             />
                                         </div>
                                     </td>
@@ -448,6 +453,7 @@ const AdminTickets = () => {
                                                 onClick={() => navigate(`/admin/ticket/${ticket.id}`)}
                                                 className="p-2 bg-slate-900 text-white rounded-xl hover:bg-emerald-600 transition-all shadow-lg shadow-slate-900/10 hover:shadow-emerald-500/20"
                                                 title="Open Detailed View"
+                                                aria-label={`Open detailed view for ticket ${ticket.id}`}
                                             >
                                                 <ArrowUpRight size={14} />
                                             </button>
