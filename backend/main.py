@@ -12,7 +12,6 @@ import datetime
 import traceback
 import warnings
 import logging
-import hashlib
 from contextlib import asynccontextmanager
 
 # Suppress harmless PyTorch CPU pin_memory warning
@@ -59,6 +58,7 @@ from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
+from backend.services.security_utils import constant_time_compare, secure_compare_sha256
 
 
 # ---------------------------------------------------------------------------
@@ -578,7 +578,7 @@ async def save_ticket(request_body: TicketSaveRequest):
             except HTTPException:
                 raise
             except Exception as profile_error:
-                user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+                user_hash = secure_compare_sha256(str(request_body.user_id))
                 logger.error(f"Tenant resolution error for user {user_hash}: {profile_error}")
                 raise HTTPException(status_code=503, detail="Failed to resolve tenant linkage") from profile_error
 
@@ -586,8 +586,10 @@ async def save_ticket(request_body: TicketSaveRequest):
         profile_company_id = profile.get("company_id")
         if final_data.get("company_id"):
             # User provided company_id: verify it matches their profile.
-            if profile_company_id and final_data["company_id"] != profile_company_id:
-                user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+            if profile_company_id and not constant_time_compare(
+                str(final_data["company_id"]), str(profile_company_id)
+            ):
+                user_hash = secure_compare_sha256(str(request_body.user_id))
                 logger.warning(f"Tenant mismatch: user {user_hash} attempted {final_data['company_id']}, assigned to {profile_company_id}")
                 raise HTTPException(status_code=403, detail="User not authorized for this tenant")
         elif profile_company_id:
@@ -601,7 +603,7 @@ async def save_ticket(request_body: TicketSaveRequest):
         if not final_data.get("company") and profile.get("company"):
             final_data["company"] = profile["company"]
 
-        user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+        user_hash = secure_compare_sha256(str(request_body.user_id))
         logger.info(f"Tenant linkage: user_hash={user_hash}, company_id={final_data.get('company_id')}")
 
 
