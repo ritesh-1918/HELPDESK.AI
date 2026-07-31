@@ -786,6 +786,51 @@ async def get_ticket_by_id(ticket_id: str, user: dict = Depends(get_current_user
     return res.data
 
 
+class KbRecommendationItem(BaseModel):
+    id: str
+    title: str
+    content: str
+    similarity: float
+
+
+class TicketRecommendationsResponse(BaseModel):
+    ticket_id: str
+    rag_available: bool
+    recommendations: list[KbRecommendationItem] = []
+
+
+@app.get("/tickets/{ticket_id}/recommendations", response_model=TicketRecommendationsResponse)
+async def get_ticket_recommendations(ticket_id: str, user: dict = Depends(get_current_user)):
+    """
+    Return RAG knowledge-base resolution recommendations for a ticket.
+
+    Embeds the ticket description and retrieves the top matching knowledge
+    base articles, which admins can present as suggested resolution steps.
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    res = supabase.table("tickets").select("id, subject, description, text").eq("id", ticket_id).single().execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    ticket = res.data
+    text = (ticket.get("description") or ticket.get("text") or ticket.get("subject") or "").strip()
+    if not text or not rag_service.is_available():
+        return TicketRecommendationsResponse(
+            ticket_id=ticket_id,
+            rag_available=rag_service.is_available(),
+            recommendations=[],
+        )
+
+    matches = rag_service.search_knowledge_base(text, threshold=0.55, match_count=5)
+    return TicketRecommendationsResponse(
+        ticket_id=ticket_id,
+        rag_available=True,
+        recommendations=matches,
+    )
+
+
 @app.post("/tickets", response_model=TicketRecord)
 async def create_ticket(ticket: TicketRecord):
     """Save a new ticket into the system."""
