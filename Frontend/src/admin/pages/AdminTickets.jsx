@@ -178,7 +178,7 @@ const AdminTickets = () => {
 
     const categories = ['All', 'Network', 'Hardware', 'Software', 'Access', 'Account'];
     const priorities = ['All', 'Low', 'Medium', 'High'];
-    const statuses = ['All', 'Open', 'In Progress', 'Resolved', 'Closed'];
+    const statuses = ['All', 'Open', 'Pending', 'In Progress', 'Resolved', 'Closed'];
     const teams = ['All', 'Software Team', 'Hardware Support', 'Network Ops', 'Security Unit', 'General Support'];
 
     const filteredTickets = useMemo(() => {
