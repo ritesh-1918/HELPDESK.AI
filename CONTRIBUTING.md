@@ -103,7 +103,53 @@ We follow a strict "Production Ready" workflow. All PRs must meet the following 
 *   Maintain central state management via **Zustand**.
 *   Ensure components are responsive across mobile, tablet, and desktop.
 
-### AI & Data
+### React Native / Expo (MobileApp)
+*   Use functional components and hooks.
+*   Manage global auth/user state via **Zustand** (see `MobileApp/src/store/`).
+*   Keep styling consistent with the shared theme in `MobileApp/src/styles/theme.js`.
+*   Always test the app on an Android emulator/device before opening a PR.
+
+---
+
+## MobileApp Developer Setup (Expo)
+
+The mobile client lives in the `MobileApp/` directory and is built with **Expo SDK 54** (React Native 0.81). Follow these steps to run it locally:
+
+### Prerequisites
+1. **Node.js** (v18 or newer) and **npm**.
+2. The **Expo Go** app on a physical device, or an Android/iOS emulator:
+   * Android: [Android Studio](https://developer.android.com/studio) + an AVD (recommended: `expo start` and press `a`).
+   * iOS: Xcode simulator (macOS only).
+3. A running instance of the HELPDESK.AI **backend** so the app can reach the API, plus the project's Supabase credentials.
+
+### Step-by-step
+1.  **Install dependencies**
+    ```bash
+    cd MobileApp
+    npm install
+    ```
+2.  **Configure environment**
+    Copy the sample configuration (if present) and fill in your Supabase/backend URLs:
+    ```bash
+    cp .env.example .env   # if .env.example exists
+    ```
+    At minimum, make sure the API base URL in the app points to your local backend (see `MobileApp/src/services/api.js`).
+3.  **Start the Metro bundler**
+    ```bash
+    npm start
+    ```
+    This launches the interactive Expo development server.
+4.  **Open the app**
+    * Press `a` to launch on an Android emulator, `i` for the iOS simulator, or
+    * scan the QR code shown in the terminal with the **Expo Go** app on your device (same Wi-Fi network required).
+5.  **Verify**
+    The app should connect to the backend, load the ticket list, and allow creating/viewing tickets.
+
+> **Troubleshooting:** If the bundler fails to resolve modules, run `npm install` again or clear the Metro cache with `npx expo start --clear`. If the app cannot reach the API, confirm the backend is running and the base URL in `MobileApp/src/services/api.js` is reachable from your device.
+
+---
+
+## AI & Data
 *   Never commit raw datasets to the repository.
 *   Ensure any model changes include a summary of evaluation metrics (F1-score, Accuracy).
 
