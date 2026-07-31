@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity } from 'lucide-react';
+import { Activity, RefreshCw, Loader2 } from 'lucide-react';
 
 import useAuthStore from "../../store/authStore";
 import { supabase } from "../../lib/supabaseClient";
@@ -72,39 +72,45 @@ const AdminDashboard = () => {
     const { profile } = useAuthStore();
     const [tickets, setTickets] = React.useState([]);
     const [isLoading, setIsLoading] = React.useState(true);
+    const [isRefreshing, setIsRefreshing] = React.useState(false);
+    const [lastUpdated, setLastUpdated] = React.useState(null);
 
-    React.useEffect(() => {
-        if (profile) {
-            const fetchStats = async () => {
-                setIsLoading(true);
-                try {
-                    let query = supabase
-                        .from('tickets')
-                        .select(`
+    const fetchStats = useCallback(async ({ manual = false } = {}) => {
+        if (manual) setIsRefreshing(true);
+        else setIsLoading(true);
+        try {
+            let query = supabase
+                .from('tickets')
+                .select(`
                     *,
                     creator:profiles!tickets_user_id_fkey(full_name, email, profile_picture)
                 `)
-                        .order('created_at', { ascending: false });
-                    if (profile?.role === 'admin' && profile?.company) query = query.eq('company', profile.company);
-                    const { data, error } = await query;
-                    if (error) {
-                        // Secondary check: If the relation fails, try a simpler select
-                        console.warn("Retrying dashboard fetch without relation...", error);
-                        const { data: basicData, error: basicError } = await supabase.from('tickets').select('*').eq('company', profile?.company).order('created_at', { ascending: false });
-                        if (basicError) throw basicError;
-                        setTickets(basicData || []);
-                    } else {
-                        setTickets(data || []);
-                    }
-                } catch (err) { console.error("Dashboard fetch error:", err); }
-                finally { setIsLoading(false); }
-            };
-
-            fetchStats();
-            const interval = setInterval(fetchStats, 30000);
-            return () => clearInterval(interval);
+                .order('created_at', { ascending: false });
+            if (profile?.role === 'admin' && profile?.company) query = query.eq('company', profile.company);
+            const { data, error } = await query;
+            if (error) {
+                // Secondary check: If the relation fails, try a simpler select
+                console.warn("Retrying dashboard fetch without relation...", error);
+                const { data: basicData, error: basicError } = await supabase.from('tickets').select('*').eq('company', profile?.company).order('created_at', { ascending: false });
+                if (basicError) throw basicError;
+                setTickets(basicData || []);
+            } else {
+                setTickets(data || []);
+            }
+            setLastUpdated(new Date());
+        } catch (err) { console.error("Dashboard fetch error:", err); }
+        finally {
+            setIsLoading(false);
+            setIsRefreshing(false);
         }
     }, [profile]);
+
+    useEffect(() => {
+        if (!profile) return;
+        fetchStats();
+        const interval = setInterval(() => fetchStats(), 30000);
+        return () => clearInterval(interval);
+    }, [profile, fetchStats]);
 
     const metrics = useMemo(() => {
         const total = tickets.length;
@@ -139,9 +145,24 @@ const AdminDashboard = () => {
                         Real-time updates active
                     </p>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 16px', background: '#F0FDF4', border: '1.5px solid #BBF7D0', borderRadius: '100px' }}>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block', animation: 'pulse-dot 2s infinite' }}></span>
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#15803d', letterSpacing: '0.08em', textTransform: 'uppercase' }}>System Active</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: 600 }}>
+                        {lastUpdated ? `Last updated ${lastUpdated.toLocaleTimeString()}` : ''}
+                    </span>
+                    <button
+                        onClick={() => fetchStats({ manual: true })}
+                        disabled={isRefreshing || isLoading}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 disabled:opacity-60 transition-all shadow-sm"
+                        aria-label="Refresh dashboard data"
+                        title="Refresh now"
+                    >
+                        {isRefreshing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                        Refresh
+                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 16px', background: '#F0FDF4', border: '1.5px solid #BBF7D0', borderRadius: '100px' }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block', animation: 'pulse-dot 2s infinite' }}></span>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#15803d', letterSpacing: '0.08em', textTransform: 'uppercase' }}>System Active</span>
+                    </div>
                 </div>
             </div>
 
