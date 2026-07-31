@@ -536,15 +536,18 @@ async def log_correction(raw_request: Request):
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None):
-    """Fetch persistent tickets from Supabase."""
+async def get_tickets(company_id: str | None = None, user: dict = Depends(get_current_user)):
+    """Fetch persistent tickets from Supabase, scoped to the caller's tenant."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
-    
+
+    profile = get_profile_for_user(user)
+    effective_company = enforce_ticket_scope(profile, company_id)
+
     query = supabase.table("tickets").select("*").order("created_at", desc=True)
-    if company_id:
-        query = query.eq("company_id", company_id)
-        
+    if effective_company:
+        query = query.eq("company_id", effective_company)
+
     res = query.execute()
     return res.data
 
@@ -654,14 +657,23 @@ async def save_ticket(request_body: TicketSaveRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/tickets/{ticket_id}")
-async def get_ticket_by_id(ticket_id: str):
-    """Fetch single persistent ticket."""
+async def get_ticket_by_id(ticket_id: str, user: dict = Depends(get_current_user)):
+    """Fetch single persistent ticket, enforcing tenant scope."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
-    
+
+    profile = get_profile_for_user(user)
+    effective_company = enforce_ticket_scope(profile, None)
+
     res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Ticket not found")
+
+    ticket_company = res.data.get("company_id")
+    if effective_company and ticket_company and not constant_time_compare(
+        str(ticket_company), str(effective_company)
+    ):
+        raise HTTPException(status_code=403, detail="User not authorized for this tenant")
     return res.data
 
 
@@ -1144,6 +1156,46 @@ async def get_current_user(request: Request) -> dict:
 class LoginBody(BaseModel):
     email: str
     password: str
+
+def get_profile_for_user(user: dict) -> dict:
+    """Resolve the caller's company profile (tenant + role) from Supabase."""
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database connection not initialized")
+    user_id = user.get("id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid session payload")
+    try:
+        res = supabase.table("profiles").select("company_id, company, role").eq("id", user_id).single().execute()
+    except Exception as exc:
+        raise HTTPException(status_code=401, detail=f"Profile lookup failed: {exc}") from exc
+    if not res.data:
+        raise HTTPException(status_code=404, detail="User profile not found")
+    return res.data
+
+
+def is_master_admin(profile: dict) -> bool:
+    return str(profile.get("role", "")).lower() == "master_admin"
+
+
+def enforce_ticket_scope(profile: dict, requested_company_id: str | None) -> str | None:
+    """
+    Validate JWT-derived tenant scope for a ticket query.
+
+    Master admins may query any tenant. Regular users are pinned to their
+    profile's company_id and may not request another tenant's scope.
+    """
+    profile_company = profile.get("company_id")
+    if is_master_admin(profile):
+        return requested_company_id or profile_company
+    if requested_company_id is not None:
+        if not profile_company or not constant_time_compare(
+            str(requested_company_id), str(profile_company)
+        ):
+            raise HTTPException(status_code=403, detail="User not authorized for this tenant")
+        return requested_company_id
+    if not profile_company:
+        raise HTTPException(status_code=403, detail="User has no tenant assignment")
+    return profile_company
 
 class SignupBody(BaseModel):
     email: str
