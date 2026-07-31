@@ -104,6 +104,14 @@ class EnsembleClassifier:
         self._initialized = False
         self._initialize()
 
+    def load(self):
+        self._initialize()
+        return self._initialized
+
+    @property
+    def _loaded(self):
+        return self._initialized
+
     def _initialize(self):
         """Lazily import model singletons to avoid circular import issues."""
         try:
