@@ -19,6 +19,10 @@ user_feedback_rows.csv
 # Git
 .git/
 
+# IDE Workspace Configurations
+.idea/
+.vscode/
+
 # Frontend
 node_modules/
 dist/

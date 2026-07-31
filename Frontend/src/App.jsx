@@ -63,6 +63,7 @@ import AdminUsers from "./admin/pages/AdminUsers";
 import AdminAnalytics from "./admin/pages/AdminAnalytics";
 import AdminProfile from "./admin/pages/AdminProfile";
 import AdminSettings from "./admin/pages/AdminSettings";
+import SLAPage from "./admin/pages/SLAPage";
 import MasterBugReports from "./master-admin/pages/MasterBugReports";
 
 // Feature Pages
@@ -206,6 +207,7 @@ function AppLayout() {
             <Route path="/admin/analytics" element={<AdminAnalytics />} />
             <Route path="/admin/profile" element={<AdminProfile />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
+            <Route path="/admin/sla" element={<SLAPage />} />
           </Route>
         </Route>
 

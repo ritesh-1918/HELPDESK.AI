@@ -10,6 +10,7 @@ export const COLORS = {
   text: '#0f1f12',
   textLight: '#4b5563',
   textMuted: '#9ca3af',
+  placeholder: '#6b7280',
   border: '#f0fdf4',
   borderDark: '#e5e7eb',
   error: '#ef4444',
