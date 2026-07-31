@@ -27,7 +27,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.encoders import jsonable_encoder
 import asyncio
 from pathlib import Path
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
 # Load environment variables from backend/.env
@@ -82,14 +82,22 @@ def get_system_settings(company_id: str) -> dict:
         print(f"[WARNING] Could not fetch system_settings for company_id={company_id}: {e}")
     return defaults
 class TicketRequest(BaseModel):
-    text: str
-    image_base64: str = ""
+    text: str = Field(..., min_length=1, max_length=100_000, description="Ticket text to analyze")
+    image_base64: str = Field("", max_length=20_000_000)
     image_text: str = "" # Keep for backward compatibility
     user_id: str | None = None
     company: str | None = None
-    image_url: str | None = None
-    confidence_threshold: float = 0.20
-    duplicate_sensitivity: float = 0.85
+    image_url: str | None = Field(None, max_length=2048)
+    confidence_threshold: float = Field(0.20, ge=0.0, le=1.0)
+    duplicate_sensitivity: float = Field(0.85, ge=0.0, le=1.0)
+
+class CorrectionLogRequest(BaseModel):
+    ticket_id: str = Field(..., min_length=1, max_length=64)
+    original_text: str = Field("", max_length=100_000)
+    ocr_text: str = Field("", max_length=100_000)
+    confidence: float = Field(0.0, ge=0.0, le=1.0)
+    original_prediction: dict = Field(default_factory=dict)
+    corrected_prediction: dict = Field(default_factory=dict)
 
 class TicketSaveRequest(BaseModel):
     user_id: str
@@ -475,22 +483,16 @@ async def analyze_bug(request: BugReportAnalysisRequest):
 CORRECTIONS_LOG_PATH = Path(__file__).parent / "data" / "corrections_log.json"
 
 @app.post("/ai/log_correction")
-async def log_correction(raw_request: Request):
+async def log_correction(body: CorrectionLogRequest):
     """Log an admin correction when the AI prediction differs from the human decision."""
-    try:
-        body = await raw_request.json()
-    except Exception as e:
-        print(f"[CORRECTION ERROR] Could not parse request body: {e}")
-        return {"status": "error", "message": "Invalid JSON body"}
+    print(f"[CORRECTION RECEIVED] Payload keys: {list(body.model_dump().keys())}")
 
-    print(f"[CORRECTION RECEIVED] Payload keys: {list(body.keys())}")
-
-    ticket_id = str(body.get("ticket_id", "unknown"))
-    original_text = str(body.get("original_text", ""))
-    ocr_text = str(body.get("ocr_text", ""))
-    confidence = float(body.get("confidence") or 0.0)
-    original_prediction = body.get("original_prediction") or {}
-    corrected_prediction = body.get("corrected_prediction") or {}
+    ticket_id = body.ticket_id
+    original_text = body.original_text
+    ocr_text = body.ocr_text
+    confidence = body.confidence
+    original_prediction = body.original_prediction
+    corrected_prediction = body.corrected_prediction
 
     # Only log if something actually changed
     changed_fields = [
@@ -1222,8 +1224,8 @@ async def get_current_user(request: Request) -> dict:
     return dict(user)
 
 class LoginBody(BaseModel):
-    email: str
-    password: str
+    email: str = Field(..., min_length=3, max_length=320)
+    password: str = Field(..., min_length=1, max_length=1024)
 
 def get_profile_for_user(user: dict) -> dict:
     """Resolve the caller's company profile (tenant + role) from Supabase."""
@@ -1266,11 +1268,11 @@ def enforce_ticket_scope(profile: dict, requested_company_id: str | None) -> str
     return profile_company
 
 class SignupBody(BaseModel):
-    email: str
-    password: str
-    full_name: str | None = None
-    role: str | None = "user"
-    company: str | None = None
+    email: str = Field(..., min_length=3, max_length=320)
+    password: str = Field(..., min_length=6, max_length=1024)
+    full_name: str | None = Field(None, min_length=1, max_length=200)
+    role: str | None = Field("user", min_length=1, max_length=50)
+    company: str | None = Field(None, min_length=1, max_length=200)
 
 @app.post("/auth/login")
 async def auth_login(body: LoginBody, response: Response):
