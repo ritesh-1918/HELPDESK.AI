@@ -105,7 +105,7 @@ const SLAPage = () => {
                                 <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
                                     SLA Target (hours)
                                 </th>
-                                <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                                <th className="hidden md:table-cell px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
                                     Status
                                 </th>
                             </tr>
@@ -114,7 +114,7 @@ const SLAPage = () => {
                             {rows.map((row) => (
                                 <tr key={row.key} className="hover:bg-slate-50/40 transition-colors">
                                     <td className="px-8 py-5 border-b border-slate-50">
-                                        <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-3 flex-wrap">
                                             <span
                                                 className="w-2.5 h-2.5 rounded-full shrink-0"
                                                 style={{ background: row.color }}
@@ -125,7 +125,7 @@ const SLAPage = () => {
                                         </div>
                                     </td>
                                     <td className="px-8 py-5 border-b border-slate-50">
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 flex-wrap">
                                             <input
                                                 type="number"
                                                 min="1"
@@ -138,7 +138,7 @@ const SLAPage = () => {
                                             <span className="text-xs font-semibold text-slate-400">hours</span>
                                         </div>
                                     </td>
-                                    <td className="px-8 py-5 border-b border-slate-50">
+                                    <td className="hidden md:table-cell px-8 py-5 border-b border-slate-50">
                                         <span
                                             className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest"
                                             style={{ background: row.bg, color: row.color, border: `1px solid ${row.border}` }}
