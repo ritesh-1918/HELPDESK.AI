@@ -49,15 +49,17 @@ class RagService:
             else:
                 raise
 
-    def search_knowledge_base(self, text: str, threshold: float = 0.85, match_count: int = 1):
+    def search_knowledge_base(self, text: str, threshold: float = 0.85, match_count: int = 1) -> list[dict]:
         """
-        Embed the input text and query Supabase for a matching article.
-        Returns the article text if found above threshold, else None.
+        Embed the input text and query Supabase for matching articles.
+
+        Returns a list of matches (each with id, title, content, similarity),
+        best first, or an empty list when nothing clears the threshold.
         """
         if not self._loaded or not self.supabase:
             if self._load_failed:
                 print("[RAG] DEGRADED: Knowledge base search skipped (model not available)")
-            return None
+            return []
 
         try:
             # Generate Embedding vector (list of 384 floats)
@@ -74,16 +76,18 @@ class RagService:
             ).execute()
 
             if response.data and len(response.data) > 0:
-                best_match = response.data[0]
-                return {
-                    "id": best_match["id"],
-                    "title": best_match["title"],
-                    "content": best_match["content"],
-                    "similarity": best_match["similarity"]
-                }
-                
-            return None
-            
+                return [
+                    {
+                        "id": best_match["id"],
+                        "title": best_match["title"],
+                        "content": best_match["content"],
+                        "similarity": best_match["similarity"],
+                    }
+                    for best_match in response.data
+                ]
+
+            return []
+
         except Exception as e:
             print(f"[RAG ERROR] Query failed: {e}")
-            return None
+            return []
