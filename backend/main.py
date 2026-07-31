@@ -12,14 +12,13 @@ import datetime
 import traceback
 import warnings
 import logging
-import hashlib
 from contextlib import asynccontextmanager
 
 # Suppress harmless PyTorch CPU pin_memory warning
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, HTTPException, Request, Query
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -28,7 +27,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.encoders import jsonable_encoder
 import asyncio
 from pathlib import Path
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
 # Load environment variables from backend/.env
@@ -59,37 +58,39 @@ from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
+from backend.services.security_utils import constant_time_compare, secure_compare_sha256
+from backend.services.cache import CacheLayer
+from backend.services.sla_service import SlaPolicyService
+from backend.services.sla_escalation_service import sla_escalation_loop
+
+# Redis-backed cache with in-memory fallback for SLA / system config lookups.
+cache_layer = CacheLayer()
+sla_policy_service = SlaPolicyService(cache_layer, supabase)
 
 
 # ---------------------------------------------------------------------------
 # Request / Response models
 # ---------------------------------------------------------------------------
 def get_system_settings(company_id: str) -> dict:
-    defaults = {
-        "ai_confidence_threshold": 0.80,
-        "duplicate_sensitivity": 0.85,
-        "enable_auto_resolve": False
-    }
-    if not supabase or not company_id:
-        return defaults
-    try:
-        res = supabase.table("system_settings").select(
-            "ai_confidence_threshold, duplicate_sensitivity, enable_auto_resolve"
-        ).eq("company_id", company_id).single().execute()
-        if res.data:
-            return {**defaults, **res.data}
-    except Exception as e:
-        print(f"[WARNING] Could not fetch system_settings for company_id={company_id}: {e}")
-    return defaults
+    """Return system settings for a company, served through the SLA cache layer."""
+    return sla_policy_service.get_policy(company_id)
 class TicketRequest(BaseModel):
-    text: str
-    image_base64: str = ""
+    text: str = Field(..., min_length=1, max_length=100_000, description="Ticket text to analyze")
+    image_base64: str = Field("", max_length=20_000_000)
     image_text: str = "" # Keep for backward compatibility
     user_id: str | None = None
     company: str | None = None
-    image_url: str | None = None
-    confidence_threshold: float = 0.20
-    duplicate_sensitivity: float = 0.85
+    image_url: str | None = Field(None, max_length=2048)
+    confidence_threshold: float = Field(0.20, ge=0.0, le=1.0)
+    duplicate_sensitivity: float = Field(0.85, ge=0.0, le=1.0)
+
+class CorrectionLogRequest(BaseModel):
+    ticket_id: str = Field(..., min_length=1, max_length=64)
+    original_text: str = Field("", max_length=100_000)
+    ocr_text: str = Field("", max_length=100_000)
+    confidence: float = Field(0.0, ge=0.0, le=1.0)
+    original_prediction: dict = Field(default_factory=dict)
+    corrected_prediction: dict = Field(default_factory=dict)
 
 class TicketSaveRequest(BaseModel):
     user_id: str
@@ -255,7 +256,19 @@ async def lifespan(app: FastAPI):
 
     if strict_mode and not classifier_loaded_flag:
         raise RuntimeError("[Startup-FATAL] Classifier assets not loaded. Set ALLOW_DEGRADED_STARTUP=1 to bypass.")
+
+    # SLA auto-escalation background job (opt-out via SLA_ESCALATION_ENABLED=0).
+    sla_task = None
+    if os.environ.get("SLA_ESCALATION_ENABLED", "1") == "1":
+        sla_task = asyncio.create_task(sla_escalation_loop(supabase))
+
     yield
+    if sla_task:
+        sla_task.cancel()
+        try:
+            await sla_task
+        except asyncio.CancelledError:
+            pass
     print("[Shutdown] Cleaning up ...")
 
 
@@ -475,22 +488,16 @@ async def analyze_bug(request: BugReportAnalysisRequest):
 CORRECTIONS_LOG_PATH = Path(__file__).parent / "data" / "corrections_log.json"
 
 @app.post("/ai/log_correction")
-async def log_correction(raw_request: Request):
+async def log_correction(body: CorrectionLogRequest):
     """Log an admin correction when the AI prediction differs from the human decision."""
-    try:
-        body = await raw_request.json()
-    except Exception as e:
-        print(f"[CORRECTION ERROR] Could not parse request body: {e}")
-        return {"status": "error", "message": "Invalid JSON body"}
+    print(f"[CORRECTION RECEIVED] Payload keys: {list(body.model_dump().keys())}")
 
-    print(f"[CORRECTION RECEIVED] Payload keys: {list(body.keys())}")
-
-    ticket_id = str(body.get("ticket_id", "unknown"))
-    original_text = str(body.get("original_text", ""))
-    ocr_text = str(body.get("ocr_text", ""))
-    confidence = float(body.get("confidence") or 0.0)
-    original_prediction = body.get("original_prediction") or {}
-    corrected_prediction = body.get("corrected_prediction") or {}
+    ticket_id = body.ticket_id
+    original_text = body.original_text
+    ocr_text = body.ocr_text
+    confidence = body.confidence
+    original_prediction = body.original_prediction
+    corrected_prediction = body.corrected_prediction
 
     # Only log if something actually changed
     changed_fields = [
@@ -536,17 +543,88 @@ async def log_correction(raw_request: Request):
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None):
-    """Fetch persistent tickets from Supabase."""
+async def get_tickets(
+    company_id: str | None = None,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1, le=200),
+    status: str | None = None,
+    priority: str | None = None,
+    category: str | None = None,
+    assigned_team: str | None = None,
+    sort_by: str = Query("created_at"),
+    sort_order: str = Query("desc", pattern="^(asc|desc)$"),
+    user: dict = Depends(get_current_user),
+):
+    """Fetch persistent tickets from Supabase with server-side pagination, filtering and sorting."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
-    
-    query = supabase.table("tickets").select("*").order("created_at", desc=True)
-    if company_id:
-        query = query.eq("company_id", company_id)
-        
+
+    profile = get_profile_for_user(user)
+    effective_company = enforce_ticket_scope(profile, company_id)
+
+    allowed_sort_fields = {"created_at", "updated_at", "status", "priority", "category", "subject", "company_id"}
+    if sort_by not in allowed_sort_fields:
+        raise HTTPException(status_code=422, detail=f"sort_by must be one of {sorted(allowed_sort_fields)}")
+    descending = sort_order.lower() == "desc"
+
+    query = (
+        supabase.table("tickets")
+        .select("*")
+        .order(sort_by, desc=descending)
+    )
+    if effective_company:
+        query = query.eq("company_id", effective_company)
+    if status:
+        query = query.eq("status", status.lower())
+    if priority:
+        query = query.eq("priority", priority.lower())
+    if category:
+        query = query.eq("category", category)
+    if assigned_team:
+        query = query.eq("assigned_team", assigned_team)
+
+    offset = (page - 1) * per_page
+    query = query.range(offset, offset + per_page - 1)
+
     res = query.execute()
-    return res.data
+    total = len(res.data)
+    if per_page and len(res.data) == per_page:
+        try:
+            count_res = (
+                supabase.table("tickets")
+                .select("id", count="exact")
+            )
+            if effective_company:
+                count_res = count_res.eq("company_id", effective_company)
+            if status:
+                count_res = count_res.eq("status", status.lower())
+            if priority:
+                count_res = count_res.eq("priority", priority.lower())
+            if category:
+                count_res = count_res.eq("category", category)
+            if assigned_team:
+                count_res = count_res.eq("assigned_team", assigned_team)
+            counted = count_res.execute()
+            if getattr(counted, "count", None) is not None:
+                total = counted.count
+        except Exception:
+            pass
+
+    return {
+        "items": res.data,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": (total + per_page - 1) // per_page,
+        "filters": {
+            "company_id": effective_company,
+            "status": status,
+            "priority": priority,
+            "category": category,
+            "assigned_team": assigned_team,
+        },
+        "sort": {"sort_by": sort_by, "sort_order": sort_order},
+    }
 
 @app.post("/tickets/save")
 async def save_ticket(request_body: TicketSaveRequest):
@@ -578,7 +656,7 @@ async def save_ticket(request_body: TicketSaveRequest):
             except HTTPException:
                 raise
             except Exception as profile_error:
-                user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+                user_hash = secure_compare_sha256(str(request_body.user_id))
                 logger.error(f"Tenant resolution error for user {user_hash}: {profile_error}")
                 raise HTTPException(status_code=503, detail="Failed to resolve tenant linkage") from profile_error
 
@@ -586,8 +664,10 @@ async def save_ticket(request_body: TicketSaveRequest):
         profile_company_id = profile.get("company_id")
         if final_data.get("company_id"):
             # User provided company_id: verify it matches their profile.
-            if profile_company_id and final_data["company_id"] != profile_company_id:
-                user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+            if profile_company_id and not constant_time_compare(
+                str(final_data["company_id"]), str(profile_company_id)
+            ):
+                user_hash = secure_compare_sha256(str(request_body.user_id))
                 logger.warning(f"Tenant mismatch: user {user_hash} attempted {final_data['company_id']}, assigned to {profile_company_id}")
                 raise HTTPException(status_code=403, detail="User not authorized for this tenant")
         elif profile_company_id:
@@ -601,7 +681,7 @@ async def save_ticket(request_body: TicketSaveRequest):
         if not final_data.get("company") and profile.get("company"):
             final_data["company"] = profile["company"]
 
-        user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+        user_hash = secure_compare_sha256(str(request_body.user_id))
         logger.info(f"Tenant linkage: user_hash={user_hash}, company_id={final_data.get('company_id')}")
 
 
@@ -652,14 +732,23 @@ async def save_ticket(request_body: TicketSaveRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/tickets/{ticket_id}")
-async def get_ticket_by_id(ticket_id: str):
-    """Fetch single persistent ticket."""
+async def get_ticket_by_id(ticket_id: str, user: dict = Depends(get_current_user)):
+    """Fetch single persistent ticket, enforcing tenant scope."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
-    
+
+    profile = get_profile_for_user(user)
+    effective_company = enforce_ticket_scope(profile, None)
+
     res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Ticket not found")
+
+    ticket_company = res.data.get("company_id")
+    if effective_company and ticket_company and not constant_time_compare(
+        str(ticket_company), str(effective_company)
+    ):
+        raise HTTPException(status_code=403, detail="User not authorized for this tenant")
     return res.data
 
 
@@ -1140,15 +1229,55 @@ async def get_current_user(request: Request) -> dict:
     return dict(user)
 
 class LoginBody(BaseModel):
-    email: str
-    password: str
+    email: str = Field(..., min_length=3, max_length=320)
+    password: str = Field(..., min_length=1, max_length=1024)
+
+def get_profile_for_user(user: dict) -> dict:
+    """Resolve the caller's company profile (tenant + role) from Supabase."""
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database connection not initialized")
+    user_id = user.get("id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid session payload")
+    try:
+        res = supabase.table("profiles").select("company_id, company, role").eq("id", user_id).single().execute()
+    except Exception as exc:
+        raise HTTPException(status_code=401, detail=f"Profile lookup failed: {exc}") from exc
+    if not res.data:
+        raise HTTPException(status_code=404, detail="User profile not found")
+    return res.data
+
+
+def is_master_admin(profile: dict) -> bool:
+    return str(profile.get("role", "")).lower() == "master_admin"
+
+
+def enforce_ticket_scope(profile: dict, requested_company_id: str | None) -> str | None:
+    """
+    Validate JWT-derived tenant scope for a ticket query.
+
+    Master admins may query any tenant. Regular users are pinned to their
+    profile's company_id and may not request another tenant's scope.
+    """
+    profile_company = profile.get("company_id")
+    if is_master_admin(profile):
+        return requested_company_id or profile_company
+    if requested_company_id is not None:
+        if not profile_company or not constant_time_compare(
+            str(requested_company_id), str(profile_company)
+        ):
+            raise HTTPException(status_code=403, detail="User not authorized for this tenant")
+        return requested_company_id
+    if not profile_company:
+        raise HTTPException(status_code=403, detail="User has no tenant assignment")
+    return profile_company
 
 class SignupBody(BaseModel):
-    email: str
-    password: str
-    full_name: str | None = None
-    role: str | None = "user"
-    company: str | None = None
+    email: str = Field(..., min_length=3, max_length=320)
+    password: str = Field(..., min_length=6, max_length=1024)
+    full_name: str | None = Field(None, min_length=1, max_length=200)
+    role: str | None = Field("user", min_length=1, max_length=50)
+    company: str | None = Field(None, min_length=1, max_length=200)
 
 @app.post("/auth/login")
 async def auth_login(body: LoginBody, response: Response):
