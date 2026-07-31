@@ -1,13 +1,40 @@
 """
 Duplicate Detection Service
 Uses sentence-transformers all-MiniLM-L6-v2 to detect similar tickets.
+
+Pipeline: embed query text -> cosine-similarity against the stored ticket
+history -> rank -> threshold gate. Indexed tickets are persisted to disk
+(case_history_cache.json) and reloaded/re-embedded at startup.
 """
 
-import uuid
+import json
+import math
 import os
-from sentence_transformers import SentenceTransformer, util
+
+from sentence_transformers import SentenceTransformer
 
 SIMILARITY_THRESHOLD = 0.70
+MAX_INDEXED_TICKETS = 10_000
+
+
+def cosine_similarity(vector_a, vector_b) -> float:
+    """
+    Pure-Python cosine similarity between two equal-length vectors.
+
+    Works with any sequence of floats (lists, tuples, numpy arrays).
+    """
+    a = list(vector_a)
+    b = list(vector_b)
+    if len(a) != len(b):
+        raise ValueError("Vectors must have the same length")
+    if not a:
+        return 0.0
+    dot = sum(x * y for x, y in zip(a, b))
+    norm_a = math.sqrt(sum(x * x for x in a))
+    norm_b = math.sqrt(sum(x * x for x in b))
+    if norm_a == 0.0 or norm_b == 0.0:
+        return 0.0
+    return dot / (norm_a * norm_b)
 
 
 class DuplicateService:
@@ -17,6 +44,8 @@ class DuplicateService:
         self._load_failed = False
         # In-memory store: list of (ticket_id, embedding, text)
         self._tickets: list[tuple[str, object, str]] = []
+        # Embedding cache for repeated query texts.
+        self._embedding_cache: dict[str, object] = {}
         self.storage_file = os.path.join(os.path.dirname(__file__), "..", "data", "case_history_cache.json")
         os.makedirs(os.path.dirname(self.storage_file), exist_ok=True)
 
@@ -28,7 +57,7 @@ class DuplicateService:
         """Load the sentence-transformer model and saved tickets."""
         if self._loaded or self._load_failed:
             return
-        
+
         print("[DuplicateService] Loading model...")
         try:
             # Check if a local model path is provided
@@ -40,20 +69,8 @@ class DuplicateService:
                 # Download from HuggingFace
                 self.model = SentenceTransformer("all-MiniLM-L6-v2")
             self._loaded = True
-            
-            if os.path.exists(self.storage_file):
-                print(f"[DuplicateService] Syncing previous ticket history from {self.storage_file}...")
-                import json
-                try:
-                    with open(self.storage_file, "r") as f:
-                        data = json.load(f)
-                        for item in data:
-                            text = item["text"]
-                            embedding = self.model.encode(text, convert_to_tensor=True)
-                            self._tickets.append((item["ticket_id"], embedding, text))
-                    print(f"[DuplicateService] Loaded {len(self._tickets)} tickets.")
-                except Exception as e:
-                    print(f"[DuplicateService] Error loading storage: {e}")
+
+            self.rebuild_index_from_disk()
         except Exception as e:
             allow_degraded = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") == "1"
             self._load_failed = True
@@ -65,9 +82,41 @@ class DuplicateService:
             else:
                 raise
 
+    def rebuild_index_from_disk(self):
+        """Reload the persisted ticket history and re-embed it into memory."""
+        if not os.path.exists(self.storage_file):
+            return
+        print(f"[DuplicateService] Syncing previous ticket history from {self.storage_file}...")
+        try:
+            with open(self.storage_file, "r") as f:
+                data = json.load(f)
+            if not isinstance(data, list):
+                print("[DuplicateService] Storage file malformed, ignoring.")
+                return
+            self._tickets = []
+            for item in data:
+                text = item.get("text")
+                ticket_id = item.get("ticket_id")
+                if not text or not ticket_id:
+                    continue
+                embedding = self.model.encode(text)
+                self._tickets.append((ticket_id, embedding, text))
+            print(f"[DuplicateService] Loaded {len(self._tickets)} tickets.")
+        except Exception as e:
+            print(f"[DuplicateService] Error loading storage: {e}")
+
+    def get_embedding(self, text: str):
+        """Return (and cache) the embedding for a piece of text."""
+        if text in self._embedding_cache:
+            return self._embedding_cache[text]
+        embedding = self.model.encode(text)
+        if len(self._embedding_cache) > 2048:
+            self._embedding_cache.clear()
+        self._embedding_cache[text] = embedding
+        return embedding
+
     def save_to_disk(self, ticket_id: str, text: str):
         """Append a new ticket to the JSON storage."""
-        import json
         data = []
         try:
             os.makedirs(os.path.dirname(self.storage_file), exist_ok=True)
@@ -77,9 +126,8 @@ class DuplicateService:
                         data = json.load(f)
                         if not isinstance(data, list):
                             data = []
-                    except:
+                    except Exception:
                         data = []
-            
             data.append({"ticket_id": ticket_id, "text": text})
             with open(self.storage_file, "w") as f:
                 json.dump(data, f, indent=2)
@@ -93,11 +141,52 @@ class DuplicateService:
         if not self.is_available():
             print(f"[DuplicateService] DEGRADED: Skipping embedding for ticket {ticket_id} (model not available)")
             return
-        embedding = self.model.encode(text, convert_to_tensor=True)
+        embedding = self.model.encode(text)
         self._tickets.append((ticket_id, embedding, text))
         self.save_to_disk(ticket_id, text)
 
-    def check_duplicate(self, text: str, threshold: float = None) -> dict:
+    def find_similar(
+        self,
+        text: str,
+        top_k: int = 5,
+        threshold: float | None = None,
+        exclude_ticket_id: str | None = None,
+    ) -> list[dict]:
+        """
+        Rank stored tickets by cosine similarity against the query text.
+
+        Returns up to ``top_k`` matches sorted by descending similarity:
+            [{"ticket_id", "text", "similarity"}, ...]
+        """
+        self.load()
+        if not self.is_available():
+            print("[DuplicateService] DEGRADED: Similarity search skipped (model not available)")
+            return []
+        if not self._tickets:
+            return []
+
+        query_embedding = self.get_embedding(text)
+        scored = []
+        for ticket_id, stored_emb, stored_text in self._tickets:
+            if exclude_ticket_id and ticket_id == exclude_ticket_id:
+                continue
+            score = cosine_similarity(query_embedding, stored_emb)
+            scored.append((score, ticket_id, stored_text))
+
+        scored.sort(key=lambda item: item[0], reverse=True)
+        return [
+            {"ticket_id": ticket_id, "text": stored_text, "similarity": round(score, 4)}
+            for score, ticket_id, stored_text in scored[: max(0, int(top_k))]
+        ]
+
+    def similarity_between(self, text_a: str, text_b: str) -> float:
+        """Direct cosine similarity between two pieces of text."""
+        self.load()
+        if not self.is_available():
+            return 0.0
+        return round(cosine_similarity(self.get_embedding(text_a), self.get_embedding(text_b)), 4)
+
+    def check_duplicate(self, text: str, threshold: float | None = None) -> dict:
         """
         Check if a ticket is a duplicate of any stored ticket.
 
@@ -113,7 +202,7 @@ class DuplicateService:
             }
         """
         self.load()
-        
+
         # If model is not available, return no duplicate found
         if not self.is_available():
             print("[DuplicateService] DEGRADED: Duplicate check skipped (model not available)")
@@ -122,32 +211,31 @@ class DuplicateService:
                 "duplicate_ticket_id": None,
                 "similarity": 0.0,
             }
-        
+
         # Use provided threshold or default to global constant
         active_threshold = threshold if threshold is not None else SIMILARITY_THRESHOLD
 
-        if not self._tickets:
+        matches = self.find_similar(text, top_k=1)
+        if not matches:
             return {
                 "is_duplicate": False,
                 "duplicate_ticket_id": None,
                 "similarity": 0.0,
             }
 
-        query_embedding = self.model.encode(text, convert_to_tensor=True)
-
-        best_score = 0.0
-        best_id = None
-
-        for ticket_id, stored_emb, _ in self._tickets:
-            score = util.cos_sim(query_embedding, stored_emb).item()
-            if score > best_score:
-                best_score = score
-                best_id = ticket_id
-
-        is_dup = best_score >= active_threshold
-
+        best = matches[0]
+        is_dup = best["similarity"] >= active_threshold
         return {
             "is_duplicate": is_dup,
-            "duplicate_ticket_id": best_id if is_dup else None,
-            "similarity": round(best_score, 4),
+            "duplicate_ticket_id": best["ticket_id"] if is_dup else None,
+            "similarity": best["similarity"],
+        }
+
+    def index_summary(self) -> dict:
+        """Diagnostics for health/readiness reporting."""
+        return {
+            "model_available": self.is_available(),
+            "indexed_tickets": len(self._tickets),
+            "threshold": SIMILARITY_THRESHOLD,
+            "storage_file": self.storage_file,
         }
