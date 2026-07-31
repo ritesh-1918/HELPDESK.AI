@@ -18,7 +18,7 @@ from contextlib import asynccontextmanager
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, HTTPException, Request, Query
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -536,20 +536,88 @@ async def log_correction(raw_request: Request):
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None, user: dict = Depends(get_current_user)):
-    """Fetch persistent tickets from Supabase, scoped to the caller's tenant."""
+async def get_tickets(
+    company_id: str | None = None,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1, le=200),
+    status: str | None = None,
+    priority: str | None = None,
+    category: str | None = None,
+    assigned_team: str | None = None,
+    sort_by: str = Query("created_at"),
+    sort_order: str = Query("desc", pattern="^(asc|desc)$"),
+    user: dict = Depends(get_current_user),
+):
+    """Fetch persistent tickets from Supabase with server-side pagination, filtering and sorting."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
 
     profile = get_profile_for_user(user)
     effective_company = enforce_ticket_scope(profile, company_id)
 
-    query = supabase.table("tickets").select("*").order("created_at", desc=True)
+    allowed_sort_fields = {"created_at", "updated_at", "status", "priority", "category", "subject", "company_id"}
+    if sort_by not in allowed_sort_fields:
+        raise HTTPException(status_code=422, detail=f"sort_by must be one of {sorted(allowed_sort_fields)}")
+    descending = sort_order.lower() == "desc"
+
+    query = (
+        supabase.table("tickets")
+        .select("*")
+        .order(sort_by, desc=descending)
+    )
     if effective_company:
         query = query.eq("company_id", effective_company)
+    if status:
+        query = query.eq("status", status.lower())
+    if priority:
+        query = query.eq("priority", priority.lower())
+    if category:
+        query = query.eq("category", category)
+    if assigned_team:
+        query = query.eq("assigned_team", assigned_team)
+
+    offset = (page - 1) * per_page
+    query = query.range(offset, offset + per_page - 1)
 
     res = query.execute()
-    return res.data
+    total = len(res.data)
+    if per_page and len(res.data) == per_page:
+        try:
+            count_res = (
+                supabase.table("tickets")
+                .select("id", count="exact")
+            )
+            if effective_company:
+                count_res = count_res.eq("company_id", effective_company)
+            if status:
+                count_res = count_res.eq("status", status.lower())
+            if priority:
+                count_res = count_res.eq("priority", priority.lower())
+            if category:
+                count_res = count_res.eq("category", category)
+            if assigned_team:
+                count_res = count_res.eq("assigned_team", assigned_team)
+            counted = count_res.execute()
+            if getattr(counted, "count", None) is not None:
+                total = counted.count
+        except Exception:
+            pass
+
+    return {
+        "items": res.data,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": (total + per_page - 1) // per_page,
+        "filters": {
+            "company_id": effective_company,
+            "status": status,
+            "priority": priority,
+            "category": category,
+            "assigned_team": assigned_team,
+        },
+        "sort": {"sort_by": sort_by, "sort_order": sort_order},
+    }
 
 @app.post("/tickets/save")
 async def save_ticket(request_body: TicketSaveRequest):
