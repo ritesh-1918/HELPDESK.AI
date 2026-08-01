@@ -28,6 +28,7 @@
     },
     "plugins": [
       "@logrocket/react-native",
+      "expo-notifications",
       [
         "expo-build-properties",
         {
