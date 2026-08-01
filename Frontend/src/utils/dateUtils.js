@@ -3,6 +3,8 @@
  * Fixes timezone shift issues by explicitly forcing local display.
  */
 
+import { formatDistanceToNow } from 'date-fns';
+
 export const formatTimelineDate = (dateStr) => {
     if (!dateStr) return null;
     
@@ -26,6 +28,31 @@ export const formatTimelineDate = (dateStr) => {
         minute: '2-digit',
         hour12: true
     });
+};
+
+/**
+ * Parse a stored timestamp into a valid Date (UTC-safe like formatTimelineDate).
+ */
+export const parseDate = (dateStr) => {
+    if (!dateStr) return null;
+    let date;
+    if (typeof dateStr === 'string' && !dateStr.includes('Z') && !dateStr.includes('+')) {
+        date = new Date(dateStr + 'Z');
+    } else {
+        date = new Date(dateStr);
+    }
+    return isNaN(date.getTime()) ? null : date;
+};
+
+/**
+ * Relative timestamp for a ticket (e.g. "3 hours ago", "in 2 days").
+ * Uses date-fns formatDistanceToNow so values stay dynamic and localized.
+ * Returns null for invalid/empty timestamps.
+ */
+export const formatRelativeTime = (dateStr, options = {}) => {
+    const date = parseDate(dateStr);
+    if (!date) return null;
+    return formatDistanceToNow(date, { addSuffix: true, ...options });
 };
 
 export const getTimeZoneAbbr = () => {

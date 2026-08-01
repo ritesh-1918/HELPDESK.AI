@@ -11,7 +11,8 @@ import { Badge } from "../../components/ui/badge";
 import { Select } from "../../components/ui/select";
 import { formatTicketId } from "../../utils/format";
 import TicketStatusBadge from "../components/TicketStatusBadge";
-import { formatTimelineDate, getTimeZoneAbbr } from "../../utils/dateUtils";
+import { getTimeZoneAbbr } from "../../utils/dateUtils";
+import RelativeTime from "../../components/shared/RelativeTime";
 import {
     Tooltip,
     TooltipContent,
@@ -333,9 +334,7 @@ function MyTickets() {
                                             </td>
                                              <td className="px-6 py-4">
                                                  <div className="flex flex-col">
-                                                     <span className="text-sm font-semibold text-gray-700">
-                                                         {formatTimelineDate(ticket.created_at)}
-                                                     </span>
+                                                     <RelativeTime value={ticket.created_at} style={{ fontSize: '14px', fontWeight: 600, color: '#374151' }} />
                                                      <span className="text-[10px] text-emerald-600 font-black uppercase tracking-widest mt-0.5">
                                                          {getTimeZoneAbbr()} Node
                                                      </span>

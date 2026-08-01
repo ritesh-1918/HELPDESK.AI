@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Clock, ChevronRight, Inbox, Loader2, AlertCircle } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import { supabase } from '../../lib/supabaseClient';
-import { formatTimelineDate } from '../../utils/dateUtils';
+import RelativeTime from '../../components/shared/RelativeTime';
 
 const RecentTickets = () => {
     const navigate = useNavigate();
@@ -155,9 +155,7 @@ const RecentTickets = () => {
                                             {getStatusBadge(ticket.status)}
                                         </td>
                                         <td style={{ padding: '16px 28px', whiteSpace: 'nowrap' }}>
-                                            <span style={{ color: '#6b7280', fontSize: '12px' }}>
-                                                {formatTimelineDate(ticket.created_at)}
-                                            </span>
+                                            <RelativeTime value={ticket.created_at} style={{ color: '#6b7280', fontSize: '12px' }} />
                                         </td>
                                     </tr>
                                 ))}
