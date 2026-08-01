@@ -14,6 +14,7 @@ import { Select } from "../../components/ui/select";
 import TicketChat from "../../components/shared/TicketChat";
 import { formatTicketId } from "../../utils/format";
 import SLABadge from "../components/SLABadge";
+import SLACountdown from "../../components/shared/SLACountdown";
 import { formatFullTimestamp } from "../../utils/dateUtils";
 import TicketTimeline from "../../user/components/TicketTimeline";
 
@@ -238,6 +239,13 @@ const AdminTicketDetail = () => {
                                 {ticket.assignee?.full_name || 'UNASSIGNED'}
                             </span>
                             <SLABadge priority={displayPriority} createdAt={ticket.created_at} status={displayStatus} compact />
+                            <SLACountdown
+                                deadline={ticket.sla_breach_at}
+                                priority={displayPriority}
+                                createdAt={ticket.created_at}
+                                status={displayStatus}
+                                compact
+                            />
                         </div>
                     </div>
                 </div>
