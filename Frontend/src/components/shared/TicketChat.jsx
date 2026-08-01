@@ -1,7 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, User, ShieldCheck, Bot, MessageSquare, Circle, Loader2 } from 'lucide-react';
+import { Send, User, ShieldCheck, Bot, MessageSquare, Circle, Loader2, Wifi, WifiOff } from 'lucide-react';
 import { supabase } from "../../lib/supabaseClient";
 import useAuthStore from "../../store/authStore";
+import { API_CONFIG } from "../../config";
+import useResilientWebSocket from "../../hooks/useResilientWebSocket";
+import { buildWebSocketUrl } from "../../utils/websocket";
 
 const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
     const [messages, setMessages] = useState([]);
@@ -20,6 +23,54 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
     const scrollContainerRef = useRef(null);
     const inputRef = useRef(null);
     const channelRef = useRef(null);
+
+    // ─── Resilient WebSocket Channel (live agent communication) ───────────
+    const isStaffUser = profile && ['admin', 'super_admin', 'agent', 'master_admin'].includes(profile?.role);
+    const wsUrl = user?.id && isStaffUser
+        ? buildWebSocketUrl(API_CONFIG.BACKEND_URL, `/ws/agents/${user.id}`)
+        : null;
+
+    const handleWsMessage = useCallback((data) => {
+        if (!data || data.type !== 'message') return;
+
+        // Ignore our own broadcasts echoing back through the hub.
+        if (data.from && data.from === user?.id) return;
+
+        // Live frames are merged when they target this agent directly or when
+        // the payload explicitly scopes a ticket id we are currently viewing.
+        if (data.to && data.to !== user?.id) return;
+        if (data.ticket_id && String(data.ticket_id) !== String(ticketId)) return;
+
+        const content = data.content;
+        const liveMessage = {
+            id: `live-${data.timestamp || Date.now()}-${data.from || 'agent'}`,
+            ticket_id: ticketId,
+            sender_id: data.from || 'live-agent',
+            sender_name: data.sender_name || (data.from ? 'Agent' : 'Support'),
+            sender_role: 'admin',
+            message: content,
+            is_internal: false,
+            is_live: true,
+            created_at: data.timestamp || new Date().toISOString()
+        };
+
+        setMessages((prev) => {
+            if (prev.find(m => m.message === content && m.sender_id === liveMessage.sender_id)) return prev;
+            return [...prev, liveMessage];
+        });
+        setTimeout(() => {
+            scrollContainerRef.current?.scrollTo({
+                top: scrollContainerRef.current.scrollHeight,
+                behavior: 'smooth'
+            });
+        }, 50);
+    }, [user?.id, ticketId]);
+
+    const { status: wsStatus, send: wsSend } = useResilientWebSocket({
+        url: wsUrl,
+        enabled: Boolean(wsUrl && ticketId),
+        onMessage: handleWsMessage
+    });
 
     // ─── Fetch Messages ──────────────────────────────────────────────────
     const fetchMessages = async () => {
@@ -208,6 +259,16 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
                     }]);
                 if (error) throw error;
             }
+
+            // Fan the message out to online agents over the resilient socket.
+            wsSend({
+                type: 'broadcast',
+                ticket_id: ticketId,
+                content,
+                sender_id: user.id,
+                sender_name: profile?.full_name || user.email,
+                timestamp: new Date().toISOString()
+            });
         } catch (err) {
             console.error("Error sending message:", err);
             setMessages(prev => prev.filter(m => m.id !== tempMessage.id));
@@ -255,6 +316,23 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
                 </div>
 
                 <div className="flex items-center gap-4">
+                    {isStaff && (
+                        <div
+                            title={`WebSocket channel: ${wsStatus}`}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                                wsStatus === 'connected'
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                    : wsStatus === 'reconnecting'
+                                        ? 'bg-amber-50 text-amber-700 border-amber-200 animate-pulse'
+                                        : wsStatus === 'connecting'
+                                            ? 'bg-slate-50 text-slate-500 border-slate-200'
+                                            : 'bg-slate-50 text-slate-400 border-slate-200'
+                            }`}
+                        >
+                            {wsStatus === 'connected' ? <Wifi size={10} /> : wsStatus === 'reconnecting' ? <Loader2 size={10} className="animate-spin" /> : <WifiOff size={10} />}
+                            {wsStatus === 'connected' ? 'Live' : wsStatus === 'reconnecting' ? 'Reconnecting' : wsStatus === 'connecting' ? 'Connecting' : 'Offline'}
+                        </div>
+                    )}
                     {isStaff && (
                         <div style={{ display: 'flex', alignItems: 'center', background: 'transparent', gap: '4px' }}>
                             <button
