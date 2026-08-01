@@ -1,10 +1,14 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, User, ShieldCheck, Bot, MessageSquare, Circle, Loader2, Wifi, WifiOff } from 'lucide-react';
+import { Send, User, ShieldCheck, Bot, MessageSquare, Circle, Loader2, Wifi, WifiOff, Lock, LockOpen } from 'lucide-react';
 import { supabase } from "../../lib/supabaseClient";
 import useAuthStore from "../../store/authStore";
 import { API_CONFIG } from "../../config";
 import useResilientWebSocket from "../../hooks/useResilientWebSocket";
 import { buildWebSocketUrl } from "../../utils/websocket";
+import {
+    encryptMessage, decryptMessage, exportKeyBase64, importKeyBase64,
+    createConversationKey, isEncryptedPayload, isWebCryptoSupported
+} from "../../utils/crypto";
 
 const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
     const [messages, setMessages] = useState([]);
@@ -17,6 +21,15 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
 
     const [isInternal, setIsInternal] = useState(false);
     const [isStaff, setIsStaff] = useState(false);
+
+    // ─── End-to-end encryption (Web Crypto) ────────────────────────────────
+    const [e2eEnabled, setE2eEnabled] = useState(false);
+    const [e2eLoading, setE2eLoading] = useState(false);
+    const [e2eReady, setE2eReady] = useState(false);
+    const [conversationKey, setConversationKey] = useState(null);
+    const [decrypted, setDecrypted] = useState({});
+    const conversationKeyRef = useRef(null);
+    useEffect(() => { conversationKeyRef.current = conversationKey; }, [conversationKey]);
 
     const { user, profile } = useAuthStore();
     const messagesEndRef = useRef(null);
@@ -71,6 +84,71 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
         enabled: Boolean(wsUrl && ticketId),
         onMessage: handleWsMessage
     });
+
+    // ─── E2E conversation key lifecycle ────────────────────────────────────
+    const ensureConversationKey = useCallback(async () => {
+        if (conversationKey) { setE2eReady(true); return conversationKey; }
+        if (!isWebCryptoSupported()) { setE2eReady(false); return null; }
+        setE2eLoading(true);
+        try {
+            const { data: ticket } = await supabase
+                .from('tickets')
+                .select('metadata')
+                .eq('id', ticketId)
+                .maybeSingle();
+
+            let key = null;
+            const stored = ticket?.metadata?.e2e_key;
+            if (stored) {
+                key = await importKeyBase64(stored);
+            } else {
+                key = await createConversationKey();
+                const exported = await exportKeyBase64(key);
+                const { error } = await supabase
+                    .from('tickets')
+                    .update({ metadata: { ...(ticket?.metadata || {}), e2e_key: exported } })
+                    .eq('id', ticketId);
+                if (error) throw error;
+            }
+            setConversationKey(key);
+            setE2eReady(true);
+            return key;
+        } catch (err) {
+            console.error("E2E key setup failed:", err);
+            setE2eReady(false);
+            return null;
+        } finally {
+            setE2eLoading(false);
+        }
+    }, [ticketId, conversationKey]);
+
+    const toggleE2E = async () => {
+        if (e2eEnabled) { setE2eEnabled(false); return; }
+        const key = await ensureConversationKey();
+        if (key) setE2eEnabled(true);
+    };
+
+    // Decrypt any encrypted payloads we currently hold in the message list.
+    useEffect(() => {
+        if (!conversationKey) return undefined;
+        let cancelled = false;
+        const process = async () => {
+            const map = {};
+            for (const msg of messages) {
+                if (isEncryptedPayload(msg.message)) {
+                    try {
+                        const plain = await decryptMessage(conversationKey, msg.message);
+                        if (!cancelled) map[msg.id] = plain;
+                    } catch {
+                        /* keep the message locked */
+                    }
+                }
+            }
+            if (!cancelled) setDecrypted(map);
+        };
+        process();
+        return () => { cancelled = true; };
+    }, [conversationKey, messages]);
 
     // ─── Fetch Messages ──────────────────────────────────────────────────
     const fetchMessages = async () => {
@@ -141,18 +219,32 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
                     table: 'ticket_messages',
                     filter: `ticket_id=eq.${ticketId}`
                 },
-                (payload) => {
+                async (payload) => {
                     const newMessage = payload.new;
+
+                    // Resolve the display text so optimistic duplicates can be
+                    // removed even when the stored payload is encrypted.
+                    let effective = newMessage;
+                    if (isEncryptedPayload(newMessage.message)) {
+                        try {
+                            const plain = await decryptMessage(conversationKeyRef.current, newMessage.message);
+                            effective = { ...newMessage, _plaintext: plain };
+                        } catch {
+                            /* keep as-is; the decrypt effect will retry */
+                        }
+                    }
+
                     setMessages((prev) => {
                         // Avoid duplicates if we already added it locally
-                        if (prev.find(m => m.id === newMessage.id)) return prev;
-                        // Remove optimistic duplicates based on content and time
-                        const filtered = prev.filter(m => !(String(m.id).startsWith('temp-') && m.message === newMessage.message && m.sender_id === newMessage.sender_id));
-                        return [...filtered, newMessage];
+                        if (prev.find(m => m.id === effective.id)) return prev;
+                        // Remove optimistic duplicates based on content and sender
+                        const incomingPlain = effective._plaintext ?? effective.message;
+                        const filtered = prev.filter(m => !(String(m.id).startsWith('temp-') && m.sender_id === effective.sender_id && m.message === incomingPlain));
+                        return [...filtered, effective];
                     });
 
                     // Handle notification logic
-                    if (newMessage.sender_id !== user?.id) {
+                    if (effective.sender_id !== user?.id) {
                         if (!isAtBottom) {
                             setUnreadCount(prev => prev + 1);
                         } else {
@@ -221,7 +313,18 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
         const content = inputValue.trim();
         const currentIsInternal = isInternal;
 
-        // Optimistic UI update
+        // When E2E is active, encrypt the payload before it leaves the browser
+        // so the API/server only ever transports opaque ciphertext.
+        let storedContent = content;
+        if (e2eEnabled && conversationKey) {
+            try {
+                storedContent = await encryptMessage(conversationKey, content);
+            } catch (err) {
+                console.error("Encryption failed, sending in plaintext:", err);
+            }
+        }
+
+        // Optimistic UI update (plaintext locally, replaced by the realtime row)
         const tempMessage = {
             id: `temp-${Date.now()}`,
             ticket_id: ticketId,
@@ -255,16 +358,17 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
                         sender_id: user.id,
                         sender_name: profile?.full_name || user.email,
                         sender_role: profile?.role || 'user',
-                        message: content
+                        message: storedContent
                     }]);
                 if (error) throw error;
             }
 
-            // Fan the message out to online agents over the resilient socket.
+            // Fan the message out to online agents over the resilient socket —
+            // still ciphertext when E2E is on, keeping the server a blind relay.
             wsSend({
                 type: 'broadcast',
                 ticket_id: ticketId,
-                content,
+                content: storedContent,
                 sender_id: user.id,
                 sender_name: profile?.full_name || user.email,
                 timestamp: new Date().toISOString()
@@ -316,6 +420,19 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
                 </div>
 
                 <div className="flex items-center gap-4">
+                    <button
+                        onClick={toggleE2E}
+                        disabled={e2eLoading}
+                        title={isWebCryptoSupported() ? (e2eEnabled ? 'End-to-end encryption is ON' : 'Enable end-to-end encryption') : 'Web Crypto is not supported in this browser'}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border transition-colors disabled:opacity-50 ${
+                            e2eEnabled
+                                ? 'bg-emerald-600 text-white border-emerald-600'
+                                : 'bg-white text-slate-500 border-slate-200 hover:border-emerald-300 hover:text-emerald-600'
+                        }`}
+                    >
+                        {e2eLoading ? <Loader2 size={10} className="animate-spin" /> : e2eEnabled ? <Lock size={10} /> : <LockOpen size={10} />}
+                        {e2eEnabled ? 'E2E On' : 'E2E Off'}
+                    </button>
                     {isStaff && (
                         <div
                             title={`WebSocket channel: ${wsStatus}`}
@@ -412,7 +529,13 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
                                             background: '#0f1f12', color: '#ffffff', borderRadius: '14px'
                                         })
                                     }}>
-                                        {msg.message}
+                                        {isEncryptedPayload(msg.message)
+                                            ? (decrypted[msg.id] ?? (
+                                                <span className="inline-flex items-center gap-1.5 italic">
+                                                    <Lock size={12} /> Encrypted message
+                                                </span>
+                                            ))
+                                            : msg.message}
                                     </div>
                                 </div>
 
