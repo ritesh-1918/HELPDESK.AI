@@ -32,10 +32,14 @@ import useAuthStore from "../../store/authStore";
 import useToastStore from "../../store/toastStore";
 import { supabase } from "../../lib/supabaseClient";
 import BugReportWidget from "../../components/shared/BugReportWidget";
+import ConfirmDialog from "../../components/shared/ConfirmDialog";
 const Profile = () => {
     const navigate = useNavigate();
     const { profile, user, logout, loading: authLoading, updateProfile } = useAuthStore();
     const { showToast } = useToastStore();
+
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [deleteLoading, setDeleteLoading] = useState(false);
 
     const [userTickets, setUserTickets] = useState([]);
     const [isEditing, setIsEditing] = useState(false);
@@ -187,19 +191,22 @@ const Profile = () => {
     };
 
     const handleDeleteAccount = async () => {
-        if (!window.confirm("Are you absolutely sure you want to permanently delete your account and all associated data? This action cannot be undone.")) return;
-
+        setDeleteLoading(true);
         try {
             const { error: rpcError } = await supabase.rpc('delete_user');
             if (rpcError) {
                 console.warn("RPC delete_user not found or failed. Attempting profile removal...", rpcError);
                 await supabase.from('profiles').delete().eq('id', user.id);
             }
+            setDeleteConfirmOpen(false);
             await logout();
             navigate('/login');
             showToast("Account deleted and securely wiped successfully.", "success");
         } catch (err) {
+            setDeleteConfirmOpen(false);
             showToast("Failed to wipe account: " + err.message, "error");
+        } finally {
+            setDeleteLoading(false);
         }
     };
 
@@ -521,7 +528,7 @@ const Profile = () => {
                                         </button>
 
                                         <button
-                                            onClick={handleDeleteAccount}
+                                            onClick={() => setDeleteConfirmOpen(true)}
                                             className="w-full p-8 flex items-center justify-between hover:bg-red-50/30 transition-all group rounded-b-3xl"
                                         >
                                             <div className="flex items-center gap-6">
@@ -608,6 +615,17 @@ const Profile = () => {
                 )}
             </AnimatePresence>
 
+            {/* Account Deletion Confirmation */}
+            <ConfirmDialog
+                open={deleteConfirmOpen}
+                title="Delete your account?"
+                message="This will permanently delete your account and all associated data. This action cannot be undone."
+                confirmLabel={deleteLoading ? "Deleting..." : "Delete Account"}
+                cancelLabel="Keep Account"
+                destructive
+                onCancel={() => setDeleteConfirmOpen(false)}
+                onConfirm={handleDeleteAccount}
+            />
 
         </div>
     );
