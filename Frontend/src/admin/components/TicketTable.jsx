@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, Clock, ExternalLink } from 'lucide-react';
 import { formatTimelineDate } from '../../utils/dateUtils';
+import PriorityBadge from '../../components/shared/PriorityBadge';
 
 const categoryDotColors = {
     'Hardware': '#f97316',
@@ -18,14 +19,6 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
     const teamMap = {
         'Network': 'Network Services', 'Hardware': 'IT Inventory', 'Software': 'Cloud Apps Team',
         'Access': 'Security Ops', 'Human Resources': 'HR Systems', 'Other': 'IT Service Desk'
-    };
-
-    const getPriorityStyle = (priority) => {
-        const p = priority?.toLowerCase();
-        if (p === 'critical') return { background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA' };
-        if (p === 'high') return { background: '#FFF7ED', color: '#EA580C', border: '1px solid #FED7AA' };
-        if (p === 'medium') return { background: '#FEFCE8', color: '#CA8A04', border: '1px solid #FDE68A' };
-        return { background: '#F0FDF4', color: '#16A34A', border: '1px solid #BBF7D0' };
     };
 
     const getStatusStyle = (status) => {
@@ -149,13 +142,7 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
 
                                 {/* Risk Factor */}
                                 <td style={{ padding: '14px 24px' }}>
-                                    <span style={{
-                                        ...getPriorityStyle(effectivePriority),
-                                        padding: '3px 12px', borderRadius: '100px', fontSize: '11px',
-                                        fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'inline-block'
-                                    }}>
-                                        {effectivePriority || 'NORMAL'}
-                                    </span>
+                                    <PriorityBadge priority={effectivePriority} />
                                 </td>
 
                                 {/* Assigned Ops */}
