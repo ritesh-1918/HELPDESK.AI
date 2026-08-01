@@ -59,6 +59,7 @@ from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
+from backend.services.rbac import require_admin
 
 
 # ---------------------------------------------------------------------------
@@ -1149,6 +1150,70 @@ class SignupBody(BaseModel):
     full_name: str | None = None
     role: str | None = "user"
     company: str | None = None
+
+
+class PrivilegeChangeBody(BaseModel):
+    target_user_id: str
+    role: str
+    action: str = "privilege.elevation"
+
+
+@app.post("/admin/users/{user_id}/privilege")
+async def admin_privilege_change(
+    user_id: str,
+    body: PrivilegeChangeBody,
+    request: Request,
+    _actor_role: str = Depends(require_admin),
+):
+    """
+    Admin-only endpoint that updates a target user's role.
+
+    Every call triggers a security audit record (issue #3906) capturing the
+    acting admin, the target user, request metadata, and a timestamp.
+    """
+    from backend.services.audit_log import log_privilege_change
+    from backend.services.rbac import get_request_role
+
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database connection offline")
+
+    new_role = body.role.strip().lower()
+    if new_role not in ("admin", "agent", "employee"):
+        raise HTTPException(status_code=400, detail="Invalid target role")
+
+    res = (
+        supabase.table("profiles")
+        .select("id, role, company_id")
+        .eq("id", user_id)
+        .single()
+        .execute()
+    )
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Target user not found")
+    previous_role = res.data.get("role")
+
+    updated = (
+        supabase.table("profiles")
+        .update({"role": new_role})
+        .eq("id", user_id)
+        .execute()
+    )
+    if not updated.data:
+        raise HTTPException(status_code=500, detail="Role update failed")
+
+    log_privilege_change(
+        supabase,
+        actor_id=request.headers.get("x-user-id") or "unknown",
+        actor_role=get_request_role(request) or "admin",
+        target_user_id=user_id,
+        target_role=new_role,
+        action=body.action,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+        meta={"previous_role": previous_role, "company_id": res.data.get("company_id")},
+    )
+
+    return {"ok": True, "target_user_id": user_id, "role": new_role, "previous_role": previous_role}
 
 @app.post("/auth/login")
 async def auth_login(body: LoginBody, response: Response):
