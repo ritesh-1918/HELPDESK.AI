@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, FlatList,
   ActivityIndicator, RefreshControl, StatusBar,
@@ -8,8 +8,21 @@ import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../lib/supabase';
 import { COLORS, SHADOWS } from '../../styles/theme';
 import { Ticket, Clock, CheckCircle2, AlertTriangle, ChevronRight, Inbox } from 'lucide-react-native';
+import LazyThumbnail from '../../components/LazyThumbnail';
 
 const FILTERS = ['All', 'Active', 'Resolved'];
+
+const THUMB_SIZE = 64;
+
+const VIEWABILITY_CONFIG = { itemVisiblePercentThreshold: 40 };
+
+const getAttachmentUri = (item) => {
+  if (Array.isArray(item?.attachments)) {
+    const first = item.attachments.find((a) => a?.url || a?.path);
+    if (first) return first.url || first.path;
+  }
+  return item?.image_url || item?.attachment_url || null;
+};
 
 const TicketsListScreen = () => {
   const navigation = useNavigation();
@@ -17,6 +30,10 @@ const TicketsListScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState('All');
+  const [visibleKeys, setVisibleKeys] = useState(() => new Set());
+  const onViewableItemsChangedRef = useRef(({ viewableItems }) => {
+    setVisibleKeys(new Set(viewableItems.map((v) => v.key)));
+  });
 
   const fetchTickets = useCallback(async () => {
     try {
@@ -67,6 +84,8 @@ const TicketsListScreen = () => {
     return true;
   });
 
+  const visibleKeysMemo = useMemo(() => visibleKeys, [visibleKeys]);
+
   const getStatusConfig = (status) => {
     switch (status) {
       case 'resolved': return { color: COLORS.success, label: 'RESOLVED', icon: CheckCircle2 };
@@ -79,6 +98,8 @@ const TicketsListScreen = () => {
   const renderTicket = ({ item }) => {
     const config = getStatusConfig(item.status);
     const StatusIcon = config.icon;
+    const thumbUri = getAttachmentUri(item);
+    const isVisible = visibleKeysMemo.has(item.id);
 
     return (
       <TouchableOpacity
@@ -87,6 +108,14 @@ const TicketsListScreen = () => {
         activeOpacity={0.8}
       >
         <View style={[styles.cardStripe, { backgroundColor: config.color }]} />
+        {thumbUri && (
+          <LazyThumbnail
+            uri={thumbUri}
+            enabled={isVisible}
+            style={styles.thumb}
+            imageStyle={styles.thumbImage}
+          />
+        )}
         <View style={styles.cardBody}>
           <View style={styles.cardHeader}>
             <Text style={styles.ticketSubject} numberOfLines={1}>{item.subject || 'Untitled Request'}</Text>
@@ -158,6 +187,13 @@ const TicketsListScreen = () => {
           renderItem={renderTicket}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          initialNumToRender={8}
+          maxToRenderPerBatch={8}
+          updateCellsBatchingPeriod={50}
+          windowSize={7}
+          removeClippedSubviews={true}
+          viewabilityConfig={VIEWABILITY_CONFIG}
+          onViewableItemsChanged={onViewableItemsChangedRef.current}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchTickets(); }} colors={[COLORS.primary]} />
           }
@@ -210,6 +246,11 @@ const styles = StyleSheet.create({
     ...SHADOWS.soft, borderWidth: 1, borderColor: 'rgba(0,0,0,0.03)',
   },
   cardStripe: { width: 5 },
+  thumb: {
+    width: THUMB_SIZE, height: THUMB_SIZE, borderRadius: 12,
+    marginVertical: 18, alignSelf: 'center',
+  },
+  thumbImage: { width: THUMB_SIZE, height: THUMB_SIZE, borderRadius: 12 },
   cardBody: { flex: 1, padding: 18 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   ticketSubject: { fontSize: 15, fontWeight: '800', color: COLORS.text, flex: 1, marginRight: 10 },

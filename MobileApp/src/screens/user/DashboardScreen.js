@@ -11,6 +11,9 @@ import {
   Plus, Ticket, Clock, CheckCircle2, Activity, ChevronRight,
   Zap, TrendingUp, BarChart3,
 } from 'lucide-react-native';
+import LazyThumbnail from '../../components/LazyThumbnail';
+
+const RECENT_TICKET_THUMB = 56;
 
 const DashboardScreen = () => {
   const navigation = useNavigation();
@@ -109,6 +112,14 @@ const DashboardScreen = () => {
     if (status === 'resolved') return COLORS.success;
     if (status === 'in_progress') return '#3b82f6';
     return '#f59e0b';
+  };
+
+  const getRecentThumb = (item) => {
+    if (Array.isArray(item?.attachments)) {
+      const first = item.attachments.find((a) => a?.url || a?.path);
+      if (first) return first.url || first.path;
+    }
+    return item?.image_url || item?.attachment_url || null;
   };
 
   if (loading) {
@@ -250,6 +261,13 @@ const DashboardScreen = () => {
               activeOpacity={0.8}
             >
               <View style={[styles.ticketStripe, { backgroundColor: getStatusColor(item.status) }]} />
+              {getRecentThumb(item) && (
+                <LazyThumbnail
+                  uri={getRecentThumb(item)}
+                  style={styles.recentThumb}
+                  imageStyle={styles.recentThumbImage}
+                />
+              )}
               <View style={styles.ticketBody}>
                 <View style={styles.ticketHeader}>
                   <Text style={styles.ticketSubject} numberOfLines={1}>{item.subject || 'Untitled'}</Text>
@@ -349,6 +367,11 @@ const styles = StyleSheet.create({
     marginBottom: 12, overflow: 'hidden', ...SHADOWS.soft, borderWidth: 1, borderColor: 'rgba(0,0,0,0.03)',
   },
   ticketStripe: { width: 5 },
+  recentThumb: {
+    width: RECENT_TICKET_THUMB, height: RECENT_TICKET_THUMB, borderRadius: 12,
+    alignSelf: 'center', marginVertical: 14,
+  },
+  recentThumbImage: { width: RECENT_TICKET_THUMB, height: RECENT_TICKET_THUMB, borderRadius: 12 },
   ticketBody: { flex: 1, padding: 18 },
   ticketHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   ticketSubject: { fontSize: 15, fontWeight: '800', color: COLORS.text, flex: 1, marginRight: 10 },
