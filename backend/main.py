@@ -274,14 +274,27 @@ limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS — locked to production + local dev only
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
+# CORS — origins loaded from environment so deployment-specific frontend
+# hosts (or "*" for development) can be configured without redeploying code.
+# Supported env var: CORS_ALLOWED_ORIGINS (comma-separated list, e.g.
+# "https://app.example.com,https://admin.example.com").
+def _parse_cors_origins() -> list[str]:
+    raw = os.environ.get("CORS_ALLOWED_ORIGINS", "").strip()
+    if raw:
+        return [origin.strip() for origin in raw.split(",") if origin.strip()]
+    # Fallback: production frontend + local dev origins.
+    return [
         "https://helpdeskaiv1.vercel.app",
         "http://localhost:5173",
         "http://localhost:3000",
-    ],
+    ]
+
+
+CORS_ALLOWED_ORIGINS = _parse_cors_origins()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
