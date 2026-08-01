@@ -536,15 +536,28 @@ async def log_correction(raw_request: Request):
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None):
-    """Fetch persistent tickets from Supabase."""
+async def get_tickets(request: Request, company_id: str | None = None):
+    """
+    Fetch persistent tickets from Supabase.
+
+    Tenant-scoped: the effective ``company_id`` (query param or X-Company-Id
+    header) is required, and results are always filtered to that tenant so
+    ticket records can never leak across companies (issue #3900).
+    """
+    from backend.services.tenant_isolation import require_tenant
+
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
-    
-    query = supabase.table("tickets").select("*").order("created_at", desc=True)
-    if company_id:
-        query = query.eq("company_id", company_id)
-        
+
+    tenant_id = require_tenant(request, company_id)
+
+    query = (
+        supabase.table("tickets")
+        .select("*")
+        .eq("company_id", tenant_id)
+        .order("created_at", desc=True)
+    )
+
     res = query.execute()
     return res.data
 
