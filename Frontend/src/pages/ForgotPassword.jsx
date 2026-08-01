@@ -135,7 +135,7 @@ function ForgotPassword() {
                 <div className="flex justify-center mb-10">
                     <Link to="/" className="flex items-center gap-2 bg-white/40 backdrop-blur-xl px-5 py-2.5 rounded-2xl border border-white/40 shadow-xl shadow-emerald-900/5 transition hover:bg-white/60 group">
                         <BrainCircuit className="w-6 h-6 text-emerald-600 transition-transform group-hover:rotate-12" />
-                        <span className="font-extrabold text-xl tracking-tight text-[#0f1f12]" style={{ fontFamily: 'Syne' }}>HelpDesk<span className="text-emerald-600">.ai</span></span>
+                        <span className="font-extrabold text-xl tracking-tight text-[#0f1f12]" style={{ fontFamily: 'Inter' }}>HelpDesk<span className="text-emerald-600">.ai</span></span>
                     </Link>
                 </div>
 
@@ -148,7 +148,7 @@ function ForgotPassword() {
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-emerald-600 opacity-20"></div>
 
                     <div className="text-center mb-10">
-                        <h2 className="text-3xl font-black text-[#0f1f12] tracking-tight" style={{ fontFamily: 'Syne' }}>
+                        <h2 className="text-3xl font-black text-[#0f1f12] tracking-tight" style={{ fontFamily: 'Inter' }}>
                             {step === 1 ? "Recovery Access" : step === 2 ? "Verify Identity" : "Secure Protocol"}
                         </h2>
                         <p className="text-gray-500 mt-2 font-medium">

@@ -189,7 +189,7 @@ function AdminSignup() {
                     <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6" style={{ background: '#f0fdf4', border: '1px solid #d1fae5' }}>
                         <Mail className="w-10 h-10" style={{ color: '#16a34a' }} />
                     </div>
-                    <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: '28px', fontWeight: 800, color: '#0f1f12', letterSpacing: '-0.02em', marginBottom: '16px' }}>Check Your Email</h2>
+                    <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: '28px', fontWeight: 800, color: '#0f1f12', letterSpacing: '-0.02em', marginBottom: '16px' }}>Check Your Email</h2>
                     <p style={{ color: '#374151', fontSize: '15px', lineHeight: 1.7, marginBottom: '32px' }}>
                         Registration request received! We've sent a verification link to <span style={{ fontWeight: 700, color: '#16a34a' }}>{formData.email}</span>.
                     </p>
@@ -242,7 +242,7 @@ function AdminSignup() {
                         <BrainCircuit className="w-10 h-10" style={{ color: '#16a34a' }} />
                     </div>
                     <p style={{ color: '#16a34a', fontWeight: 700, fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '16px' }}>Enterprise Edition</p>
-                    <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: '42px', fontWeight: 800, color: '#0f1f12', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '32px' }}>
+                    <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: '42px', fontWeight: 800, color: '#0f1f12', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '32px' }}>
                         Scale your <span style={{ color: '#16a34a' }}>IT Support</span> globally.
                     </h1>
 
