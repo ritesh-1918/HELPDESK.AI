@@ -4,7 +4,6 @@ to prevent timing side-channel attacks.
 """
 
 import hashlib
-import hmac
 import secrets
 from typing import Optional
 
