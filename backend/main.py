@@ -59,6 +59,10 @@ from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
+from backend.services.rbac import (
+    require_agent_or_admin,
+    require_any_authenticated,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -549,7 +553,11 @@ async def get_tickets(company_id: str | None = None):
     return res.data
 
 @app.post("/tickets/save")
-async def save_ticket(request_body: TicketSaveRequest):
+async def save_ticket(
+    request_body: TicketSaveRequest,
+    request: Request,
+    _: str = Depends(require_any_authenticated),
+):
     """
     OFFICIAL PERSISTENCE: Saves the analyzed ticket to Supabase.
     This is called AFTER the user confirms the analysis results.
@@ -664,8 +672,12 @@ async def get_ticket_by_id(ticket_id: str):
 
 
 @app.post("/tickets", response_model=TicketRecord)
-async def create_ticket(ticket: TicketRecord):
-    """Save a new ticket into the system."""
+async def create_ticket(
+    ticket: TicketRecord,
+    request: Request,
+    _: str = Depends(require_any_authenticated),
+):
+    """Save a new ticket into the system (any authenticated role)."""
     # Check for duplicates before adding
     existing = next((t for t in TICKETS_DB if t.ticket_id == ticket.ticket_id), None)
     if existing:
@@ -677,8 +689,13 @@ async def create_ticket(ticket: TicketRecord):
 
 
 @app.patch("/tickets/{ticket_id}", response_model=TicketRecord)
-async def update_ticket(ticket_id: str, updates: dict):
-    """Partially update a ticket's fields (e.g., status, viewed_at)."""
+async def update_ticket(
+    ticket_id: str,
+    updates: dict,
+    request: Request,
+    _: str = Depends(require_agent_or_admin),
+):
+    """Partially update a ticket's fields (admin/agent only)."""
     for i, ticket in enumerate(TICKETS_DB):
         if str(ticket.ticket_id) == str(ticket_id):
             # Convert to dict, update, then back to model
