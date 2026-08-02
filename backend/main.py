@@ -24,7 +24,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse, FileResponse
 from fastapi.encoders import jsonable_encoder
 import asyncio
 from pathlib import Path
@@ -661,6 +661,32 @@ async def get_ticket_by_id(ticket_id: str):
     if not res.data:
         raise HTTPException(status_code=404, detail="Ticket not found")
     return res.data
+
+
+UPLOADS_DIR = os.environ.get(
+    "UPLOADS_DIR",
+    os.path.join(os.path.dirname(__file__), "uploads"),
+)
+
+@app.get("/tickets/attachments/{filename}")
+async def download_attachment(filename: str):
+    """
+    Serve a ticket attachment safely.
+
+    The filename is user-supplied, so it is resolved through
+    ``resolve_safe_attachment_path`` which rejects traversal tokens (``..``,
+    NULL bytes, leading slashes) and verifies the final path stays inside the
+    uploads directory before the file is streamed to the client.
+    """
+    from backend.services.ocr_service import resolve_safe_attachment_path
+    try:
+        target = resolve_safe_attachment_path(filename, UPLOADS_DIR)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid attachment file name")
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+
+    return FileResponse(target, filename=os.path.basename(str(target)))
 
 
 @app.post("/tickets", response_model=TicketRecord)
