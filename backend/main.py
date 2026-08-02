@@ -19,9 +19,7 @@ from contextlib import asynccontextmanager
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
-from fastapi import FastAPI, Depends, HTTPException, Request
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
+from fastapi import FastAPI, Depends, HTTPException, Request, Response
 from slowapi.errors import RateLimitExceeded
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
@@ -59,6 +57,12 @@ from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
+from backend.rate_limit import (
+    AUTH_LOGIN_LIMIT,
+    TICKET_CREATE_LIMIT,
+    build_limiter,
+    rate_limit_exceeded_handler,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -269,10 +273,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Rate limiter — 10 AI requests per minute per IP (free tier protection)
-limiter = Limiter(key_func=get_remote_address)
+# Rate limiter — AI + sensitive routes are capped per client IP (free tier protection).
+limiter = build_limiter()
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
 # CORS — locked to production + local dev only
 app.add_middleware(
@@ -549,7 +553,8 @@ async def get_tickets(company_id: str | None = None):
     return res.data
 
 @app.post("/tickets/save")
-async def save_ticket(request_body: TicketSaveRequest):
+@limiter.limit(TICKET_CREATE_LIMIT)
+async def save_ticket(request: Request, request_body: TicketSaveRequest):
     """
     OFFICIAL PERSISTENCE: Saves the analyzed ticket to Supabase.
     This is called AFTER the user confirms the analysis results.
@@ -664,7 +669,8 @@ async def get_ticket_by_id(ticket_id: str):
 
 
 @app.post("/tickets", response_model=TicketRecord)
-async def create_ticket(ticket: TicketRecord):
+@limiter.limit(TICKET_CREATE_LIMIT)
+async def create_ticket(request: Request, ticket: TicketRecord):
     """Save a new ticket into the system."""
     # Check for duplicates before adding
     existing = next((t for t in TICKETS_DB if t.ticket_id == ticket.ticket_id), None)
@@ -1151,7 +1157,8 @@ class SignupBody(BaseModel):
     company: str | None = None
 
 @app.post("/auth/login")
-async def auth_login(body: LoginBody, response: Response):
+@limiter.limit(AUTH_LOGIN_LIMIT)
+async def auth_login(request: Request, body: LoginBody, response: Response):
     if not supabase:
         raise HTTPException(status_code=503, detail="Database connection offline")
     try:
@@ -1171,7 +1178,8 @@ async def auth_login(body: LoginBody, response: Response):
     return {"user": user_payload, "message": "Session cookies set"}
 
 @app.post("/auth/signup")
-async def auth_signup(body: SignupBody, response: Response):
+@limiter.limit(AUTH_LOGIN_LIMIT)
+async def auth_signup(request: Request, body: SignupBody, response: Response):
     if not supabase:
         raise HTTPException(status_code=503, detail="Database connection offline")
     metadata = {}
