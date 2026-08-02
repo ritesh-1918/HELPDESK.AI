@@ -19,7 +19,7 @@ from contextlib import asynccontextmanager
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -59,6 +59,10 @@ from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
+from backend.websocket_hub import WebSocketHub, agent_socket_handler
+
+# Realtime agent messaging hub (issue #3899).
+ws_hub = WebSocketHub()
 
 
 # ---------------------------------------------------------------------------
@@ -1208,4 +1212,10 @@ async def auth_logout(response: Response):
 @app.get("/auth/me")
 async def auth_me(user: dict = Depends(get_current_user)):
     return {"user": user}
+
+
+@app.websocket("/ws/agents/{agent_id}")
+async def agent_ws(websocket: WebSocket, agent_id: str):
+    """Realtime agent messaging channel (issue #3899)."""
+    await agent_socket_handler(ws_hub, websocket, agent_id)
 
