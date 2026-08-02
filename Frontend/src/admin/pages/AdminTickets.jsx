@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { Select } from "../../components/ui/select";
 import { formatTicketId } from "../../utils/format";
-import SLABadge from "../components/SLABadge";
+import SLACountdown from "../../components/shared/SLACountdown";
 import { formatTimelineDate } from "../../utils/dateUtils";
 
 const AdminTickets = () => {
@@ -432,12 +432,14 @@ const AdminTickets = () => {
                                         </div>
                                     </td>
 
-                                    {/* SLA Badge */}
+                                    {/* SLA Countdown */}
                                     <td className="px-6 py-6">
-                                        <SLABadge
+                                        <SLACountdown
+                                            deadline={ticket.sla_breach_at}
                                             priority={ticket.priority}
                                             createdAt={ticket.created_at}
                                             status={ticket.status}
+                                            compact
                                         />
                                     </td>
 

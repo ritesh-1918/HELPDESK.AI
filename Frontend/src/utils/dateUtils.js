@@ -3,6 +3,18 @@
  * Fixes timezone shift issues by explicitly forcing local display.
  */
 
+export const parseDate = (dateStr) => {
+    if (dateStr === null || dateStr === undefined || dateStr === '') return null;
+    let date;
+    if (typeof dateStr === 'string' && !dateStr.includes('Z') && !dateStr.includes('+')) {
+        // Raw strings without a timezone are treated as UTC coming from our backend
+        date = new Date(dateStr + 'Z');
+    } else {
+        date = new Date(dateStr);
+    }
+    return isNaN(date.getTime()) ? null : date;
+};
+
 export const formatTimelineDate = (dateStr) => {
     if (!dateStr) return null;
     

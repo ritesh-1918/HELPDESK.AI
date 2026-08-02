@@ -11,6 +11,7 @@ import { Card } from "../../components/ui/card";
 import TicketStatusBadge from "../components/TicketStatusBadge";
 import TicketTimeline from "../components/TicketTimeline";
 import TicketChat from "../../components/shared/TicketChat";
+import SLACountdown from "../../components/shared/SLACountdown";
 import { formatTicketId } from "../../utils/format";
 import CSATModal from "../components/CSATModal";
 
@@ -238,6 +239,15 @@ const TicketDetail = () => {
 
                 {/* RIGHT SIDE (Context Panel) */}
                 <div className="flex flex-col gap-6">
+
+                    {/* Card 2.5: SLA Resolution Clock */}
+                    <SLACountdown
+                        deadline={ticket.sla_breach_at}
+                        priority={ticket.priority}
+                        createdAt={ticket.created_at}
+                        status={ticket.status}
+                        className="shadow-sm"
+                    />
 
                     {/* Card 3: AI Understanding */}
                     <Card className="p-6 rounded-2xl border border-gray-100 shadow-sm bg-[#f6f8f7]">
