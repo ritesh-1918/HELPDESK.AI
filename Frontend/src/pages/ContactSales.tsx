@@ -50,12 +50,13 @@ export default function ContactSales() {
             : DEFAULT_COMPANY_SIZE;
 
         return {
-            name: '',
-            email: '',
-            company: '',
-            phone: '',
-            company_size: companySizeInit,
-            message: ''
+        name: '',
+        email: '',
+        company: '',
+        website: '',
+        phone: '',
+        company_size: '50-200',
+        message: ''
         };
     });
 
@@ -67,8 +68,15 @@ export default function ContactSales() {
         }
     };
 
-    const handleSubmit = async (e) => {
+  const handleSubmit = async (e) => {
         e.preventDefault();
+        if (formData.website.trim()) {
+            const urlRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/i;
+            if (!urlRegex.test(formData.website.trim())) {
+                alert('Please enter a valid website URL (e.g. https://company.com).');
+                return;
+            }
+        }
         setIsSubmitting(true);
         
         try {
@@ -241,9 +249,30 @@ export default function ContactSales() {
                                             onChange={handleChange}
                                         />
                                     </div>
+                               </div>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-sm font-semibold text-gray-700 ml-1">Company Website</label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                        <Building2 className="h-5 w-5 text-gray-400" />
+                                    </div>
+                                    <input
+                                        type="url"
+                                        name="website"
+                                        className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all font-medium text-gray-900"
+                                        placeholder="https://company.com"
+                                        value={formData.website}
+                                        onChange={handleChange}
+                                    />
                                 </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <div className="space-y-1.5 relative">
                                     <label className="text-sm font-semibold text-gray-700 ml-1">Company Size</label>
+                                    
                                     <div className="relative">
                                         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                                             <Building2 className="h-5 w-5 text-gray-400" />
