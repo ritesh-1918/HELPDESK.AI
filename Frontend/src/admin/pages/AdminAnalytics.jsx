@@ -16,10 +16,19 @@ import { formatTimelineDate } from "../../utils/dateUtils";
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#a855f7', '#ec4899'];
 
+const formatDuration = (hours) => {
+    if (hours === null || hours === undefined || isNaN(hours)) return 'N/A';
+    if (hours < 1) return `${Math.round(hours * 60)}m`;
+    const h = Math.floor(hours);
+    const m = Math.round((hours - h) * 60);
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+};
+
 const AdminAnalytics = () => {
     const { profile } = useAuthStore();
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [activeWeekday, setActiveWeekday] = useState(null);
 
     const fetchAnalytics = async () => {
         setLoading(true);
@@ -66,7 +75,8 @@ const AdminAnalytics = () => {
     const stats = useMemo(() => {
         if (!tickets.length) return {
             total: 0, open: 0, resolved: 0, highPriority: 0,
-            volumeTimeline: [], categoryData: [], teamData: [], resolutionData: [], liveFeed: []
+            volumeTimeline: [], categoryData: [], teamData: [], resolutionData: [],
+            weekdayResolution: [], liveFeed: []
         };
 
         const total = tickets.length;
@@ -111,7 +121,34 @@ const AdminAnalytics = () => {
         });
         const resolutionData = Object.keys(statusMap).map(key => ({ name: key, value: statusMap[key] }));
 
-        // 5. Live Activity Feed (Latest 10)
+        // 5. Average Resolution Duration Grouped By Weekday
+        const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const weekdayMap = {};
+        tickets.forEach(t => {
+            const isResolvedTicket = /resolv|closed/.test(String(t.status || '').toLowerCase());
+            const resolvedAt = t.resolved_at || t.metadata?.resolved_at || t.updated_at;
+            if (!t.created_at || !isResolvedTicket || !resolvedAt) return;
+
+            const createdMs = new Date(t.created_at).getTime();
+            const resolvedMs = new Date(resolvedAt).getTime();
+            if (isNaN(createdMs) || isNaN(resolvedMs) || resolvedMs <= createdMs) return;
+
+            const day = WEEKDAYS[new Date(t.created_at).getDay()];
+            const hours = (resolvedMs - createdMs) / (1000 * 60 * 60);
+            if (!weekdayMap[day]) weekdayMap[day] = { totalHours: 0, count: 0 };
+            weekdayMap[day].totalHours += hours;
+            weekdayMap[day].count += 1;
+        });
+        const weekdayResolution = WEEKDAYS.map(day => {
+            const bucket = weekdayMap[day];
+            return {
+                name: day,
+                avgHours: bucket ? +((bucket.totalHours / bucket.count)).toFixed(1) : 0,
+                tickets: bucket ? bucket.count : 0,
+            };
+        });
+
+        // 6. Live Activity Feed (Latest 10)
         const liveFeed = tickets.slice(0, 10).map(t => ({
             ticket_id: t.id,
             user: t.creator?.full_name || t.profiles?.full_name || (t.user_id ? `User ${t.user_id.slice(0, 5)}` : 'Anonymous'),
@@ -123,7 +160,7 @@ const AdminAnalytics = () => {
 
         return {
             total, open, resolved, highPriority,
-            volumeTimeline, categoryData, teamData, resolutionData, liveFeed
+            volumeTimeline, categoryData, teamData, resolutionData, weekdayResolution, liveFeed
         };
     }, [tickets]);
 
@@ -257,6 +294,57 @@ const AdminAnalytics = () => {
                                 <div className="w-full h-full flex items-center justify-center text-slate-300 font-black uppercase text-[10px] italic tracking-widest">No activity data</div>
                             )}
                         </div>
+                    </div>
+
+                    {/* Resolution Duration By Weekday (Interactive) */}
+                    <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #f0fdf4', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', padding: '24px' }}>
+                        <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
+                            <h3 style={{ fontFamily: 'Syne, sans-serif', fontSize: '16px', fontWeight: 700, color: '#0f1f12', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Clock size={18} color="#22c55e" /> Avg Resolution Time by Weekday
+                            </h3>
+                            {activeWeekday !== null && stats.weekdayResolution[activeWeekday]?.tickets > 0 && (
+                                <span style={{ background: '#f0fdf4', color: '#166534', borderRadius: '100px', padding: '6px 14px', fontSize: '11px', fontWeight: 700 }}>
+                                    {stats.weekdayResolution[activeWeekday].name} · avg{' '}
+                                    {formatDuration(stats.weekdayResolution[activeWeekday].avgHours)} across {stats.weekdayResolution[activeWeekday].tickets} tickets
+                                </span>
+                            )}
+                        </div>
+                        <div className="h-[280px] w-full">
+                            {stats.weekdayResolution.some(d => d.tickets > 0) ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart
+                                        data={stats.weekdayResolution}
+                                        margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
+                                        barCategoryGap="28%"
+                                    >
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 11, fontWeight: 700 }} />
+                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 10, fontWeight: 600 }} tickFormatter={(v) => `${v}h`} />
+                                        <Tooltip
+                                            cursor={{ fill: '#f8faf9' }}
+                                            contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #f0fdf4', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
+                                            formatter={(value, _name, entry) => [`${formatDuration(value)}`, `Avg (${entry.payload.tickets || 0} resolved)`]}
+                                        />
+                                        <Bar
+                                            dataKey="avgHours"
+                                            fill="#16a34a"
+                                            radius={[6, 6, 0, 0]}
+                                            maxBarSize={44}
+                                            activeBar={{ fill: '#10b981', stroke: '#059669', strokeWidth: 2 }}
+                                            onClick={(data, idx) => setActiveWeekday(idx)}
+                                        />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center flex-col gap-3">
+                                    <Clock className="w-10 h-10 text-slate-200" />
+                                    <p className="text-slate-300 font-black uppercase text-[10px] italic tracking-widest text-center">No resolved ticket durations to chart</p>
+                                </div>
+                            )}
+                        </div>
+                        <p style={{ fontSize: '10px', color: '#9ca3af', marginTop: '14px', fontWeight: 600 }} className="uppercase tracking-widest">
+                            Click any bar to inspect that weekday's average resolution duration
+                        </p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
