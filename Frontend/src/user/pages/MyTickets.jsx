@@ -11,6 +11,7 @@ import { Badge } from "../../components/ui/badge";
 import { Select } from "../../components/ui/select";
 import { formatTicketId } from "../../utils/format";
 import TicketStatusBadge from "../components/TicketStatusBadge";
+import PriorityBadge from "../../components/shared/PriorityBadge";
 import { formatTimelineDate, getTimeZoneAbbr } from "../../utils/dateUtils";
 import {
     Tooltip,
@@ -111,14 +112,6 @@ function MyTickets() {
             });
     }, [tickets, searchQuery, statusFilter, priorityFilter]);
 
-
-    const getPriorityColor = (priority) => {
-        const p = (priority || '').toLowerCase();
-        if (p === 'high' || p === 'critical') return 'text-red-600 font-bold';
-        if (p === 'medium') return 'text-amber-600 font-bold';
-        if (p === 'low') return 'text-blue-600 font-bold';
-        return 'text-gray-600';
-    };
 
     return (
         <main className="flex-1 max-w-[1200px] w-full mx-auto px-6 py-10 flex flex-col gap-8">
@@ -327,9 +320,7 @@ function MyTickets() {
                                                 <TicketStatusBadge status={ticket.status} />
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className={`text-sm capitalize ${getPriorityColor(ticket.priority)}`}>
-                                                    {ticket.priority || 'medium'}
-                                                </span>
+                                                <PriorityBadge priority={ticket.priority} />
                                             </td>
                                              <td className="px-6 py-4">
                                                  <div className="flex flex-col">
