@@ -1,0 +1,47 @@
+import logging
+from pathlib import Path
+from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
+
+from backend.config import settings
+
+env_path = Path(__file__).parent / '.env'
+load_dotenv(dotenv_path=env_path)
+
+supabase = None
+try:
+    from supabase import create_client, Client
+    url = settings.SUPABASE_URL
+    key = settings.SUPABASE_SERVICE_KEY
+    if not url or not key:
+        logger.error("SUPABASE_URL or SUPABASE_SERVICE_KEY not set in backend/.env")
+    else:
+        # NOTE (Issue #3374 prerequisite fix): this call was previously
+        # missing entirely - the client was never created even when
+        # credentials WERE present, and the preceding `try/else` (with no
+        # `except`) was a SyntaxError that blocked this whole module -
+        # and therefore backend/routers/admin.py, which imports `supabase`
+        # from here - from importing at all.
+        supabase = create_client(url, key)
+except Exception as e:
+    logger.exception("Failed to initialize Supabase client: %s", e)
+    supabase = None
+
+def get_system_settings(company_id: str) -> dict:
+    defaults = {
+        "ai_confidence_threshold": 0.80,
+        "duplicate_sensitivity": 0.85,
+        "enable_auto_resolve": False
+    }
+    if not supabase or not company_id:
+        return defaults
+    try:
+        res = supabase.table("system_settings").select(
+            "ai_confidence_threshold, duplicate_sensitivity, enable_auto_resolve"
+        ).eq("company_id", company_id).single().execute()
+        if res.data:
+            return {**defaults, **res.data}
+    except Exception as e:
+        logger.warning("Could not fetch system_settings for company_id=%s: %s", company_id, e)
+    return defaults

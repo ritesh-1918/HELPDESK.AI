@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import {
   StyleSheet, View, Text, TextInput, TouchableOpacity,
   FlatList, ActivityIndicator, StatusBar,
@@ -7,6 +7,22 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { COLORS, SHADOWS } from '../../styles/theme';
 import { Search, BookOpen, ChevronRight, ArrowLeft, HelpCircle } from 'lucide-react-native';
+
+const ArticleCard = memo(({ item }) => (
+  <TouchableOpacity
+    style={styles.articleCard}
+    onPress={() => {/* Show article detail modal or screen */}}
+  >
+    <View style={styles.articleIcon}>
+      <BookOpen size={20} color={COLORS.primary} />
+    </View>
+    <View style={styles.articleInfo}>
+      <Text style={styles.articleTitle}>{item.title}</Text>
+      <Text style={styles.articleSnippet} numberOfLines={2}>{item.content}</Text>
+    </View>
+    <ChevronRight size={18} color={COLORS.textMuted} />
+  </TouchableOpacity>
+));
 
 const KnowledgeBaseScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -55,21 +71,9 @@ const KnowledgeBaseScreen = ({ navigation }) => {
     }
   };
 
-  const renderArticle = ({ item }) => (
-    <TouchableOpacity 
-      style={styles.articleCard}
-      onPress={() => {/* Show article detail modal or screen */}}
-    >
-      <View style={styles.articleIcon}>
-        <BookOpen size={20} color={COLORS.primary} />
-      </View>
-      <View style={styles.articleInfo}>
-        <Text style={styles.articleTitle}>{item.title}</Text>
-        <Text style={styles.articleSnippet} numberOfLines={2}>{item.content}</Text>
-      </View>
-      <ChevronRight size={18} color={COLORS.textMuted} />
-    </TouchableOpacity>
-  );
+  const renderArticle = useCallback(({ item }) => (
+    <ArticleCard item={item} />
+  ), []);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

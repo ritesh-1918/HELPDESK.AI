@@ -1,0 +1,115 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-provisioning
+  namespace: monitoring
+data:
+  datasources.yml: |
+    apiVersion: 1
+    deleteDatasources: false
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus:9090
+        isDefault: true
+        editable: true
+  dashboards.yml: |
+    apiVersion: 1
+    providers:
+      - name: "helpdesk-dashboards"
+        orgId: 1
+        folder: ""
+        type: file
+        disableDeletion: false
+        updateIntervalSeconds: 10
+        options:
+          path: /var/lib/grafana/dashboards
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: monitoring
+data:
+  helpdesk_backend_dashboard.json: |
+  {
+    "dashboard": {
+      "id": null,
+      "uid": "helpdesk-backend",
+      "title": "HELPDESK.AI - Backend Monitoring",
+      "tags": ["backend", "prometheus", "helpdesk"],
+      "timezone": "browser",
+      "schemaVersion": 36,
+      "version": 1,
+      "refresh": "10s",
+      "panels": [
+        {
+          "type": "timeseries",
+          "title": "API Request Latency (95th percentile)",
+          "id": 1,
+          "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, path))",
+              "legendFormat": "{{path}}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "CPU Usage (process)",
+          "id": 2,
+          "gridPos": { "x": 12, "y": 0, "w": 12, "h": 4 },
+          "targets": [
+            {
+              "expr": "rate(process_cpu_seconds_total[1m])",
+              "legendFormat": "CPU (process)",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Memory Usage (RSS)",
+          "id": 3,
+          "gridPos": { "x": 12, "y": 4, "w": 12, "h": 4 },
+          "targets": [
+            {
+              "expr": "process_resident_memory_bytes",
+              "legendFormat": "Memory (bytes)",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "AI Inference Requests (rate)",
+          "id": 4,
+          "gridPos": { "x": 0, "y": 8, "w": 12, "h": 4 },
+          "targets": [
+            {
+              "expr": "rate(ai_inference_requests_total[1m])",
+              "legendFormat": "ai_inference_requests_total",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "type": "stat",
+          "title": "Active Model Instances",
+          "id": 5,
+          "gridPos": { "x": 12, "y": 8, "w": 12, "h": 4 },
+          "targets": [
+            {
+              "expr": "max(active_model_instances) or vector(0)",
+              "legendFormat": "active_model_instances",
+              "refId": "A"
+            }
+          ]
+        }
+      ]
+    },
+    "overwrite": true
+  }

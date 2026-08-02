@@ -1,0 +1,25 @@
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+var React = _interopRequireWildcard(require("react"));
+var _SignatureFilled = _interopRequireDefault(require("@ant-design/icons-svg/lib/asn/SignatureFilled"));
+var _AntdIcon = _interopRequireDefault(require("../components/AntdIcon"));
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+function _getRequireWildcardCache(e) { if ("function" != typeof WeakMap) return null; var r = new WeakMap(), t = new WeakMap(); return (_getRequireWildcardCache = function (e) { return e ? t : r; })(e); }
+function _interopRequireWildcard(e, r) { if (!r && e && e.__esModule) return e; if (null === e || "object" != typeof e && "function" != typeof e) return { default: e }; var t = _getRequireWildcardCache(r); if (t && t.has(e)) return t.get(e); var n = { __proto__: null }, a = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var u in e) if ("default" !== u && Object.prototype.hasOwnProperty.call(e, u)) { var i = a ? Object.getOwnPropertyDescriptor(e, u) : null; i && (i.get || i.set) ? Object.defineProperty(n, u, i) : n[u] = e[u]; } return n.default = e, t && t.set(e, n), n; }
+function _extends() { _extends = Object.assign ? Object.assign.bind() : function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return _extends.apply(this, arguments); } // GENERATE BY ./scripts/generate.ts
+// DON NOT EDIT IT MANUALLY
+const SignatureFilled = (props, ref) => /*#__PURE__*/React.createElement(_AntdIcon.default, _extends({}, props, {
+  ref: ref,
+  icon: _SignatureFilled.default
+}));
+
+/**![signature](data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNjYWNhY2EiIGZpbGwtcnVsZT0iZXZlbm9kZCIgdmlld0JveD0iNjQgNjQgODk2IDg5NiIgZm9jdXNhYmxlPSJmYWxzZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTQ1LjcxIDc1MmMyIDAgNC0uMiA1Ljk4LS41TDMxOS45IDcyMmMxLjk5LS40IDMuODgtMS4zIDUuMjgtMi44bDQyMy45MS00MjMuODdhOS45MyA5LjkzIDAgMDAwLTE0LjA2TDU4Mi44OCAxMTQuOUM1ODEgMTEzIDU3OC41IDExMiA1NzUuODIgMTEycy01LjE4IDEtNy4wOCAyLjlMMTQ0LjgyIDUzOC43NmMtMS41IDEuNS0yLjQgMy4yOS0yLjggNS4yOGwtMjkuNSAxNjguMTdhMzMuNTkgMzMuNTkgMCAwMDkuMzcgMjkuODFjNi41OCA2LjQ4IDE0Ljk1IDkuOTcgMjMuODIgOS45N200NTMuMTItMTg0LjA3YzI3LjY5LTE0LjgxIDU3LjI5LTIwLjg1IDg1LjU0LTE1LjUyIDMyLjM3IDYuMSA1OS43MiAyNi41MyA3OC45NiA1OS40IDI5Ljk3IDUxLjIyIDIxLjY0IDEwMi4zNC0xOC40OCAxNDQuMjYtMTcuNTggMTguMzYtNDEuMDcgMzUuMDEtNzAgNTAuM2wtLjMuMTUuODYuMjZhMTQ3Ljg4IDE0Ny44OCAwIDAwNDEuNTQgNi4ybDEuMTcuMDFjNjEuMDcgMCAxMDAuOTgtMjIuMSAxMjUuMjgtNjcuODdhMzYgMzYgMCAwMTYzLjYgMzMuNzZDODY5LjcgODQ5LjEgODA0LjkgODg1IDcxOC4xMiA4ODVjLTQ3LjY5IDAtOTEuOTQtMTUuMDMtMTI4LjE5LTQxLjM2bC0xLjA1LS43OC0xLjM2LjQ3Yy00Ni4xOCAxNi05OC43NCAyOS45NS0xNTUuMzcgNDEuOTRsLTIuMjQuNDdhMTkzMS4xIDE5MzEuMSAwIDAxLTEzOS4xNiAyMy45NiAzNiAzNiAwIDExLTkuNS03MS4zOCAxODYwLjEgMTg2MC4xIDAgMDAxMzMuODQtMjMuMDRjNDIuOC05IDgzLTE5LjEzIDExOS4zNS0zMC4zNGwuMjQtLjA4LS40NC0uNjljLTE2LjQ2LTI2LjQ1LTI1Ljg2LTU1LjQzLTI2LjE0LTgzLjI0di0xLjNjMC00OS45IDM5LjU1LTEwNC4zMiA5MC43My0xMzEuN002NzEgNjIzLjE3Yy0xMC43NC0yLjAzLTI0LjEuNy0zOC4yMiA4LjI2LTI5LjU1IDE1LjgtNTIuNyA0Ny42NC01Mi43IDY4LjIgMCAxOC4yIDguOSA0MC4xNCAyNC43MSA1OS43M2wuMjQuMyAxLjIyLS41MmMzOS4xNy0xNi41OCA2OC40OS0zNC4yNyA4NS45My01Mi4xOGwuNjQtLjY3YzE4Ljc0LTE5LjU3IDIxLjM5LTM1Ljg0IDguMzYtNTguMS05LjA2LTE1LjQ3LTE5LjAzLTIyLjkyLTMwLjE4LTI1LjAyIiAvPjwvc3ZnPg==) */
+const RefIcon = /*#__PURE__*/React.forwardRef(SignatureFilled);
+if (process.env.NODE_ENV !== 'production') {
+  RefIcon.displayName = 'SignatureFilled';
+}
+var _default = exports.default = RefIcon;

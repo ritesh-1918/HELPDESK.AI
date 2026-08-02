@@ -1,0 +1,273 @@
+.rc-drawer {
+  inset: 0;
+  position: fixed;
+  z-index: 1050;
+  pointer-events: none;
+}
+.rc-drawer-inline {
+  position: absolute;
+}
+.rc-drawer-mask {
+  inset: 0;
+  position: absolute;
+  z-index: 1050;
+  background: rgba(0, 0, 0, 0.5);
+  pointer-events: auto;
+}
+.rc-drawer-content-wrapper {
+  position: absolute;
+  z-index: 1050;
+  transition: transform 0.3s;
+  pointer-events: auto;
+}
+.rc-drawer-content-wrapper-hidden {
+  display: none;
+}
+.rc-drawer-left .rc-drawer-content-wrapper {
+  top: 0;
+  bottom: 0;
+  left: 0;
+}
+.rc-drawer-right .rc-drawer-content-wrapper {
+  top: 0;
+  right: 0;
+  bottom: 0;
+}
+.rc-drawer-content {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background: #fff;
+  pointer-events: auto;
+}
+.rc-drawer-resizable-dragger {
+  position: absolute;
+  z-index: 2;
+  pointer-events: auto;
+}
+.rc-drawer-resizable-dragger:hover {
+  background-color: #1890ff !important;
+}
+.rc-drawer-resizable-dragger-dragging {
+  background-color: #1890ff !important;
+}
+.rc-drawer-resizable-dragger-left {
+  top: 0;
+  bottom: 0;
+  right: -3px;
+  width: 6px;
+  cursor: ew-resize;
+}
+.rc-drawer-resizable-dragger-right {
+  top: 0;
+  bottom: 0;
+  left: -3px;
+  width: 6px;
+  cursor: ew-resize;
+}
+.rc-drawer-resizable-dragger-top {
+  left: 0;
+  right: 0;
+  bottom: -3px;
+  height: 6px;
+  cursor: ns-resize;
+}
+.rc-drawer-resizable-dragger-bottom {
+  left: 0;
+  right: 0;
+  top: -3px;
+  height: 6px;
+  cursor: ns-resize;
+}
+.rc-drawer {
+  overflow: hidden;
+  z-index: 9999;
+  transition: width 0s ease 0.3s, height 0s ease 0.3s, transform 0.3s cubic-bezier(0.78, 0.14, 0.15, 0.86);
+}
+.rc-drawer > * {
+  transition: transform 0.3s cubic-bezier(0.78, 0.14, 0.15, 0.86), opacity 0.3s cubic-bezier(0.78, 0.14, 0.15, 0.86), box-shadow 0.3s cubic-bezier(0.78, 0.14, 0.15, 0.86);
+}
+.rc-drawer.rc-drawer-open {
+  transition: transform 0.3s cubic-bezier(0.78, 0.14, 0.15, 0.86);
+}
+.rc-drawer .rc-drawer-mask {
+  background: #000;
+  opacity: 0;
+  width: 100%;
+  height: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  transition: opacity 0.3s cubic-bezier(0.78, 0.14, 0.15, 0.86), height 0s ease 0.3s;
+}
+.rc-drawer-content-wrapper {
+  position: absolute;
+  background: #fff;
+}
+.rc-drawer-content {
+  overflow: auto;
+  z-index: 1;
+  position: relative;
+}
+.rc-drawer-handle {
+  position: absolute;
+  top: 72px;
+  width: 41px;
+  height: 40px;
+  cursor: pointer;
+  z-index: 0;
+  text-align: center;
+  line-height: 40px;
+  font-size: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #fff;
+}
+.rc-drawer-handle-icon {
+  width: 14px;
+  height: 2px;
+  background: #333;
+  position: relative;
+  transition: background 0.3s cubic-bezier(0.78, 0.14, 0.15, 0.86);
+}
+.rc-drawer-handle-icon::before,
+.rc-drawer-handle-icon::after {
+  content: '';
+  display: block;
+  position: absolute;
+  background: #333;
+  width: 100%;
+  height: 2px;
+  transition: transform 0.3s cubic-bezier(0.78, 0.14, 0.15, 0.86);
+}
+.rc-drawer-handle-icon::before {
+  top: -5px;
+}
+.rc-drawer-handle-icon::after {
+  top: 5px;
+}
+.rc-drawer-left,
+.rc-drawer-right {
+  width: 0%;
+  height: 100%;
+}
+.rc-drawer-left .rc-drawer-content-wrapper,
+.rc-drawer-right .rc-drawer-content-wrapper,
+.rc-drawer-left .rc-drawer-content,
+.rc-drawer-right .rc-drawer-content {
+  height: 100%;
+}
+.rc-drawer-left.rc-drawer-open,
+.rc-drawer-right.rc-drawer-open {
+  width: 100%;
+}
+.rc-drawer-left.rc-drawer-open.no-mask,
+.rc-drawer-right.rc-drawer-open.no-mask {
+  width: 0%;
+}
+.rc-drawer-left {
+  top: 0;
+  left: 0;
+}
+.rc-drawer-left .rc-drawer-handle {
+  right: -40px;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+  border-radius: 0 4px 4px 0;
+}
+.rc-drawer-left.rc-drawer-open .rc-drawer-content-wrapper {
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+}
+.rc-drawer-right {
+  top: 0;
+  right: 0;
+}
+.rc-drawer-right .rc-drawer-content-wrapper {
+  right: 0;
+}
+.rc-drawer-right .rc-drawer-handle {
+  left: -40px;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+  border-radius: 4px 0 0 4px;
+}
+.rc-drawer-right.rc-drawer-open .rc-drawer-content-wrapper {
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+}
+.rc-drawer-right.rc-drawer-open.no-mask {
+  right: 1px;
+  transform: translateX(1px);
+}
+.rc-drawer-top,
+.rc-drawer-bottom {
+  width: 100%;
+  height: 0%;
+}
+.rc-drawer-top .rc-drawer-content-wrapper,
+.rc-drawer-bottom .rc-drawer-content-wrapper,
+.rc-drawer-top .rc-drawer-content,
+.rc-drawer-bottom .rc-drawer-content {
+  width: 100%;
+}
+.rc-drawer-top .rc-drawer-content,
+.rc-drawer-bottom .rc-drawer-content {
+  height: 100%;
+}
+.rc-drawer-top.rc-drawer-open,
+.rc-drawer-bottom.rc-drawer-open {
+  height: 100%;
+}
+.rc-drawer-top.rc-drawer-open.no-mask,
+.rc-drawer-bottom.rc-drawer-open.no-mask {
+  height: 0%;
+}
+.rc-drawer-top .rc-drawer-handle,
+.rc-drawer-bottom .rc-drawer-handle {
+  left: 50%;
+  margin-left: -20px;
+}
+.rc-drawer-top {
+  top: 0;
+  left: 0;
+}
+.rc-drawer-top .rc-drawer-handle {
+  top: auto;
+  bottom: -40px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border-radius: 0 0 4px 4px;
+}
+.rc-drawer-top.rc-drawer-open .rc-drawer-content-wrapper {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+.rc-drawer-bottom {
+  bottom: 0;
+  left: 0;
+}
+.rc-drawer-bottom .rc-drawer-content-wrapper {
+  bottom: 0;
+}
+.rc-drawer-bottom .rc-drawer-handle {
+  top: -40px;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.15);
+  border-radius: 4px 4px 0 0;
+}
+.rc-drawer-bottom.rc-drawer-open .rc-drawer-content-wrapper {
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.15);
+}
+.rc-drawer-bottom.rc-drawer-open.no-mask {
+  bottom: 1px;
+  transform: translateY(1px);
+}
+.rc-drawer.rc-drawer-open .rc-drawer-mask {
+  opacity: 0.3;
+  height: 100%;
+  transition: opacity 0.3s cubic-bezier(0.78, 0.14, 0.15, 0.86);
+}
+.rc-drawer.rc-drawer-open .rc-drawer-handle-icon {
+  background: transparent;
+}
+.rc-drawer.rc-drawer-open .rc-drawer-handle-icon::before {
+  transform: translateY(5px) rotate(45deg);
+}
+.rc-drawer.rc-drawer-open .rc-drawer-handle-icon::after {
+  transform: translateY(-5px) rotate(-45deg);
+}

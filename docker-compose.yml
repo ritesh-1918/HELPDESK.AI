@@ -1,0 +1,136 @@
+version: "3.9"
+
+# Full-stack deployment stack for HELPDESK.AI
+# Usage: docker compose up --build
+#
+# Multi-stage builds used for both backend (Python) and frontend (Vite + nginx)
+# to ensure minimal production images with only runtime dependencies.
+
+services:
+  # ── Backend: FastAPI (Python) ──────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: production
+    image: helpdesk-ai-backend:local
+    container_name: helpdesk_backend
+    restart: unless-stopped
+    ports:
+      - "7860:7860"
+    environment:
+      - ALLOW_DEGRADED_STARTUP=1
+      - ENV=development
+      - PYTHONPATH=/app
+      - SUPABASE_URL=${SUPABASE_URL:-}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY:-}
+      - TICKET_ENCRYPTION_KEY=${TICKET_ENCRYPTION_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - REDIS_URL=redis://redis:6379/0
+      - RATE_LIMIT_AI=${RATE_LIMIT_AI:-10/minute}
+      - RATE_LIMIT_AUTH=${RATE_LIMIT_AUTH:-5/minute}
+    volumes:
+      - model_cache:/app/backend/models
+      - ticket_data:/app/backend/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "/app/backend/healthcheck.py"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    networks:
+      - helpdesk_net
+
+  # ── Frontend: Vite + nginx (multi-stage build) ─────────────────────────────
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    image: helpdesk-ai-frontend:local
+    container_name: helpdesk_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - helpdesk_net
+
+  # ── Redis Cache ────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: helpdesk_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --save 60 1 --loglevel warning --requirepass ${REDIS_PASSWORD:-}
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - redis_data:/data
+    networks:
+      - helpdesk_net
+
+  # ── Database: PostgreSQL with pgvector ─────────────────────────────────────
+  db:
+    image: pgvector/pgvector:pg15
+    container_name: helpdesk_db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-helpdesk}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-helpdesk_local_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-helpdesk}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-helpdesk}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    profiles:
+      - local
+    networks:
+      - helpdesk_net
+
+  # ── API: PostgREST for direct DB access ────────────────────────────────────
+  api:
+    image: postgrest/postgrest:latest
+    container_name: helpdesk_api
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      PGRST_DB_URI: postgres://${POSTGRES_USER:-helpdesk}:${POSTGRES_PASSWORD:-helpdesk_local_pass}@db:5432/${POSTGRES_DB:-helpdesk}
+      PGRST_DB_SCHEMA: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${PGRST_JWT_SECRET}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - helpdesk_net
+
+volumes:
+  model_cache:
+  ticket_data:
+  redis_data:
+  pg_data:
+
+networks:
+  helpdesk_net:
+    driver: bridge

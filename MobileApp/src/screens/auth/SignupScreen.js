@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import {
   StyleSheet, View, Text, TextInput, TouchableOpacity,
   KeyboardAvoidingView, Platform, ActivityIndicator,
@@ -11,6 +11,22 @@ import { Mail, Lock, User, Building2, Search, ChevronDown, Eye, EyeOff, ArrowRig
 import * as Haptics from 'expo-haptics';
 import { useNotification } from '../../components/NotificationProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const CompanyItem = memo(({ item, selected, onSelect }) => (
+  <TouchableOpacity
+    style={[styles.companyItem, selected && styles.companyItemSelected]}
+    onPress={() => onSelect(item)}
+    activeOpacity={0.7}
+  >
+    <View style={styles.companyIcon}>
+      <Building2 size={18} color={selected ? COLORS.primary : 'rgba(255,255,255,0.5)'} />
+    </View>
+    <Text style={[styles.companyName, selected && { color: COLORS.primary }]}>
+      {item.name}
+    </Text>
+    {selected && <CheckCircle2 size={18} color={COLORS.primary} />}
+  </TouchableOpacity>
+));
 
 const SignupScreen = () => {
   const navigation = useNavigation();
@@ -71,6 +87,21 @@ const SignupScreen = () => {
     const q = companySearch.toLowerCase().trim();
     setFilteredCompanies(q ? companies.filter(c => c.name.toLowerCase().includes(q)) : companies);
   }, [companySearch, companies]);
+
+  const handleCompanySelect = useCallback((item) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedCompany(item);
+    setCompanyModalOpen(false);
+    setCompanySearch('');
+  }, []);
+
+  const renderCompanyItem = useCallback(({ item }) => (
+    <CompanyItem
+      item={item}
+      selected={selectedCompany?.id === item.id}
+      onSelect={handleCompanySelect}
+    />
+  ), [selectedCompany, handleCompanySelect]);
 
   const handleSignup = async () => {
     if (!fullName || !email || !password || !confirmPassword) {
@@ -293,26 +324,7 @@ const SignupScreen = () => {
               <FlatList
                 data={filteredCompanies}
                 keyExtractor={item => item.id}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={[styles.companyItem, selectedCompany?.id === item.id && styles.companyItemSelected]}
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      setSelectedCompany(item);
-                      setCompanyModalOpen(false);
-                      setCompanySearch('');
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.companyIcon}>
-                      <Building2 size={18} color={selectedCompany?.id === item.id ? COLORS.primary : 'rgba(255,255,255,0.5)'} />
-                    </View>
-                    <Text style={[styles.companyName, selectedCompany?.id === item.id && { color: COLORS.primary }]}>
-                      {item.name}
-                    </Text>
-                    {selectedCompany?.id === item.id && <CheckCircle2 size={18} color={COLORS.primary} />}
-                  </TouchableOpacity>
-                )}
+                renderItem={renderCompanyItem}
                 showsVerticalScrollIndicator={false}
                 style={{ marginTop: 8 }}
               />

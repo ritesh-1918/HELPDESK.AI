@@ -1,0 +1,84 @@
+/* eslint-disable react/no-unknown-property */
+import raf from "@rc-component/util/es/raf";
+import { clsx } from 'clsx';
+import * as React from 'react';
+
+/**
+ * When click and hold on a button - the speed of auto changing the value.
+ */
+const STEP_INTERVAL = 200;
+
+/**
+ * When click and hold on a button - the delay before auto changing the value.
+ */
+const STEP_DELAY = 600;
+export default function StepHandler({
+  prefixCls,
+  action,
+  children,
+  disabled,
+  className,
+  style,
+  onStep
+}) {
+  // ======================== MISC ========================
+  const isUpAction = action === 'up';
+
+  // ======================== Step ========================
+  const stepTimeoutRef = React.useRef();
+  const frameIds = React.useRef([]);
+  const onStopStep = () => {
+    clearTimeout(stepTimeoutRef.current);
+  };
+
+  // We will interval update step when hold mouse down
+  const onStepMouseDown = e => {
+    e.preventDefault();
+    onStopStep();
+    onStep(isUpAction, 'handler');
+
+    // Loop step for interval
+    function loopStep() {
+      onStep(isUpAction, 'handler');
+      stepTimeoutRef.current = setTimeout(loopStep, STEP_INTERVAL);
+    }
+
+    // First time press will wait some time to trigger loop step update
+    stepTimeoutRef.current = setTimeout(loopStep, STEP_DELAY);
+  };
+  React.useEffect(() => () => {
+    onStopStep();
+    frameIds.current.forEach(id => {
+      raf.cancel(id);
+    });
+  }, []);
+
+  // ======================= Render =======================
+  const actionClassName = `${prefixCls}-action`;
+  const mergedClassName = clsx(actionClassName, `${actionClassName}-${action}`, {
+    [`${actionClassName}-${action}-disabled`]: disabled
+  }, className);
+
+  // fix: https://github.com/ant-design/ant-design/issues/43088
+  // In Safari, When we fire onmousedown and onmouseup events in quick succession,
+  // there may be a problem that the onmouseup events are executed first,
+  // resulting in a disordered program execution.
+  // So, we need to use requestAnimationFrame to ensure that the onmouseup event is executed after the onmousedown event.
+  const safeOnStopStep = () => frameIds.current.push(raf(onStopStep));
+  return /*#__PURE__*/React.createElement("span", {
+    unselectable: "on",
+    role: "button",
+    onMouseUp: safeOnStopStep,
+    onMouseLeave: safeOnStopStep,
+    onMouseDown: e => {
+      onStepMouseDown(e);
+    },
+    "aria-label": isUpAction ? 'Increase Value' : 'Decrease Value',
+    "aria-disabled": disabled,
+    className: mergedClassName,
+    style: style
+  }, children || /*#__PURE__*/React.createElement("span", {
+    unselectable: "on",
+    className: `${prefixCls}-action-${action}-inner`
+  }));
+}

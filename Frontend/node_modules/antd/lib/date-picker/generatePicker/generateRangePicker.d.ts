@@ -1,0 +1,20 @@
+import * as React from 'react';
+import type { PickerRef } from '@rc-component/picker';
+import type { GenerateConfig } from '@rc-component/picker/generate/index';
+import type { AnyObject } from '../../_util/type';
+import type { PickerLocale } from './interface';
+declare const generateRangePicker: <DateType extends AnyObject = AnyObject>(generateConfig: GenerateConfig<DateType>) => React.ForwardRefExoticComponent<Omit<import("@rc-component/picker").RangePickerProps<DateType>, "classNames" | "styles" | "locale" | "generateConfig" | "hideHeader"> & {
+    locale?: PickerLocale;
+    size?: import("../../button").ButtonSize;
+    placement?: "bottomLeft" | "bottomRight" | "topLeft" | "topRight";
+    bordered?: boolean;
+    status?: import("../../_util/statusUtils").InputStatus;
+    variant?: import("../../config-provider").Variant;
+    dropdownClassName?: string;
+    popupClassName?: string;
+    rootClassName?: string;
+    popupStyle?: React.CSSProperties;
+    classNames?: import("./interface").DatePickerPickerClassNames<import("@rc-component/picker").RangePickerProps<DateType>> | undefined;
+    styles?: import("./interface").DatePickerStylesType<import("@rc-component/picker").RangePickerProps<DateType>> | undefined;
+} & React.RefAttributes<PickerRef>>;
+export default generateRangePicker;
