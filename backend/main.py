@@ -548,6 +548,62 @@ async def get_tickets(company_id: str | None = None):
     res = query.execute()
     return res.data
 
+
+@app.get("/tickets/search")
+async def search_tickets(
+    q: str = "",
+    company_id: str | None = None,
+    status: str | None = None,
+    priority: str | None = None,
+    category: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+):
+    """
+    Search tickets with parameterized filters.
+
+    Every filter is passed to the Supabase/PostgREST client as a bound
+    parameter — no raw SQL string is concatenated with user input. Free-text
+    terms are additionally sanitized/escaped by :mod:`query_sanitizer` before
+    being used in the ``ilike`` match so wildcards and SQL metacharacters are
+    treated as literal characters.
+    """
+    from backend.services.query_sanitizer import (
+        QuerySanitizationError,
+        sanitize_enum_filter,
+        sanitize_identifier,
+        sanitize_search_query,
+        validate_pagination,
+    )
+
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    try:
+        term = sanitize_search_query(q)
+        company_id = sanitize_identifier(company_id)
+        status = sanitize_enum_filter(status)
+        priority = sanitize_enum_filter(priority)
+        category = sanitize_enum_filter(category)
+        limit, offset = validate_pagination(limit, offset)
+    except QuerySanitizationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    query = supabase.table("tickets").select("*").order("created_at", desc=True)
+    if term:
+        query = query.ilike("description", f"%{term}%")
+    if company_id:
+        query = query.eq("company_id", company_id)
+    if status:
+        query = query.eq("status", status)
+    if priority:
+        query = query.eq("priority", priority)
+    if category:
+        query = query.eq("category", category)
+
+    res = query.range(offset, offset + limit - 1).execute()
+    return res.data
+
 @app.post("/tickets/save")
 async def save_ticket(request_body: TicketSaveRequest):
     """
