@@ -78,6 +78,7 @@ import AdminProtectedRoute from "./components/shared/AdminProtectedRoute";
 import MasterAdminProtectedRoute from "./components/shared/MasterAdminProtectedRoute";
 import ProtectedRoute from "./components/shared/ProtectedRoute";
 import useAuthStore from "./store/authStore";
+import useSilentSessionRefresh from "./hooks/useSilentSessionRefresh";
 import NotApproved from "./pages/NotApproved";
 
 // Master Admin Components
@@ -154,6 +155,14 @@ function AppLayout() {
 
   // Initialize Global Realtime Notifications Listener
   useRealtimeNotifications();
+
+  // Silently rotate JWTs before expiry (Supabase + HttpOnly-cookie flow)
+  useSilentSessionRefresh({
+    enabled: Boolean(user),
+    onError: (err) => {
+      console.warn("Silent session refresh failed:", err?.message || err);
+    },
+  });
 
   useEffect(() => {
     if (!user) return;
