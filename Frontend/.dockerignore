@@ -1,0 +1,54 @@
+# ── Version Control ──
+.git/
+.gitignore
+.gitattributes
+
+# ── Dependencies (will be installed fresh in builder) ──
+node_modules/
+.npm-cache/
+
+# ── Build artifacts (will be generated in builder) ──
+dist/
+build/
+
+# ── CI / Dev configs ──
+.github/
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Environment / Secrets ──
+.env
+.env.local
+.env.*.local
+
+# ── Test files (not needed in production image) ──
+**/__tests__/
+**/*.test.js
+**/*.test.jsx
+**/*.spec.js
+**/*.spec.jsx
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+**/coverage/
+
+# ── Documentation ──
+*.md
+LICENSE
+
+# ── OS files ──
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
+
+# ── Other project dirs (not needed for frontend build) ──
+backend/
+MobileApp/
+docs/
+scratch/
+supabase/
+Model/

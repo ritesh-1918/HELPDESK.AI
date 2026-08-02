@@ -1,0 +1,46 @@
+name: Tenant Isolation Security Audit
+
+on:
+  push:
+    branches: [ main, gssoc ]
+  pull_request:
+    branches: [ main, gssoc ]
+
+permissions:
+  contents: read
+
+jobs:
+  security-audit:
+    name: Run Tenant Isolation Security Tests
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/backend
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install fastapi uvicorn pydantic python-dotenv slowapi \
+                    supabase==2.22.4 storage3==2.22.4 \
+                    requests httpx \
+                    pytest pytest-cov pytest-asyncio \
+                    redis langdetect tokenizers openpyxl google-genai google-generativeai pillow \
+                    prometheus-fastapi-instrumentator prometheus-client pycryptodome \
+                    cryptography websockets openai-whisper python-multipart \
+                    sentencepiece sacremoses accelerate apscheduler
+
+    - name: Run Tenant Isolation Security Tests
+      env:
+        ALLOW_DEGRADED_STARTUP: "1"
+        REQUIRE_SUPABASE: "false"
+      run: |
+        cd backend && python -m pytest tests/test_tenant_isolation.py -v

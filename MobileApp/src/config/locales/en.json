@@ -1,0 +1,9 @@
+{
+  "ticketDetail": {
+    "aiAssistant": "AI Assistant",
+    "support": "Support",
+    "titleFallback": "Ticket Details",
+    "emptyMessages": "No messages yet. Send a message to start the conversation.",
+    "inputPlaceholder": "Type a message..."
+  }
+}

@@ -1,0 +1,286 @@
+### RANGE 520-620
+520:             isOneToOne: false
+521:             referencedRelation: "companies"
+522:             referencedColumns: ["id"]
+523:           },
+524:           {
+525:             foreignKeyName: "tickets_user_id_fkey"
+526:             columns: ["user_id"]
+527:             isOneToOne: false
+528:             referencedRelation: "profiles"
+529:             referencedColumns: ["id"]
+530:           },
+531:         ]
+532:       }
+533:       user_feedback: {
+534:         Row: {
+535:           created_at: string | null
+536:           id: string
+537:           message: string
+538:           status: string | null
+539:           type: string
+540:           url: string
+541:           user_email: string | null
+542:           user_id: string | null
+543:           user_role: string | null
+544:         }
+545:         Insert: {
+546:           created_at?: string | null
+547:           id?: string
+548:           message: string
+549:           status?: string | null
+550:           type: string
+551:           url: string
+552:           user_email?: string | null
+553:           user_id?: string | null
+554:           user_role?: string | null
+555:         }
+556:         Update: {
+557:           created_at?: string | null
+558:           id?: string
+559:           message?: string
+560:           status?: string | null
+561:           type?: string
+562:           url?: string
+563:           user_email?: string | null
+564:           user_id?: string | null
+565:           user_role?: string | null
+566:         }
+567:         Relationships: []
+568:       }
+569:     }
+570:     Views: {
+571:       monthly_ai_savings: {
+572:         Row: {
+573:           auto_resolved: number | null
+574:           company_id: string | null
+575:           duplicates_blocked: number | null
+576:           estimated_savings_usd: number | null
+577:           month: string | null
+578:         }
+579:         Relationships: [
+580:           {
+581:             foreignKeyName: "tickets_company_id_fkey"
+582:             columns: ["company_id"]
+583:             isOneToOne: false
+584:             referencedRelation: "companies"
+585:             referencedColumns: ["id"]
+586:           },
+587:         ]
+588:       }
+589:     }
+590:     Functions: {
+591:       check_is_admin: { Args: never; Returns: boolean }
+592:       check_is_master_admin: { Args: never; Returns: boolean }
+593:       get_my_company_id: { Args: never; Returns: string }
+594:       match_articles: {
+595:         Args: {
+596:           match_count: number
+597:           match_threshold: number
+598:           query_embedding: string
+599:         }
+600:         Returns: {
+601:           content: string
+602:           id: string
+603:           similarity: number
+604:           title: string
+605:         }[]
+606:       }
+607:     }
+608:     Enums: {
+609:       [_ in never]: never
+610:     }
+611:     CompositeTypes: {
+612:       [_ in never]: never
+613:     }
+614:   }
+615: }
+616: 
+617: type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+618: 
+619: type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+620: 
+
+### RANGE 560-650
+560:           status?: string | null
+561:           type?: string
+562:           url?: string
+563:           user_email?: string | null
+564:           user_id?: string | null
+565:           user_role?: string | null
+566:         }
+567:         Relationships: []
+568:       }
+569:     }
+570:     Views: {
+571:       monthly_ai_savings: {
+572:         Row: {
+573:           auto_resolved: number | null
+574:           company_id: string | null
+575:           duplicates_blocked: number | null
+576:           estimated_savings_usd: number | null
+577:           month: string | null
+578:         }
+579:         Relationships: [
+580:           {
+581:             foreignKeyName: "tickets_company_id_fkey"
+582:             columns: ["company_id"]
+583:             isOneToOne: false
+584:             referencedRelation: "companies"
+585:             referencedColumns: ["id"]
+586:           },
+587:         ]
+588:       }
+589:     }
+590:     Functions: {
+591:       check_is_admin: { Args: never; Returns: boolean }
+592:       check_is_master_admin: { Args: never; Returns: boolean }
+593:       get_my_company_id: { Args: never; Returns: string }
+594:       match_articles: {
+595:         Args: {
+596:           match_count: number
+597:           match_threshold: number
+598:           query_embedding: string
+599:         }
+600:         Returns: {
+601:           content: string
+602:           id: string
+603:           similarity: number
+604:           title: string
+605:         }[]
+606:       }
+607:     }
+608:     Enums: {
+609:       [_ in never]: never
+610:     }
+611:     CompositeTypes: {
+612:       [_ in never]: never
+613:     }
+614:   }
+615: }
+616: 
+617: type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+618: 
+619: type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+620: 
+621: export type Tables<
+622:   DefaultSchemaTableNameOrOptions extends
+623:     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+624:     | { schema: keyof DatabaseWithoutInternals },
+625:   TableName extends DefaultSchemaTableNameOrOptions extends {
+626:     schema: keyof DatabaseWithoutInternals
+627:   }
+628:     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+629:         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+630:     : never = never,
+631: > = DefaultSchemaTableNameOrOptions extends {
+632:   schema: keyof DatabaseWithoutInternals
+633: }
+634:   ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+635:       DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+636:       Row: infer R
+637:     }
+638:     ? R
+639:     : never
+640:   : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+641:         DefaultSchema["Views"])
+642:     ? (DefaultSchema["Tables"] &
+643:         DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+644:         Row: infer R
+645:       }
+646:       ? R
+647:       : never
+648:     : never
+649: 
+650: export type TablesInsert<
+
+### RANGE 650-760
+650: export type TablesInsert<
+651:   DefaultSchemaTableNameOrOptions extends
+652:     | keyof DefaultSchema["Tables"]
+653:     | { schema: keyof DatabaseWithoutInternals },
+654:   TableName extends DefaultSchemaTableNameOrOptions extends {
+655:     schema: keyof DatabaseWithoutInternals
+656:   }
+657:     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+658:     : never = never,
+659: > = DefaultSchemaTableNameOrOptions extends {
+660:   schema: keyof DatabaseWithoutInternals
+661: }
+662:   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+663:       Insert: infer I
+664:     }
+665:     ? I
+666:     : never
+667:   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+668:     ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+669:         Insert: infer I
+670:       }
+671:       ? I
+672:       : never
+673:     : never
+674: 
+675: export type TablesUpdate<
+676:   DefaultSchemaTableNameOrOptions extends
+677:     | keyof DefaultSchema["Tables"]
+678:     | { schema: keyof DatabaseWithoutInternals },
+679:   TableName extends DefaultSchemaTableNameOrOptions extends {
+680:     schema: keyof DatabaseWithoutInternals
+681:   }
+682:     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+683:     : never = never,
+684: > = DefaultSchemaTableNameOrOptions extends {
+685:   schema: keyof DatabaseWithoutInternals
+686: }
+687:   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+688:       Update: infer U
+689:     }
+690:     ? U
+691:     : never
+692:   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+693:     ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+694:         Update: infer U
+695:       }
+696:       ? U
+697:       : never
+698:     : never
+699: 
+700: export type Enums<
+701:   DefaultSchemaEnumNameOrOptions extends
+702:     | keyof DefaultSchema["Enums"]
+703:     | { schema: keyof DatabaseWithoutInternals },
+704:   EnumName extends DefaultSchemaEnumNameOrOptions extends {
+705:     schema: keyof DatabaseWithoutInternals
+706:   }
+707:     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+708:     : never = never,
+709: > = DefaultSchemaEnumNameOrOptions extends {
+710:   schema: keyof DatabaseWithoutInternals
+711: }
+712:   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+713:   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+714:     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+715:     : never
+716: 
+717: export type CompositeTypes<
+718:   PublicCompositeTypeNameOrOptions extends
+719:     | keyof DefaultSchema["CompositeTypes"]
+720:     | { schema: keyof DatabaseWithoutInternals },
+721:   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+722:     schema: keyof DatabaseWithoutInternals
+723:   }
+724:     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+725:     : never = never,
+726: > = PublicCompositeTypeNameOrOptions extends {
+727:   schema: keyof DatabaseWithoutInternals
+728: }
+729:   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+730:   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+731:     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+732:     : never
+733: 
+734: export const Constants = {
+735:   public: {
+736:     Enums: {},
+737:   },
+738: } as const

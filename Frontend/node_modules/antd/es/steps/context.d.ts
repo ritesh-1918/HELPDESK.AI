@@ -1,0 +1,9 @@
+import * as React from 'react';
+export interface InternalContextProps {
+    rootComponent: string;
+    itemComponent: string;
+}
+/**
+ * When use this context. Will trade as sub component instead of root Steps component.
+ */
+export declare const InternalContext: React.Context<InternalContextProps | null>;

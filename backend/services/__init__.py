@@ -1,1 +1,1 @@
-# Service modules
+# Services package initializer

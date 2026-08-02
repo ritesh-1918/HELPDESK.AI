@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback, memo } from 'react';
 import {
   StyleSheet,
   View,
@@ -44,6 +44,21 @@ const SLIDES = [
   }
 ];
 
+const SlideItem = memo(({ item }) => (
+  <View style={styles.slide}>
+    <View style={styles.iconWrapper}>
+      <LinearGradient
+        colors={['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.02)']}
+        style={styles.iconCircle}
+      >
+        {item.icon}
+      </LinearGradient>
+    </View>
+    <Text style={styles.title}>{item.title}</Text>
+    <Text style={styles.description}>{item.description}</Text>
+  </View>
+));
+
 const OnboardingScreen = () => {
   const navigation = useNavigation();
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -70,20 +85,9 @@ const OnboardingScreen = () => {
     }
   }).current;
 
-  const renderSlide = ({ item }) => (
-    <View style={styles.slide}>
-      <View style={styles.iconWrapper}>
-        <LinearGradient
-          colors={['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.02)']}
-          style={styles.iconCircle}
-        >
-          {item.icon}
-        </LinearGradient>
-      </View>
-      <Text style={styles.title}>{item.title}</Text>
-      <Text style={styles.description}>{item.description}</Text>
-    </View>
-  );
+  const renderSlide = useCallback(({ item }) => (
+    <SlideItem item={item} />
+  ), []);
 
   return (
     <View style={styles.container}>

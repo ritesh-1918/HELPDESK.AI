@@ -1,0 +1,481 @@
+# =============================================================================
+# HELPDESK.AI — Kubernetes Monitoring Stack
+# Prometheus + Grafana for FastAPI backend observability
+# =============================================================================
+# Apply with:
+#   kubectl apply -f deploy/k8s/monitoring-stack.yaml
+#
+# Environment variables expected in a Secret named "grafana-secret":
+#   GF_SECURITY_ADMIN_USER     — Grafana admin username
+#   GF_SECURITY_ADMIN_PASSWORD — Grafana admin password
+# =============================================================================
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    app.kubernetes.io/part-of: helpdesk-ai
+    app.kubernetes.io/managed-by: kubectl
+
+---
+# ---------------------------------------------------------------------------
+# Prometheus — ConfigMap (scrape + alerting rules)
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: monitoring
+  labels:
+    app: prometheus
+    app.kubernetes.io/part-of: helpdesk-ai
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval:     15s
+      evaluation_interval: 15s
+      scrape_timeout:      10s
+      external_labels:
+        monitor:     'helpdesk-ai-production'
+        environment: 'production'
+
+    rule_files:
+      - /etc/prometheus/alert-rules.yml
+
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets: []   # add alertmanager targets here
+
+    scrape_configs:
+      # FastAPI backend — uses prometheus_fastapi_instrumentator
+      - job_name: helpdesk-fastapi
+        metrics_path: /metrics
+        scrape_interval: 10s
+        static_configs:
+          - targets:
+              - helpdesk-backend:7860
+        relabel_configs:
+          - source_labels: [__address__]
+            target_label: instance
+
+      # Kubernetes API server
+      - job_name: kubernetes-apiservers
+        kubernetes_sd_configs:
+          - role: endpoints
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+          - source_labels:
+              - __meta_kubernetes_namespace
+              - __meta_kubernetes_service_name
+              - __meta_kubernetes_endpoint_port_name
+            action: keep
+            regex: default;kubernetes;https
+
+      # Kubernetes nodes (kubelet)
+      - job_name: kubernetes-nodes
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        kubernetes_sd_configs:
+          - role: node
+        relabel_configs:
+          - action: labelmap
+            regex: __meta_kubernetes_node_label_(.+)
+
+      # Pod auto-discovery via annotations:
+      #   prometheus.io/scrape: "true"
+      #   prometheus.io/port:   "PORT"
+      #   prometheus.io/path:   "/metrics"
+      - job_name: kubernetes-pods
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: "true"
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels:
+              - __address__
+              - __meta_kubernetes_pod_annotation_prometheus_io_port
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: kubernetes_pod_name
+
+  alert-rules.yml: |
+    groups:
+      - name: helpdesk-fastapi
+        interval: 30s
+        rules:
+
+          # --- Availability ---
+          - alert: HelpdeskBackendDown
+            expr: up{job="helpdesk-fastapi"} == 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "HELPDESK.AI backend is DOWN"
+              description: "The FastAPI backend has not responded to Prometheus scrapes for 1 minute."
+
+          # --- Latency ---
+          - alert: HighRequestLatency
+            expr: |
+              histogram_quantile(0.95,
+                rate(http_request_duration_seconds_bucket{job="helpdesk-fastapi"}[5m])
+              ) > 0.5
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High p95 request latency (>500ms)"
+              description: "95th percentile latency is {{ $value | humanizeDuration }} on {{ $labels.handler }}."
+
+          - alert: CriticalRequestLatency
+            expr: |
+              histogram_quantile(0.99,
+                rate(http_request_duration_seconds_bucket{job="helpdesk-fastapi"}[5m])
+              ) > 2
+            for: 3m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Critical p99 latency (>2s)"
+              description: "99th percentile latency is {{ $value | humanizeDuration }}."
+
+          # --- Error rate ---
+          - alert: HighErrorRate
+            expr: |
+              rate(http_requests_total{job="helpdesk-fastapi",status=~"5.."}[5m])
+              /
+              rate(http_requests_total{job="helpdesk-fastapi"}[5m])
+              > 0.05
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Error rate exceeds 5%"
+              description: "{{ $value | humanizePercentage }} of requests are failing (5xx) on {{ $labels.handler }}."
+
+          # --- Rate limiting ---
+          - alert: RateLimitSpiking
+            expr: |
+              rate(http_requests_total{job="helpdesk-fastapi",status="429"}[5m]) > 10
+            for: 2m
+            labels:
+              severity: info
+            annotations:
+              summary: "Rate limiting spike detected"
+              description: "More than 10 req/s are being rate-limited. Possible abuse or load spike."
+
+          # --- WebSocket ---
+          - alert: WebSocketConnectionPoolFull
+            expr: websocket_connections_total{job="helpdesk-fastapi"} >= 95
+            for: 2m
+            labels:
+              severity: warning
+            annotations:
+              summary: "WebSocket connection pool near capacity"
+              description: "{{ $value }} connections active (limit: 100)."
+
+---
+# ---------------------------------------------------------------------------
+# Prometheus — Service Account + RBAC for K8s service discovery
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus
+rules:
+  - apiGroups: [""]
+    resources: [nodes, nodes/proxy, services, endpoints, pods]
+    verbs: [get, list, watch]
+  - apiGroups: [extensions, networking.k8s.io]
+    resources: [ingresses]
+    verbs: [get, list, watch]
+  - nonResourceURLs: [/metrics]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus
+subjects:
+  - kind: ServiceAccount
+    name: prometheus
+    namespace: monitoring
+
+---
+# ---------------------------------------------------------------------------
+# Prometheus — PersistentVolumeClaim
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-pvc
+  namespace: monitoring
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+# ---------------------------------------------------------------------------
+# Prometheus — Deployment
+# ---------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: monitoring
+  labels:
+    app: prometheus
+    app.kubernetes.io/part-of: helpdesk-ai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+      annotations:
+        prometheus.io/scrape: "false"  # don't scrape self via pod discovery
+    spec:
+      serviceAccountName: prometheus
+      securityContext:
+        fsGroup: 65534
+        runAsNonRoot: true
+        runAsUser: 65534
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v2.51.0
+          args:
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.path=/prometheus
+            - --storage.tsdb.retention.time=15d
+            - --web.enable-lifecycle
+            - --web.console.libraries=/usr/share/prometheus/console_libraries
+            - --web.console.templates=/usr/share/prometheus/consoles
+          ports:
+            - name: web
+              containerPort: 9090
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 9090
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 9090
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/prometheus
+            - name: data
+              mountPath: /prometheus
+      volumes:
+        - name: config
+          configMap:
+            name: prometheus-config
+        - name: data
+          persistentVolumeClaim:
+            claimName: prometheus-pvc
+
+---
+# ---------------------------------------------------------------------------
+# Prometheus — Service
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: monitoring
+  labels:
+    app: prometheus
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9090
+      targetPort: 9090
+      name: web
+  selector:
+    app: prometheus
+
+---
+# ---------------------------------------------------------------------------
+# Grafana — Datasource ConfigMap
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: monitoring
+  labels:
+    app: grafana
+data:
+  prometheus.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus:9090
+        isDefault: true
+        editable: false
+
+---
+# ---------------------------------------------------------------------------
+# Grafana — PersistentVolumeClaim
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-pvc
+  namespace: monitoring
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 2Gi
+
+---
+# ---------------------------------------------------------------------------
+# Grafana — Deployment
+# ---------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: monitoring
+  labels:
+    app: grafana
+    app.kubernetes.io/part-of: helpdesk-ai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      securityContext:
+        fsGroup: 472
+        runAsNonRoot: true
+        runAsUser: 472
+      containers:
+        - name: grafana
+          image: grafana/grafana:10.4.0
+          ports:
+            - name: grafana
+              containerPort: 3000
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-secret
+                  key: admin-user
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-secret
+                  key: admin-password
+            - name: GF_USERS_ALLOW_SIGN_UP
+              value: "false"
+            - name: GF_AUTH_ANONYMOUS_ENABLED
+              value: "false"
+            - name: GF_SERVER_ROOT_URL
+              value: "%(protocol)s://%(domain)s:%(http_port)s/"
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 256Mi
+          volumeMounts:
+            - name: datasources
+              mountPath: /etc/grafana/provisioning/datasources
+            - name: data
+              mountPath: /var/lib/grafana
+      volumes:
+        - name: datasources
+          configMap:
+            name: grafana-datasources
+        - name: data
+          persistentVolumeClaim:
+            claimName: grafana-pvc
+
+---
+# ---------------------------------------------------------------------------
+# Grafana — Service
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: monitoring
+  labels:
+    app: grafana
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3000
+      targetPort: 3000
+      name: grafana
+  selector:
+    app: grafana

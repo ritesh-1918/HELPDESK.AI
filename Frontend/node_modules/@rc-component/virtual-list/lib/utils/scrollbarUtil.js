@@ -1,0 +1,15 @@
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.getSpinSize = getSpinSize;
+const MIN_SIZE = 20;
+function getSpinSize(containerSize = 0, scrollRange = 0) {
+  let baseSize = containerSize / scrollRange * containerSize;
+  if (isNaN(baseSize)) {
+    baseSize = 0;
+  }
+  baseSize = Math.max(baseSize, MIN_SIZE);
+  return Math.floor(baseSize);
+}

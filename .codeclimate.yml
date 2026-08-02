@@ -1,0 +1,34 @@
+version: "2"
+checks:
+  argument-count:
+    enabled: true
+  complex-logic:
+    enabled: true
+  file-lines:
+    enabled: true
+  method-complexity:
+    enabled: true
+  method-count:
+    enabled: true
+  method-lines:
+    enabled: true
+  nested-control-flow:
+    enabled: true
+  return-statements:
+    enabled: true
+  similar-code:
+    enabled: true
+  identical-code:
+    enabled: true
+plugins:
+  eslint:
+    enabled: true
+  pep8:
+    enabled: true
+exclude_patterns:
+  - "**/node_modules/"
+  - "**/venv/"
+  - "**/__pycache__/"
+  - "**/*.spec.js"
+  - "**/*.test.js"
+  - "**/tests/"

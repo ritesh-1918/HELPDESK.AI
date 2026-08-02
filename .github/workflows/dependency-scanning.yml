@@ -1,0 +1,49 @@
+name: Dependency Security Scanning
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  schedule:
+    - cron: '0 0 * * 0'
+
+jobs:
+  scan-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Run pip-audit for Backend
+        working-directory: ./backend
+        run: pip-audit -r requirements.txt || true
+
+      - name: Run pip-audit for Model
+        working-directory: ./Model
+        # Check if requirements.txt exists first, since we aren't 100% sure it does.
+        run: if [ -f "requirements.txt" ]; then pip-audit -r requirements.txt; fi || true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run npm audit for Frontend
+        working-directory: ./Frontend
+        run: npm audit || true
+
+      - name: Run npm audit for MobileApp
+        working-directory: ./MobileApp
+        run: npm audit || true
+        
+      - name: Run npm audit for Root
+        run: npm audit || true

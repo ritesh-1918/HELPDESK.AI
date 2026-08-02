@@ -1,0 +1,91 @@
+# @rc-component/drawer
+
+[![NPM version][npm-image]][npm-url]
+[![npm download][download-image]][download-url]
+[![build status][github-actions-image]][github-actions-url]
+[![codecov][codecov-image]][codecov-url]
+[![dumi][dumi-image]][dumi-url]
+
+[npm-image]: http://img.shields.io/npm/v/@rc-component/drawer.svg?style=flat-square
+[npm-url]: http://npmjs.org/package/@rc-component/drawer
+[dumi-image]: https://img.shields.io/badge/docs%20by-dumi-blue?style=flat-square
+[dumi-url]: https://github.com/umijs/dumi
+[github-actions-image]: https://github.com/react-component/drawer/actions/workflows/react-component-ci.yml/badge.svg
+[github-actions-url]: https://github.com/react-component/drawer/actions/workflows/react-component-ci.yml
+[download-image]: https://img.shields.io/npm/dm/@rc-component/drawer.svg?style=flat-square
+[download-url]: https://npmjs.org/package/@rc-component/drawer
+[codecov-image]: https://codecov.io/gh/react-component/drawer/branch/master/graph/badge.svg
+[codecov-url]: https://codecov.io/gh/react-component/drawer
+
+
+## Example
+
+https://drawer-react-component.vercel.app/
+
+## Usage
+
+```js
+import Drawer from '@rc-component/drawer';
+import React from 'react';
+import ReactDom from 'react-dom';
+
+ReactDom.render(
+  <Drawer>
+    {menu children}
+  </Drawer>
+, mountNode);
+```
+
+## Install
+
+[![@rc-component/drawer](https://nodei.co/npm/@rc-component/drawer.png)](https://npmjs.org/package/@rc-component/drawer)
+
+## Browser Support
+
+| ![IE](https://github.com/alrra/browser-logos/blob/master/src/edge/edge_48x48.png?raw=true) | ![Chrome](https://github.com/alrra/browser-logos/blob/master/src/chrome/chrome_48x48.png?raw=true) | ![Firefox](https://github.com/alrra/browser-logos/blob/master/src/firefox/firefox_48x48.png?raw=true) | ![Opera](https://github.com/alrra/browser-logos/blob/master/src/opera/opera_48x48.png?raw=true) | ![Safari](https://github.com/alrra/browser-logos/blob/master/src/safari/safari_48x48.png?raw=true) |
+| ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| IE 10+ ✔                                                                                  | Chrome 31.0+ ✔                                                                                    | Firefox 31.0+ ✔                                                                                      | Opera 30.0+ ✔                                                                                  | Safari 7.0+ ✔                                                                                     |
+
+## API
+
+| props              | type                                                                        | default                                | description                                                                   |
+| ------------------ | --------------------------------------------------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------- |
+| className          | string                                                                      | null                                   | -                                                                             |
+| classNames         | { mask?: string; content?: string; wrapper?: string; }                      | -                                      | pass className to target area                                                 |
+| styles             | { mask?: CSSProperties; content?: CSSProperties; wrapper?: CSSProperties; } | `rc-drawer`                            | pass style to target area                                                     |
+| prefixCls          | string                                                                      | 'drawer'                               | prefix class                                                                  |
+| width              | string \| number                                                            | null                                   | drawer content wrapper width, drawer level transition width                   |
+| height             | string \| number                                                            | null                                   | drawer content wrapper height, drawer level transition height                 |
+| defaultWidth       | string \| number                                                            | null                                   | default width for uncontrolled resizable drawer                               |
+| defaultHeight      | string \| number                                                            | null                                   | default height for uncontrolled resizable drawer                              |
+| open               | boolean                                                                     | false                                  | open or close menu                                                            |
+| defaultOpen        | boolean                                                                     | false                                  | default open menu                                                             |
+| placement          | string                                                                      | `left`                                 | `left` `top` `right` `bottom`                                                 |
+| level              | string \| array                                                             | `all`                                  | With the drawer level element. `all`/ null / className / id / tagName / array |
+| levelMove          | number \| array \| func                                                     | null                                   | level move value. default is drawer width                                     |
+| duration           | string                                                                      | `.3s`                                  | level animation duration                                                      |
+| ease               | string                                                                      | `cubic-bezier(0.78, 0.14, 0.15, 0.86)` | level animation timing function                                               |
+| getContainer       | string \| func \| HTMLElement                                               | `body`                                 | Return the mount node for Drawer. if is `null` use React.creactElement        |
+| showMask           | boolean                                                                     | true                                   | mask is show                                                                  |
+| maskClosable       | boolean                                                                     | true                                   | Clicking on the mask (area outside the Drawer) to close the Drawer or not.    |
+| maskStyle          | CSSProperties                                                               | null                                   | mask style                                                                    |
+| afterOpenChange    | func                                                                        | null                                   | transition end callback(open)                                                 |
+| onClose            | func                                                                        | null                                   | close click function                                                          |
+| keyboard           | boolean                                                                     | true                                   | Whether support press esc to close                                            |
+| autoFocus          | boolean                                                                     | true                                   | Whether focusing on the drawer after it opened                                |
+| resizable          | { onResize?: (size: number) => void; onResizeStart?: () => void; onResizeEnd?: () => void; } | -                                      | Resizable configuration with optional callbacks                                |
+| onMouseEnter       | React.MouseEventHandler\<HTMLDivElement\>                                   | -                                      | Trigger when mouse enter drawer panel                                         |
+| onMouseOver        | React.MouseEventHandler\<HTMLDivElement\>                                   | -                                      | Trigger when mouse over drawer panel                                          |
+| onMouseLeave       | React.MouseEventHandler\<HTMLDivElement\>                                   | -                                      | Trigger when mouse leave drawer panel                                         |
+| onClick            | React.MouseEventHandler\<HTMLDivElement\>                                   | -                                      | Trigger when mouse click drawer panel                                         |
+| onKeyDown          | React.MouseEventHandler\<HTMLDivElement\>                                   | -                                      | Trigger when mouse keydown on drawer panel                                    |
+| onKeyUp            | React.MouseEventHandler\<HTMLDivElement\>                                   | -                                      | Trigger when mouse keyup on drawer panel                                      |
+
+> 2.0 Rename `onMaskClick` -> `onClose`, add `maskClosable`.
+
+## Development
+
+```
+npm install
+npm start
+```

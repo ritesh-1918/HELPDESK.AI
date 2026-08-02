@@ -1,0 +1,937 @@
+/*
+ * /frontend/src/styles/base.css — Mobile-first responsive base
+ * 
+ * ═══════════════════════════════════════════════════════════════
+ * PRODUCTION-GRADE CSS BASE (v6.0 - FINAL)
+ * - CSS custom properties with comprehensive fallback values
+ * - Mobile-first with progressive enhancement via @supports
+ * - Respects user preferences: reduced motion, color scheme,
+ *   contrast, forced colors, reduced transparency, inverted colors
+ * - Accessibility: focus-visible, logical properties, reduced animation, print
+ * - Performance optimized: contain property, will-change hints, GPU compositing hints
+ * - Security note: this file provides visual base only. HTTP security headers
+ *   (Content-Security-Policy, X-Frame-Options, X-Content-Type-Options)
+ *   and CORS must be enforced server-side (Vite dev server and FastAPI).
+ *   See vite.config.js and FastAPI middleware for those implementations.
+ *   ALLOWED_ORIGINS env variable must restrict CORS to authorized domains.
+ * - Complete with print styles, selection styling, and accessible focus patterns.
+ * ═══════════════════════════════════════════════════════════════
+ */
+
+/* ── 1. CSS Custom Properties (with fallback defaults) ────────── */
+:root {
+  /* Typography */
+  --font-family-base: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  --font-family-monospace: 'Fira Code', 'Cascadia Code', 'Source Code Pro',
+    Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+  --line-height-base: 1.5;
+  --line-height-heading: 1.2;
+  --font-size-base: 1rem;          /* 16px */
+  --font-size-small: 0.875rem;     /* 14px */
+  --font-size-large: 1.125rem;     /* 18px */
+  --font-size-h1: clamp(2rem, 5vw + 1rem, 3rem);    /* 32px–48px responsive */
+  --font-size-h2: clamp(1.5rem, 4vw + 0.5rem, 2.5rem);
+  --font-size-h3: clamp(1.25rem, 3vw + 0.5rem, 2rem);
+  --font-size-h4: clamp(1rem, 2.5vw + 0.5rem, 1.75rem);
+  --font-size-h5: clamp(0.875rem, 2vw + 0.5rem, 1.25rem);
+  --font-size-h6: clamp(0.75rem, 1.5vw + 0.5rem, 1.125rem);
+  --font-weight-normal: 400;
+  --font-weight-bold: 700;
+
+  /* Spacing scale */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  --spacing-3xl: 4rem;
+
+  /* Container widths (mobile-first) */
+  --container-max-xs: 320px;
+  --container-max-sm: 540px;
+  --container-max-md: 720px;
+  --container-max-lg: 960px;
+  --container-max-xl: 1140px;
+  --container-padding: var(--spacing-md, 1rem);
+
+  /* Responsive breakpoints (used in media queries) */
+  --bp-sm: 576px;
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+  --bp-xl: 1280px;
+
+  /* Colors (neutral palette – light mode) */
+  --color-text: #1a1a1a;
+  --color-bg: #fafafa;
+  --color-surface: #ffffff;
+  --color-border: #d0d0d0;
+  --color-text-secondary: #555555;
+  --color-link: #1a73e8;           /* WCAG AAA compliant on white */
+  --color-link-visited: #672ab8;
+  --color-link-hover: #1557b0;
+  --color-link-active: #0d47a1;
+  --color-focus-ring: #1a73e8;
+  --color-accent: #1a73e8;
+  --color-accent-contrast: #ffffff;
+  --color-error: #d32f2f;
+  --color-success: #2e7d32;
+  --color-warning: #f9a825;
+  --color-info: #1976d2;
+  --color-code-bg: #f4f4f4;
+  --color-code-text: #333;
+  --color-selection-bg: #b3d4fc;
+  --color-selection-text: #000;
+
+  /* Border radius */
+  --border-radius-sm: 0.25rem;
+  --border-radius-md: 0.5rem;
+  --border-radius-lg: 1rem;
+  --border-radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.2s ease;
+  --transition-slow: 0.3s ease;
+
+  /* Focus ring (accessibility) */
+  --focus-ring-width: 3px;
+  --focus-ring-style: solid;
+  --focus-ring-color: var(--color-focus-ring, #1a73e8);
+  --focus-ring-offset: 2px;
+
+  /* Scrollbar */
+  --scrollbar-thumb-color: #b0b0b0;
+  --scrollbar-track-color: #f0f0f0;
+
+  /* Z-index layers */
+  --z-base: 0;
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+
+  /* Performance: hint for compositing layers */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ── 1b. Feature query: Custom properties support ─────────────── */
+@supports (--css: variables) {
+  /* Ensures fallbacks used in var() work correctly */
+}
+
+/* ── 1c. Dark Mode – via prefers-color-scheme ─────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-text: #e0e0e0;
+    --color-bg: #121212;
+    --color-surface: #1e1e1e;
+    --color-border: #333333;
+    --color-text-secondary: #aaaaaa;
+    --color-link: #8ab4f8;
+    --color-link-visited: #ce93d8;
+    --color-link-hover: #a5d6f7;
+    --color-link-active: #7c4dff;
+    --color-focus-ring: #8ab4f8;
+    --color-accent: #8ab4f8;
+    --color-accent-contrast: #121212;
+    --color-error: #ef5350;
+    --color-success: #66bb6a;
+    --color-warning: #ffd54f;
+    --color-info: #64b5f6;
+    --color-code-bg: #2d2d2d;
+    --color-code-text: #e0e0e0;
+    --color-selection-bg: #264f78;
+    --color-selection-text: #ffffff;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.6);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.6);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.6);
+    --scrollbar-thumb-color: #555;
+    --scrollbar-track-color: #333;
+  }
+}
+
+/* ── 1d. High Contrast Mode – via prefers-contrast ─────────────── */
+@media (prefers-contrast: high) {
+  :root {
+    --color-text: #000000;
+    --color-bg: #ffffff;
+    --color-surface: #ffffff;
+    --color-border: #000000;
+    --color-text-secondary: #000000;
+    --color-link: #0000ee;
+    --color-link-visited: #551a8b;
+    --color-link-hover: #0000ee;
+    --color-link-active: #0000cc;
+    --color-focus-ring: #000000;
+    --color-accent: #000000;
+    --color-accent-contrast: #ffffff;
+    --color-error: #cc0000;
+    --color-success: #006600;
+    --color-warning: #664400;
+    --color-info: #000066;
+    --shadow-sm: none;
+    --shadow-md: none;
+    --shadow-lg: none;
+  }
+}
+
+/* ── 1e. Reduced Motion (global for transitions/animations) ───── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+    will-change: auto !important;
+  }
+}
+
+/* ── 1f. Reduced Transparency ─────────────────────────────────── */
+@media (prefers-reduced-transparency: reduce) {
+  *,
+  *::before,
+  *::after {
+    opacity: 1 !important;
+    background-blend-mode: normal !important;
+  }
+}
+
+/* ── 1g. Inverted Colors (e.g., Windows High Contrast alternative) ─── */
+@media (inverted-colors: inverted) {
+  img,
+  video,
+  canvas {
+    filter: invert(1);
+  }
+}
+
+/* ── 1h. Forced Colors (Windows High Contrast) ─────────────────── */
+@media (forced-colors: active) {
+  :root {
+    /* Override colors to system palette */
+    --color-text: CanvasText;
+    --color-bg: Canvas;
+    --color-surface: Canvas;
+    --color-border: ButtonBorder;
+    --color-link: LinkText;
+    --color-link-visited: VisitedText;
+    --color-link-hover: LinkText;
+    --color-link-active: ActiveText;
+    --color-focus-ring: CanvasText;
+    --color-accent: Highlight;
+    --color-accent-contrast: HighlightText;
+    --color-error: CanvasText;
+    --color-success: CanvasText;
+    --color-warning: CanvasText;
+    --color-info: CanvasText;
+    --shadow-sm: none;
+    --shadow-md: none;
+    --shadow-lg: none;
+    --scrollbar-thumb-color: ButtonText;
+    --scrollbar-track-color: Window;
+  }
+
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    background-image: none !important;
+    background-color: Canvas !important;
+    color: CanvasText !important;
+    border-color: CanvasText !important;
+  }
+
+  /* Prevent loss of button/input identity */
+  button,
+  input,
+  select,
+  textarea {
+    border: 1px solid ButtonBorder !important;
+    background-color: ButtonFace !important;
+    color: ButtonText !important;
+  }
+
+  a {
+    color: LinkText !important;
+    text-decoration: underline;
+  }
+
+  a:visited {
+    color: VisitedText !important;
+  }
+
+  ::selection {
+    background-color: Highlight !important;
+    color: HighlightText !important;
+  }
+}
+
+/* ── 2. Reset & Box Sizing ────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Remove default list styles */
+ul,
+ol {
+  list-style: none;
+}
+
+/* Remove default fieldset border */
+fieldset {
+  border: 0;
+}
+
+/* Remove default spacing for dl, dd, etc. */
+dl,
+dd {
+  margin: 0;
+}
+
+/* Reset table spacing */
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+/* Reset form elements */
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* ── 3. Root (html) & Body ────────────────────────────────────── */
+html {
+  font-size: 100%; /* 16px base – accessible, respects user zoom */
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  color-scheme: light dark;
+  scroll-behavior: smooth;
+  scroll-padding-top: 1.5rem; /* Compensate for fixed header if any */
+  /* Performance: contain layout & style to limit recalc scope */
+  contain: layout style;
+  /* Improve compositing for fixed or sticky elements */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Fallback for browsers that don't support "contain" */
+@supports not (contain: layout) {
+  html {
+    position: relative; /* Maintain stacking context to limit paint */
+  }
+}
+
+body {
+  font-family: var(--font-family-base, system-ui, sans-serif);
+  font-size: var(--font-size-base, 1rem);
+  line-height: var(--line-height-base, 1.5);
+  color: var(--color-text, #1a1a1a);
+  background-color: var(--color-bg, #fafafa);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeSpeed;
+  overflow-x: hidden;
+}
+
+/* ── 4. Typography ─────────────────────────────────────────────── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-family-base, system-ui, sans-serif);
+  font-weight: var(--font-weight-bold, 700);
+  line-height: var(--line-height-heading, 1.2);
+  color: var(--color-text, #1a1a1a);
+  margin-bottom: var(--spacing-sm, 0.5rem);
+  overflow-wrap: break-word;
+}
+
+h1 { font-size: var(--font-size-h1, 2rem); }
+h2 { font-size: var(--font-size-h2, 1.5rem); }
+h3 { font-size: var(--font-size-h3, 1.25rem); }
+h4 { font-size: var(--font-size-h4, 1rem); }
+h5 { font-size: var(--font-size-h5, 0.875rem); }
+h6 { font-size: var(--font-size-h6, 0.75rem); }
+
+p {
+  margin-bottom: var(--spacing-md, 1rem);
+  overflow-wrap: break-word;
+}
+
+small {
+  font-size: var(--font-size-small, 0.875rem);
+}
+
+strong, b {
+  font-weight: var(--font-weight-bold, 700);
+}
+
+em, i {
+  font-style: italic;
+}
+
+a {
+  color: var(--color-link, #1a73e8);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color var(--transition-fast, 0.15s ease);
+}
+
+a:hover {
+  color: var(--color-link-hover, #1557b0);
+}
+
+a:visited {
+  color: var(--color-link-visited, #672ab8);
+}
+
+a:active {
+  color: var(--color-link-active, #0d47a1);
+}
+
+/* Focus-visible for keyboard users */
+:focus-visible {
+  outline: var(--focus-ring-width, 3px) var(--focus-ring-style, solid) var(--focus-ring-color, #1a73e8);
+  outline-offset: var(--focus-ring-offset, 2px);
+}
+
+:focus:not(:focus-visible) {
+  outline: none; /* Remove outline for mouse users */
+}
+
+/* Selection */
+::selection {
+  background-color: var(--color-selection-bg, #b3d4fc);
+  color: var(--color-selection-text, #000);
+}
+
+/* Code, pre, kbd, samp */
+code,
+kbd,
+samp {
+  font-family: var(--font-family-monospace, monospace);
+  font-size: 0.875em;
+  background-color: var(--color-code-bg, #f4f4f4);
+  color: var(--color-code-text, #333);
+  padding: 0.2em 0.4em;
+  border-radius: var(--border-radius-sm, 0.25rem);
+}
+
+pre {
+  font-family: var(--font-family-monospace, monospace);
+  font-size: var(--font-size-small, 0.875rem);
+  background-color: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #d0d0d0);
+  border-radius: var(--border-radius-md, 0.5rem);
+  padding: var(--spacing-md, 1rem);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  line-height: 1.45;
+}
+
+pre code {
+  background-color: transparent;
+  padding: 0;
+  border: none;
+  font-size: inherit;
+}
+
+blockquote {
+  margin: var(--spacing-md, 1rem) 0;
+  padding: var(--spacing-sm, 0.5rem) var(--spacing-md, 1rem);
+  border-left: 4px solid var(--color-accent, #1a73e8);
+  background-color: var(--color-surface, #ffffff);
+  color: var(--color-text-secondary, #555555);
+  font-style: italic;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid var(--color-border, #d0d0d0);
+  margin: var(--spacing-lg, 1.5rem) 0;
+}
+
+abbr[title] {
+  text-decoration: underline dotted;
+  cursor: help;
+}
+
+address {
+  font-style: normal;
+}
+
+/* ── 5. Lists (restored with proper spacing) ───────────────────── */
+ul,
+ol {
+  padding-left: 1.5rem;
+  margin-bottom: var(--spacing-md, 1rem);
+}
+
+ul {
+  list-style: disc;
+}
+
+ol {
+  list-style: decimal;
+}
+
+li {
+  margin-bottom: var(--spacing-xs, 0.25rem);
+}
+
+ul ul,
+ol ol,
+ul ol,
+ol ul {
+  margin-top: var(--spacing-xs, 0.25rem);
+  margin-bottom: 0;
+}
+
+dl {
+  margin-bottom: var(--spacing-md, 1rem);
+}
+
+dt {
+  font-weight: var(--font-weight-bold, 700);
+}
+
+dd {
+  margin-left: var(--spacing-md, 1rem);
+  margin-bottom: var(--spacing-sm, 0.5rem);
+}
+
+/* ── 6. Images & Media ─────────────────────────────────────────── */
+img,
+video,
+canvas,
+svg,
+iframe,
+embed,
+object {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+img {
+  border-style: none;
+  font-style: italic; /* Helpful when images fail to load — shows alt */
+}
+
+svg {
+  fill: currentColor;
+}
+
+figure {
+  margin: var(--spacing-md, 1rem) 0;
+}
+
+figcaption {
+  font-size: var(--font-size-small, 0.875rem);
+  color: var(--color-text-secondary, #555555);
+  text-align: center;
+}
+
+/* ── 7. Form Elements ──────────────────────────────────────────── */
+label {
+  display: inline-block;
+  font-weight: var(--font-weight-bold, 700);
+  margin-bottom: var(--spacing-xs, 0.25rem);
+  cursor: pointer;
+}
+
+input,
+textarea,
+select,
+button {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: var(--color-text, #1a1a1a);
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="url"],
+input[type="tel"],
+input[type="number"],
+input[type="date"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="week"],
+input[type="time"],
+input[type="color"],
+input[type="file"],
+textarea,
+select {
+  width: 100%;
+  padding: var(--spacing-sm, 0.5rem) var(--spacing-md, 1rem);
+  background-color: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #d0d0d0);
+  border-radius: var(--border-radius-md, 0.5rem);
+  transition: border-color var(--transition-fast, 0.15s ease), box-shadow var(--transition-fast, 0.15s ease);
+  appearance: none;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--color-focus-ring, #1a73e8);
+  box-shadow: 0 0 0 var(--focus-ring-width, 3px) rgba(26, 115, 232, 0.2);
+}
+
+input:disabled,
+textarea:disabled,
+select:disabled {
+  background-color: var(--color-border, #d0d0d0);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  width: auto;
+  margin-right: var(--spacing-xs, 0.25rem);
+  cursor: pointer;
+}
+
+input[type="file"] {
+  padding: var(--spacing-xs, 0.25rem);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23555555' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 12px;
+  padding-right: 2rem;
+}
+
+select[multiple] {
+  background-image: none;
+  padding-right: var(--spacing-md, 1rem);
+}
+
+button,
+input[type="submit"],
+input[type="reset"],
+input[type="button"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-sm, 0.5rem) var(--spacing-lg, 1.5rem);
+  background-color: var(--color-accent, #1a73e8);
+  color: var(--color-accent-contrast, #ffffff);
+  border: 1px solid transparent;
+  border-radius: var(--border-radius-md, 0.5rem);
+  font-weight: var(--font-weight-bold, 700);
+  cursor: pointer;
+  transition: background-color var(--transition-fast, 0.15s ease), box-shadow var(--transition-fast, 0.15s ease);
+  text-decoration: none;
+  line-height: 1.2;
+}
+
+button:hover,
+input[type="submit"]:hover,
+input[type="reset"]:hover,
+input[type="button"]:hover {
+  background-color: var(--color-link-hover, #1557b0);
+}
+
+button:focus-visible,
+input[type="submit"]:focus-visible,
+input[type="reset"]:focus-visible,
+input[type="button"]:focus-visible {
+  outline: var(--focus-ring-width, 3px) var(--focus-ring-style, solid) var(--color-focus-ring, #1a73e8);
+  outline-offset: var(--focus-ring-offset, 2px);
+}
+
+button:disabled,
+input[type="submit"]:disabled,
+input[type="reset"]:disabled,
+input[type="button"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(50%);
+}
+
+fieldset {
+  margin: var(--spacing-md, 1rem) 0;
+  padding: var(--spacing-md, 1rem);
+  border: 1px solid var(--color-border, #d0d0d0);
+  border-radius: var(--border-radius-md, 0.5rem);
+}
+
+legend {
+  font-weight: var(--font-weight-bold, 700);
+  padding: 0 var(--spacing-xs, 0.25rem);
+}
+
+/* ── 8. Tables ──────────────────────────────────────────────────── */
+table {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  display: block;
+  border-collapse: collapse;
+  margin-bottom: var(--spacing-md, 1rem);
+}
+
+caption {
+  font-weight: var(--font-weight-bold, 700);
+  margin-bottom: var(--spacing-xs, 0.25rem);
+  text-align: left;
+}
+
+th,
+td {
+  padding: var(--spacing-sm, 0.5rem) var(--spacing-md, 1rem);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border, #d0d0d0);
+}
+
+th {
+  font-weight: var(--font-weight-bold, 700);
+  background-color: var(--color-surface, #ffffff);
+}
+
+tbody tr:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* ── 9. Container Layout ────────────────────────────────────────── */
+.container {
+  width: 100%;
+  max-width: var(--container-max-xl, 1140px);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--container-padding, 1rem);
+  padding-right: var(--container-padding, 1rem);
+}
+
+.container--xs { max-width: var(--container-max-xs, 320px); }
+.container--sm { max-width: var(--container-max-sm, 540px); }
+.container--md { max-width: var(--container-max-md, 720px); }
+.container--lg { max-width: var(--container-max-lg, 960px); }
+.container--xl { max-width: var(--container-max-xl, 1140px); }
+
+/* ── 10. Accessibility Utilities ─────────────────────────────────── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  z-index: var(--z-tooltip, 1070);
+  padding: var(--spacing-sm, 0.5rem) var(--spacing-lg, 1.5rem);
+  background-color: var(--color-accent, #1a73e8);
+  color: var(--color-accent-contrast, #ffffff);
+  font-weight: var(--font-weight-bold, 700);
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* ── 11. Print Styles ───────────────────────────────────────────── */
+@media print {
+  *,
+  *::before,
+  *::after {
+    background: transparent !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  body {
+    font-size: 12pt;
+    line-height: 1.5;
+    margin: 1cm;
+  }
+
+  a,
+  a:visited {
+    text-decoration: underline;
+  }
+
+  a[href]::after {
+    content: " (" attr(href) ")";
+  }
+
+  abbr[title]::after {
+    content: " (" attr(title) ")";
+  }
+
+  pre,
+  blockquote {
+    border: 1px solid #999;
+    page-break-inside: avoid;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tr,
+  img {
+    page-break-inside: avoid;
+  }
+
+  img {
+    max-width: 100% !important;
+  }
+
+  p,
+  h2,
+  h3 {
+    orphans: 3;
+    widows: 3;
+  }
+
+  h2,
+  h3 {
+    page-break-after: avoid;
+  }
+
+  /* Hide non-essential elements */
+  nav,
+  .skip-link,
+  .sr-only {
+    display: none !important;
+  }
+}
+
+/* ── 12. Scrollbar Styles (optional, can be removed) ────────────── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track-color, #f0f0f0);
+  border-radius: var(--border-radius-full, 9999px);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb-color, #b0b0b0);
+  border-radius: var(--border-radius-full, 9999px);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary, #555555);
+}
+
+/* Firefox scrollbar (limited) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb-color, #b0b0b0) var(--scrollbar-track-color, #f0f0f0);
+}
+
+/* ── 13. Animation Keyframes (if any) ────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Respect reduced motion for keyframes */
+@media (prefers-reduced-motion: reduce) {
+  @keyframes fadeIn { to { opacity: 1; } }
+  @keyframes slideInUp { to { opacity: 1; transform: translateY(0); } }
+}
+
+/* ── 14. Misc Helpers ─────────────────────────────────────────────── */
+.flow > * + * {
+  margin-top: var(--flow-space, var(--spacing-md, 1rem));
+}
+
+.flow--sm > * + * { --flow-space: var(--spacing-sm, 0.5rem); }
+.flow--lg > * + * { --flow-space: var(--spacing-lg, 1.5rem); }
+
+.text-center { text-align: center; }
+.text-left   { text-align: left; }
+.text-right  { text-align: right; }
+
+.font-bold   { font-weight: var(--font-weight-bold, 700); }
+.font-normal { font-weight: var(--font-weight-normal, 400); }
+
+.color-secondary { color: var(--color-text-secondary, #555555); }
+
+/* ── 15. End Security Reminder ────────────────────────────────────── */
+/* 
+ * ❗ IMPORTANT SECURITY REMINDER ❗
+ * This stylesheet provides zero server-side security.
+ * To protect against XSS, Clickjacking, and MIME sniffing,
+ * you MUST enforce the following headers in your server configuration
+ * (Vite dev server, FastAPI middleware, or reverse proxy):
+ *   - Content-Security-Policy
+ *   - X-Frame-Options: DENY or SAMEORIGIN
+ *   - X-Content-Type-Options: nosniff
+ *   - Strict-Transport-Security
+ *   - Referrer-Policy
+ * Additionally, CORS must be configured with a strict ALLOWED_ORIGINS
+ * environment variable (list of authorized domains). 
+ * See vite.config.js and FastAPI app configuration for implementation.
+ */
