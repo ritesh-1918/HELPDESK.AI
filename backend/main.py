@@ -19,7 +19,7 @@ from contextlib import asynccontextmanager
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, HTTPException, Request, UploadFile, File
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -547,6 +547,60 @@ async def get_tickets(company_id: str | None = None):
         
     res = query.execute()
     return res.data
+
+
+UPLOADS_DIR = os.environ.get(
+    "UPLOADS_DIR",
+    os.path.join(os.path.dirname(__file__), "uploads"),
+)
+
+ALLOWED_ASSET_EXTENSIONS = {".pdf", ".png", ".jpg", ".log"}
+
+
+@app.post("/assets/upload")
+async def upload_asset(file: UploadFile = File(...)):
+    """
+    Upload a ticket asset after strict metadata validation.
+
+    Files must be <= 5 MB and use a permitted extension (pdf, png, jpg, log).
+    The payload is streamed in bounded chunks so an oversized upload is
+    rejected before the full body is buffered. The stored file name is
+    stripped to its basename and path-traversal tokens are rejected.
+    """
+    from backend.services.file_validation import (
+        MAX_ASSET_SIZE_BYTES,
+        AssetValidationError,
+        validate_asset_extension,
+    )
+
+    try:
+        validate_asset_extension(file.filename)
+    except AssetValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    total = 0
+    chunks = []
+    chunk_size = 64 * 1024
+    while True:
+        chunk = await file.read(chunk_size)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > MAX_ASSET_SIZE_BYTES:
+            raise HTTPException(status_code=413, detail="File exceeds the 5 MB size limit")
+        chunks.append(chunk)
+
+    if total == 0:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+
+    safe_name = os.path.basename(file.filename or "")
+    os.makedirs(UPLOADS_DIR, exist_ok=True)
+    dest = os.path.join(UPLOADS_DIR, safe_name)
+    with open(dest, "wb") as out:
+        for chunk in chunks:
+            out.write(chunk)
+
+    return {"status": "success", "filename": safe_name, "size_bytes": total}
 
 @app.post("/tickets/save")
 async def save_ticket(request_body: TicketSaveRequest):
