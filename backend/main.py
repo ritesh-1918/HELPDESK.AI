@@ -864,9 +864,10 @@ async def analyze_only(request_body: TicketRequest):
         summary = gemini_service.get_summary(text)
     
     # Convert priority to SLA breached timestamp (for preview)
-    hours_map = {"Critical": 2, "High": 8, "Medium": 24, "Low": 72}
-    sla_hours = hours_map.get(classification["priority"], 72)
-    sla_breach_dt = datetime.datetime.utcnow() + datetime.timedelta(hours=sla_hours)
+    # Business-hours aware: weekends and public holidays don't count against SLA.
+    from backend.services.sla_service import get_sla_deadline
+
+    sla_breach_dt = get_sla_deadline(datetime.datetime.utcnow(), classification["priority"])
 
     return TicketResponse(
         ticket_id=str(uuid.uuid4()), # Temporary ID
@@ -1011,9 +1012,9 @@ async def analyze_stream(request_body: TicketRequest):
         if gemini_service and gemini_service._initialized:
             summary = gemini_service.get_summary(text)
         
-        hours_map = {"Critical": 2, "High": 8, "Medium": 24, "Low": 72}
-        sla_hours = hours_map.get(classification["priority"], 72)
-        sla_breach_dt = datetime.datetime.utcnow() + datetime.timedelta(hours=sla_hours)
+        from backend.services.sla_service import get_sla_deadline
+
+        sla_breach_dt = get_sla_deadline(datetime.datetime.utcnow(), classification["priority"])
 
         ticket_response_dict = {
             "ticket_id": str(uuid.uuid4()),
