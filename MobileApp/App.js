@@ -11,6 +11,8 @@ import { LayoutDashboard, Ticket, User } from 'lucide-react-native';
 import { View, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AppState } from 'react-native';
+import { registerForPushNotificationsAsync } from './src/services/pushNotifications';
 
 // Notification system
 import { NotificationProvider } from './src/components/NotificationProvider';
@@ -102,10 +104,13 @@ const AppContent = () => {
             .eq('id', session.user.id)
             .single();
           setUserStatus(data?.status || 'active');
+
+          // Register the device for remote push notifications (best-effort)
+          registerForPushNotificationsAsync();
         }
 
-        const onboardingDone = await AsyncStorage.getItem('@onboarding_complete');
-        setShowOnboarding(onboardingDone === null);
+    const onboardingDone = await AsyncStorage.getItem('@onboarding_complete');
+    setShowOnboarding(onboardingDone === null);
       } catch (e) {
         console.log('Init error', e);
       } finally {
@@ -131,12 +136,23 @@ const AppContent = () => {
           .eq('id', session.user.id)
           .single();
         setUserStatus(data?.status || 'active');
+
+        // Re-register push token on sign-in (token may have rotated)
+        registerForPushNotificationsAsync();
       } else {
         setUserStatus(null);
       }
     });
 
     return () => subscription.unsubscribe();
+  }, []);
+
+  // Re-register the push token whenever the app returns to the foreground
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') registerForPushNotificationsAsync();
+    });
+    return () => sub.remove();
   }, []);
 
   // Also subscribe to profile changes to catch approval in real-time
