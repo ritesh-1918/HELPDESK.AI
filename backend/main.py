@@ -548,6 +548,38 @@ async def get_tickets(company_id: str | None = None):
     res = query.execute()
     return res.data
 
+
+@app.get("/tickets/export/csv")
+async def export_tickets_csv(company_id: str | None = None):
+    """
+    Stream all tickets as a downloadable CSV for admin audits.
+
+    Data is fetched from Supabase in bounded batches and serialized
+    incrementally, so large exports stream to the client without loading the
+    full dataset into memory. Cell values are sanitized against CSV
+    formula-injection payloads.
+    """
+    from backend.services.csv_exporter import stream_tickets_csv
+
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    def fetch_batch(offset: int, batch_size: int):
+        query = supabase.table("tickets").select("*").order("created_at", desc=True)
+        if company_id:
+            query = query.eq("company_id", company_id)
+        res = query.range(offset, offset + batch_size - 1).execute()
+        return res.data or []
+
+    return StreamingResponse(
+        stream_tickets_csv(fetch_batch),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": 'attachment; filename="tickets_export.csv"',
+            "Cache-Control": "no-store",
+        },
+    )
+
 @app.post("/tickets/save")
 async def save_ticket(request_body: TicketSaveRequest):
     """
