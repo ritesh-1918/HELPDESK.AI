@@ -50,11 +50,12 @@ export default function ContactSales() {
             : DEFAULT_COMPANY_SIZE;
 
         return {
-            name: '',
+           name: '',
             email: '',
             company: '',
             phone: '',
             company_size: companySizeInit,
+            country: '',
             message: ''
         };
     });
@@ -283,8 +284,56 @@ export default function ContactSales() {
                                 </div>
                             </div>
 
+                         <div className="space-y-1.5">
+                                <label className="text-sm font-semibold text-gray-700 ml-1">Country</label>
+                                <div className="relative">
+                                    <select
+                                        name="country"
+                                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all font-medium text-gray-900 appearance-none cursor-pointer"
+                                        value={formData.country}
+                                        onChange={handleChange}
+                                    >
+                                        <option value="">Select your country...</option>
+                                        <option value="US">United States</option>
+                                        <option value="GB">United Kingdom</option>
+                                        <option value="IN">India</option>
+                                        <option value="CA">Canada</option>
+                                        <option value="AU">Australia</option>
+                                        <option value="DE">Germany</option>
+                                        <option value="FR">France</option>
+                                        <option value="SG">Singapore</option>
+                                        <option value="AE">United Arab Emirates</option>
+                                        <option value="JP">Japan</option>
+                                        <option value="BR">Brazil</option>
+                                        <option value="MX">Mexico</option>
+                                        <option value="NL">Netherlands</option>
+                                        <option value="SE">Sweden</option>
+                                        <option value="NO">Norway</option>
+                                        <option value="DK">Denmark</option>
+                                        <option value="FI">Finland</option>
+                                        <option value="CH">Switzerland</option>
+                                        <option value="NZ">New Zealand</option>
+                                        <option value="ZA">South Africa</option>
+                                        <option value="NG">Nigeria</option>
+                                        <option value="KE">Kenya</option>
+                                        <option value="PK">Pakistan</option>
+                                        <option value="BD">Bangladesh</option>
+                                        <option value="PH">Philippines</option>
+                                        <option value="ID">Indonesia</option>
+                                        <option value="MY">Malaysia</option>
+                                        <option value="TH">Thailand</option>
+                                        <option value="VN">Vietnam</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                    <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none">
+                                        <ArrowRight className="h-4 w-4 text-gray-400 rotate-90" />
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className="space-y-1.5">
                                 <label className="text-sm font-semibold text-gray-700 ml-1">How can we help? *</label>
+
                                 <textarea 
                                     required 
                                     name="message"
