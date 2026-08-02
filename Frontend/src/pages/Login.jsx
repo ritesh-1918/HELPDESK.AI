@@ -130,7 +130,7 @@ function Login() {
           {/* Headline */}
           <h1
             style={{
-              fontFamily: "'Syne', sans-serif",
+              fontFamily: "'Inter', sans-serif",
               fontSize: '48px',
               fontWeight: 800,
               color: '#0f1f12',
@@ -201,7 +201,7 @@ function Login() {
           <div className="text-center" style={{ marginBottom: '40px' }}>
             <h2
               style={{
-                fontFamily: "'Syne', sans-serif",
+                fontFamily: "'Inter', sans-serif",
                 fontSize: '28px',
                 fontWeight: 800,
                 color: '#0f1f12',

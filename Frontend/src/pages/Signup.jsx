@@ -193,7 +193,7 @@ function Signup() {
           <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6" style={{ background: '#f0fdf4', border: '1px solid #d1fae5' }}>
             <CheckCircle2 className="w-8 h-8" style={{ color: '#16a34a' }} />
           </div>
-          <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: '24px', fontWeight: 800, color: '#0f1f12', marginBottom: '16px' }}>Registration Successful</h2>
+          <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: '24px', fontWeight: 800, color: '#0f1f12', marginBottom: '16px' }}>Registration Successful</h2>
           <p style={{ color: '#374151', fontSize: '14px', lineHeight: 1.7, marginBottom: '32px' }}>{successMsg}</p>
           <Link
             to="/login"
@@ -246,7 +246,7 @@ function Signup() {
 
         <div className="bg-white rounded-3xl p-6 sm:p-8" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.08)', border: '1px solid #f0fdf4' }}>
           <div className="text-center" style={{ marginBottom: '32px' }}>
-            <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: '28px', fontWeight: 800, color: '#0f1f12', letterSpacing: '-0.02em', marginBottom: '8px' }}>Create Account</h2>
+            <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: '28px', fontWeight: 800, color: '#0f1f12', letterSpacing: '-0.02em', marginBottom: '8px' }}>Create Account</h2>
             <p style={{ color: '#6b7280', fontSize: '14px' }}>Start automating your IT support today</p>
           </div>
 
