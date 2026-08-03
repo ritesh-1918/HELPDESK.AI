@@ -20,7 +20,7 @@ pinned: false
 
 <img src="https://img.shields.io/badge/GirlScript_Summer_Of_Code-2026-F37021?style=for-the-badge&logo=girlscript&logoColor=white" height="42" alt="GSSoC 2026">
 &nbsp;&nbsp;
-<a href="https://github.com/ritesh-1918/HELPDESK.AI/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22">
+<a href="https://github.com/riteshbonthalakoti/HELPDESK.AI/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22">
 <img src="https://img.shields.io/badge/Good_First_Issues-Available-10B981?style=for-the-badge&logo=github&logoColor=white" height="42" alt="Good First Issues">
 </a>
 
@@ -29,11 +29,11 @@ pinned: false
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![Vercel Deployment](https://img.shields.io/badge/Production-Live-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://helpdeskaiv1.vercel.app/)
 
-[![CI - Frontend Lint](https://github.com/Lin081984/fugui-fix-env/actions/workflows/ci.yml/badge.svg?job=frontend-lint)](https://github.com/Lin081984/fugui-fix-env/actions/workflows/ci.yml)
-[![CI - Frontend Build](https://github.com/Lin081984/fugui-fix-env/actions/workflows/ci.yml/badge.svg?job=frontend-build)](https://github.com/Lin081984/fugui-fix-env/actions/workflows/ci.yml)
-[![CI - Backend Lint](https://github.com/Lin081984/fugui-fix-env/actions/workflows/ci.yml/badge.svg?job=backend-lint)](https://github.com/Lin081984/fugui-fix-env/actions/workflows/ci.yml)
-[![CI - Backend Tests](https://github.com/Lin081984/fugui-fix-env/actions/workflows/ci.yml/badge.svg?job=backend-tests)](https://github.com/Lin081984/fugui-fix-env/actions/workflows/ci.yml)
-[![CI - Model Validation](https://github.com/Lin081984/fugui-fix-env/actions/workflows/ci.yml/badge.svg?job=model-validation)](https://github.com/Lin081984/fugui-fix-env/actions/workflows/ci.yml)
+[![CI - Frontend Lint](https://github.com/riteshbonthalakoti/HELPDESK.AI/actions/workflows/ci.yml/badge.svg?job=frontend-lint)](https://github.com/riteshbonthalakoti/HELPDESK.AI/actions/workflows/ci.yml)
+[![CI - Frontend Build](https://github.com/riteshbonthalakoti/HELPDESK.AI/actions/workflows/ci.yml/badge.svg?job=frontend-build)](https://github.com/riteshbonthalakoti/HELPDESK.AI/actions/workflows/ci.yml)
+[![CI - Backend Lint](https://github.com/riteshbonthalakoti/HELPDESK.AI/actions/workflows/ci.yml/badge.svg?job=backend-lint)](https://github.com/riteshbonthalakoti/HELPDESK.AI/actions/workflows/ci.yml)
+[![CI - Backend Tests](https://github.com/riteshbonthalakoti/HELPDESK.AI/actions/workflows/ci.yml/badge.svg?job=backend-tests)](https://github.com/riteshbonthalakoti/HELPDESK.AI/actions/workflows/ci.yml)
+[![CI - Model Validation](https://github.com/riteshbonthalakoti/HELPDESK.AI/actions/workflows/ci.yml/badge.svg?job=model-validation)](https://github.com/riteshbonthalakoti/HELPDESK.AI/actions/workflows/ci.yml)
 
 <br/>
 
@@ -49,7 +49,7 @@ pinned: false
     <img src="https://img.shields.io/badge/✉️_CONTACT_ENTERPRISE-111827?style=for-the-badge&logo=minutemailer&logoColor=white&labelColor=10b981" height="42" alt="Contact Enterprise" />
   </a>
   &nbsp;&nbsp;
-  <a href="https://ritesh-1918.github.io/HELPDESK.AI/">
+  <a href="https://riteshbonthalakoti.github.io/HELPDESK.AI/">
     <img src="https://img.shields.io/badge/📊_SYSTEM_PRESENTATION-111827?style=for-the-badge&logo=googleslides&logoColor=white&labelColor=3b82f6" height="42" alt="System Presentation" />
   </a>
   &nbsp;&nbsp;
@@ -72,15 +72,15 @@ To support the project and get real-time open-source project updates, please mak
 
 <h3> 🚀 Support the Orchestrator in 3 Seconds! </h3>
 
-<a href="https://github.com/ritesh-1918/HELPDESK.AI">
+<a href="https://github.com/riteshbonthalakoti/HELPDESK.AI">
   <img src="https://img.shields.io/badge/⭐_STAR_REPOSITORY-111827?style=for-the-badge&logo=github&logoColor=white&labelColor=e5a50a" height="40" alt="Star Repository" />
 </a>
 &nbsp;&nbsp;
-<a href="https://github.com/ritesh-1918/HELPDESK.AI/fork">
+<a href="https://github.com/riteshbonthalakoti/HELPDESK.AI/fork">
   <img src="https://img.shields.io/badge/🍴_FORK_REPOSITORY-111827?style=for-the-badge&logo=git&logoColor=white&labelColor=238636" height="40" alt="Fork Repository" />
 </a>
 &nbsp;&nbsp;
-<a href="https://github.com/ritesh-1918">
+<a href="https://github.com/riteshbonthalakoti">
   <img src="https://img.shields.io/badge/👤_FOLLOW_OWNER-111827?style=for-the-badge&logo=github&logoColor=white&labelColor=586069" height="40" alt="Follow Owner" />
 </a>
 
@@ -322,7 +322,7 @@ cp .env.example .env
 ### Local Installation
 
 ```bash
-git clone https://github.com/ritesh-1918/HELPDESK.AI.git
+git clone https://github.com/riteshbonthalakoti/HELPDESK.AI.git
 cd HELPDESK.AI/Frontend
 npm install
 npm run dev
@@ -408,8 +408,8 @@ Helpdesk.ai is now available as a native Android application. It features a comp
 
 Thanks goes to these wonderful people for contributing to this project ❤️
 
-<a href="https://github.com/ritesh-1918/HELPDESK.AI/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=ritesh-1918/HELPDESK.AI" />
+<a href="https://github.com/riteshbonthalakoti/HELPDESK.AI/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=riteshbonthalakoti/HELPDESK.AI" />
 </a>
 
 ---
