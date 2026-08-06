@@ -61,6 +61,26 @@ function AdminSignup() {
         return null; // valid
     };
 
+    const validateWebsite = (website) => {
+        if (!website || !website.trim()) return null;
+        const value = website.trim();
+        const hostPart = value.replace(/^https?:\/\//i, '').split(/[/?#]/)[0];
+        if (hostPart && hostPart.toLowerCase() !== 'localhost' && !hostPart.includes('.')) {
+            return 'Please enter a valid website URL (e.g. https://acme.com).';
+        }
+        const url = /^https?:\/\//i.test(value) ? value : `https://${value}`;
+        let parsed;
+        try {
+            parsed = new URL(url);
+        } catch {
+            return 'Please enter a valid website URL (e.g. https://acme.com).';
+        }
+        if (!parsed.hostname || !/^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(parsed.hostname)) {
+            return 'Please enter a valid website URL (e.g. https://acme.com).';
+        }
+        return null;
+    };
+
     // Password strength calculation
     useEffect(() => {
         const pw = formData.password;
@@ -99,6 +119,11 @@ function AdminSignup() {
         } else if (step === 2) {
             if (!formData.companyName || !formData.companySize || !formData.industry || !formData.country) {
                 setError("Please fill in all required company details.");
+                return;
+            }
+            const websiteError = validateWebsite(formData.website);
+            if (websiteError) {
+                setError(websiteError);
                 return;
             }
         }
