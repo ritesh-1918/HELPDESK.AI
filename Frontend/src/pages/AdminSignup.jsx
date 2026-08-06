@@ -61,6 +61,14 @@ function AdminSignup() {
         return null; // valid
     };
 
+    const validatePhone = (phone) => {
+        if (!phone || !phone.trim()) return null;
+        if (/[^0-9+()\-.\s]/.test(phone)) return 'Please enter a valid phone number (digits only).';
+        const digitCount = phone.replace(/[^0-9]/g, '').length;
+        if (digitCount < 7 || digitCount > 15) return 'Phone number must contain between 7 and 15 digits.';
+        return null;
+    };
+
     // Password strength calculation
     useEffect(() => {
         const pw = formData.password;
@@ -94,6 +102,11 @@ function AdminSignup() {
             }
             if (formData.password !== formData.confirmPassword) {
                 setError("Passwords do not match.");
+                return;
+            }
+            const phoneError = validatePhone(formData.phone);
+            if (phoneError) {
+                setError(phoneError);
                 return;
             }
         } else if (step === 2) {
