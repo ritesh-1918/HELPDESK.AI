@@ -61,6 +61,20 @@ function AdminSignup() {
         return null; // valid
     };
 
+    const validateFullName = (name) => {
+        if (!name || !name.trim()) return null;
+        if (name.trim().length < 2) return 'Full Name must be at least 2 characters long.';
+        if (!/^[\p{L}\s'-]+$/u.test(name)) return 'Full Name can only contain letters, spaces, hyphens, and apostrophes.';
+        if (/\s{2,}|^['\s-]|['\s-]$/.test(name)) return 'Full Name contains invalid spacing or punctuation.';
+        return null;
+    };
+
+    const validateEmail = (email) => {
+        if (!email || !email.trim()) return null;
+        if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) return 'Please enter a valid work email (e.g. name@company.com).';
+        return null;
+    };
+
     // Password strength calculation
     useEffect(() => {
         const pw = formData.password;
@@ -85,6 +99,16 @@ function AdminSignup() {
         if (step === 1) {
             if (!formData.fullName || !formData.email || !formData.password || !formData.confirmPassword) {
                 setError("Please fill in all required personal information.");
+                return;
+            }
+            const nameError = validateFullName(formData.fullName);
+            if (nameError) {
+                setError(nameError);
+                return;
+            }
+            const emailError = validateEmail(formData.email);
+            if (emailError) {
+                setError(emailError);
                 return;
             }
             const pwError = validatePassword(formData.password);
