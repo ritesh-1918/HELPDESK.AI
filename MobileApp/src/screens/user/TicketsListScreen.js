@@ -6,8 +6,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../lib/supabase';
+import { useOfflineSync } from '../../lib/useOfflineSync';
 import { COLORS, SHADOWS } from '../../styles/theme';
-import { Ticket, Clock, CheckCircle2, AlertTriangle, ChevronRight, Inbox } from 'lucide-react-native';
+import { Ticket, Clock, CheckCircle2, AlertTriangle, ChevronRight, Inbox, WifiOff } from 'lucide-react-native';
 
 const FILTERS = ['All', 'Active', 'Resolved'];
 
@@ -18,25 +19,19 @@ const TicketsListScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState('All');
 
-  const fetchTickets = useCallback(async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data, error } = await supabase
-        .from('tickets')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      if (!error) setTickets(data || []);
-    } catch (e) {
-      console.error('Fetch tickets error:', e);
-    } finally {
+  // Offline-first data source: fetches online and caches to SQLite, falls back
+  // to the local cache when the device is offline.
+  const { data: syncedTickets, isOffline, refresh } = useOfflineSync('tickets');
+
+  useEffect(() => {
+    if (syncedTickets) {
+      setTickets(syncedTickets);
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [syncedTickets]);
 
-  useEffect(() => { fetchTickets(); }, [fetchTickets]);
+  useEffect(() => { refresh(); }, [refresh]);
 
   // Realtime subscription
   useEffect(() => {
@@ -53,13 +48,18 @@ const TicketsListScreen = () => {
           schema: 'public',
           table: 'tickets',
           filter: `user_id=eq.${userId}`,
-        }, () => fetchTickets())
+        }, () => refresh())
         .subscribe();
 
       return () => supabase.removeChannel(channel);
     };
     setup();
-  }, [fetchTickets]);
+  }, [refresh]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    refresh().finally(() => setRefreshing(false));
+  };
 
   const filteredTickets = tickets.filter((t) => {
     if (activeFilter === 'Active') return t.status !== 'resolved';
@@ -128,6 +128,14 @@ const TicketsListScreen = () => {
         </View>
       </View>
 
+      {/* Offline banner */}
+      {isOffline && (
+        <View style={styles.offlineBanner}>
+          <WifiOff size={14} color="#fff" />
+          <Text style={styles.offlineText}>Offline mode — showing saved tickets</Text>
+        </View>
+      )}
+
       {/* Filter chips */}
       <View style={styles.filterRow}>
         {FILTERS.map((f) => (
@@ -159,7 +167,7 @@ const TicketsListScreen = () => {
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchTickets(); }} colors={[COLORS.primary]} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
           }
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
@@ -191,6 +199,12 @@ const styles = StyleSheet.create({
   },
   countText: { fontSize: 16, fontWeight: '900', color: COLORS.primary },
   // Filters
+  offlineBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#f59e0b', marginHorizontal: 20, marginBottom: 10,
+    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12,
+  },
+  offlineText: { fontSize: 13, fontWeight: '700', color: '#fff' },
   filterRow: { flexDirection: 'row', paddingHorizontal: 24, gap: 10, marginBottom: 16 },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,

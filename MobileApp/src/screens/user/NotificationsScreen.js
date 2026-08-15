@@ -2,45 +2,29 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
+import { useOfflineSync } from '../../lib/useOfflineSync';
 import { COLORS, SHADOWS } from '../../styles/theme';
-import { Bell, Sparkles, MessageSquare, AlertCircle, Info, CheckCircle2 } from 'lucide-react-native';
+import { Bell, Sparkles, MessageSquare, AlertCircle, Info, CheckCircle2, WifiOff } from 'lucide-react-native';
 
 const NotificationsScreen = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchNotifications = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+  // Offline-first data source backed by the local SQLite cache.
+  const { data: syncedNotifications, isOffline, refresh } = useOfflineSync('notifications');
 
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        if (error.code === 'PGRST205') {
-          console.warn('Notifications table not found in Supabase. Showing empty state.');
-          setNotifications([]);
-          return;
-        }
-        throw error;
-      }
-      setNotifications(data || []);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-    } finally {
+  useEffect(() => {
+    if (syncedNotifications) {
+      setNotifications(syncedNotifications);
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [syncedNotifications]);
+
+  useEffect(() => { refresh(); }, [refresh]);
 
   useEffect(() => {
-    fetchNotifications();
-
     // Subscribe to new notifications
     const channel = supabase
       .channel('public:notifications')
@@ -55,6 +39,11 @@ const NotificationsScreen = () => {
 
     return () => supabase.removeChannel(channel);
   }, []);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    refresh().finally(() => setRefreshing(false));
+  };
 
   const markAsRead = async (id) => {
     try {
@@ -129,6 +118,13 @@ const NotificationsScreen = () => {
         <Text style={styles.headerTitle}>Notifications</Text>
       </View>
 
+      {isOffline && (
+        <View style={styles.offlineBanner}>
+          <WifiOff size={14} color="#fff" />
+          <Text style={styles.offlineText}>Offline — showing saved notifications</Text>
+        </View>
+      )}
+
       {loading ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={COLORS.primary} />
@@ -136,7 +132,7 @@ const NotificationsScreen = () => {
       ) : (
         <ScrollView 
           contentContainerStyle={styles.scrollContent}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchNotifications(); }} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
           {notifications.length === 0 ? (
             <View style={styles.emptyContainer}>
@@ -164,6 +160,12 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   headerTitle: { fontSize: 32, fontWeight: '900', color: COLORS.text, letterSpacing: -1 },
+  offlineBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#f59e0b', marginHorizontal: 24, marginBottom: 12,
+    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12,
+  },
+  offlineText: { fontSize: 13, fontWeight: '700', color: '#fff' },
   scrollContent: { padding: 24, paddingBottom: 120 },
   notificationCard: {
     flexDirection: 'row',
