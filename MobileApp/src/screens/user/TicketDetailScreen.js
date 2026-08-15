@@ -12,8 +12,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
+import { useOfflineSync } from '../../lib/useOfflineSync';
 import { COLORS, SHADOWS } from '../../styles/theme';
-import { ArrowLeft, Send, User, Bot } from 'lucide-react-native';
+import { ArrowLeft, Send, User, Bot, WifiOff } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 
 const TicketDetailScreen = ({ route }) => {
@@ -25,11 +26,25 @@ const TicketDetailScreen = ({ route }) => {
   const navigation = useNavigation();
   const flatListRef = useRef(null);
 
-  useEffect(() => {
-    fetchTicketDetails();
-    fetchMessages();
+  // Offline-first data sources backed by the local SQLite cache.
+  const { data: syncedTicket, isOffline, refresh: refreshTicket } = useOfflineSync('ticketDetail', { ticketId });
+  const { data: syncedMessages, refresh: refreshMessages } = useOfflineSync('ticketMessages', { ticketId });
 
-    // Set up real-time subscription for messages
+  useEffect(() => {
+    if (syncedTicket) setTicket(syncedTicket);
+    if (syncedMessages) {
+      setMessages(syncedMessages);
+      setLoading(false);
+    }
+  }, [syncedTicket, syncedMessages]);
+
+  useEffect(() => {
+    refreshTicket();
+    refreshMessages();
+  }, [refreshTicket, refreshMessages]);
+
+  // Set up real-time subscription for messages
+  useEffect(() => {
     const channel = supabase
       .channel(`ticket_messages:${ticketId}`)
       .on('postgres_changes', {
@@ -46,33 +61,6 @@ const TicketDetailScreen = ({ route }) => {
       supabase.removeChannel(channel);
     };
   }, [ticketId]);
-
-  const fetchTicketDetails = async () => {
-    const { data, error } = await supabase
-      .from('tickets')
-      .select('*')
-      .eq('id', ticketId)
-      .single();
-    
-    if (!error) setTicket(data);
-  };
-
-  const fetchMessages = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('ticket_messages')
-        .select('*')
-        .eq('ticket_id', ticketId)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-      setMessages(data || []);
-    } catch (error) {
-      console.error('Error fetching messages:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const sendMessage = async () => {
     if (!newMessage.trim()) return;
@@ -136,7 +124,15 @@ const TicketDetailScreen = ({ route }) => {
           <Text style={styles.headerTitle} numberOfLines={1}>
             {ticket?.subject || 'Ticket Details'}
           </Text>
-          <Text style={styles.headerSubtitle}>#{ticketId?.slice(0, 8).toUpperCase()}</Text>
+          <View style={styles.headerSubRow}>
+            <Text style={styles.headerSubtitle}>#{ticketId?.slice(0, 8).toUpperCase()}</Text>
+            {isOffline && (
+              <View style={styles.offlineChip}>
+                <WifiOff size={10} color="#fff" />
+                <Text style={styles.offlineChipText}>Offline</Text>
+              </View>
+            )}
+          </View>
         </View>
       </View>
 
@@ -201,7 +197,13 @@ const styles = StyleSheet.create({
   backBtn: { padding: 8, marginRight: 8 },
   headerContent: { flex: 1 },
   headerTitle: { fontSize: 18, fontWeight: '800', color: COLORS.text },
+  headerSubRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   headerSubtitle: { fontSize: 12, color: COLORS.textMuted, fontWeight: '600' },
+  offlineChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#f59e0b', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 100,
+  },
+  offlineChipText: { fontSize: 10, fontWeight: '800', color: '#fff' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   messagesList: { padding: 16, paddingBottom: 32 },
   messageBubble: {

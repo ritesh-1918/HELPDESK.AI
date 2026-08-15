@@ -6,10 +6,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../lib/supabase';
+import { useOfflineSync } from '../../lib/useOfflineSync';
 import { COLORS, SHADOWS } from '../../styles/theme';
 import {
   Plus, Ticket, Clock, CheckCircle2, Activity, ChevronRight,
-  Zap, TrendingUp, BarChart3,
+  Zap, TrendingUp, BarChart3, WifiOff,
 } from 'lucide-react-native';
 
 const DashboardScreen = () => {
@@ -21,73 +22,58 @@ const DashboardScreen = () => {
 
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const fetchData = useCallback(async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+  // Offline-first data sources backed by the local SQLite cache.
+  const { data: syncedProfile, refresh: refreshProfile } = useOfflineSync('profile');
+  const { data: syncedTickets, isOffline, refresh: refreshTickets } = useOfflineSync('tickets');
+  const { data: syncedUnread, refresh: refreshUnread } = useOfflineSync('unreadCount');
 
-      // Fetch profile
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      if (profileData) setProfile(profileData);
-
-      // Fetch tickets
-      const { data: ticketData } = await supabase
-        .from('tickets')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      setTickets(ticketData || []);
-
-      // Fetch unread notifications count
-      const { count } = await supabase
-        .from('notifications')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('read', false);
-      setUnreadCount(count || 0);
-
-    } catch (e) {
-      console.error('Dashboard fetch error:', e);
-    } finally {
+  useEffect(() => {
+    if (syncedProfile) setProfile(syncedProfile);
+    if (syncedTickets) {
+      setTickets(syncedTickets);
       setLoading(false);
-      setRefreshing(false);
     }
-  }, []);
+    if (syncedUnread !== null) setUnreadCount(syncedUnread);
+  }, [syncedProfile, syncedTickets, syncedUnread]);
 
-  useEffect(() => { 
-    fetchData(); 
+  const syncAll = useCallback(() => {
+    refreshProfile();
+    refreshTickets();
+    refreshUnread();
+  }, [refreshProfile, refreshTickets, refreshUnread]);
 
-    // Subscribe to ticket changes
+  useEffect(() => { syncAll(); }, [syncAll]);
+
+  // Subscribe to ticket & notification changes
+  useEffect(() => {
     const ticketsChannel = supabase
       .channel('dashboard_tickets')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'tickets' 
-      }, () => fetchData())
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'tickets',
+      }, () => syncAll())
       .subscribe();
 
-    // Subscribe to notifications changes
     const notificationsChannel = supabase
       .channel('dashboard_notifications')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'notifications' 
-      }, () => fetchData())
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'notifications',
+      }, () => syncAll())
       .subscribe();
 
     return () => {
       supabase.removeChannel(ticketsChannel);
       supabase.removeChannel(notificationsChannel);
     };
-  }, [fetchData]);
+  }, [syncAll]);
 
-  const onRefresh = () => { setRefreshing(true); fetchData(); };
+  const onRefresh = () => {
+    setRefreshing(true);
+    Promise.all([refreshProfile(), refreshTickets(), refreshUnread()]).finally(() => setRefreshing(false));
+  };
 
   const totalTickets = tickets.length;
   const activeTickets = tickets.filter(t => t.status !== 'resolved').length;
@@ -140,6 +126,14 @@ const DashboardScreen = () => {
             resizeMode="contain"
           />
         </View>
+
+        {/* Offline banner */}
+        {isOffline && (
+          <View style={styles.offlineBanner}>
+            <WifiOff size={14} color="#fff" />
+            <Text style={styles.offlineText}>Offline — showing saved data</Text>
+          </View>
+        )}
 
         {/* Quick Actions */}
         <View style={styles.quickActions}>
@@ -284,6 +278,12 @@ const styles = StyleSheet.create({
   userName: { fontSize: 28, fontWeight: '900', color: COLORS.text, letterSpacing: -0.8 },
   headerLogo: { width: 44, height: 44, borderRadius: 14 },
   // Quick Actions
+  offlineBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#f59e0b', marginHorizontal: 20, marginBottom: 12,
+    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12,
+  },
+  offlineText: { fontSize: 13, fontWeight: '700', color: '#fff' },
   quickActions: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginBottom: 20 },
   actionItem: { 
     flex: 1, backgroundColor: '#fff', borderRadius: 20, padding: 12, 
