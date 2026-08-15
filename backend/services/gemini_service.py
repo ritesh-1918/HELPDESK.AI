@@ -2,10 +2,13 @@ import os
 import base64
 import io
 import re
+import logging
 from PIL import Image
 from google import genai
 from dotenv import load_dotenv
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 # Load environment variables from backend/.env
 env_path = Path(__file__).parent.parent / '.env'
@@ -21,11 +24,11 @@ class GeminiService:
             try:
                 self.client = genai.Client(api_key=self.api_key)
                 self._initialized = True
-                print(f"[GeminiService] Connected to Google GenAI API (Model: {self.model_name})")
+                logger.info("Connected to Google GenAI API (Model: %s)", self.model_name)
             except Exception as e:
-                print(f"[GeminiService] Initialization Error: {e}")
+                logger.error("Initialization Error: %s", e)
         else:
-            print("[GeminiService] WARNING: GEMINI_API_KEY not found in environment.")
+            logger.warning("GEMINI_API_KEY not found in environment.")
 
     def analyze_image(self, image_base64: str) -> dict:
         """
@@ -72,7 +75,7 @@ class GeminiService:
             }
 
         except Exception as e:
-            print(f"[GeminiService] Image Analysis Error: {e}")
+            logger.error("Image Analysis Error: %s", e)
             return {
                 "image_description": f"Error analyzing image: {str(e)}",
                 "ocr_text": "",
@@ -99,7 +102,7 @@ class GeminiService:
             )
             return response.text.strip().replace("\n", " ")
         except Exception as e:
-            print(f"[GeminiService] Summarization Error: {e}")
+            logger.error("Summarization Error: %s", e)
             return ticket_text[:100] + ("…" if len(ticket_text) > 100 else "")
 
     def get_reasoning(self, ticket_text: str, category: str, team: str) -> dict:
@@ -138,7 +141,7 @@ class GeminiService:
                 "highlights": highlights
             }
         except Exception as e:
-            print(f"[GeminiService] Reasoning Error: {e}")
+            logger.error("Reasoning Error: %s", e)
             return {"reasoning": "", "highlights": []}
 
     def get_troubleshooting_step(self, ticket_text: str, history: list[dict], category: str) -> dict:
@@ -187,7 +190,7 @@ class GeminiService:
                 "is_final": final_match.group(1).lower() == "true" if final_match else False
             }
         except Exception as e:
-            print(f"[GeminiService] Troubleshooting Error: {e}")
+            logger.error("Troubleshooting Error: %s", e)
             return {
                 "step_text": "I encountered an error. Let's try one more basic check.",
                 "options": ["Okay", "Skip to agent"],
@@ -220,5 +223,5 @@ class GeminiService:
             )
             return response.text.strip()
         except Exception as e:
-            print(f"[GeminiService] Bug Analysis Error: {e}")
+            logger.error("Bug Analysis Error: %s", e)
             return f"Diagnostic analysis failed: {str(e)}"

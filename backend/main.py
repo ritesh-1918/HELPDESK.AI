@@ -14,6 +14,10 @@ import warnings
 import logging
 import hashlib
 from contextlib import asynccontextmanager
+from backend.logging_config import setup_logging
+
+setup_logging()
+logger = logging.getLogger(__name__)
 
 # Suppress harmless PyTorch CPU pin_memory warning
 warnings.filterwarnings("ignore", message="'pin_memory'")
@@ -41,12 +45,12 @@ try:
     url = os.environ.get("SUPABASE_URL")
     key = os.environ.get("SUPABASE_SERVICE_KEY")
     if not url or not key:
-        print("[ERROR] SUPABASE_URL or SUPABASE_SERVICE_KEY not set in backend/.env")
+        logger.error("SUPABASE_URL or SUPABASE_SERVICE_KEY not set in backend/.env")
         supabase = None
     else:
         supabase = create_client(url, key)
 except (ImportError, Exception) as e:
-    print(f"[WARNING] Supabase initialization failed: {e}")
+    logger.warning("Supabase initialization failed: %s", e)
     supabase = None
     Client = None
 
@@ -79,7 +83,7 @@ def get_system_settings(company_id: str) -> dict:
         if res.data:
             return {**defaults, **res.data}
     except Exception as e:
-        print(f"[WARNING] Could not fetch system_settings for company_id={company_id}: {e}")
+        logger.warning("Could not fetch system_settings for company_id=%s: %s", company_id, e)
     return defaults
 class TicketRequest(BaseModel):
     text: str
@@ -218,31 +222,32 @@ except ImportError:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Load all models at startup."""
-    print("[Startup] Loading AI models ...")
+    logger.info("Loading AI models ...")
     try:
         classifier_service.load()
     except FileNotFoundError as e:
-        print(f"[WARNING] Classifier not loaded: {e}")
+        logger.warning("Classifier not loaded: %s", e)
     try:
         ner_service.load()
     except FileNotFoundError as e:
-        print(f"[WARNING] NER not loaded: {e}")
+        logger.warning("NER not loaded: %s", e)
     try:
         duplicate_service.load()
     except Exception as e:
-        print(f"[WARNING] Duplicate service not loaded: {e}")
+        logger.warning("Duplicate service not loaded: %s", e)
     try:
         rag_service.load()
     except Exception as e:
-        print(f"[WARNING] RAG service not loaded: {e}")
+        logger.warning("RAG service not loaded: %s", e)
     
     if gemini_service:
-        print(f"[Startup] Gemini Service: {'Initialized' if gemini_service._initialized else 'FAILED (Key missing or SDK error)'}")
+        status = "Initialized" if gemini_service._initialized else "FAILED (Key missing or SDK error)"
+        logger.info("Gemini Service: %s", status)
     else:
-        print("[Startup] Gemini Service: NOT LOADED (Import failed)")
+        logger.info("Gemini Service: NOT LOADED (Import failed)")
 
-    print("[Startup] Classifier V2 Shadow: Ready.")
-    print("[Startup] Ready.")
+    logger.info("Classifier V2 Shadow: Ready.")
+    logger.info("Ready.")
     # Strict health checks: fail loudly when core model assets are unavailable.
     # Set ALLOW_DEGRADED_STARTUP=1 to permit degraded startup for local/dev convenience.
     try:
@@ -256,7 +261,7 @@ async def lifespan(app: FastAPI):
     if strict_mode and not classifier_loaded_flag:
         raise RuntimeError("[Startup-FATAL] Classifier assets not loaded. Set ALLOW_DEGRADED_STARTUP=1 to bypass.")
     yield
-    print("[Shutdown] Cleaning up ...")
+    logger.info("Cleaning up ...")
 
 
 # ---------------------------------------------------------------------------
@@ -480,10 +485,10 @@ async def log_correction(raw_request: Request):
     try:
         body = await raw_request.json()
     except Exception as e:
-        print(f"[CORRECTION ERROR] Could not parse request body: {e}")
+        logger.error("Could not parse request body: %s", e)
         return {"status": "error", "message": "Invalid JSON body"}
 
-    print(f"[CORRECTION RECEIVED] Payload keys: {list(body.keys())}")
+    logger.info("Correction received. Payload keys: %s", list(body.keys()))
 
     ticket_id = str(body.get("ticket_id", "unknown"))
     original_text = str(body.get("original_text", ""))
@@ -524,11 +529,11 @@ async def log_correction(raw_request: Request):
         with open(CORRECTIONS_LOG_PATH, "w", encoding="utf-8") as f:
             json.dump(logs, f, indent=2)
 
-        print(f"[CORRECTION SAVED] Ticket ID: {ticket_id} | Changed: {changed_fields}")
+        logger.info("Correction saved. Ticket ID: %s | Changed: %s", ticket_id, changed_fields)
         return {"status": "saved", "changed_fields": changed_fields}
 
     except Exception as e:
-        print(f"[CORRECTION ERROR] Could not save: {e}")
+        logger.error("Could not save correction: %s", e)
         return {"status": "error", "message": str(e)}
 
 
@@ -623,11 +628,11 @@ async def save_ticket(request_body: TicketSaveRequest):
             except Exception as index_error:
                 duplicate_indexed = False
                 duplicate_index_warning = "Duplicate index update failed."
-                print(f"[WARNING] {duplicate_index_warning} ticket_id={ticket_id} error={index_error}")
+                logger.warning("%s ticket_id=%s error=%s", duplicate_index_warning, ticket_id, index_error)
         else:
             duplicate_indexed = False
             duplicate_index_warning = "Duplicate index update skipped: no description or subject text was provided."
-            print(f"[WARNING] {duplicate_index_warning}")
+            logger.warning("%s", duplicate_index_warning)
         
         # Add initial system diagnostic message
         msg = "Our Neural Engine has successfully triaged your issue and routed it to the designated team."
@@ -648,7 +653,7 @@ async def save_ticket(request_body: TicketSaveRequest):
         return response
 
     except Exception as e:
-        traceback.print_exc()
+        logger.exception("Failed to save ticket")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/tickets/{ticket_id}")
@@ -672,7 +677,7 @@ async def create_ticket(ticket: TicketRecord):
         return existing
         
     TICKETS_DB.append(ticket)
-    print(f"[DB] Ticket #{ticket.ticket_id} created for user {ticket.owner_id}")
+    logger.info("Ticket #%s created for user %s", ticket.ticket_id, ticket.owner_id)
     return ticket
 
 
@@ -721,11 +726,11 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     # --- Layer 1: Local OCR (CPU, no API required) ---
     local_ocr_text = ""
     if request_body.image_base64 and ocr_service:
-        print("[AI] Extracting text via local OCR...")
+        logger.info("Extracting text via local OCR...")
         local_ocr_text = ocr_service.extract_text(request_body.image_base64)
         if local_ocr_text:
             text = f"{text} {local_ocr_text}".strip()
-            print(f"[AI] OCR added {len(local_ocr_text)} chars to context.")
+            logger.info("OCR added %d chars to context.", len(local_ocr_text))
 
     # Initalize Timeline
     return await analyze_only(request_body)
@@ -738,7 +743,7 @@ async def analyze_only(request_body: TicketRequest):
     and duplicate check before committing to a ticket creation.
     """
     text = request_body.text
-    print(f"[AI] Starting Analysis (READ-ONLY) for: {text[:50]}...") 
+    logger.info("Starting Analysis (READ-ONLY) for: %s...", text[:50]) 
     settings = get_system_settings(request_body.company)
     confidence_threshold = settings["ai_confidence_threshold"]
     duplicate_sensitivity = settings["duplicate_sensitivity"]
@@ -765,11 +770,11 @@ async def analyze_only(request_body: TicketRequest):
     
     if request_body.image_base64 and not gemini_analysis["ocr_text"]:
         try:
-            print("[AI] Detecting visual context via Gemini...")
+            logger.info("Detecting visual context via Gemini...")
             vision_result = gemini_service.analyze_image(request_body.image_base64, text)
             gemini_analysis.update(vision_result)
         except Exception as e:
-            print(f"[VISION ERROR] {e}")
+            logger.error("Vision error: %s", e)
 
     summary = text[:100] + ("…" if len(text) > 100 else "") 
 
@@ -799,7 +804,7 @@ async def analyze_only(request_body: TicketRequest):
                 "confidence": float(conf)
             }
     except Exception as e:
-        traceback.print_exc()
+        logger.exception("Classification failed")
         classification = {
             "category": "Unknown", "subcategory": "Unknown", "priority": "Medium",
             "auto_resolve": False, "assigned_team": "General Support", "confidence": 0.0,
@@ -830,9 +835,9 @@ async def analyze_only(request_body: TicketRequest):
             classification["auto_resolve"] = True
             classification["assigned_team"] = "Auto-Resolve AI"
             classification["confidence"] = max(classification["confidence"], float(rag_match["similarity"]))
-            print(f"[RAG SUCCESS] Found solution for: '{rag_match['title']}'")
+            logger.info("RAG SUCCESS: Found solution for: '%s'", rag_match['title'])
     except Exception as e:
-        print(f"[RAG ERROR] {e}")
+        logger.error("RAG error: %s", e)
 
     # --- Reasoning ---
     decision_factors = []
