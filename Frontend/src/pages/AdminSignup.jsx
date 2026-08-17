@@ -87,6 +87,14 @@ function AdminSignup() {
                 setError("Please fill in all required personal information.");
                 return;
             }
+            if (!/^[a-zA-Z\s\-'.]+$/.test(formData.fullName.trim())) {
+                setError("Full Name should only contain letters, spaces, hyphens, and apostrophes.");
+                return;
+            }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+                setError("Please enter a valid email address.");
+                return;
+            }
             const pwError = validatePassword(formData.password);
             if (pwError) {
                 setError(pwError);
